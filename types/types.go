@@ -44,3 +44,44 @@ type GenerateTestsOutput struct {
 	GeneratedCases int    `json:"generated_cases"`
 	Preview       string `json:"preview,omitempty"`
 }
+
+// CoverageReport 覆盖率报告
+type CoverageReport struct {
+	Framework      string             `json:"framework"`
+	TotalPercent   float64            `json:"total_percent"`
+	Files          []CoverageFile     `json:"files"`
+	Summary        CoverageSummary    `json:"summary"`
+	Suggestions    []CoverageSuggestion `json:"suggestions,omitempty"`
+}
+
+// CoverageFile 单文件覆盖率
+type CoverageFile struct {
+	Path     string             `json:"path"`
+	Percent  float64            `json:"percent"`
+	Blocks   []CoverageBlock    `json:"blocks,omitempty"`
+}
+
+// CoverageBlock 覆盖率块
+type CoverageBlock struct {
+	StartLine int `json:"start_line"`
+	EndLine   int `json:"end_line"`
+	Count     int `json:"count"`
+	Covered   bool `json:"covered"`
+}
+
+// CoverageSummary 覆盖率汇总
+type CoverageSummary struct {
+	TotalStatements   int `json:"total_statements"`
+	CoveredStatements int `json:"covered_statements"`
+	TotalFiles        int `json:"total_files"`
+	CoveredFiles      int `json:"covered_files"`
+	UncoveredFiles    []string `json:"uncovered_files,omitempty"`
+}
+
+// CoverageSuggestion 覆盖率改进建议
+type CoverageSuggestion struct {
+	File       string  `json:"file"`
+	LineRange  string  `json:"line_range"`
+	Reason     string  `json:"reason"`
+	Confidence float64 `json:"confidence"`
+}

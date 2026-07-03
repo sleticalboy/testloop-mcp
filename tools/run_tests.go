@@ -39,6 +39,10 @@ func Register(s *mcp.Server) {
 		&mcp.Tool{Name: "fix_suggestions", Description: "根据测试失败信息和源代码，生成结构化修复建议（供 AI 消费）。"},
 		HandleFixSuggestions,
 	)
+	mcp.AddTool[parseCoverageInput, any](s,
+		&mcp.Tool{Name: "parse_coverage", Description: "解析覆盖率数据（Go coverprofile / Jest coverage JSON / pytest coverage JSON），返回结构化覆盖率报告和改进建议。"},
+		HandleParseCoverage,
+	)
 }
 
 func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTestsInput) (*mcp.CallToolResult, any, error) {
