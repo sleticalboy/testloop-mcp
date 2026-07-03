@@ -13,6 +13,8 @@ func ParseTestOutput(output, framework string) types.TestResult {
 		return ParseJestTest(output)
 	case "pytest":
 		return ParsePytestTest(output)
+	case "mocha":
+		return ParseMochaTest(output)
 	default:
 		// 默认按 go test 解析
 		return ParseGoTest(output)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -73,8 +74,11 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		args = append(args, path)
 		output, err = exec.CommandContext(ctx, "go", args...).CombinedOutput()
 		
-	case "jest":
+	case "jest", "vitest":
 		args := []string{"jest"}
+		if framework == "vitest" {
+			args = []string{"vitest", "run"}
+		}
 		if verbose {
 			args = append(args, "--verbose")
 		}
@@ -84,6 +88,19 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		if path != "." {
 			args = append(args, path)
 		}
+		cmd := exec.CommandContext(ctx, "npx", args...)
+		cmd.Dir = getProjectRoot(path)
+		output, err = cmd.CombinedOutput()
+		
+	case "mocha":
+		args := []string{"mocha"}
+		if verbose {
+			args = append(args, "--reporter", "spec")
+		}
+		if coverage {
+			args = append(args, "--coverage")
+		}
+		args = append(args, path)
 		cmd := exec.CommandContext(ctx, "npx", args...)
 		cmd.Dir = getProjectRoot(path)
 		output, err = cmd.CombinedOutput()
@@ -102,7 +119,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		output, err = cmd.CombinedOutput()
 		
 	default:
-		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, jest, pytest）", framework)
+		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, jest, vitest, mocha, pytest）", framework)
 	}
 
 	// 测试失败是正常情况，继续解析输出
@@ -142,6 +159,16 @@ func detectFramework(path string) string {
 
 	// 检查 package.json (Node.js)
 	if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
+		// 读取 package.json 检查测试框架
+		if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
+			content := string(data)
+			if strings.Contains(content, "vitest") {
+				return "vitest"
+			}
+			if strings.Contains(content, "mocha") {
+				return "mocha"
+			}
+		}
 		return "jest"
 	}
 	
