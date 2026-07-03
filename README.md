@@ -258,7 +258,7 @@ go run main.go
 - [x] 覆盖率解析（Go / Jest / pytest）
 - [ ] Vitest / Mocha 覆盖率解析
 - [ ] Jest / pytest 测试生成器
-- [ ] SSE 传输层支持
+- [ ] Streamable HTTP 传输层支持
 - [ ] VS Code Extension 配套
 
 ## License
