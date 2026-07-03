@@ -266,7 +266,6 @@ go run main.go
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
 - [x] 覆盖率解析（Go / Jest / Vitest / pytest）
 - [ ] Mocha 覆盖率解析
-- [ ] Streamable HTTP 传输层支持
 - [ ] VS Code Extension 配套
 
 ## License
