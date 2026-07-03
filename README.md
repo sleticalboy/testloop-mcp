@@ -98,9 +98,9 @@ go build -o testloop-mcp .
 
 **Go 生成器：** 基于 `go/ast` 原生 AST 分析，支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 
-**JS/TS 生成器：** 正则解析函数声明、箭头函数、类方法，自动检测 CommonJS / ES Module 导入方式。支持 async 函数、变参 `...args`、默认值参数、TypeScript 类型注解剥离。
+**JS/TS 生成器：** 正则 + 花括号匹配解析函数体，分析 `return` 语句推断返回类型（number/string/array/object/boolean）、检测 `throw` 生成 `toThrow()` 测试、检测 `if (param === value)` 边界条件生成针对性用例。支持 async 函数（`await` + `resolves`）、箭头函数表达式体、CommonJS / ES Module 导入。
 
-**Python 生成器：** 正则解析 `def`/`async def`/`class` 声明，自动剥离 `self`/`cls` 参数、类型注解、默认值。支持 `*args`/`**kwargs`、`@staticmethod`。
+**Python 生成器：** 正则 + 缩进感知解析函数体，分析 `return` 语句推断返回类型（int/float/str/list/dict/bool）、检测 `raise` 生成 `pytest.raises()` 测试、检测 `if param == value` 边界条件。支持 `async def`（`asyncio.run()`）、`*args`/`**kwargs`、`@staticmethod`。
 
 ---
 
