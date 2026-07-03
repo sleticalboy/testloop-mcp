@@ -210,14 +210,18 @@ testloop-mcp/
 │   │   ├── jest_parser.go           # Jest 输出解析
 │   │   ├── pytest_parser.go         # pytest 输出解析
 │   │   └── mocha_parser.go          # Mocha 输出解析
-│   └── coverage/
-│       ├── coverage.go              # 统一入口 + 改进建议生成
-│       ├── go_coverage.go           # Go coverprofile 解析
-│       ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析（Vitest 共用）
-│       └── pytest_coverage.go       # coverage.py JSON 解析
+│   ├── coverage/
+│   │   ├── coverage.go              # 统一入口 + 改进建议生成
+│   │   ├── go_coverage.go           # Go coverprofile 解析
+│   │   ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析（Vitest/Mocha 共用）
+│   │   └── pytest_coverage.go       # coverage.py JSON 解析
+│   └── detector/
+│       └── detector.go              # 框架自动检测（package.json/pyproject.toml/go.mod，向上递归）
 ├── cmd/
 │   └── testgen/main.go              # 独立 CLI 工具，脱离 MCP 直接生成测试
-└── demo/                            # 示例代码（calc, service, advanced）
+├── demo/                            # 示例代码（calc, service, advanced）
+├── Dockerfile                       # 多阶段构建（Go builder → alpine runtime）
+└── docker-compose.yml               # HTTP 模式一键部署
 ```
 
 ---
@@ -232,6 +236,8 @@ testloop-mcp/
 | Streamable HTTP | `--transport http --addr :8080` | 远程部署、多客户端、Web IDE 集成 |
 
 > 两种模式均已实现。HTTP 模式基于 go-sdk 的 `StreamableHTTPHandler`，支持有状态（默认）和无状态（`--stateless`）两种会话模式。
+>
+> **Docker 部署：** `docker compose up -d` 一键启动 HTTP 模式。多阶段构建（Go builder → alpine runtime），最终镜像约 15MB。
 
 ---
 

@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/binlee/testloop-mcp/internal/detector"
 	"github.com/binlee/testloop-mcp/internal/parser"
 )
 
@@ -60,7 +60,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 
 	// 自动检测框架
 	if framework == "" {
-		framework = detectFramework(path)
+		framework = detector.DetectFramework(path)
 	}
 
 	var output []byte
@@ -133,63 +133,6 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
-}
-
-func detectFramework(path string) string {
-	// 检查路径是否存在
-	info, err := os.Stat(path)
-	if err != nil {
-		return "go-test" // 默认
-	}
-
-	// 如果是文件，检查扩展名
-	if !info.IsDir() {
-		ext := filepath.Ext(path)
-		switch ext {
-		case ".go":
-			return "go-test"
-		case ".js", ".ts", ".jsx", ".tsx":
-			return "jest"
-		case ".py":
-			return "pytest"
-		}
-	}
-
-	// 如果是目录，检查项目配置文件
-	dir := path
-	if !info.IsDir() {
-		dir = filepath.Dir(path)
-	}
-
-	// 检查 package.json (Node.js)
-	if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
-		// 读取 package.json 检查测试框架
-		if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
-			content := string(data)
-			if strings.Contains(content, "vitest") {
-				return "vitest"
-			}
-			if strings.Contains(content, "mocha") {
-				return "mocha"
-			}
-		}
-		return "jest"
-	}
-	
-	// 检查 go.mod (Go)
-	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-		return "go-test"
-	}
-	
-	// 检查 setup.py 或 pyproject.toml (Python)
-	if _, err := os.Stat(filepath.Join(dir, "setup.py")); err == nil {
-		return "pytest"
-	}
-	if _, err := os.Stat(filepath.Join(dir, "pyproject.toml")); err == nil {
-		return "pytest"
-	}
-
-	return "go-test" // 默认
 }
 
 func getProjectRoot(path string) string {

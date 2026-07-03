@@ -212,14 +212,19 @@ testloop-mcp/
 │   │   ├── jest_parser.go           # Jest 输出解析
 │   │   ├── pytest_parser.go         # pytest 输出解析
 │   │   └── mocha_parser.go          # Mocha 输出解析
-│   └── coverage/
-│       ├── coverage.go              # 统一入口 + 改进建议生成
-│       ├── go_coverage.go           # Go coverprofile 解析
-│       ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析
-│       └── pytest_coverage.go       # coverage.py JSON 解析
+│   ├── coverage/
+│   │   ├── coverage.go              # 统一入口 + 改进建议生成
+│   │   ├── go_coverage.go           # Go coverprofile 解析
+│   │   ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析
+│   │   └── pytest_coverage.go       # coverage.py JSON 解析
+│   └── detector/
+│       └── detector.go              # 框架自动检测（package.json/pyproject.toml/go.mod）
 ├── cmd/
 │   └── testgen/main.go              # 独立 CLI 工具，脱离 MCP 直接生成测试
-└── demo/                            # 示例代码（calc, service, advanced）
+├── demo/                            # 示例代码（calc, service, advanced）
+├── Dockerfile                       # 多阶段构建（Go builder → alpine runtime）
+├── docker-compose.yml               # HTTP 模式一键部署
+└── .dockerignore
 ```
 
 ## 开发
@@ -246,6 +251,11 @@ go run ./cmd/testgen demo/calc.go
 # 启动 MCP server
 go run main.go                          # stdio 模式（默认）
 go run main.go --transport http --addr :8080  # Streamable HTTP 模式
+
+# Docker 部署
+docker compose up -d                   # HTTP 模式，监听 :8080
+docker compose logs -f                 # 查看日志
+docker compose down                    # 停止
 ```
 
 ## 技术栈
@@ -254,6 +264,7 @@ go run main.go --transport http --addr :8080  # Streamable HTTP 模式
 - **MCP SDK：** [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) v1.6.1（官方 SDK）
 - **AST 分析：** Go 标准库 `go/ast`、`go/parser`、`go/token`、`go/format`
 - **传输层：** stdio（JSON-RPC over stdin/stdout）+ Streamable HTTP（`--transport http`）
+- **部署：** Docker 多阶段构建（alpine 基础镜像，~8MB 二进制）
 
 ## Roadmap
 
@@ -266,6 +277,8 @@ go run main.go --transport http --addr :8080  # Streamable HTTP 模式
 - [x] 测试输出解析器（5 框架）
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
 - [x] 覆盖率解析（Go / Jest / Vitest / Mocha / pytest）
+- [x] 框架自动检测（package.json scripts/dependencies + pyproject.toml + go.mod，向上递归查找）
+- [x] Docker 部署（多阶段构建 + docker-compose）
 - [ ] VS Code Extension 配套
 
 ## License

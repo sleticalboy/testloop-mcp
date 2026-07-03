@@ -1,0 +1,15 @@
+.git
+.gitignore
+.vscode
+.idea
+bin/
+pkg/
+test/
+demo-node/
+demo-python/
+*.md
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

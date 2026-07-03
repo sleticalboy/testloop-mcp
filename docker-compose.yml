@@ -1,0 +1,15 @@
+services:
+  testloop-mcp:
+    build: .
+    image: testloop-mcp:latest
+    container_name: testloop-mcp
+    ports:
+      - "8080:8080"
+    command: ["--transport", "http", "--addr", ":8080"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/mcp"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
