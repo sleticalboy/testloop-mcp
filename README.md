@@ -17,7 +17,7 @@
 
 ```
 AI IDE (Claude Code / Cursor / Copilot)
-        │  MCP JSON-RPC (stdio)
+        │  MCP JSON-RPC (stdio / Streamable HTTP)
         ▼
   testloop-mcp server
         │
@@ -243,8 +243,9 @@ go test ./internal/parser/ -v
 # 用 CLI 工具对指定文件生成测试（脱离 MCP）
 go run ./cmd/testgen demo/calc.go
 
-# 启动 MCP server（stdio 模式）
-go run main.go
+# 启动 MCP server
+go run main.go                          # stdio 模式（默认）
+go run main.go --transport http --addr :8080  # Streamable HTTP 模式
 ```
 
 ## 技术栈
@@ -252,11 +253,11 @@ go run main.go
 - **语言：** Go 1.25+
 - **MCP SDK：** [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) v1.6.1（官方 SDK）
 - **AST 分析：** Go 标准库 `go/ast`、`go/parser`、`go/token`、`go/format`
-- **传输层：** stdio（JSON-RPC over stdin/stdout）
+- **传输层：** stdio（JSON-RPC over stdin/stdout）+ Streamable HTTP（`--transport http`）
 
 ## Roadmap
 
-- [x] MCP 服务器骨架（stdio 传输）
+- [x] MCP 服务器骨架（stdio + Streamable HTTP 传输）
 - [x] Go 测试生成器（AST → 表驱动测试）
 - [x] 泛型 / 通道 / 接口 / 变参 / `reflect.DeepEqual` 支持
 - [x] JavaScript/TypeScript 测试生成器（函数/箭头/类/async → Jest）
@@ -266,7 +267,6 @@ go run main.go
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
 - [x] 覆盖率解析（Go / Jest / Vitest / pytest）
 - [ ] Mocha 覆盖率解析
-- [ ] Streamable HTTP 传输层支持
 - [ ] VS Code Extension 配套
 
 ## License

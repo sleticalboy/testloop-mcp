@@ -188,7 +188,7 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 
 ```
 testloop-mcp/
-├── main.go                          # 入口，启动 MCP server（stdio）
+├── main.go                          # 入口，启动 MCP server（stdio / Streamable HTTP）
 ├── go.mod                           # github.com/binlee/testloop-mcp, go 1.25
 ├── types/
 │   └── types.go                     # 公共类型定义（TestResult/TestFailure/FixSuggestion/CoverageReport 等）
@@ -228,10 +228,10 @@ testloop-mcp/
 
 | 模式 | 参数 | 用途 |
 |------|------|------|
-| stdio | `--stdio` | 生产使用，接入 Claude/Cursor |
-| Streamable HTTP | `--http --port 8080` | 开发调试，可用 Insomnia/Postman 测试 |
+| stdio | `--transport stdio`（默认） | 生产使用，接入 Claude/Cursor |
+| Streamable HTTP | `--transport http --addr :8080` | 远程部署、多客户端、Web IDE 集成 |
 
-> 当前仅实现 stdio。Streamable HTTP 待后续迭代（go-sdk 已有 `StreamableHTTPRequestHandler`）。
+> 两种模式均已实现。HTTP 模式基于 go-sdk 的 `StreamableHTTPHandler`，支持有状态（默认）和无状态（`--stateless`）两种会话模式。
 
 ---
 
