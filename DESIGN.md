@@ -168,7 +168,7 @@ testloop-mcp/
 | 模式 | 参数 | 用途 |
 |------|------|------|
 | stdio | `--stdio` | 生产使用，接入 Claude/Cursor |
-| SSE HTTP | `--sse --port 8080` | 开发调试，可用 Insomnia/Postman 测试 |
+| Streamable HTTP | `--http --port 8080` | 开发调试，可用 Insomnia/Postman 测试 |
 
 ---
 
