@@ -44,7 +44,7 @@ type istanbulFileCoverage struct {
 }
 
 // ParseJestCoverage 解析 Jest / Vitest 的 coverage-final.json 格式
-func ParseJestCoverage(profileData string) (*types.CoverageReport, error) {
+func ParseJestCoverage(profileData, framework string) (*types.CoverageReport, error) {
 	// 尝试解析为 JSON
 	var raw map[string]istanbulFileCoverage
 	if err := json.Unmarshal([]byte(profileData), &raw); err != nil {
@@ -95,7 +95,7 @@ func ParseJestCoverage(profileData string) (*types.CoverageReport, error) {
 	}
 
 	report := &types.CoverageReport{
-		Framework:    "jest",
+		Framework:    framework,
 		TotalPercent: percent(coveredStmts, totalStmts),
 		Files:        files,
 		Summary: types.CoverageSummary{

@@ -36,12 +36,12 @@ AI IDE (Claude Code / Cursor / Copilot)
 | 语言 | 测试框架 | 生成 | 执行 | 解析 | 覆盖率 |
 |------|---------|:----:|:----:|:----:|:------:|
 | Go | `go test` | ✅ | ✅ | ✅ | ✅ |
-| Node.js | Jest | — | ✅ | ✅ | ✅ |
-| Node.js | Vitest | — | ✅ | ✅ | ✅ |
+| Node.js | Jest | ✅ | ✅ | ✅ | ✅ |
+| Node.js | Vitest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Mocha | — | ✅ | ✅ | — |
-| Python | pytest | — | ✅ | ✅ | ✅ |
+| Python | pytest | ✅ | ✅ | ✅ | ✅ |
 
-> 测试生成当前仅支持 Go（基于 `go/ast` 原生 AST 分析）。其他语言的生成器后续迭代。
+> 测试生成支持 Go（基于 `go/ast` 原生 AST）、JavaScript/TypeScript（正则解析函数签名 → Jest 测试）、Python（正则解析 `def`/`class` → pytest 测试）。
 
 ## 安装
 
@@ -87,16 +87,20 @@ go build -o testloop-mcp .
 
 ### `generate_tests`
 
-根据源文件生成测试代码（当前支持 Go）。
+根据源文件生成测试代码。支持 Go（AST 分析）、JavaScript/TypeScript（Jest）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `file_path` | string | ✅ | 源文件路径 |
-| `framework` | string | — | 测试框架，默认 `go test` |
+| `file_path` | string | ✅ | 源文件路径（`.go` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
+| `framework` | string | — | 测试框架，默认根据文件扩展名自动选择 |
 
 **返回：** `{ status, test_file, generated_cases, preview }`
 
-生成的测试支持：泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
+**Go 生成器：** 基于 `go/ast` 原生 AST 分析，支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
+
+**JS/TS 生成器：** 正则解析函数声明、箭头函数、类方法，自动检测 CommonJS / ES Module 导入方式。支持 async 函数、变参 `...args`、默认值参数、TypeScript 类型注解剥离。
+
+**Python 生成器：** 正则解析 `def`/`async def`/`class` 声明，自动剥离 `self`/`cls` 参数、类型注解、默认值。支持 `*args`/`**kwargs`、`@staticmethod`。
 
 ---
 
@@ -198,7 +202,10 @@ testloop-mcp/
 │   └── parse_coverage.go            # parse_coverage 工具
 ├── internal/
 │   ├── generator/
-│   │   └── go_generator.go          # Go AST 测试生成器（泛型/通道/接口/变参）
+│   │   ├── generator.go              # 多语言分发入口（按扩展名路由）
+│   │   ├── go_generator.go           # Go AST 测试生成器（泛型/通道/接口/变参）
+│   │   ├── js_generator.go           # JS/TS Jest 测试生成器（函数/箭头/类/async）
+│   │   └── py_generator.go           # Python pytest 测试生成器（def/class/async）
 │   ├── parser/
 │   │   ├── parser.go                # 统一解析入口
 │   │   ├── go_parser.go             # go test 输出解析
@@ -252,12 +259,13 @@ go run main.go
 - [x] MCP 服务器骨架（stdio 传输）
 - [x] Go 测试生成器（AST → 表驱动测试）
 - [x] 泛型 / 通道 / 接口 / 变参 / `reflect.DeepEqual` 支持
+- [x] JavaScript/TypeScript 测试生成器（函数/箭头/类/async → Jest）
+- [x] Python 测试生成器（def/class/async → pytest）
 - [x] `go test` / Jest / Vitest / Mocha / pytest 执行器
 - [x] 测试输出解析器（5 框架）
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
-- [x] 覆盖率解析（Go / Jest / pytest）
-- [ ] Vitest / Mocha 覆盖率解析
-- [ ] Jest / pytest 测试生成器
+- [x] 覆盖率解析（Go / Jest / Vitest / pytest）
+- [ ] Mocha 覆盖率解析
 - [ ] Streamable HTTP 传输层支持
 - [ ] VS Code Extension 配套
 

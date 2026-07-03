@@ -48,8 +48,8 @@ type methodSig struct {
 	Returns []paramInfo
 }
 
-// GenerateTests 读取源文件，用 AST 分析生成表驱动测试代码
-func GenerateTests(srcPath string) (string, error) {
+// GenerateGoTests 读取 Go 源文件，用 AST 分析生成表驱动测试代码
+func GenerateGoTests(srcPath string) (string, error) {
 	fs := token.NewFileSet()
 	node, err := parser.ParseFile(fs, srcPath, nil, parser.ParseComments)
 	if err != nil {

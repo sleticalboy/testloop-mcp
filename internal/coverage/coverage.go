@@ -11,8 +11,10 @@ func ParseCoverage(profileData, framework string) (*types.CoverageReport, error)
 	switch framework {
 	case "go-test":
 		return ParseGoCoverage(profileData)
-	case "jest", "vitest":
-		return ParseJestCoverage(profileData)
+	case "jest":
+		return ParseJestCoverage(profileData, "jest")
+	case "vitest":
+		return ParseJestCoverage(profileData, "vitest")
 	case "pytest":
 		return ParsePytestCoverage(profileData)
 	default:

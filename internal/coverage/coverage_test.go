@@ -93,7 +93,7 @@ func TestParseJestCoverage(t *testing.T) {
 		}
 	}`
 
-	report, err := ParseJestCoverage(raw)
+	report, err := ParseJestCoverage(raw, "jest")
 	if err != nil {
 		t.Fatalf("ParseJestCoverage 失败: %v", err)
 	}
@@ -185,6 +185,15 @@ example.com/foo.go:1.1,2.1 1 1`
 	}
 	if r2.Framework != "jest" {
 		t.Errorf("Framework = %s", r2.Framework)
+	}
+
+	// vitest — 同样走 Istanbul 格式，但 framework 标签应为 vitest
+	r3, err := ParseCoverage(jestData, "vitest")
+	if err != nil {
+		t.Fatalf("vitest 分发失败: %v", err)
+	}
+	if r3.Framework != "vitest" {
+		t.Errorf("Framework = %s, want vitest", r3.Framework)
 	}
 
 	// 不支持的框架

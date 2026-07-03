@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -34,8 +36,8 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, fmt.Errorf("生成测试失败: %w", err)
 	}
 
-	// 写入测试文件
-	testFile := filePath[:len(filePath)-3] + "_test.go" // 替换 .go → _test.go
+	// 根据语言约定生成测试文件名
+	testFile := genTestFileName(filePath)
 	if err := os.WriteFile(testFile, []byte(code), 0644); err != nil {
 		return nil, nil, fmt.Errorf("写入测试文件失败: %w", err)
 	}
@@ -51,4 +53,29 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+// genTestFileName 根据源文件扩展名生成对应的测试文件名
+// .go → _test.go, .js → .test.js, .ts → .test.ts, .py → test_*.py
+func genTestFileName(srcPath string) string {
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	dir := filepath.Dir(srcPath)
+	name := strings.TrimSuffix(filepath.Base(srcPath), ext)
+
+	switch ext {
+	case ".go":
+		return filepath.Join(dir, name+"_test.go")
+	case ".js", ".mjs", ".cjs":
+		return filepath.Join(dir, name+".test.js")
+	case ".jsx":
+		return filepath.Join(dir, name+".test.jsx")
+	case ".ts":
+		return filepath.Join(dir, name+".test.ts")
+	case ".tsx":
+		return filepath.Join(dir, name+".test.tsx")
+	case ".py":
+		return filepath.Join(dir, "test_"+name+".py")
+	default:
+		return filepath.Join(dir, name+".test"+ext)
+	}
 }

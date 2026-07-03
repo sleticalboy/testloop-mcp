@@ -34,6 +34,11 @@ Thumbs.db
 
 # Test artifacts
 demo/*_test.go
+demo/*.test.js
+demo/*.test.ts
+demo/*.test.jsx
+demo/*.test.tsx
+demo/test_*.py
 demo-node/jest_output.txt
 demo-python/pytest_output.txt
 demo-python/venv/
