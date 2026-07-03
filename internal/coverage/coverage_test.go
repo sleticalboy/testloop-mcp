@@ -196,6 +196,15 @@ example.com/foo.go:1.1,2.1 1 1`
 		t.Errorf("Framework = %s, want vitest", r3.Framework)
 	}
 
+	// mocha — 同样走 Istanbul 格式（nyc 生成），framework 标签应为 mocha
+	r4, err := ParseCoverage(jestData, "mocha")
+	if err != nil {
+		t.Fatalf("mocha 分发失败: %v", err)
+	}
+	if r4.Framework != "mocha" {
+		t.Errorf("Framework = %s, want mocha", r4.Framework)
+	}
+
 	// 不支持的框架
 	_, err = ParseCoverage("", "ruby")
 	if err == nil {

@@ -38,7 +38,7 @@ AI IDE (Claude Code / Cursor / Copilot)
 | Go | `go test` | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Jest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Vitest | ✅ | ✅ | ✅ | ✅ |
-| Node.js | Mocha | — | ✅ | ✅ | — |
+| Node.js | Mocha | ✅ | ✅ | ✅ | ✅ |
 | Python | pytest | ✅ | ✅ | ✅ | ✅ |
 
 > 测试生成支持 Go（基于 `go/ast` 原生 AST）、JavaScript/TypeScript（正则解析函数签名 → Jest 测试）、Python（正则解析 `def`/`class` → pytest 测试）。
@@ -265,8 +265,7 @@ go run main.go --transport http --addr :8080  # Streamable HTTP 模式
 - [x] `go test` / Jest / Vitest / Mocha / pytest 执行器
 - [x] 测试输出解析器（5 框架）
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
-- [x] 覆盖率解析（Go / Jest / Vitest / pytest）
-- [ ] Mocha 覆盖率解析
+- [x] 覆盖率解析（Go / Jest / Vitest / Mocha / pytest）
 - [ ] VS Code Extension 配套
 
 ## License

@@ -15,6 +15,8 @@ func ParseCoverage(profileData, framework string) (*types.CoverageReport, error)
 		return ParseJestCoverage(profileData, "jest")
 	case "vitest":
 		return ParseJestCoverage(profileData, "vitest")
+	case "mocha":
+		return ParseJestCoverage(profileData, "mocha")
 	case "pytest":
 		return ParsePytestCoverage(profileData)
 	default:

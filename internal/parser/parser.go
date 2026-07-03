@@ -6,17 +6,20 @@ import (
 
 // ParseTestOutput 根据框架类型解析测试输出
 func ParseTestOutput(output, framework string) types.TestResult {
+	var result types.TestResult
 	switch framework {
 	case "go-test":
-		return ParseGoTest(output)
+		result = ParseGoTest(output)
 	case "jest":
-		return ParseJestTest(output)
+		result = ParseJestTest(output)
 	case "pytest":
-		return ParsePytestTest(output)
+		result = ParsePytestTest(output)
 	case "mocha":
-		return ParseMochaTest(output)
+		result = ParseMochaTest(output)
 	default:
-		// 默认按 go test 解析
-		return ParseGoTest(output)
+		result = ParseGoTest(output)
+		framework = "go-test"
 	}
+	result.Framework = framework
+	return result
 }
