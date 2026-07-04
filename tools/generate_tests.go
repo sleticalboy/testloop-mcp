@@ -15,8 +15,8 @@ import (
 )
 
 type generateTestsInput struct {
-	FilePath  string   `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
-	Framework string   `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
+	FilePath  string `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
+	Framework string `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
 }
 
 func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input generateTestsInput) (*mcp.CallToolResult, any, error) {
@@ -45,14 +45,46 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	out := types.GenerateTestsOutput{
 		Status:         "ok",
 		TestFile:       testFile,
-		GeneratedCases: 0, // TODO: 统计实际生成的测试用例数
-		Preview:         code,
+		GeneratedCases: countGeneratedCases(code, filepath.Ext(filePath)),
+		Preview:        code,
+		Context:        generator.BuildGenerationContext(filePath),
 	}
 
 	resultJSON, _ := json.Marshal(out)
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+func countGeneratedCases(code, ext string) int {
+	ext = strings.ToLower(ext)
+	switch ext {
+	case ".go":
+		return countLinePrefixes(code, "func Test")
+	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+		return strings.Count(code, "it('") + strings.Count(code, "it(\"")
+	case ".py":
+		return countLinePrefixes(code, "def test_", "    def test_")
+	case ".rs":
+		return strings.Count(code, "#[test]")
+	case ".java":
+		return strings.Count(code, "@Test")
+	default:
+		return 0
+	}
+}
+
+func countLinePrefixes(code string, prefixes ...string) int {
+	count := 0
+	for _, line := range strings.Split(code, "\n") {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(line, prefix) {
+				count++
+				break
+			}
+		}
+	}
+	return count
 }
 
 // genTestFileName 根据源文件扩展名生成对应的测试文件名

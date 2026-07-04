@@ -162,7 +162,41 @@ func TestE2E_GenerateTests(t *testing.T) {
 		t.Errorf("preview should contain 'func Test'")
 	}
 
+	generatedCases, _ := payload["generated_cases"].(float64)
+	if generatedCases <= 0 {
+		t.Fatalf("expected generated_cases > 0, got: %v", payload["generated_cases"])
+	}
+
 	t.Logf("generate_tests: test_file=%s, preview_len=%d", testFile, len(preview))
+}
+
+// TestE2E_GenerateTests_Context 验证 generate_tests 返回语义生成上下文
+func TestE2E_GenerateTests_Context(t *testing.T) {
+	session := startServer(t)
+	defer session.Close()
+
+	srcPath := filepath.Join(projectRoot(), "demo", "calc.py")
+	payload := callTool(t, session, "generate_tests", map[string]any{
+		"file_path": srcPath,
+	})
+
+	testFile, _ := payload["test_file"].(string)
+	if testFile == "" {
+		t.Fatal("test_file is empty")
+	}
+	defer os.Remove(testFile)
+
+	contextPayload, ok := payload["context"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected context object, got: %T", payload["context"])
+	}
+	if contextPayload["language"] != "python" || contextPayload["framework"] != "pytest" {
+		t.Fatalf("unexpected context metadata: %+v", contextPayload)
+	}
+	targets, ok := contextPayload["targets"].([]any)
+	if !ok || len(targets) == 0 {
+		t.Fatalf("expected non-empty context targets, got: %v", contextPayload["targets"])
+	}
 }
 
 // TestE2E_RunTests 验证 run_tests 端到端
@@ -416,6 +450,11 @@ func TestE2E_GenerateTests_Rust(t *testing.T) {
 		t.Errorf("preview should contain 'fn test_', got: %.100s", preview)
 	}
 
+	generatedCases, _ := payload["generated_cases"].(float64)
+	if generatedCases <= 0 {
+		t.Fatalf("expected generated_cases > 0, got: %v", payload["generated_cases"])
+	}
+
 	t.Logf("generate_tests (Rust): test_file=%s, preview_len=%d", testFile, len(preview))
 }
 
@@ -439,6 +478,11 @@ func TestE2E_GenerateTests_Java(t *testing.T) {
 	}
 	if !strings.Contains(preview, "assert") {
 		t.Errorf("preview should contain 'assert', got: %.100s", preview)
+	}
+
+	generatedCases, _ := payload["generated_cases"].(float64)
+	if generatedCases <= 0 {
+		t.Fatalf("expected generated_cases > 0, got: %v", payload["generated_cases"])
 	}
 
 	t.Logf("generate_tests (Java): test_file=%s, preview_len=%d", testFile, len(preview))

@@ -98,3 +98,25 @@ func TestParseGoTest_JSONPassFailSkip(t *testing.T) {
 		t.Errorf("期望 Error 包含 got 4，实际 %s", f.Error)
 	}
 }
+
+func TestParseGoTest_JSONSkipOutputIsNotFailure(t *testing.T) {
+	output := `
+{"Action":"run","Package":"example.com/calc","Test":"TestTodo"}
+{"Action":"run","Package":"example.com/calc","Test":"TestTodo/todo"}
+{"Action":"output","Package":"example.com/calc","Test":"TestTodo/todo","Output":"    calc_test.go:12: TODO: fill in meaningful test inputs\n"}
+{"Action":"skip","Package":"example.com/calc","Test":"TestTodo/todo","Elapsed":0}
+{"Action":"pass","Package":"example.com/calc","Test":"TestTodo","Elapsed":0}
+{"Action":"pass","Package":"example.com/calc","Elapsed":0}
+`
+
+	result := ParseGoTest(output)
+	if result.Status != "pass" {
+		t.Fatalf("期望 status=pass，实际 %s: %+v", result.Status, result.Failures)
+	}
+	if result.Failed != 0 || len(result.Failures) != 0 {
+		t.Fatalf("skip 输出不应产生失败: failed=%d failures=%+v", result.Failed, result.Failures)
+	}
+	if result.Passed != 1 || result.Skipped != 1 || result.Total != 2 {
+		t.Fatalf("统计错误: passed=%d skipped=%d total=%d", result.Passed, result.Skipped, result.Total)
+	}
+}

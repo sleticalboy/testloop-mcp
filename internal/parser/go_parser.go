@@ -60,7 +60,10 @@ func parseGoTestJSON(output string) types.TestResult {
 		RawOutput: output,
 	}
 
-	failures := map[string]*goFailureState{}
+	outputs := map[string]*goFailureState{}
+	failedTests := map[string]bool{}
+	packageFailed := false
+	packageName := ""
 	for _, rawLine := range strings.Split(output, "\n") {
 		line := strings.TrimSpace(rawLine)
 		if line == "" {
@@ -82,12 +85,11 @@ func parseGoTestJSON(output string) types.TestResult {
 			result.Status = "fail"
 			if event.Test != "" {
 				result.Failed++
-				ensureGoFailure(failures, event.Test)
+				failedTests[event.Test] = true
+				ensureGoFailure(outputs, event.Test)
 			} else if result.Failed == 0 {
-				failures["package"] = &goFailureState{
-					Name:    event.Package,
-					Details: []string{"package failed"},
-				}
+				packageFailed = true
+				packageName = event.Package
 			}
 		case "skip":
 			if event.Test != "" {
@@ -105,7 +107,7 @@ func parseGoTestJSON(output string) types.TestResult {
 			if detail == "" || strings.HasPrefix(detail, "===") || strings.HasPrefix(detail, "---") {
 				continue
 			}
-			state := ensureGoFailure(failures, event.Test)
+			state := ensureGoFailure(outputs, event.Test)
 			file, lineNum, msg, ok := parseGoFailureDetail(detail)
 			if ok {
 				if state.File == "" {
@@ -122,7 +124,8 @@ func parseGoTestJSON(output string) types.TestResult {
 
 	}
 
-	for _, failure := range failures {
+	for testName := range failedTests {
+		failure := outputs[testName]
 		errorMsg := strings.TrimSpace(strings.Join(failure.Details, "\n"))
 		if errorMsg == "" {
 			errorMsg = "test failed"
@@ -132,6 +135,12 @@ func parseGoTestJSON(output string) types.TestResult {
 			File:     failure.File,
 			Line:     failure.Line,
 			Error:    errorMsg,
+		})
+	}
+	if packageFailed && len(result.Failures) == 0 {
+		result.Failures = append(result.Failures, types.TestFailure{
+			TestName: packageName,
+			Error:    "package failed",
 		})
 	}
 
