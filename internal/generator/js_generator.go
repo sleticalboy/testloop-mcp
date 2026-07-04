@@ -311,7 +311,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 	} else {
 		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgList(fn.Params)))
 	}
-	sb.WriteString(genJSResultAssertion(fn.Analysis, "    "))
+	sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, nil, "    "))
 	sb.WriteString("  });\n\n")
 
 	for _, b := range fn.Analysis.Boundaries {
@@ -333,7 +333,8 @@ func genJestFuncTest(fn jsFuncInfo) string {
 			} else {
 				sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 			}
-			sb.WriteString(genJSResultAssertion(fn.Analysis, "    "))
+			boundary := b
+			sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, &boundary, "    "))
 		}
 		sb.WriteString("  });\n\n")
 	}
@@ -356,7 +357,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 		} else {
 			sb.WriteString(fmt.Sprintf("    const result = %s();\n", fn.Name))
 		}
-		sb.WriteString(genJSResultAssertion(fn.Analysis, "    "))
+		sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, nil, "    "))
 		sb.WriteString("  });\n\n")
 	}
 
@@ -387,7 +388,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 		} else {
 			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgList(method.Params)))
 		}
-		sb.WriteString(genJSResultAssertion(method.Analysis, "      "))
+		sb.WriteString(genJSResultAssertionWithArgs(method.Analysis, method.Params, nil, "      "))
 		sb.WriteString("    });\n\n")
 
 		if method.Analysis.Throws {
@@ -422,7 +423,8 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 				} else {
 					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
 				}
-				sb.WriteString(genJSResultAssertion(method.Analysis, "      "))
+				boundary := b
+				sb.WriteString(genJSResultAssertionWithArgs(method.Analysis, method.Params, &boundary, "      "))
 			}
 			sb.WriteString("    });\n\n")
 		}
@@ -436,10 +438,19 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 }
 
 func genJSResultAssertion(a jsFuncAnalysis, indent string) string {
+	return genJSResultAssertionWithArgs(a, nil, nil, indent)
+}
+
+func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, indent string) string {
 	var sb strings.Builder
 
 	if !a.HasReturn {
 		sb.WriteString(indent + "// void function, verify no exception\n")
+		return sb.String()
+	}
+
+	if expected, ok := jsExpectedReturnExpr(a, params, boundary); ok {
+		sb.WriteString(indent + "expect(result).toBe(" + expected + ");\n")
 		return sb.String()
 	}
 
@@ -466,6 +477,46 @@ func genJSResultAssertion(a jsFuncAnalysis, indent string) string {
 	}
 
 	return sb.String()
+}
+
+func jsExpectedReturnExpr(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary) (string, bool) {
+	if len(a.Returns) != 1 {
+		return "", false
+	}
+	expr := strings.TrimSpace(strings.TrimSuffix(a.Returns[0], ";"))
+	if !jsReturnExprIsSafe(expr) {
+		return "", false
+	}
+
+	for i, p := range params {
+		if p.IsRest {
+			continue
+		}
+		value := jsArgValue(p, i)
+		if boundary != nil && p.Name == boundary.Param {
+			value = boundary.Value
+		}
+		expr = replaceIdentifier(expr, p.Name, value)
+	}
+
+	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+		"true": true, "false": true, "null": true, "undefined": true,
+	}) {
+		return "", false
+	}
+	return "(" + expr + ")", true
+}
+
+func jsReturnExprIsSafe(expr string) bool {
+	if expr == "" || strings.ContainsAny(expr, "\n;{}[]") {
+		return false
+	}
+	for _, blocked := range []string{"await ", "function", "=>", "new ", "this.", "(", ")("} {
+		if strings.Contains(expr, blocked) {
+			return false
+		}
+	}
+	return true
 }
 
 // ---- 辅助函数 ----

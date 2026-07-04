@@ -250,6 +250,50 @@ func TestPytestBoundaryUsesRaisesForErrorPath(t *testing.T) {
 	}
 }
 
+func TestPytestGeneratesExactAssertionForSimpleReturn(t *testing.T) {
+	fn := pyFuncInfo{
+		Name:   "add",
+		Params: []pyParamInfo{{Name: "a"}, {Name: "b"}},
+		Analysis: pyFuncAnalysis{
+			ReturnType: "int",
+			Returns:    []string{"a + b"},
+			HasReturn:  true,
+		},
+	}
+
+	code := genPytestFuncTest(fn)
+	if !strings.Contains(code, "result = add(1, 2)") {
+		t.Fatalf("expected semantic args, got:\n%s", code)
+	}
+	if !strings.Contains(code, "assert result == (1 + 2)") {
+		t.Fatalf("expected exact assertion, got:\n%s", code)
+	}
+	if strings.Contains(code, "assert isinstance(result, int)") {
+		t.Fatalf("exact assertion should replace broad type assertion, got:\n%s", code)
+	}
+}
+
+func TestPytestExactAssertionUsesBoundaryValue(t *testing.T) {
+	fn := pyFuncInfo{
+		Name:   "normalize",
+		Params: []pyParamInfo{{Name: "prefix"}, {Name: "text"}},
+		Analysis: pyFuncAnalysis{
+			ReturnType: "str",
+			Returns:    []string{"prefix + text"},
+			HasReturn:  true,
+			Boundaries: []pyBoundary{{Param: "prefix", Value: "'>'", Type: "string"}},
+		},
+	}
+
+	code := genPytestFuncTest(fn)
+	if !strings.Contains(code, "assert result == ('test' + 'test')") {
+		t.Fatalf("expected exact normal assertion, got:\n%s", code)
+	}
+	if !strings.Contains(code, "assert result == ('>' + 'test')") {
+		t.Fatalf("expected exact boundary assertion, got:\n%s", code)
+	}
+}
+
 func TestIsPyDunder(t *testing.T) {
 	if !isPyDunder("__init__") {
 		t.Error("__init__ should be dunder")

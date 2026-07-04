@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Python/Jest 生成器会对简单 return 表达式生成精确断言，例如 `a + b` 会生成 `assert result == (1 + 2)` / `expect(result).toBe((1 + 2))`。
+- 边界用例会把边界值带入简单 return 表达式，生成更具体的断言。
+
 ## v0.2.0 - 2026-07-05
 
 ### Added

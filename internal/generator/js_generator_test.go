@@ -259,6 +259,50 @@ func TestJSTestBoundaryUsesThrowForErrorPath(t *testing.T) {
 	}
 }
 
+func TestJestGeneratesExactAssertionForSimpleReturn(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "add",
+		Params: []jsParamInfo{{Name: "a"}, {Name: "b"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "number",
+			Returns:    []string{"a + b"},
+			HasReturn:  true,
+		},
+	}
+
+	code := genJestFuncTest(fn)
+	if !strings.Contains(code, "const result = add(1, 2);") {
+		t.Fatalf("expected semantic args, got:\n%s", code)
+	}
+	if !strings.Contains(code, "expect(result).toBe((1 + 2));") {
+		t.Fatalf("expected exact assertion, got:\n%s", code)
+	}
+	if strings.Contains(code, "expect(typeof result).toBe('number');") {
+		t.Fatalf("exact assertion should replace broad type assertion, got:\n%s", code)
+	}
+}
+
+func TestJestExactAssertionUsesBoundaryValue(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "normalize",
+		Params: []jsParamInfo{{Name: "prefix"}, {Name: "text"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "string",
+			Returns:    []string{"prefix + text"},
+			HasReturn:  true,
+			Boundaries: []jsBoundary{{Param: "prefix", Value: "'>'", Type: "string"}},
+		},
+	}
+
+	code := genJestFuncTest(fn)
+	if !strings.Contains(code, "expect(result).toBe(('test' + 'test'));") {
+		t.Fatalf("expected exact normal assertion, got:\n%s", code)
+	}
+	if !strings.Contains(code, "expect(result).toBe(('>' + 'test'));") {
+		t.Fatalf("expected exact boundary assertion, got:\n%s", code)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {

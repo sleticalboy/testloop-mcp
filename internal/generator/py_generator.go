@@ -326,7 +326,7 @@ func genPytestFuncTest(fn pyFuncInfo) string {
 		sb.WriteString(fmt.Sprintf("def test_%s():\n", fn.Name))
 		sb.WriteString(fmt.Sprintf("    result = %s(%s)\n", fn.Name, pyArgList(fn.Params)))
 	}
-	sb.WriteString(genPyResultAssertion(fn.Analysis, "    "))
+	sb.WriteString(genPyResultAssertionWithArgs(fn.Analysis, fn.Params, nil, "    "))
 
 	for _, b := range fn.Analysis.Boundaries {
 		if !pyParamExists(fn.Params, b.Param) {
@@ -347,7 +347,8 @@ func genPytestFuncTest(fn pyFuncInfo) string {
 			} else {
 				sb.WriteString(fmt.Sprintf("    result = %s(%s)\n", fn.Name, args))
 			}
-			sb.WriteString(genPyResultAssertion(fn.Analysis, "    "))
+			boundary := b
+			sb.WriteString(genPyResultAssertionWithArgs(fn.Analysis, fn.Params, &boundary, "    "))
 		}
 	}
 
@@ -389,7 +390,7 @@ func genPytestClassTest(cls pyClassInfo) string {
 			} else {
 				sb.WriteString(fmt.Sprintf("        result = %s.%s(%s)\n", cls.Name, method.Name, pyArgList(method.Params)))
 			}
-			sb.WriteString(genPyResultAssertion(method.Analysis, "        "))
+			sb.WriteString(genPyResultAssertionWithArgs(method.Analysis, method.Params, nil, "        "))
 		} else {
 			sb.WriteString(fmt.Sprintf("    def test_%s(self):\n", testName))
 			sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
@@ -398,7 +399,7 @@ func genPytestClassTest(cls pyClassInfo) string {
 			} else {
 				sb.WriteString(fmt.Sprintf("        result = instance.%s(%s)\n", method.Name, pyArgList(method.Params)))
 			}
-			sb.WriteString(genPyResultAssertion(method.Analysis, "        "))
+			sb.WriteString(genPyResultAssertionWithArgs(method.Analysis, method.Params, nil, "        "))
 		}
 
 		if method.Analysis.Raises {
@@ -462,7 +463,8 @@ func genPytestClassTest(cls pyClassInfo) string {
 						sb.WriteString(fmt.Sprintf("        result = instance.%s(%s)\n", method.Name, args))
 					}
 				}
-				sb.WriteString(genPyResultAssertion(method.Analysis, "        "))
+				boundary := b
+				sb.WriteString(genPyResultAssertionWithArgs(method.Analysis, method.Params, &boundary, "        "))
 			}
 		}
 	}
@@ -471,10 +473,19 @@ func genPytestClassTest(cls pyClassInfo) string {
 }
 
 func genPyResultAssertion(a pyFuncAnalysis, indent string) string {
+	return genPyResultAssertionWithArgs(a, nil, nil, indent)
+}
+
+func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary, indent string) string {
 	var sb strings.Builder
 
 	if !a.HasReturn {
 		sb.WriteString(indent + "# void function, verify no exception\n")
+		return sb.String()
+	}
+
+	if expected, ok := pyExpectedReturnExpr(a, params, boundary); ok {
+		sb.WriteString(indent + "assert result == " + expected + "\n")
 		return sb.String()
 	}
 
@@ -500,6 +511,47 @@ func genPyResultAssertion(a pyFuncAnalysis, indent string) string {
 	}
 
 	return sb.String()
+}
+
+func pyExpectedReturnExpr(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary) (string, bool) {
+	if len(a.Returns) != 1 {
+		return "", false
+	}
+	expr := strings.TrimSpace(a.Returns[0])
+	if !pyReturnExprIsSafe(expr) {
+		return "", false
+	}
+
+	for i, p := range params {
+		if p.IsArgs || p.IsKwargs {
+			continue
+		}
+		value := pyArgValue(p, i)
+		if boundary != nil && p.Name == boundary.Param {
+			value = boundary.Value
+		}
+		expr = replaceIdentifier(expr, p.Name, value)
+	}
+
+	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+		"True": true, "False": true, "None": true,
+		"and": true, "or": true, "not": true, "is": true,
+	}) {
+		return "", false
+	}
+	return "(" + expr + ")", true
+}
+
+func pyReturnExprIsSafe(expr string) bool {
+	if expr == "" || strings.ContainsAny(expr, "\n;{}[]") {
+		return false
+	}
+	for _, blocked := range []string{"await ", "lambda ", "yield ", " for ", " if ", "(", ")("} {
+		if strings.Contains(expr, blocked) {
+			return false
+		}
+	}
+	return true
 }
 
 // ---- 辅助函数 ----
