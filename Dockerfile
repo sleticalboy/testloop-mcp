@@ -19,7 +19,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o testloop-mcp .
 # -- runtime stage --
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates musl-libc
+RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /build/testloop-mcp /usr/local/bin/testloop-mcp
 

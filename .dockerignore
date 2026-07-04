@@ -4,6 +4,9 @@
 .idea
 bin/
 pkg/
+testloop-mcp
+testgen
+*.test
 test/
 demo-node/
 demo-python/
