@@ -347,12 +347,13 @@ func genPytestFuncTest(fn pyFuncInfo) string {
 
 	if fn.Analysis.Raises {
 		sb.WriteString(fmt.Sprintf("\ndef test_%s_raises():\n", fn.Name))
+		args := pyInvalidArgList(fn.Params, fn.Analysis.Boundaries)
 		if fn.IsAsync {
 			sb.WriteString(fmt.Sprintf("    with pytest.raises(Exception):\n"))
-			sb.WriteString(fmt.Sprintf("        asyncio.run(%s(%s))\n", fn.Name, pyArgList(fn.Params)))
+			sb.WriteString(fmt.Sprintf("        asyncio.run(%s(%s))\n", fn.Name, args))
 		} else {
 			sb.WriteString(fmt.Sprintf("    with pytest.raises(Exception):\n"))
-			sb.WriteString(fmt.Sprintf("        %s(%s)\n", fn.Name, pyArgList(fn.Params)))
+			sb.WriteString(fmt.Sprintf("        %s(%s)\n", fn.Name, args))
 		}
 		sb.WriteString("\n")
 	}
@@ -396,22 +397,23 @@ func genPytestClassTest(cls pyClassInfo) string {
 
 		if method.Analysis.Raises {
 			sb.WriteString(fmt.Sprintf("\n    def test_%s_raises(self):\n", method.Name))
+			args := pyInvalidArgList(method.Params, method.Analysis.Boundaries)
 			if method.IsStatic {
 				if method.IsAsync {
 					sb.WriteString("        with pytest.raises(Exception):\n")
-					sb.WriteString(fmt.Sprintf("            asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, pyArgList(method.Params)))
+					sb.WriteString(fmt.Sprintf("            asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
 				} else {
 					sb.WriteString("        with pytest.raises(Exception):\n")
-					sb.WriteString(fmt.Sprintf("            %s.%s(%s)\n", cls.Name, method.Name, pyArgList(method.Params)))
+					sb.WriteString(fmt.Sprintf("            %s.%s(%s)\n", cls.Name, method.Name, args))
 				}
 			} else {
 				sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
 				if method.IsAsync {
 					sb.WriteString("        with pytest.raises(Exception):\n")
-					sb.WriteString(fmt.Sprintf("            asyncio.run(instance.%s(%s))\n", method.Name, pyArgList(method.Params)))
+					sb.WriteString(fmt.Sprintf("            asyncio.run(instance.%s(%s))\n", method.Name, args))
 				} else {
 					sb.WriteString("        with pytest.raises(Exception):\n")
-					sb.WriteString(fmt.Sprintf("            instance.%s(%s)\n", method.Name, pyArgList(method.Params)))
+					sb.WriteString(fmt.Sprintf("            instance.%s(%s)\n", method.Name, args))
 				}
 			}
 			sb.WriteString("\n")
@@ -495,18 +497,38 @@ func pyArgListWithBoundary(params []pyParamInfo, b pyBoundary) string {
 	for i, p := range params {
 		if p.Name == b.Param {
 			args[i] = b.Value
-		} else if p.IsArgs {
-			args[i] = "()"
-		} else if p.IsKwargs {
-			args[i] = "{}"
 		} else {
-			args[i] = "None"
+			args[i] = pyArgValue(p, i)
 		}
 	}
 	return strings.Join(args, ", ")
 }
 
 func pyArgList(params []pyParamInfo) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := make([]string, len(params))
+	for i, p := range params {
+		args[i] = pyArgValue(p, i)
+	}
+	return strings.Join(args, ", ")
+}
+
+func pyDefaultArgs(params []pyParamInfo) string {
+	return pyArgList(params)
+}
+
+func pyInvalidArgList(params []pyParamInfo, boundaries []pyBoundary) string {
+	for _, b := range boundaries {
+		if b.Value == "None" || b.Value == "False" {
+			return pyArgListWithBoundary(params, b)
+		}
+	}
+	return pyPlaceholderArgList(params)
+}
+
+func pyPlaceholderArgList(params []pyParamInfo) string {
 	if len(params) == 0 {
 		return ""
 	}
@@ -523,8 +545,75 @@ func pyArgList(params []pyParamInfo) string {
 	return strings.Join(args, ", ")
 }
 
-func pyDefaultArgs(params []pyParamInfo) string {
-	return pyArgList(params)
+func pyArgValue(p pyParamInfo, _ int) string {
+	if p.IsArgs {
+		return "()"
+	}
+	if p.IsKwargs {
+		return "{}"
+	}
+
+	name := strings.ToLower(p.Name)
+	compact := strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+
+	if pyNameHasPrefix(compact, "is", "has", "can", "should") ||
+		pyNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {
+		return "True"
+	}
+	if pyNameHasAny(compact, "items", "list", "array", "arr", "rows", "records", "args") {
+		return "[]"
+	}
+	if pyNameIsNumeric(compact) {
+		if compact == "b" || compact == "y" {
+			return "2"
+		}
+		return "1"
+	}
+	if pyNameHasAny(compact, "options", "opts", "config", "payload", "data", "body", "params", "query", "user", "metadata") {
+		return "{}"
+	}
+	if pyNameHasAny(compact, "url", "uri", "endpoint", "href") {
+		return "'https://example.com'"
+	}
+	if pyNameHasAny(compact, "email") {
+		return "'user@example.com'"
+	}
+	if pyNameHasAny(compact, "name", "title", "text", "message", "prefix", "suffix", "label", "path", "key", "value", "type", "mode") {
+		return "'test'"
+	}
+	if p.HasDefault {
+		return "None"
+	}
+
+	return "None"
+}
+
+func pyNameHasAny(name string, parts ...string) bool {
+	for _, part := range parts {
+		if strings.Contains(name, part) {
+			return true
+		}
+	}
+	return false
+}
+
+func pyNameHasPrefix(name string, prefixes ...string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(name, prefix) && len(name) > len(prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func pyNameIsNumeric(name string) bool {
+	switch name {
+	case "a", "b", "x", "y", "n", "num", "number", "count", "size", "index", "idx",
+		"age", "page", "limit", "offset", "total", "amount", "price", "id":
+		return true
+	}
+	return strings.HasSuffix(name, "id") || strings.HasSuffix(name, "count") ||
+		strings.HasSuffix(name, "index") || strings.HasSuffix(name, "size")
 }
 
 func isPyDunder(name string) bool {

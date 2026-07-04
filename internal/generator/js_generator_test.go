@@ -181,6 +181,60 @@ const arrow = (a, b) => a + b;
 	}
 }
 
+func TestJSTestArgsUseSemanticDefaults(t *testing.T) {
+	params := []jsParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+		{Name: "enabled"},
+		{Name: "items"},
+		{Name: "options"},
+		{Name: "name"},
+	}
+
+	got := jsArgList(params)
+	for _, want := range []string{
+		"'https://example.com'",
+		"1",
+		"true",
+		"[]",
+		"{}",
+		"'test'",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("jsArgList() = %q, want value %q", got, want)
+		}
+	}
+	if strings.Contains(got, "undefined") {
+		t.Fatalf("jsArgList() = %q, should avoid undefined for recognized params", got)
+	}
+}
+
+func TestJSTestArgsKeepSemanticDefaultsForBoundaryCases(t *testing.T) {
+	params := []jsParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+		{Name: "mode"},
+	}
+
+	got := jsArgListWithBoundary(params, jsBoundary{Param: "mode", Value: "null", Type: "null"})
+	if got != "'https://example.com', 1, null" {
+		t.Fatalf("jsArgListWithBoundary() = %q", got)
+	}
+}
+
+func TestJSThrowArgsPreferInvalidBoundary(t *testing.T) {
+	params := []jsParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+	}
+	boundaries := []jsBoundary{{Param: "url", Value: "undefined", Type: "undefined"}}
+
+	got := jsInvalidArgList(params, boundaries)
+	if got != "undefined, 1" {
+		t.Fatalf("jsInvalidArgList() = %q", got)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {

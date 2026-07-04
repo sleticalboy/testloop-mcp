@@ -172,6 +172,60 @@ func TestTreeSitterPython_SelfStripped(t *testing.T) {
 	}
 }
 
+func TestPytestArgsUseSemanticDefaults(t *testing.T) {
+	params := []pyParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+		{Name: "enabled"},
+		{Name: "items"},
+		{Name: "options"},
+		{Name: "name"},
+	}
+
+	got := pyArgList(params)
+	for _, want := range []string{
+		"'https://example.com'",
+		"1",
+		"True",
+		"[]",
+		"{}",
+		"'test'",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("pyArgList() = %q, want value %q", got, want)
+		}
+	}
+	if strings.Contains(got, "None") {
+		t.Fatalf("pyArgList() = %q, should avoid None for recognized params", got)
+	}
+}
+
+func TestPytestArgsKeepSemanticDefaultsForBoundaryCases(t *testing.T) {
+	params := []pyParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+		{Name: "mode"},
+	}
+
+	got := pyArgListWithBoundary(params, pyBoundary{Param: "mode", Value: "None", Type: "None"})
+	if got != "'https://example.com', 1, None" {
+		t.Fatalf("pyArgListWithBoundary() = %q", got)
+	}
+}
+
+func TestPytestRaiseArgsPreferInvalidBoundary(t *testing.T) {
+	params := []pyParamInfo{
+		{Name: "url"},
+		{Name: "count"},
+	}
+	boundaries := []pyBoundary{{Param: "url", Value: "None", Type: "None"}}
+
+	got := pyInvalidArgList(params, boundaries)
+	if got != "None, 1" {
+		t.Fatalf("pyInvalidArgList() = %q", got)
+	}
+}
+
 func TestIsPyDunder(t *testing.T) {
 	if !isPyDunder("__init__") {
 		t.Error("__init__ should be dunder")

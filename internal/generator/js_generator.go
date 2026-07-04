@@ -337,10 +337,11 @@ func genJestFuncTest(fn jsFuncInfo) string {
 
 	if fn.Analysis.Throws {
 		sb.WriteString(fmt.Sprintf("  it('should throw on invalid input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
+		args := jsInvalidArgList(fn.Params, fn.Analysis.Boundaries)
 		if fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, jsArgList(fn.Params)))
+			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
 		} else {
-			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, jsArgList(fn.Params)))
+			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
 		}
 		sb.WriteString("  });\n\n")
 	}
@@ -389,10 +390,11 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 		if method.Analysis.Throws {
 			sb.WriteString(fmt.Sprintf("    it('should throw on invalid input', %s => {\n", jsAsyncArrow(method.IsAsync)))
 			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+			args := jsInvalidArgList(method.Params, method.Analysis.Boundaries)
 			if method.IsAsync {
-				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, jsArgList(method.Params)))
+				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
 			} else {
-				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, jsArgList(method.Params)))
+				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
 			}
 			sb.WriteString("    });\n\n")
 		}
@@ -481,16 +483,34 @@ func jsArgListWithBoundary(params []jsParamInfo, b jsBoundary) string {
 	for i, p := range params {
 		if p.Name == b.Param {
 			args[i] = b.Value
-		} else if p.IsRest {
-			args[i] = "[]"
 		} else {
-			args[i] = "undefined"
+			args[i] = jsArgValue(p, i)
 		}
 	}
 	return strings.Join(args, ", ")
 }
 
 func jsArgList(params []jsParamInfo) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := make([]string, len(params))
+	for i, p := range params {
+		args[i] = jsArgValue(p, i)
+	}
+	return strings.Join(args, ", ")
+}
+
+func jsInvalidArgList(params []jsParamInfo, boundaries []jsBoundary) string {
+	for _, b := range boundaries {
+		if b.Value == "null" || b.Value == "undefined" {
+			return jsArgListWithBoundary(params, b)
+		}
+	}
+	return jsPlaceholderArgList(params)
+}
+
+func jsPlaceholderArgList(params []jsParamInfo) string {
 	if len(params) == 0 {
 		return ""
 	}
@@ -503,6 +523,74 @@ func jsArgList(params []jsParamInfo) string {
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsArgValue(p jsParamInfo, _ int) string {
+	if p.IsRest {
+		return "[]"
+	}
+
+	name := strings.ToLower(p.Name)
+	compact := strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+
+	if jsNameHasPrefix(compact, "is", "has", "can", "should") ||
+		jsNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {
+		return "true"
+	}
+	if jsNameHasAny(compact, "items", "list", "array", "arr", "rows", "records", "args") {
+		return "[]"
+	}
+	if jsNameIsNumeric(compact) {
+		if compact == "b" || compact == "y" {
+			return "2"
+		}
+		return "1"
+	}
+	if jsNameHasAny(compact, "options", "opts", "config", "payload", "data", "body", "params", "query", "user", "metadata") {
+		return "{}"
+	}
+	if jsNameHasAny(compact, "url", "uri", "endpoint", "href") {
+		return "'https://example.com'"
+	}
+	if jsNameHasAny(compact, "email") {
+		return "'user@example.com'"
+	}
+	if jsNameHasAny(compact, "name", "title", "text", "message", "prefix", "suffix", "label", "path", "key", "value", "type", "mode") {
+		return "'test'"
+	}
+	if p.HasDefault {
+		return "undefined"
+	}
+
+	return "undefined"
+}
+
+func jsNameHasAny(name string, parts ...string) bool {
+	for _, part := range parts {
+		if strings.Contains(name, part) {
+			return true
+		}
+	}
+	return false
+}
+
+func jsNameHasPrefix(name string, prefixes ...string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(name, prefix) && len(name) > len(prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func jsNameIsNumeric(name string) bool {
+	switch name {
+	case "a", "b", "x", "y", "n", "num", "number", "count", "size", "index", "idx",
+		"age", "page", "limit", "offset", "total", "amount", "price", "id":
+		return true
+	}
+	return strings.HasSuffix(name, "id") || strings.HasSuffix(name, "count") ||
+		strings.HasSuffix(name, "index") || strings.HasSuffix(name, "size")
 }
 
 func isTestHelper(name string) bool {
