@@ -50,7 +50,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	if path == "" {
 		return nil, nil, fmt.Errorf("path 参数必填")
 	}
-	
+
 	framework := input.Framework
 	coverage := input.Coverage
 	verbose := input.Verbose
@@ -65,19 +65,19 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 
 	var output []byte
 	var err error
-	
+
 	switch framework {
 	case "go-test":
-		args := []string{"test"}
+		args := []string{"test", "-json"}
 		if verbose {
 			args = append(args, "-v")
 		}
 		if coverage {
 			args = append(args, "-cover")
 		}
-		args = append(args, path)
+		args = append(args, normalizeGoTestPath(path))
 		output, err = exec.CommandContext(ctx, "go", args...).CombinedOutput()
-		
+
 	case "jest", "vitest":
 		args := []string{"jest"}
 		if framework == "vitest" {
@@ -95,7 +95,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		cmd := exec.CommandContext(ctx, "npx", args...)
 		cmd.Dir = getProjectRoot(path)
 		output, err = cmd.CombinedOutput()
-		
+
 	case "mocha":
 		args := []string{"mocha"}
 		if verbose {
@@ -108,7 +108,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		cmd := exec.CommandContext(ctx, "npx", args...)
 		cmd.Dir = getProjectRoot(path)
 		output, err = cmd.CombinedOutput()
-		
+
 	case "pytest":
 		args := []string{"-m", "pytest"}
 		if verbose {
@@ -121,7 +121,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		cmd := exec.CommandContext(ctx, "python3", args...)
 		cmd.Dir = getProjectRoot(path)
 		output, err = cmd.CombinedOutput()
-		
+
 	default:
 		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, jest, vitest, mocha, pytest）", framework)
 	}
@@ -135,13 +135,21 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	}, nil, nil
 }
 
+func normalizeGoTestPath(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() || filepath.Ext(path) != ".go" {
+		return path
+	}
+	return filepath.Dir(path)
+}
+
 func getProjectRoot(path string) string {
 	// 简单实现：返回路径所在的目录
 	info, err := os.Stat(path)
 	if err != nil {
 		return "."
 	}
-	
+
 	if info.IsDir() {
 		return path
 	}

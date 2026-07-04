@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -20,9 +21,138 @@ import (
 //	coverage: 50.0% of statements
 //	FAIL	github.com/example/calc	0.001s
 func ParseGoTest(output string) types.TestResult {
+	if looksLikeGoJSON(output) {
+		return parseGoTestJSON(output)
+	}
+	return parseGoTestText(output)
+}
+
+type goTestEvent struct {
+	Action  string  `json:"Action"`
+	Package string  `json:"Package"`
+	Test    string  `json:"Test"`
+	Output  string  `json:"Output"`
+	Elapsed float64 `json:"Elapsed"`
+}
+
+type goFailureState struct {
+	Name    string
+	File    string
+	Line    int
+	Details []string
+}
+
+func looksLikeGoJSON(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		return strings.HasPrefix(line, "{") && strings.Contains(line, `"Action"`)
+	}
+	return false
+}
+
+func parseGoTestJSON(output string) types.TestResult {
 	result := types.TestResult{
-		Status:   "pass",
-		Failures: []types.TestFailure{},
+		Status:    "pass",
+		Failures:  []types.TestFailure{},
+		RawOutput: output,
+	}
+
+	failures := map[string]*goFailureState{}
+	for _, rawLine := range strings.Split(output, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			continue
+		}
+
+		var event goTestEvent
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			continue
+		}
+
+		switch event.Action {
+		case "run":
+		case "pass":
+			if event.Test != "" {
+				result.Passed++
+			}
+		case "fail":
+			result.Status = "fail"
+			if event.Test != "" {
+				result.Failed++
+				ensureGoFailure(failures, event.Test)
+			} else if result.Failed == 0 {
+				failures["package"] = &goFailureState{
+					Name:    event.Package,
+					Details: []string{"package failed"},
+				}
+			}
+		case "skip":
+			if event.Test != "" {
+				result.Skipped++
+			}
+		case "output":
+			if strings.Contains(event.Output, "coverage:") {
+				result.CoveragePercent = parseGoCoverageLine(event.Output)
+				continue
+			}
+			if event.Test == "" || event.Output == "" {
+				continue
+			}
+			detail := strings.TrimSpace(event.Output)
+			if detail == "" || strings.HasPrefix(detail, "===") || strings.HasPrefix(detail, "---") {
+				continue
+			}
+			state := ensureGoFailure(failures, event.Test)
+			file, lineNum, msg, ok := parseGoFailureDetail(detail)
+			if ok {
+				if state.File == "" {
+					state.File = file
+					state.Line = lineNum
+				}
+				if msg != "" {
+					state.Details = append(state.Details, msg)
+				}
+			} else {
+				state.Details = append(state.Details, detail)
+			}
+		}
+
+	}
+
+	for _, failure := range failures {
+		errorMsg := strings.TrimSpace(strings.Join(failure.Details, "\n"))
+		if errorMsg == "" {
+			errorMsg = "test failed"
+		}
+		result.Failures = append(result.Failures, types.TestFailure{
+			TestName: failure.Name,
+			File:     failure.File,
+			Line:     failure.Line,
+			Error:    errorMsg,
+		})
+	}
+
+	result.Total = result.Passed + result.Failed + result.Skipped
+	if result.Failed > 0 || len(result.Failures) > 0 {
+		result.Status = "fail"
+	}
+	return result
+}
+
+func ensureGoFailure(failures map[string]*goFailureState, testName string) *goFailureState {
+	if failures[testName] == nil {
+		failures[testName] = &goFailureState{Name: testName}
+	}
+	return failures[testName]
+}
+
+func parseGoTestText(output string) types.TestResult {
+	result := types.TestResult{
+		Status:    "pass",
+		Failures:  []types.TestFailure{},
 		RawOutput: output,
 	}
 
@@ -63,56 +193,68 @@ func ParseGoTest(output string) types.TestResult {
 			// 去掉缩进
 			detail := strings.TrimSpace(line)
 			// 格式：calc_test.go:42: got -1, want 0
-			idx1 := strings.Index(detail, ":")
-			if idx1 > 0 {
-				rest := detail[idx1+1:]
-				idx2 := strings.Index(rest, ":")
-				if idx2 > 0 {
-					fileAndLine := detail[:idx1+1+idx2]
-					errorMsg := strings.TrimSpace(rest[idx2+1:])
-
-					// 解析行号
-					lineNum := 0
-					lastColon := strings.LastIndex(fileAndLine, ":")
-					if lastColon > 0 {
-						v, _ := strconv.Atoi(fileAndLine[lastColon+1:])
-						lineNum = v
-					}
-
-					fileName := fileAndLine
-					if lastColon > 0 {
-						fileName = fileAndLine[:lastColon]
-					}
-
-					result.Failures = append(result.Failures, types.TestFailure{
-						TestName: lastTest,
-						File:     fileName,
-						Line:     lineNum,
-						Error:    errorMsg,
-					})
-				}
+			fileName, lineNum, errorMsg, ok := parseGoFailureDetail(detail)
+			if ok {
+				result.Failures = append(result.Failures, types.TestFailure{
+					TestName: lastTest,
+					File:     fileName,
+					Line:     lineNum,
+					Error:    errorMsg,
+				})
 			}
 			continue
 		}
 
 		// 4) 覆盖率
 		if strings.Contains(line, "coverage:") {
-			fields := strings.Fields(line)
-			for i, f := range fields {
-				if f == "coverage:" && i+1 < len(fields) {
-					coverStr := strings.TrimSuffix(fields[i+1], "%")
-					v, err := strconv.ParseFloat(coverStr, 64)
-					if err == nil {
-						result.CoveragePercent = v
-					}
-					break
-				}
-			}
+			result.CoveragePercent = parseGoCoverageLine(line)
 		}
 	}
 
 	if result.Failed > 0 {
 		result.Status = "fail"
 	}
+	result.Total = result.Passed + result.Failed + result.Skipped
 	return result
+}
+
+func parseGoFailureDetail(detail string) (string, int, string, bool) {
+	idx1 := strings.Index(detail, ":")
+	if idx1 <= 0 {
+		return "", 0, detail, false
+	}
+	rest := detail[idx1+1:]
+	idx2 := strings.Index(rest, ":")
+	if idx2 <= 0 {
+		return "", 0, detail, false
+	}
+
+	fileAndLine := detail[:idx1+1+idx2]
+	errorMsg := strings.TrimSpace(rest[idx2+1:])
+	lastColon := strings.LastIndex(fileAndLine, ":")
+	if lastColon <= 0 {
+		return "", 0, errorMsg, false
+	}
+
+	lineNum, err := strconv.Atoi(fileAndLine[lastColon+1:])
+	if err != nil {
+		return "", 0, errorMsg, false
+	}
+
+	return fileAndLine[:lastColon], lineNum, errorMsg, true
+}
+
+func parseGoCoverageLine(line string) float64 {
+	fields := strings.Fields(line)
+	for i, f := range fields {
+		if f == "coverage:" && i+1 < len(fields) {
+			coverStr := strings.TrimSuffix(fields[i+1], "%")
+			v, err := strconv.ParseFloat(coverStr, 64)
+			if err == nil {
+				return v
+			}
+			break
+		}
+	}
+	return 0
 }

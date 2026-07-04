@@ -371,6 +371,7 @@ func genTableDrivenTest(fn funcInfo) string {
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
 	sb.WriteString("\t\tname string\n")
+	sb.WriteString("\t\tskip bool\n")
 	for _, p := range fn.Params {
 		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", p.Name, p.Type))
 	}
@@ -382,7 +383,8 @@ func genTableDrivenTest(fn funcInfo) string {
 	// 测试用例列表
 	sb.WriteString("\ttests := []testCase{\n")
 	sb.WriteString("\t\t{\n")
-	sb.WriteString("\t\t\tname: \"default\",\n")
+	sb.WriteString("\t\t\tname: \"todo\",\n")
+	sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
 	for _, p := range fn.Params {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, zeroValue(p.Type)))
 	}
@@ -395,6 +397,9 @@ func genTableDrivenTest(fn funcInfo) string {
 	// 执行测试
 	sb.WriteString("\tfor _, tt := range tests {\n")
 	sb.WriteString(fmt.Sprintf("\t\tt.Run(tt.name, func(t *testing.T) {\n"))
+	sb.WriteString("\t\t\tif tt.skip {\n")
+	sb.WriteString("\t\t\t\tt.Skip(\"TODO: fill in meaningful test inputs and expected values\")\n")
+	sb.WriteString("\t\t\t}\n")
 
 	// 为通道类型参数添加 nil 检查，避免阻塞
 	for _, p := range fn.Params {
@@ -438,7 +443,7 @@ func genTableDrivenTest(fn funcInfo) string {
 		if fn.Returns[0].Type == "error" {
 			sb.WriteString(fmt.Sprintf("\t\t\terr := %s\n", callExpr))
 			sb.WriteString("\t\t\tif err != nil {\n")
-			sb.WriteString("\t\t\t\tt.Errorf(\"unexpected error: %%v\", err)\n")
+			sb.WriteString("\t\t\t\tt.Errorf(\"unexpected error: %v\", err)\n")
 			sb.WriteString("\t\t\t}\n")
 		} else {
 			sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
