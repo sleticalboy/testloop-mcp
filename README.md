@@ -7,7 +7,7 @@
 
 ## 核心能力
 
-- **智能生成测试** — 多语言 AST 分析（Go `go/ast` + tree-sitter Rust/Java/JS/TS/Python），自动生成类型感知测试。支持泛型、async、Result/Option 返回类型、JUnit 5 断言
+- **智能生成测试** — Go 优先复用 `gotests` 并回退内置 `go/ast`，其他语言结合 tree-sitter/轻量解析器生成类型感知测试。支持泛型、async、Result/Option 返回类型、JUnit 5 断言，可选接入外部 LLM provider
 - **执行测试** — 支持 `go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit 5（Maven/Gradle），自动检测项目类型，可选收集覆盖率
 - **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
 - **修复建议** — 根据失败类型（期望值不匹配 / nil pointer / 数组越界 / 除零 / 类型不匹配等）生成结构化修复建议
@@ -43,7 +43,7 @@ AI IDE (Claude Code / Cursor / Copilot)
 | Python | pytest | ✅ | ✅ | ✅ | ✅ |
 | Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | 🔲 |
 
-> 测试生成：Go 基于 `go/ast` 原生 AST；JS/TS/Python/Rust/Java 基于 tree-sitter 多语言 AST 解析。
+> 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。
 > 覆盖率：Rust (`cargo tarpaulin`)、Java (JaCoCo) 的支持正在路上。
 
 ## 安装
@@ -90,17 +90,19 @@ go build -o testloop-mcp .
 
 ### `generate_tests`
 
-根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、JavaScript/TypeScript（Jest）、Python（pytest）。
+根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（Jest）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `file_path` | string | ✅ | 源文件路径（`.go` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
+| `file_path` | string | ✅ | 源文件路径（`.go` / `.rs` / `.java` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
 | `framework` | string | — | 测试框架，默认根据文件扩展名自动选择 |
 | `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
 
 **返回：** `{ status, test_file, generated_cases, preview, context, provider }`
 
 **LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
+
+LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examples/llm-provider.sh](./examples/llm-provider.sh)。
 
 **Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 
@@ -208,10 +210,15 @@ testloop-mcp/
 │   └── parse_coverage.go            # parse_coverage 工具
 ├── internal/
 │   ├── generator/
-│   │   ├── generator.go              # 多语言分发入口（按扩展名路由）
-│   │   ├── go_generator.go           # Go AST 测试生成器（泛型/通道/接口/变参）
+│   │   ├── generator.go              # 多语言静态生成分发入口
+│   │   ├── provider.go               # 测试生成 provider 接口 + 可选 LLM command provider
+│   │   ├── context.go                # 面向 LLM/AI Agent 的测试生成上下文
+│   │   ├── go_gotests.go             # gotests 优先生成器
+│   │   ├── go_generator.go           # Go AST 回退测试生成器（泛型/通道/接口/变参）
 │   │   ├── js_generator.go           # JS/TS Jest 测试生成器（函数/箭头/类/async）
-│   │   └── py_generator.go           # Python pytest 测试生成器（def/class/async）
+│   │   ├── py_generator.go           # Python pytest 测试生成器（def/class/async）
+│   │   ├── rs_generator.go           # Rust 测试生成器
+│   │   └── java_generator.go         # Java JUnit 5 测试生成器
 │   ├── parser/
 │   │   ├── parser.go                # 统一解析入口
 │   │   ├── go_parser.go             # go test 输出解析

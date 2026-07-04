@@ -21,15 +21,18 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 ```json
 {
   "file_path": "src/calc.rs",
-  "framework": "cargo-test"
+  "framework": "cargo-test",
+  "provider": "static"
 }
 ```
 
 **处理逻辑：**
-1. 按文件扩展名分发（`.go` → Go `go/ast`，`.rs` → tree-sitter Rust，`.java` → tree-sitter Java，`.js`/`.ts` → tree-sitter JS/TS，`.py` → tree-sitter Python）
-2. 提取 functions / methods / class methods / impl 块方法 / trait 方法
-3. 根据返回类型（Result/Option/async）生成类型感知测试
-4. 写入测试文件（`_test.go` / `test.rs` / `Test.java` / `.test.js` / `test_*.py`）
+1. 根据 `provider` 选择测试生成路径：`static`（默认）、`llm`、`auto`。
+2. 静态路径按文件扩展名分发：`.go` → 优先 `gotests -all`，失败回退内置 Go AST；`.rs` → tree-sitter Rust；`.java` → tree-sitter Java；`.js`/`.ts` → tree-sitter JS/TS；`.py` → tree-sitter Python。
+3. 提取 functions / methods / class methods / impl 块方法 / trait 方法，以及导入、邻近类型、返回表达式、错误路径和边界条件。
+4. 根据返回类型（Result/Option/async）生成类型感知测试。
+5. 当 `provider` 为 `llm` 或 `auto` 且配置了 `TESTLOOP_LLM_PROVIDER_CMD` 时，把源码上下文和静态生成结果传给外部 LLM provider，由 provider 返回最终测试代码。
+6. 写入测试文件（`_test.go` / `test.rs` / `Test.java` / `.test.js` / `test_*.py`）。
 
 **输出：**
 ```json
@@ -37,11 +40,15 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
   "status": "ok",
   "test_file": "internal/calc/calc_test.go",
   "generated_cases": 12,
-  "preview": "..."
+  "preview": "...",
+  "context": { "language": "typescript", "targets": [] },
+  "provider": "static"
 }
 ```
 
-**Go 生成器：** 基于 `go/ast` 原生 AST 分析，支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
+**Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
+
+**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。provider 从 stdin 接收 `{ source_file, context, static_code }`，stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。
 
 **JS/TS 生成器：** 正则解析函数声明、箭头函数、类方法，自动检测 CommonJS / ES Module 导入方式。支持 async 函数、变参 `...args`、默认值参数、TypeScript 类型注解剥离。
 
@@ -205,7 +212,10 @@ testloop-mcp/
 ├── internal/
 │   ├── generator/
 │   │   ├── generator.go             # 多语言分发入口（按扩展名路由 .go/.rs/.java/.js/.ts/.py）
-│   │   ├── go_generator.go          # Go AST 测试生成器（泛型/通道/接口/变参）
+│   │   ├── provider.go              # 测试生成 provider 接口 + 可选 LLM command provider
+│   │   ├── go_gotests.go            # gotests 优先生成器，失败回退内置 Go AST
+│   │   ├── go_generator.go          # Go AST 回退测试生成器（泛型/通道/接口/变参）
+│   │   ├── context.go               # 面向 LLM/AI Agent 的测试生成上下文
 │   │   ├── ts_parser.go            # JS/TS tree-sitter AST 解析器（函数/箭头/类/async）
 │   │   ├── js_generator.go          # JS/TS Jest 测试生成器（类型推断/throw/边界条件）
 │   │   ├── py_generator.go          # Python pytest 测试生成器（def/class/async/*args）
@@ -221,7 +231,6 @@ testloop-mcp/
 │   │   ├── mocha_parser.go          # Mocha 输出解析
 │   │   ├── rust.go                 # cargo test 输出解析
 │   │   └── java.go                 # JUnit 输出解析（Maven/Gradle/JUnit5）
-│   ├── coverage/
 │   ├── coverage/
 │   │   ├── coverage.go              # 统一入口 + 改进建议生成
 │   │   ├── go_coverage.go           # Go coverprofile 解析
@@ -260,7 +269,7 @@ testloop-mcp/
 | MCP SDK | `github.com/modelcontextprotocol/go-sdk` v1.6.1 | MCP 官方 Go SDK |
 | Go 版本 | 1.25+ | 泛型支持，标准库足够 |
 | 测试解析 | 正则 + 行解析 | go test / Jest / pytest 输出格式稳定，无需复杂 Parser |
-| 测试生成 | `go/ast` + tree-sitter + 模板 | Go 用标准库 AST；JS/TS/Python/Rust/Java 用 tree-sitter 多语言 AST |
+| 测试生成 | `gotests` + provider 接口 + `go/ast` + tree-sitter + 模板 | Go 优先复用成熟社区工具；LLM 可选接入；静态生成保持无外部强依赖 |
 | 覆盖率解析 | 正则 + JSON 解析 | 各框架覆盖率格式不同，按框架分发 |
 | 配置 | 命令行参数 + 环境变量 | 保持简单，MCP 本身无状态 |
 

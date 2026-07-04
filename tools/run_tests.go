@@ -16,7 +16,7 @@ import (
 
 type runTestsInput struct {
 	Path      string `json:"path" jsonschema:"测试文件或目录路径，必填"`
-	Framework string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/jest/pytest，默认自动检测"`
+	Framework string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认自动检测"`
 	Coverage  bool   `json:"coverage,omitempty" jsonschema:"是否收集覆盖率，默认 false"`
 	Verbose   bool   `json:"verbose,omitempty" jsonschema:"是否输出详细日志，默认 true"`
 }
@@ -32,7 +32,7 @@ func Register(s *mcp.Server) {
 		HandleParseResults,
 	)
 	mcp.AddTool[generateTestsInput, any](s,
-		&mcp.Tool{Name: "generate_tests", Description: "根据指定源文件生成测试代码（当前仅支持 Go）。"},
+		&mcp.Tool{Name: "generate_tests", Description: "根据指定源文件生成测试代码，支持 Go/Rust/Java/JavaScript/TypeScript/Python，可选静态或 LLM provider。"},
 		HandleGenerateTests,
 	)
 	mcp.AddTool[fixSuggestionsInput, any](s,
