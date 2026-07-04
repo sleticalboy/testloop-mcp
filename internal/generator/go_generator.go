@@ -19,6 +19,7 @@ type funcInfo struct {
 	IsMethod     bool
 	TypeParams   []string // 泛型类型参数名，如 T, K, V
 	IsVariadic   bool     // 是否有变参（...T）
+	ReturnExpr   string
 }
 
 type paramInfo struct {
@@ -199,6 +200,8 @@ func GenerateGoTests(srcPath string) (string, error) {
 				info.Returns[i].Type = substituteType(info.Returns[i].Type, substMap)
 			}
 		}
+
+		info.ReturnExpr = singleReturnExpr(fn.Body)
 
 		funcs = append(funcs, info)
 	}
@@ -381,15 +384,27 @@ func genTableDrivenTest(fn funcInfo) string {
 	sb.WriteString("\t}\n\n")
 
 	// 测试用例列表
+	seedCase, hasSeedCase := goSeedTestCase(fn)
 	sb.WriteString("\ttests := []testCase{\n")
 	sb.WriteString("\t\t{\n")
-	sb.WriteString("\t\t\tname: \"todo\",\n")
-	sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
-	for _, p := range fn.Params {
-		sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, zeroValue(p.Type)))
-	}
-	for _, r := range fn.Returns {
-		sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, zeroValue(r.Type)))
+	if hasSeedCase {
+		sb.WriteString("\t\t\tname: \"simple\",\n")
+		sb.WriteString("\t\t\tskip: false,\n")
+		for _, p := range fn.Params {
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, seedCase.Inputs[p.Name]))
+		}
+		for _, r := range fn.Returns {
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
+		}
+	} else {
+		sb.WriteString("\t\t\tname: \"todo\",\n")
+		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
+		for _, p := range fn.Params {
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, zeroValue(p.Type)))
+		}
+		for _, r := range fn.Returns {
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, zeroValue(r.Type)))
+		}
 	}
 	sb.WriteString("\t\t},\n")
 	sb.WriteString("\t}\n\n")
@@ -503,6 +518,95 @@ func needsDeepEqual(typ string) bool {
 			!strings.HasPrefix(typ, "func"))
 }
 
+type goSeedCase struct {
+	Inputs  map[string]string
+	Outputs map[string]string
+}
+
+func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
+	if fn.IsMethod || fn.IsVariadic || len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
+		return goSeedCase{}, false
+	}
+	if !goTypeSupportsExactSeed(fn.Returns[0].Type) || fn.ReturnExpr == "" || !goReturnExprIsSafe(fn.ReturnExpr) {
+		return goSeedCase{}, false
+	}
+
+	seed := goSeedCase{Inputs: map[string]string{}, Outputs: map[string]string{}}
+	expr := fn.ReturnExpr
+	for i, p := range fn.Params {
+		if !goTypeSupportsExactSeed(p.Type) {
+			return goSeedCase{}, false
+		}
+		value := goArgValue(p, i)
+		seed.Inputs[p.Name] = value
+		expr = replaceIdentifier(expr, p.Name, value)
+	}
+
+	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+		"true": true, "false": true, "nil": true,
+	}) {
+		return goSeedCase{}, false
+	}
+	seed.Outputs[fn.Returns[0].Name] = expr
+	return seed, true
+}
+
+func singleReturnExpr(body *ast.BlockStmt) string {
+	if body == nil || len(body.List) != 1 {
+		return ""
+	}
+	ret, ok := body.List[0].(*ast.ReturnStmt)
+	if !ok || len(ret.Results) != 1 {
+		return ""
+	}
+	return exprToString(ret.Results[0])
+}
+
+func goTypeSupportsExactSeed(typ string) bool {
+	return strings.HasPrefix(typ, "int") ||
+		strings.HasPrefix(typ, "uint") ||
+		strings.HasPrefix(typ, "float") ||
+		typ == "string" ||
+		typ == "bool"
+}
+
+func goReturnExprIsSafe(expr string) bool {
+	if expr == "" || strings.ContainsAny(expr, "\n;{}[]") {
+		return false
+	}
+	for _, blocked := range []string{"(", ")", ".", "*", "&", "<-", "chan ", "func"} {
+		if strings.Contains(expr, blocked) {
+			return false
+		}
+	}
+	return true
+}
+
+func goArgValue(p paramInfo, _ int) string {
+	name := strings.ToLower(p.Name)
+	compact := strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+
+	if p.Type == "bool" {
+		return "true"
+	}
+	if p.Type == "string" {
+		return "\"test\""
+	}
+	if strings.HasPrefix(p.Type, "float") {
+		if compact == "b" || compact == "y" {
+			return "2.0"
+		}
+		return "1.0"
+	}
+	if strings.HasPrefix(p.Type, "int") || strings.HasPrefix(p.Type, "uint") {
+		if compact == "b" || compact == "y" {
+			return "2"
+		}
+		return "1"
+	}
+	return zeroValue(p.Type)
+}
+
 // substituteType 把类型参数名替换为具体类型
 func substituteType(typ string, substMap map[string]string) string {
 	for name, concrete := range substMap {
@@ -550,6 +654,14 @@ func exprToString(expr ast.Expr) string {
 	switch v := expr.(type) {
 	case *ast.Ident:
 		return v.Name
+	case *ast.BasicLit:
+		return v.Value
+	case *ast.BinaryExpr:
+		return exprToString(v.X) + " " + v.Op.String() + " " + exprToString(v.Y)
+	case *ast.UnaryExpr:
+		return v.Op.String() + exprToString(v.X)
+	case *ast.ParenExpr:
+		return "(" + exprToString(v.X) + ")"
 	case *ast.SelectorExpr:
 		return exprToString(v.X) + "." + v.Sel.Name
 	case *ast.StarExpr:

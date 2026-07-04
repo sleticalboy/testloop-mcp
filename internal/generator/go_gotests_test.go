@@ -63,8 +63,34 @@ exit 42
 	if strings.Contains(code, "TestFromGotests") {
 		t.Fatalf("expected fallback output, got gotests output:\n%s", code)
 	}
-	if !strings.Contains(code, "func TestAdd") || !strings.Contains(code, "skip: true") {
+	if !strings.Contains(code, "func TestAdd") || !strings.Contains(code, "skip: false") {
 		t.Fatalf("expected built-in fallback output, got:\n%s", code)
+	}
+	if !strings.Contains(code, "a:    1,") || !strings.Contains(code, "b:    2,") || !strings.Contains(code, "ret0: 1 + 2,") {
+		t.Fatalf("expected seeded exact test case, got:\n%s", code)
+	}
+}
+
+func TestGenerateGoTestsSeedsSimplePureFunction(t *testing.T) {
+	srcPath := writeTempGoSource(t)
+
+	code, err := GenerateGoTests(srcPath)
+	if err != nil {
+		t.Fatalf("GenerateGoTests() error = %v", err)
+	}
+	for _, want := range []string{
+		"name: \"simple\"",
+		"skip: false",
+		"a:    1,",
+		"b:    2,",
+		"ret0: 1 + 2,",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "name: \"todo\"") {
+		t.Fatalf("simple pure function should not generate TODO case:\n%s", code)
 	}
 }
 
