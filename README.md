@@ -7,9 +7,9 @@
 
 ## 核心能力
 
-- **智能生成测试** — 基于 Go AST 分析，自动生成表驱动测试。支持泛型实例化、指针接收者、变参、通道（nil-check 防阻塞）、接口 mock、`reflect.DeepEqual` 自动检测
-- **执行测试** — 支持 `go test` / Jest / Vitest / Mocha / pytest 五大框架，自动检测项目类型，可选收集覆盖率
-- **解析失败** — 结构化解析测试输出，提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
+- **智能生成测试** — 多语言 AST 分析（Go `go/ast` + tree-sitter Rust/Java/JS/TS/Python），自动生成类型感知测试。支持泛型、async、Result/Option 返回类型、JUnit 5 断言
+- **执行测试** — 支持 `go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit 5（Maven/Gradle），自动检测项目类型，可选收集覆盖率
+- **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
 - **修复建议** — 根据失败类型（期望值不匹配 / nil pointer / 数组越界 / 除零 / 类型不匹配等）生成结构化修复建议
 - **覆盖率分析** — 解析 Go coverprofile / Jest coverage JSON / pytest coverage JSON，输出文件级覆盖率、未覆盖 block 定位和改进建议
 
@@ -36,12 +36,15 @@ AI IDE (Claude Code / Cursor / Copilot)
 | 语言 | 测试框架 | 生成 | 执行 | 解析 | 覆盖率 |
 |------|---------|:----:|:----:|:----:|:------:|
 | Go | `go test` | ✅ | ✅ | ✅ | ✅ |
+| Rust | `cargo test` | ✅ | ✅ | ✅ | 🔲 |
 | Node.js | Jest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Vitest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Mocha | ✅ | ✅ | ✅ | ✅ |
 | Python | pytest | ✅ | ✅ | ✅ | ✅ |
+| Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | 🔲 |
 
-> 测试生成支持 Go（基于 `go/ast` 原生 AST）、JavaScript/TypeScript（正则解析函数签名 → Jest 测试）、Python（正则解析 `def`/`class` → pytest 测试）。
+> 测试生成：Go 基于 `go/ast` 原生 AST；JS/TS/Python/Rust/Java 基于 tree-sitter 多语言 AST 解析。
+> 覆盖率：Rust (`cargo tarpaulin`)、Java (JaCoCo) 的支持正在路上。
 
 ## 安装
 

@@ -10,12 +10,16 @@ func ParseTestOutput(output, framework string) types.TestResult {
 	switch framework {
 	case "go-test":
 		result = ParseGoTest(output)
-	case "jest":
+	case "jest", "vitest":
 		result = ParseJestTest(output)
 	case "pytest":
 		result = ParsePytestTest(output)
 	case "mocha":
 		result = ParseMochaTest(output)
+	case "cargo-test":
+		result = ParseCargoTest(output)
+	case "junit":
+		result = ParseJUnitTest(output)
 	default:
 		result = ParseGoTest(output)
 		framework = "go-test"

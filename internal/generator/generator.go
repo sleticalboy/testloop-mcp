@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -16,7 +17,21 @@ func GenerateTests(srcPath string) (string, error) {
 		return GenerateJestTests(srcPath)
 	case ".py":
 		return GeneratePytestTests(srcPath)
+	case ".rs":
+		source, err := os.ReadFile(srcPath)
+		if err != nil {
+			return "", fmt.Errorf("读取 Rust 源文件失败: %w", err)
+		}
+		_, content, err := GenerateRustTests(source, srcPath)
+		return content, err
+	case ".java":
+		source, err := os.ReadFile(srcPath)
+		if err != nil {
+			return "", fmt.Errorf("读取 Java 源文件失败: %w", err)
+		}
+		_, content, err := GenerateJavaTests(source, srcPath)
+		return content, err
 	default:
-		return "", fmt.Errorf("不支持的文件类型: %s（支持: .go, .js, .ts, .jsx, .tsx, .py）", ext)
+		return "", fmt.Errorf("不支持的文件类型: %s（支持: .go, .js, .ts, .jsx, .tsx, .py, .rs, .java）", ext)
 	}
 }

@@ -11,12 +11,10 @@ func TestGeneratePytestTests(t *testing.T) {
 		t.Fatalf("GeneratePytestTests 失败: %v", err)
 	}
 
-	// 验证导入
 	if !strings.Contains(code, "from calc import") {
 		t.Error("缺少 Python import 导入")
 	}
 
-	// 验证函数测试
 	expectedFuncs := []string{"add", "divide", "format_text", "fetch_data"}
 	for _, name := range expectedFuncs {
 		if !strings.Contains(code, "def test_"+name+"(") {
@@ -24,17 +22,14 @@ func TestGeneratePytestTests(t *testing.T) {
 		}
 	}
 
-	// 验证类测试
 	if !strings.Contains(code, "class TestCalculator:") {
 		t.Error("缺少 TestCalculator 类测试")
 	}
 
-	// 验证 __init__ 测试
 	if !strings.Contains(code, "def test_init(self):") {
 		t.Error("缺少 __init__ 测试")
 	}
 
-	// 验证方法测试
 	if !strings.Contains(code, "def test_add(self):") {
 		t.Error("缺少 Calculator.add 方法测试")
 	}
@@ -55,75 +50,125 @@ func TestGeneratePytestTests(t *testing.T) {
 	t.Logf("生成的 pytest 测试:\n%s", code)
 }
 
-func TestParsePyParams(t *testing.T) {
-	tests := []struct {
-		input    string
-		isMethod bool
-		wantLen  int
-	}{
-		{"", false, 0},
-		{"a, b", false, 2},
-		{"a, b, c", false, 3},
-		{"a: int, b: str", false, 2},    // 类型注解
-		{"a = 1, b = 'hello'", false, 2}, // 默认值
-		{"*args", false, 1},              // *args
-		{"**kwargs", false, 1},           // **kwargs
-		{"self, a, b", true, 2},          // 方法：self 被剥离
-		{"cls, a", true, 1},              // 类方法：cls 被剥离
+func TestTreeSitterPython_ParsesAllDeclarations(t *testing.T) {
+	source := []byte(`def add(a, b):
+    return a + b
+
+class Calculator:
+    def add(self, a, b):
+        return a + b
+
+    @staticmethod
+    def version():
+        return "1.0.0"
+`)
+	funcs, classes := parsePyWithTreeSitter(source)
+
+	if len(funcs) != 1 {
+		t.Fatalf("期望 1 个顶层函数, got %d", len(funcs))
+	}
+	if funcs[0].Name != "add" {
+		t.Errorf("funcs[0].Name = %s, want add", funcs[0].Name)
 	}
 
-	for _, tt := range tests {
-		params := parsePyParams(tt.input, tt.isMethod, false)
-		if len(params) != tt.wantLen {
-			t.Errorf("parsePyParams(%q, isMethod=%v) = %d params, want %d",
-				tt.input, tt.isMethod, len(params), tt.wantLen)
+	if len(classes) != 1 {
+		t.Fatalf("期望 1 个类, got %d", len(classes))
+	}
+	cls := classes[0]
+	if cls.Name != "Calculator" {
+		t.Errorf("class name = %s, want Calculator", cls.Name)
+	}
+	// add + divide + version (not __init__)
+	if len(cls.Methods) != 2 {
+		t.Errorf("期望 2 个方法 (add, version), got %d", len(cls.Methods))
+	}
+
+	// 验证 staticmethod
+	foundStatic := false
+	for _, m := range cls.Methods {
+		if m.Name == "version" && m.IsStatic {
+			foundStatic = true
 		}
 	}
-}
-
-func TestParsePyParams_RestAndKwargs(t *testing.T) {
-	params := parsePyParams("a, *args, **kwargs", false, false)
-	if len(params) != 3 {
-		t.Fatalf("len = %d, want 3", len(params))
-	}
-	if params[1].IsArgs != true {
-		t.Errorf("param[1] should be *args")
-	}
-	if params[2].IsKwargs != true {
-		t.Errorf("param[2] should be **kwargs")
+	if !foundStatic {
+		t.Error("version 应该是 static method")
 	}
 }
 
-func TestParsePyParams_TypeHints(t *testing.T) {
-	params := parsePyParams("a: int, b: str = 'hello'", false, false)
-	if len(params) != 2 {
-		t.Fatalf("len = %d, want 2", len(params))
-	}
-	if params[0].Name != "a" {
-		t.Errorf("param[0].Name = %q, want 'a'", params[0].Name)
-	}
-	if params[1].Name != "b" || !params[1].HasDefault {
-		t.Errorf("param[1] = %+v, want name='b' hasDefault=true", params[1])
-	}
-}
+func TestTreeSitterPython_AsyncDetection(t *testing.T) {
+	source := []byte(`async def fetch_data(url):
+    return await fetch(url)
 
-func TestIndentLevel(t *testing.T) {
-	tests := []struct {
-		input string
-		want  int
-	}{
-		{"    def foo():", 4},
-		{"  def foo():", 2},
-		{"def foo():", 0},
-		{"\tdef foo():", 4},
-		{"        def foo():", 8},
+def sync_fn(x):
+    return x * 2
+`)
+	funcs, _ := parsePyWithTreeSitter(source)
+
+	if len(funcs) != 2 {
+		t.Fatalf("期望 2 个函数, got %d", len(funcs))
 	}
 
-	for _, tt := range tests {
-		got := indentLevel(tt.input)
-		if got != tt.want {
-			t.Errorf("indentLevel(%q) = %d, want %d", tt.input, got, tt.want)
+	foundAsync := false
+	foundSync := false
+	for _, fn := range funcs {
+		if fn.Name == "fetch_data" && fn.IsAsync {
+			foundAsync = true
 		}
+		if fn.Name == "sync_fn" && !fn.IsAsync {
+			foundSync = true
+		}
+	}
+	if !foundAsync {
+		t.Error("fetch_data 应该是 async")
+	}
+	if !foundSync {
+		t.Error("sync_fn 不应该是 async")
+	}
+}
+
+func TestTreeSitterPython_ParamsExtraction(t *testing.T) {
+	source := []byte(`def format_text(text: str, prefix: str = "", *args, **kwargs) -> str:
+    return prefix + text
+`)
+	funcs, _ := parsePyWithTreeSitter(source)
+
+	if len(funcs) != 1 {
+		t.Fatalf("期望 1 个函数, got %d", len(funcs))
+	}
+	fn := funcs[0]
+	if len(fn.Params) != 4 {
+		t.Fatalf("期望 4 个参数, got %d: %+v", len(fn.Params), fn.Params)
+	}
+	if fn.Params[0].Name != "text" {
+		t.Errorf("param[0].Name = %s, want text", fn.Params[0].Name)
+	}
+	if !fn.Params[1].HasDefault {
+		t.Error("param[1] 应该有默认值")
+	}
+	if !fn.Params[2].IsArgs {
+		t.Error("param[2] 应该是 *args")
+	}
+	if !fn.Params[3].IsKwargs {
+		t.Error("param[3] 应该是 **kwargs")
+	}
+}
+
+func TestTreeSitterPython_SelfStripped(t *testing.T) {
+	source := []byte(`class Foo:
+    def bar(self, a, b):
+        return a + b
+`)
+	_, classes := parsePyWithTreeSitter(source)
+
+	if len(classes) != 1 || len(classes[0].Methods) != 1 {
+		t.Fatal("期望 1 个类 1 个方法")
+	}
+	method := classes[0].Methods[0]
+	if len(method.Params) != 2 {
+		t.Errorf("期望 2 个参数 (self 被剥离), got %d: %+v", len(method.Params), method.Params)
+	}
+	if method.Params[0].Name != "a" {
+		t.Errorf("param[0].Name = %s, want a", method.Params[0].Name)
 	}
 }
 

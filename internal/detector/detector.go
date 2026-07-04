@@ -9,8 +9,8 @@ import (
 
 // DetectFramework 根据路径自动检测测试框架。
 // 检测优先级：
-//  1. 文件扩展名（.go → go-test, .py → pytest, .js/.ts/.jsx/.tsx → 需进一步看 package.json）
-//  2. 项目配置文件（package.json scripts.test + dependencies / pyproject.toml / go.mod）
+//  1. 文件扩展名（.go → go-test, .py → pytest, .rs → cargo-test, .java → junit, .js/.ts/.jsx/.tsx → 需进一步看 package.json）
+//  2. 项目配置文件（package.json / pyproject.toml / go.mod / Cargo.toml / pom.xml / build.gradle）
 //  3. 向上递归查找配置文件（最多 5 层）
 //  4. 默认 go-test
 func DetectFramework(path string) string {
@@ -26,6 +26,10 @@ func DetectFramework(path string) string {
 			return "go-test"
 		case ".py":
 			return "pytest"
+		case ".rs":
+			return "cargo-test"
+		case ".java":
+			return "junit"
 		case ".js", ".ts", ".jsx", ".tsx":
 			// JS/TS 文件需要看 package.json 决定 jest/vitest/mocha
 			if fw := detectJSFramework(path); fw != "" {
@@ -53,28 +57,66 @@ func detectJSFramework(filePath string) string {
 
 // detectFromDir 从目录出发检测框架
 func detectFromDir(dir string) string {
-	// package.json
+	// package.json (JS/TS)
 	pkg, pkgDir := findPackageJSON(dir)
 	if pkg != nil {
 		return resolveJSFramework(pkg, pkgDir) // 已有兜底 "jest"
 	}
 
-	// go.mod
+	// go.mod (Go)
 	if _, d := findFile(dir, "go.mod"); d != "" {
 		return "go-test"
 	}
 
-	// pyproject.toml
+	// Cargo.toml (Rust)
+	if _, d := findFile(dir, "Cargo.toml"); d != "" {
+		return "cargo-test"
+	}
+
+	// pyproject.toml (Python)
 	if fw, _ := detectPytest(dir); fw != "" {
 		return fw
 	}
 
-	// setup.py
+	// setup.py (Python)
 	if _, d := findFile(dir, "setup.py"); d != "" {
 		return "pytest"
 	}
 
+	// pom.xml (Java Maven)
+	if _, d := findFile(dir, "pom.xml"); d != "" {
+		return "junit"
+	}
+
+	// build.gradle / build.gradle.kts (Java Gradle)
+	if _, d := findFileGlob(dir, "build.gradle"); d != "" {
+		return "junit"
+	}
+	if _, d := findFileGlob(dir, "build.gradle.kts"); d != "" {
+		return "junit"
+	}
+
 	return "go-test"
+}
+
+// findFileGlob 从 dir 开始向上查找匹配 prefix 的文件（最多 5 层）
+func findFileGlob(dir, prefix string) (string, string) {
+	for i := 0; i < 6; i++ {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasPrefix(e.Name(), prefix) {
+					return filepath.Join(dir, e.Name()), dir
+				}
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", ""
 }
 
 // ---- package.json 解析 ----

@@ -15,21 +15,21 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 
 ### Tool 1：`generate_tests`
 
-**目标**：给定源文件，生成对应的测试文件。支持 Go / JavaScript / TypeScript / Python。
+**目标**：给定源文件，生成对应的测试文件。支持 Go / Rust / Java / JavaScript / TypeScript / Python。
 
 **输入：**
 ```json
 {
-  "file_path": "internal/calc/calc.go",
-  "framework": "go test"
+  "file_path": "src/calc.rs",
+  "framework": "cargo-test"
 }
 ```
 
 **处理逻辑：**
-1. 按文件扩展名分发（`.go` → Go AST，`.js`/`.ts`/`.jsx`/`.tsx` → JS 正则解析，`.py` → Python 正则解析）
-2. 提取 exported functions / methods / class methods
-3. 对每个函数生成表驱动测试模板
-4. 写入测试文件（`_test.go` / `.test.js` / `test_*.py`）
+1. 按文件扩展名分发（`.go` → Go `go/ast`，`.rs` → tree-sitter Rust，`.java` → tree-sitter Java，`.js`/`.ts` → tree-sitter JS/TS，`.py` → tree-sitter Python）
+2. 提取 functions / methods / class methods / impl 块方法 / trait 方法
+3. 根据返回类型（Result/Option/async）生成类型感知测试
+4. 写入测试文件（`_test.go` / `test.rs` / `Test.java` / `.test.js` / `test_*.py`）
 
 **输出：**
 ```json
@@ -45,7 +45,11 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 
 **JS/TS 生成器：** 正则解析函数声明、箭头函数、类方法，自动检测 CommonJS / ES Module 导入方式。支持 async 函数、变参 `...args`、默认值参数、TypeScript 类型注解剥离。
 
-**Python 生成器：** 正则解析 `def`/`async def`/`class` 声明，自动剥离 `self`/`cls` 参数、类型注解、默认值。支持 `*args`/`**kwargs`、`@staticmethod`。
+**Python 生成器：** 正则解析 `def`/`async def`/`class` 声明，自动剥离 `self`/`cls` 参数、类型注解、默认值。支持 `*args`/`**kwargs`、`@staticmethod`、pytest.raises 异常测试。
+
+**Rust 生成器：** 基于 tree-sitter Rust grammar 解析 `fn`/impl 块方法/trait 方法，自动推断 `Result<T,E>`/`Option<T>` 返回类型并生成 `Ok`/`Err`/`Some`/`None` 分支测试，支持 `#[test]` 和 `#[tokio::test]` async 测试。
+
+**Java 生成器：** 基于 tree-sitter Java grammar 解析 `class`/`method`/`constructor`，自动检测 `public`/`static` 修饰符，生成 JUnit 5 `@Test` 测试方法，支持 `assertAll`/`assertThrows` 异常测试。
 
 ---
 
@@ -64,8 +68,8 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 ```
 
 **处理逻辑：**
-1. 根据 `framework` 选择执行器（go-test / jest / vitest / mocha / pytest）
-2. 自动检测项目类型（存在 `go.mod` → go-test，`package.json` 含 jest → jest，等等）
+1. 根据 `framework` 选择执行器（`go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`）
+2. 自动检测项目类型（存在 `go.mod` → go-test，`Cargo.toml` → cargo-test，`package.json` → Jest，等等）
 3. 执行命令，捕获 stdout/stderr
 4. 调用 `parser` 解析输出
 5. 返回结构化 JSON
@@ -102,7 +106,7 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 
 **输出：** 同 `run_tests` 的 failures 结构（可独立使用）
 
-支持 5 种框架的输出解析：`go test` / Jest / Vitest / Mocha / pytest。
+支持 7 种框架的输出解析：`go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit。
 
 ---
 
@@ -200,16 +204,24 @@ testloop-mcp/
 │   └── parse_coverage.go            # parse_coverage 工具
 ├── internal/
 │   ├── generator/
-│   │   ├── generator.go             # 多语言分发入口（按扩展名路由）
+│   │   ├── generator.go             # 多语言分发入口（按扩展名路由 .go/.rs/.java/.js/.ts/.py）
 │   │   ├── go_generator.go          # Go AST 测试生成器（泛型/通道/接口/变参）
-│   │   ├── js_generator.go          # JS/TS Jest 测试生成器（函数/箭头/类/async）
-│   │   └── py_generator.go          # Python pytest 测试生成器（def/class/async）
+│   │   ├── ts_parser.go            # JS/TS tree-sitter AST 解析器（函数/箭头/类/async）
+│   │   ├── js_generator.go          # JS/TS Jest 测试生成器（类型推断/throw/边界条件）
+│   │   ├── py_generator.go          # Python pytest 测试生成器（def/class/async/*args）
+│   │   ├── rs_parser.go            # Rust tree-sitter AST 解析器（fn/impl/trait/async）
+│   │   ├── rs_generator.go          # Rust #[test] 测试生成器（Result/Option/async）
+│   │   ├── java_parser.go          # Java tree-sitter AST 解析器（class/method/constructor）
+│   │   └── java_generator.go        # Java JUnit 5 测试生成器（@Test/assertAll/assertThrows）
 │   ├── parser/
 │   │   ├── parser.go                # 统一解析入口（按框架名分发）
 │   │   ├── go_parser.go             # go test 输出解析
-│   │   ├── jest_parser.go           # Jest 输出解析
+│   │   ├── jest_parser.go         # Jest 输出解析
 │   │   ├── pytest_parser.go         # pytest 输出解析
-│   │   └── mocha_parser.go          # Mocha 输出解析
+│   │   ├── mocha_parser.go          # Mocha 输出解析
+│   │   ├── rust.go                 # cargo test 输出解析
+│   │   └── java.go                 # JUnit 输出解析（Maven/Gradle/JUnit5）
+│   ├── coverage/
 │   ├── coverage/
 │   │   ├── coverage.go              # 统一入口 + 改进建议生成
 │   │   ├── go_coverage.go           # Go coverprofile 解析
@@ -248,7 +260,7 @@ testloop-mcp/
 | MCP SDK | `github.com/modelcontextprotocol/go-sdk` v1.6.1 | MCP 官方 Go SDK |
 | Go 版本 | 1.25+ | 泛型支持，标准库足够 |
 | 测试解析 | 正则 + 行解析 | go test / Jest / pytest 输出格式稳定，无需复杂 Parser |
-| 测试生成 | `go/ast` + 正则 + 模板 | Go 用标准库 AST；JS/Python 用正则解析签名 |
+| 测试生成 | `go/ast` + tree-sitter + 模板 | Go 用标准库 AST；JS/TS/Python/Rust/Java 用 tree-sitter 多语言 AST |
 | 覆盖率解析 | 正则 + JSON 解析 | 各框架覆盖率格式不同，按框架分发 |
 | 配置 | 命令行参数 + 环境变量 | 保持简单，MCP 本身无状态 |
 

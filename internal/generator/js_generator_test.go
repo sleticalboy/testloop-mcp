@@ -63,7 +63,6 @@ export class Baz {
   method(p) { return p; }
 }
 `
-	// 写到临时文件
 	tmpPath := t.TempDir() + "/esmod.js"
 	if err := writeFile(tmpPath, src); err != nil {
 		t.Fatal(err)
@@ -74,7 +73,6 @@ export class Baz {
 		t.Fatalf("GenerateJestTests 失败: %v", err)
 	}
 
-	// 验证 ES module 导入
 	if !strings.Contains(code, "import {") {
 		t.Error("缺少 ES module import 导入")
 	}
@@ -82,91 +80,104 @@ export class Baz {
 		t.Error("缺少 from './esmod' 导入路径")
 	}
 
-	// 验证导出函数都在导入中
 	if !strings.Contains(code, "foo") || !strings.Contains(code, "bar") || !strings.Contains(code, "Baz") {
 		t.Error("导入中缺少导出函数/类")
 	}
 }
 
-func TestParseJSParams(t *testing.T) {
-	tests := []struct {
-		input   string
-		wantLen int
-		wantFirst string
-	}{
-		{"", 0, ""},
-		{"a, b", 2, "a"},
-		{"a, b, c", 3, "a"},
-		{"a = 1, b = 'hello'", 2, "a"},
-		{"...args", 1, "args"},
-		{"a: number, b: string", 2, "a"}, // TS 类型注解
-		{"{a, b}", 1, "a, b"}, // 解构（简化处理，strip {} 后保留原始内容）
+func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
+	source := []byte(`function add(a, b) { return a + b; }
+const multiply = (a, b) => a * b;
+const greet = function(name) { return "Hello, " + name; };
+class Calculator {
+  add(a, b) { return a + b; }
+  async divide(a, b) { return a / b; }
+}
+`)
+
+	funcs, classes, isESModule := parseJSWithTreeSitter(source, ".js")
+
+	if isESModule {
+		t.Error("不应检测到 ES module")
 	}
 
-	for _, tt := range tests {
-		params := parseJSParams(tt.input)
-		if len(params) != tt.wantLen {
-			t.Errorf("parseJSParams(%q) = %d params, want %d", tt.input, len(params), tt.wantLen)
-			continue
+	expectedFuncs := map[string]bool{"add": false, "multiply": false, "greet": false}
+	for _, fn := range funcs {
+		if _, ok := expectedFuncs[fn.Name]; ok {
+			expectedFuncs[fn.Name] = true
 		}
-		if tt.wantLen > 0 && params[0].Name != tt.wantFirst {
-			t.Errorf("parseJSParams(%q)[0].Name = %q, want %q", tt.input, params[0].Name, tt.wantFirst)
+	}
+	for name, found := range expectedFuncs {
+		if !found {
+			t.Errorf("未提取到函数: %s", name)
 		}
+	}
+
+	if len(classes) != 1 || classes[0].Name != "Calculator" {
+		t.Errorf("期望 1 个 Calculator 类, got %d classes", len(classes))
+	}
+	if len(classes[0].Methods) != 2 {
+		t.Errorf("期望 2 个方法, got %d", len(classes[0].Methods))
 	}
 }
 
-func TestParseJSParams_RestAndDefault(t *testing.T) {
-	params := parseJSParams("a, b = 2, ...rest")
-	if len(params) != 3 {
-		t.Fatalf("len = %d, want 3", len(params))
+func TestTreeSitterJS_AsyncDetection(t *testing.T) {
+	source := []byte(`async function fetchData(url) { return fetch(url); }
+const syncFn = (x) => x * 2;
+`)
+	funcs, _, _ := parseJSWithTreeSitter(source, ".js")
+
+	if len(funcs) != 2 {
+		t.Fatalf("期望 2 个函数, got %d", len(funcs))
 	}
-	if params[0].Name != "a" || params[0].HasDefault {
-		t.Errorf("param[0] = %+v", params[0])
+
+	// fetchData 应该是 async
+	foundAsync := false
+	foundSync := false
+	for _, fn := range funcs {
+		if fn.Name == "fetchData" && fn.IsAsync {
+			foundAsync = true
+		}
+		if fn.Name == "syncFn" && !fn.IsAsync {
+			foundSync = true
+		}
 	}
-	if !params[1].HasDefault {
-		t.Errorf("param[1] should have default, got %+v", params[1])
+	if !foundAsync {
+		t.Error("fetchData 应该是 async")
 	}
-	if !params[2].IsRest {
-		t.Errorf("param[2] should be rest, got %+v", params[2])
+	if !foundSync {
+		t.Error("syncFn 不应该是 async")
 	}
 }
 
-func TestSplitParams(t *testing.T) {
-	tests := []struct {
-		input   string
-		wantLen int
-	}{
-		{"a, b, c", 3},
-		{"a, {b, c}, d", 3}, // 嵌套不分割
-		{"a, [b, c]", 2},     // 嵌套不分割
-		{"", 1},              // 空字符串返回 1 个空元素
-	}
+func TestTreeSitterJS_ParamsExtraction(t *testing.T) {
+	source := []byte(`function formatText(text, prefix = "", ...args) { return text; }
+const arrow = (a, b) => a + b;
+`)
+	funcs, _, _ := parseJSWithTreeSitter(source, ".js")
 
-	for _, tt := range tests {
-		parts := splitParams(tt.input)
-		if len(parts) != tt.wantLen {
-			t.Errorf("splitParams(%q) = %d parts, want %d", tt.input, len(parts), tt.wantLen)
+	// formatText: 3 params (text, prefix=hasDefault, ...args=rest)
+	var formatFn *jsFuncInfo
+	for i := range funcs {
+		if funcs[i].Name == "formatText" {
+			formatFn = &funcs[i]
+			break
 		}
 	}
-}
-
-func TestFindMatchingBrace(t *testing.T) {
-	tests := []struct {
-		input    string
-		openIdx  int
-		wantEnd  int
-	}{
-		{"{a: 1}", 0, 5},
-		{"{{a: 1}, b: 2}", 0, 13},
-		{"const x = {a: 1};", 10, 15},
-		{`{a: "}"}`, 0, 7}, // 字符串中的 } 不算
+	if formatFn == nil {
+		t.Fatal("未找到 formatText 函数")
 	}
-
-	for _, tt := range tests {
-		end := findMatchingBrace(tt.input, tt.openIdx)
-		if end != tt.wantEnd {
-			t.Errorf("findMatchingBrace(%q, %d) = %d, want %d", tt.input, tt.openIdx, end, tt.wantEnd)
-		}
+	if len(formatFn.Params) != 3 {
+		t.Fatalf("formatText 期望 3 个参数, got %d", len(formatFn.Params))
+	}
+	if formatFn.Params[0].Name != "text" {
+		t.Errorf("param[0] = %s, want text", formatFn.Params[0].Name)
+	}
+	if !formatFn.Params[1].HasDefault {
+		t.Error("param[1] 应该有默认值")
+	}
+	if !formatFn.Params[2].IsRest {
+		t.Error("param[2] 应该是 rest 参数")
 	}
 }
 
@@ -185,7 +196,6 @@ func TestIsTestHelper(t *testing.T) {
 	}
 }
 
-// 辅助函数
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }

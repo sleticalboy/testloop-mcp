@@ -392,3 +392,54 @@ func TestE2E_FullLoop(t *testing.T) {
 
 	t.Log("Full loop completed successfully!")
 }
+
+// TestE2E_GenerateTests_Rust 验证 Rust 生成测试
+func TestE2E_GenerateTests_Rust(t *testing.T) {
+	session := startServer(t)
+	defer session.Close()
+
+	payload := callTool(t, session, "generate_tests", map[string]any{
+		"file_path": filepath.Join(projectRoot(), "demo", "calc.rs"),
+	})
+
+	// 检查是否返回了 test_file 和 preview
+	testFile, _ := payload["test_file"].(string)
+	if testFile == "" {
+		t.Fatal("test_file is empty")
+	}
+
+	preview, _ := payload["preview"].(string)
+	if !strings.Contains(preview, "#[test]") {
+		t.Errorf("preview should contain '#[test]', got: %.100s", preview)
+	}
+	if !strings.Contains(preview, "fn test_") {
+		t.Errorf("preview should contain 'fn test_', got: %.100s", preview)
+	}
+
+	t.Logf("generate_tests (Rust): test_file=%s, preview_len=%d", testFile, len(preview))
+}
+
+// TestE2E_GenerateTests_Java 验证 Java 生成测试
+func TestE2E_GenerateTests_Java(t *testing.T) {
+	session := startServer(t)
+	defer session.Close()
+
+	payload := callTool(t, session, "generate_tests", map[string]any{
+		"file_path": filepath.Join(projectRoot(), "demo", "Calculator.java"),
+	})
+
+	testFile, _ := payload["test_file"].(string)
+	if testFile == "" {
+		t.Fatal("test_file is empty")
+	}
+
+	preview, _ := payload["preview"].(string)
+	if !strings.Contains(preview, "@Test") {
+		t.Errorf("preview should contain '@Test', got: %.100s", preview)
+	}
+	if !strings.Contains(preview, "assert") {
+		t.Errorf("preview should contain 'assert', got: %.100s", preview)
+	}
+
+	t.Logf("generate_tests (Java): test_file=%s, preview_len=%d", testFile, len(preview))
+}
