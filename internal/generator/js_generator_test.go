@@ -303,6 +303,32 @@ func TestJestExactAssertionUsesBoundaryValue(t *testing.T) {
 	}
 }
 
+func TestJestExactAssertionUsesBranchReturnForBoundary(t *testing.T) {
+	analysis := analyzeJSBody(`if (mode === 'short') {
+  return prefix;
+}
+return prefix + text;`)
+	fn := jsFuncInfo{
+		Name:     "formatText",
+		Params:   []jsParamInfo{{Name: "mode"}, {Name: "prefix"}, {Name: "text"}},
+		Analysis: analysis,
+	}
+
+	code := genJestFuncTest(fn)
+	if !strings.Contains(code, "const result = formatText('test', 'test', 'test');") {
+		t.Fatalf("expected normal call, got:\n%s", code)
+	}
+	if !strings.Contains(code, "expect(result).toBe(('test' + 'test'));") {
+		t.Fatalf("expected default-path assertion, got:\n%s", code)
+	}
+	if !strings.Contains(code, "const result = formatText('short', 'test', 'test');") {
+		t.Fatalf("expected boundary call, got:\n%s", code)
+	}
+	if !strings.Contains(code, "expect(result).toBe(('test'));") {
+		t.Fatalf("expected branch assertion, got:\n%s", code)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {

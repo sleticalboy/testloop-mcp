@@ -7,6 +7,7 @@
 - Python/Jest 生成器会对简单 return 表达式生成精确断言，例如 `a + b` 会生成 `assert result == (1 + 2)` / `expect(result).toBe((1 + 2))`。
 - 边界用例会把边界值带入简单 return 表达式，生成更具体的断言。
 - Go 内置生成器会为简单纯函数生成可执行表驱动 case，不再默认只生成 TODO/skip。
+- Python/Jest 生成器会识别简单 if-return 分支，为普通路径和边界路径分别生成期望值。
 
 ## v0.2.0 - 2026-07-05
 

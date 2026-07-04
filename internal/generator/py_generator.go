@@ -38,9 +38,10 @@ type pyFuncAnalysis struct {
 
 // pyBoundary 边界条件
 type pyBoundary struct {
-	Param string
-	Value string
-	Type  string // number/string/None/boolean
+	Param      string
+	Value      string
+	Type       string // number/string/None/boolean
+	ReturnExpr string
 }
 
 // pyClassInfo 类信息
@@ -136,10 +137,11 @@ func GeneratePytestTests(srcPath string) (string, error) {
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----
 
 var (
-	pyReturnRe = regexp.MustCompile(`\breturn\s+(.+)`)
-	pyRaiseRe  = regexp.MustCompile(`\braise\b`)
-	pyIfEqRe   = regexp.MustCompile(`if\s+(\w+)\s*(?:==?|!=)\s*(.+?):`)
-	pyIfNoneRe = regexp.MustCompile(`if\s+(\w+)\s+(?:is|is\s+not)\s+(None|True|False)\s*:`)
+	pyReturnRe   = regexp.MustCompile(`\breturn\s+(.+)`)
+	pyRaiseRe    = regexp.MustCompile(`\braise\b`)
+	pyIfEqRe     = regexp.MustCompile(`if\s+(\w+)\s*(?:==?|!=)\s*(.+?):`)
+	pyIfNoneRe   = regexp.MustCompile(`if\s+(\w+)\s+(?:is|is\s+not)\s+(None|True|False)\s*:`)
+	pyIfReturnRe = regexp.MustCompile(`(?s)if\s+(\w+)\s*(?:==|is)\s*(.+?):\s*\n\s*return\s+([^\n]+)`)
 )
 
 func analyzePyBody(body string) pyFuncAnalysis {
@@ -273,6 +275,7 @@ func hasPyStringLiteral(s string) bool {
 func extractPyBoundaries(body string) []pyBoundary {
 	var boundaries []pyBoundary
 	seen := make(map[string]bool)
+	branchReturns := extractPyBranchReturns(body)
 
 	noneMatches := pyIfNoneRe.FindAllStringSubmatch(body, -1)
 	for _, m := range noneMatches {
@@ -281,7 +284,7 @@ func extractPyBoundaries(body string) []pyBoundary {
 		key := param + ":" + val
 		if !seen[key] {
 			seen[key] = true
-			boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: val})
+			boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: val, ReturnExpr: branchReturns[key]})
 		}
 	}
 
@@ -308,10 +311,27 @@ func extractPyBoundaries(body string) []pyBoundary {
 			bType = "string"
 		}
 
-		boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: bType})
+		boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 	}
 
 	return boundaries
+}
+
+func extractPyBranchReturns(body string) map[string]string {
+	results := map[string]string{}
+	for _, m := range pyIfReturnRe.FindAllStringSubmatch(body, -1) {
+		if len(m) != 4 {
+			continue
+		}
+		param := strings.TrimSpace(m[1])
+		value := strings.TrimSpace(m[2])
+		ret := strings.TrimSpace(m[3])
+		if param == "" || value == "" || ret == "" {
+			continue
+		}
+		results[param+":"+value] = ret
+	}
+	return results
 }
 
 // ---- 测试生成 ----
@@ -514,10 +534,17 @@ func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, bounda
 }
 
 func pyExpectedReturnExpr(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary) (string, bool) {
-	if len(a.Returns) != 1 {
+	expr := ""
+	if boundary != nil && boundary.ReturnExpr != "" {
+		expr = strings.TrimSpace(boundary.ReturnExpr)
+	} else if len(a.Returns) == 1 {
+		expr = strings.TrimSpace(a.Returns[0])
+	} else if len(a.Returns) > 1 {
+		expr = strings.TrimSpace(a.Returns[len(a.Returns)-1])
+	}
+	if expr == "" {
 		return "", false
 	}
-	expr := strings.TrimSpace(a.Returns[0])
 	if !pyReturnExprIsSafe(expr) {
 		return "", false
 	}

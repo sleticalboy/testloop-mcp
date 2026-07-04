@@ -40,9 +40,10 @@ type jsFuncAnalysis struct {
 
 // jsBoundary 边界条件
 type jsBoundary struct {
-	Param string // 参数名
-	Value string // 边界值（原始字面量）
-	Type  string // 值类型：number/string/null/undefined/boolean
+	Param      string // 参数名
+	Value      string // 边界值（原始字面量）
+	Type       string // 值类型：number/string/null/undefined/boolean
+	ReturnExpr string // 命中边界分支时的简单 return 表达式
 }
 
 // jsClassInfo 类信息
@@ -111,10 +112,11 @@ func GenerateJestTests(srcPath string) (string, error) {
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----
 
 var (
-	jsReturnRe = regexp.MustCompile(`\breturn\s+(.+?)(?:;|\n|$)`)
-	jsThrowRe  = regexp.MustCompile(`\bthrow\b`)
-	jsIfEqRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*([^)]+?)\s*\)`)
-	jsIfNullRe = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*(null|undefined)\s*\)`)
+	jsReturnRe   = regexp.MustCompile(`\breturn\s+(.+?)(?:;|\n|$)`)
+	jsThrowRe    = regexp.MustCompile(`\bthrow\b`)
+	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*([^)]+?)\s*\)`)
+	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*(null|undefined)\s*\)`)
+	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(?:===?|==)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(.+?)(?:;|\n|\})`)
 )
 
 // analyzeJSBody 分析 JS 函数体，推断返回类型、检测 throw 和边界条件
@@ -255,6 +257,7 @@ func hasStringLiteral(s string) bool {
 func extractJSBoundaries(body string) []jsBoundary {
 	var boundaries []jsBoundary
 	seen := make(map[string]bool)
+	branchReturns := extractJSBranchReturns(body)
 
 	nullMatches := jsIfNullRe.FindAllStringSubmatch(body, -1)
 	for _, m := range nullMatches {
@@ -263,7 +266,7 @@ func extractJSBoundaries(body string) []jsBoundary {
 		key := param + ":" + val
 		if !seen[key] {
 			seen[key] = true
-			boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: val})
+			boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: val, ReturnExpr: branchReturns[key]})
 		}
 	}
 
@@ -292,10 +295,27 @@ func extractJSBoundaries(body string) []jsBoundary {
 			bType = "boolean"
 		}
 
-		boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: bType})
+		boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 	}
 
 	return boundaries
+}
+
+func extractJSBranchReturns(body string) map[string]string {
+	results := map[string]string{}
+	for _, m := range jsIfReturnRe.FindAllStringSubmatch(body, -1) {
+		if len(m) != 4 {
+			continue
+		}
+		param := strings.TrimSpace(m[1])
+		value := strings.TrimSpace(m[2])
+		ret := strings.TrimSpace(m[3])
+		if param == "" || value == "" || ret == "" {
+			continue
+		}
+		results[param+":"+value] = ret
+	}
+	return results
 }
 
 // ---- 测试生成 ----
@@ -480,10 +500,18 @@ func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, bounda
 }
 
 func jsExpectedReturnExpr(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary) (string, bool) {
-	if len(a.Returns) != 1 {
+	expr := ""
+	if boundary != nil && boundary.ReturnExpr != "" {
+		expr = strings.TrimSpace(boundary.ReturnExpr)
+	} else if len(a.Returns) == 1 {
+		expr = strings.TrimSpace(a.Returns[0])
+	} else if len(a.Returns) > 1 {
+		expr = strings.TrimSpace(a.Returns[len(a.Returns)-1])
+	}
+	if expr == "" {
 		return "", false
 	}
-	expr := strings.TrimSpace(strings.TrimSuffix(a.Returns[0], ";"))
+	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
 	if !jsReturnExprIsSafe(expr) {
 		return "", false
 	}

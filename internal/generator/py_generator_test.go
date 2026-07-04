@@ -294,6 +294,31 @@ func TestPytestExactAssertionUsesBoundaryValue(t *testing.T) {
 	}
 }
 
+func TestPytestExactAssertionUsesBranchReturnForBoundary(t *testing.T) {
+	analysis := analyzePyBody(`if mode == "short":
+    return prefix
+return prefix + text`)
+	fn := pyFuncInfo{
+		Name:     "format_text",
+		Params:   []pyParamInfo{{Name: "mode"}, {Name: "prefix"}, {Name: "text"}},
+		Analysis: analysis,
+	}
+
+	code := genPytestFuncTest(fn)
+	if !strings.Contains(code, "result = format_text('test', 'test', 'test')") {
+		t.Fatalf("expected normal call, got:\n%s", code)
+	}
+	if !strings.Contains(code, "assert result == ('test' + 'test')") {
+		t.Fatalf("expected default-path assertion, got:\n%s", code)
+	}
+	if !strings.Contains(code, "result = format_text(\"short\", 'test', 'test')") {
+		t.Fatalf("expected boundary call, got:\n%s", code)
+	}
+	if !strings.Contains(code, "assert result == ('test')") {
+		t.Fatalf("expected branch assertion, got:\n%s", code)
+	}
+}
+
 func TestIsPyDunder(t *testing.T) {
 	if !isPyDunder("__init__") {
 		t.Error("__init__ should be dunder")
