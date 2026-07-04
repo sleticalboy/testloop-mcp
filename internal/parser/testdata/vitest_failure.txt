@@ -1,0 +1,14 @@
+ FAIL  src/sum.test.ts > sum > adds values
+AssertionError: expected 4 to be 3 // Object.is equality
+
+Expected: 3
+Received: 4
+
+ ❯ src/sum.test.ts:8:18
+      6| test('adds values', () => {
+      7|   const result = add(1, 2)
+      8|   expect(result).toBe(3)
+       |                  ^
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)

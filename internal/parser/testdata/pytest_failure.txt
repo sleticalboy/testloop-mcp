@@ -1,0 +1,20 @@
+test_calc.py::test_divide FAILED                                           [100%]
+
+=================================== FAILURES ===================================
+________________________________ test_divide _________________________________
+
+    def test_divide():
+>       divide(1, 0)
+
+test_calc.py:8:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+a = 1, b = 0
+
+    def divide(a, b):
+        if b == 0:
+>           raise ValueError("division by zero")
+E           ValueError: division by zero
+
+calc.py:7: ValueError
+============================== 1 failed in 0.01s ===============================

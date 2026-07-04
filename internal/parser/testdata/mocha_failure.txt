@@ -1,0 +1,11 @@
+  calc
+    ✓ add() should add numbers
+    1) divide() should handle division by zero
+
+  1 passing (12ms)
+  1 failing
+
+  1) calc
+       divide() should handle division by zero:
+     AssertionError: expected 4 to equal 3
+      at Context.<anonymous> (test/calc.test.js:12:18)

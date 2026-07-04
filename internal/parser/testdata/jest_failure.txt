@@ -1,0 +1,11 @@
+FAIL  ./sum.test.js
+  ✕ adds 1 + 2 to equal 3 (1 ms)
+
+  ● sum › adds 1 + 2 to equal 3
+    expect(received).toBe(expected)
+    Expected: 3
+    Received: 4
+      at Object.<anonymous> (sum.test.js:5:15)
+
+Test Suites: 1 failed, 0 passed, 1 total
+Tests:       1 failed, 0 passed, 1 total
