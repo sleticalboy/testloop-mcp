@@ -21,8 +21,9 @@ var (
 // ParseCargoTest 解析 cargo test 输出，返回 TestResult
 func ParseCargoTest(output string) types.TestResult {
 	result := types.TestResult{
-		Status:   "pass",
-		Failures: []types.TestFailure{},
+		Status:    "pass",
+		Failures:  []types.TestFailure{},
+		RawOutput: output,
 	}
 
 	lines := strings.Split(output, "\n")
@@ -89,6 +90,7 @@ func ParseCargoTest(output string) types.TestResult {
 	if result.Failed > 0 {
 		result.Status = "fail"
 	}
+	result.Total = result.Passed + result.Failed + result.Skipped
 
 	return result
 }

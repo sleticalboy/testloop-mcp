@@ -7,6 +7,7 @@
 - `parse_coverage` 支持 Rust `cargo tarpaulin --out Lcov` 生成的 LCOV。
 - `parse_coverage` 支持 Java JaCoCo XML。
 - Rust/Java 覆盖率报告会生成统一的 `CoverageReport`、`suggestions` 和 `test_tasks`。
+- `run_tests coverage=true` 支持为 Rust 调用 tarpaulin、为 Java Maven/Gradle 调用 JaCoCo report，并回填 `coverage_percent`。
 
 ## v0.1.0 - 2026-07-04
 

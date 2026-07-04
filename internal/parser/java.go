@@ -29,8 +29,9 @@ var (
 // ParseJUnitTest 解析 Java JUnit 测试输出（Maven/Gradle/JUnit 5）
 func ParseJUnitTest(output string) types.TestResult {
 	result := types.TestResult{
-		Status:   "pass",
-		Failures: []types.TestFailure{},
+		Status:    "pass",
+		Failures:  []types.TestFailure{},
+		RawOutput: output,
 	}
 
 	lines := strings.Split(output, "\n")
@@ -45,8 +46,10 @@ func ParseJUnitTest(output string) types.TestResult {
 			failures, _ := strconv.Atoi(m[2])
 			errors, _ := strconv.Atoi(m[3])
 			skipped, _ := strconv.Atoi(m[4])
+			result.Total = total
 			result.Passed = total - failures - errors - skipped
 			result.Failed = failures + errors
+			result.Skipped = skipped
 			if result.Failed > 0 {
 				result.Status = "fail"
 			}
@@ -57,6 +60,7 @@ func ParseJUnitTest(output string) types.TestResult {
 		if m := javaGradleRE.FindStringSubmatch(line); m != nil {
 			total, _ := strconv.Atoi(m[1])
 			failed, _ := strconv.Atoi(m[2])
+			result.Total = total
 			result.Passed = total - failed
 			result.Failed = failed
 			if result.Failed > 0 {
@@ -67,9 +71,10 @@ func ParseJUnitTest(output string) types.TestResult {
 
 		// JUnit 5 格式
 		if m := javaJUnit5RE.FindStringSubmatch(line); m != nil {
-			// found = m[1], succeeded = m[2], failed = m[3]
+			total, _ := strconv.Atoi(m[1])
 			passed, _ := strconv.Atoi(m[2])
 			failed, _ := strconv.Atoi(m[3])
+			result.Total = total
 			result.Passed = passed
 			result.Failed = failed
 			if result.Failed > 0 {
@@ -115,6 +120,9 @@ func ParseJUnitTest(output string) types.TestResult {
 
 	if result.Failed > 0 {
 		result.Status = "fail"
+	}
+	if result.Total == 0 {
+		result.Total = result.Passed + result.Failed + result.Skipped
 	}
 
 	return result

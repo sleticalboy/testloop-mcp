@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/binlee/testloop-mcp/internal/coverage"
 	"github.com/binlee/testloop-mcp/internal/detector"
 	"github.com/binlee/testloop-mcp/internal/parser"
 )
@@ -132,7 +133,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		output, err = cmd.CombinedOutput()
 
 	case "junit":
-		cmd := javaTestCommand(ctx, path)
+		cmd := javaTestCommand(ctx, path, coverage)
 		output, err = cmd.CombinedOutput()
 
 	default:
@@ -142,6 +143,9 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	// 测试失败是正常情况，继续解析输出
 	_ = err
 	result := parser.ParseTestOutput(string(output), framework)
+	if coverage {
+		result.CoveragePercent = collectCoveragePercent(ctx, framework, path, result.CoveragePercent)
+	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
@@ -169,26 +173,44 @@ func getProjectRoot(path string) string {
 	return filepath.Dir(path)
 }
 
-func javaTestCommand(ctx context.Context, path string) *exec.Cmd {
+func javaTestCommand(ctx context.Context, path string, withCoverage bool) *exec.Cmd {
 	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
 	if fileExists(filepath.Join(root, "mvnw")) {
-		cmd := exec.CommandContext(ctx, "./mvnw", "test")
+		args := javaMavenArgs(withCoverage)
+		cmd := exec.CommandContext(ctx, "./mvnw", args...)
 		cmd.Dir = root
 		return cmd
 	}
 	if fileExists(filepath.Join(root, "pom.xml")) {
-		cmd := exec.CommandContext(ctx, "mvn", "test")
+		args := javaMavenArgs(withCoverage)
+		cmd := exec.CommandContext(ctx, "mvn", args...)
 		cmd.Dir = root
 		return cmd
 	}
 	if fileExists(filepath.Join(root, "gradlew")) {
-		cmd := exec.CommandContext(ctx, "./gradlew", "test")
+		args := javaGradleArgs(withCoverage)
+		cmd := exec.CommandContext(ctx, "./gradlew", args...)
 		cmd.Dir = root
 		return cmd
 	}
-	cmd := exec.CommandContext(ctx, "gradle", "test")
+	args := javaGradleArgs(withCoverage)
+	cmd := exec.CommandContext(ctx, "gradle", args...)
 	cmd.Dir = root
 	return cmd
+}
+
+func javaMavenArgs(withCoverage bool) []string {
+	if withCoverage {
+		return []string{"test", "jacoco:report"}
+	}
+	return []string{"test"}
+}
+
+func javaGradleArgs(withCoverage bool) []string {
+	if withCoverage {
+		return []string{"test", "jacocoTestReport"}
+	}
+	return []string{"test"}
 }
 
 func fileExists(path string) bool {
@@ -211,4 +233,51 @@ func findProjectRoot(path string, markers ...string) string {
 		root = parent
 	}
 	return getProjectRoot(path)
+}
+
+func collectCoveragePercent(ctx context.Context, framework string, path string, current float64) float64 {
+	switch framework {
+	case "cargo-test":
+		if percent, ok := collectRustCoveragePercent(ctx, path); ok {
+			return percent
+		}
+	case "junit":
+		if percent, ok := collectJavaCoveragePercent(path); ok {
+			return percent
+		}
+	}
+	return current
+}
+
+func collectRustCoveragePercent(ctx context.Context, path string) (float64, bool) {
+	root := findProjectRoot(path, "Cargo.toml")
+	outputDir := filepath.Join(root, "target", "tarpaulin")
+	cmd := exec.CommandContext(ctx, "cargo", "tarpaulin", "--out", "Lcov", "--output-dir", outputDir)
+	cmd.Dir = root
+	if _, err := cmd.CombinedOutput(); err != nil {
+		return 0, false
+	}
+	report, err := coverage.ParseRustTarpaulinCoverage(filepath.Join(outputDir, "lcov.info"))
+	if err != nil {
+		return 0, false
+	}
+	return report.TotalPercent, true
+}
+
+func collectJavaCoveragePercent(path string) (float64, bool) {
+	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
+	for _, reportPath := range []string{
+		filepath.Join(root, "target", "site", "jacoco", "jacoco.xml"),
+		filepath.Join(root, "build", "reports", "jacoco", "test", "jacocoTestReport.xml"),
+	} {
+		if !fileExists(reportPath) {
+			continue
+		}
+		report, err := coverage.ParseJaCoCoCoverage(reportPath)
+		if err != nil {
+			continue
+		}
+		return report.TotalPercent, true
+	}
+	return 0, false
 }

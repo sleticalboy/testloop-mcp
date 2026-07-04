@@ -34,4 +34,4 @@
 
 - [x] Rust `cargo tarpaulin` LCOV 覆盖率解析已实现。
 - [x] Java JaCoCo XML 覆盖率解析已实现。
-- [ ] `run_tests` 的 coverage 模式可进一步集成 tarpaulin/JaCoCo 报告生成命令。
+- [x] `run_tests` 的 coverage 模式已集成 tarpaulin/JaCoCo 报告生成命令。

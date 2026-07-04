@@ -125,7 +125,7 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
 
 **返回：** `{ status, framework, total, passed, failed, skipped, coverage_percent, failures[], raw_output }`
 
-Rust/Java 的覆盖率报告目前通过 `parse_coverage` 解析外部工具生成的文件：Rust 使用 `cargo tarpaulin --out Lcov`，Java 使用 JaCoCo XML。`run_tests` 的 `coverage` 参数暂不自动生成 tarpaulin/JaCoCo 报告。
+`coverage=true` 时，Rust 会额外调用 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin` 并回填 `coverage_percent`；Java Maven/Gradle 项目会执行 JaCoCo report 任务并从 XML 报告回填 `coverage_percent`。也可以通过 `parse_coverage` 直接解析已有 LCOV/JaCoCo XML 文件。
 
 ---
 
