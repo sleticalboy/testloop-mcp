@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -101,6 +102,28 @@ func callToolRaw(t *testing.T, session *mcp.ClientSession, name string, args map
 func projectRoot() string {
 	abs, _ := filepath.Abs(filepath.Join("..", ".."))
 	return abs
+}
+
+func prependPath(t *testing.T, dir string) {
+	t.Helper()
+	separator := string(os.PathListSeparator)
+	oldPath := os.Getenv("PATH")
+	if oldPath == "" {
+		t.Setenv("PATH", dir)
+		return
+	}
+	t.Setenv("PATH", dir+separator+oldPath)
+}
+
+func writeExecutable(t *testing.T, path string, content string) {
+	t.Helper()
+	mode := os.FileMode(0o755)
+	if runtime.GOOS == "windows" {
+		mode = 0o644
+	}
+	if err := os.WriteFile(path, []byte(content), mode); err != nil {
+		t.Fatalf("write executable %s: %v", path, err)
+	}
 }
 
 // TestE2E_ListTools 验证 tools/list 返回全部 5 个工具
@@ -331,6 +354,158 @@ github.com/binlee/testloop-mcp/demo/calc.go:15.1,21.2 1 1`
 
 	t.Logf("parse_coverage: framework=%s, total_percent=%v, files=%d",
 		framework, payload["total_percent"], len(files))
+}
+
+func TestE2E_RunTests_RustCoverageLoop(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake shell commands are unix-style")
+	}
+
+	tmp := t.TempDir()
+	projectDir := filepath.Join(tmp, "rust-demo")
+	if err := os.MkdirAll(filepath.Join(projectDir, "src"), 0o755); err != nil {
+		t.Fatalf("mkdir rust project: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "Cargo.toml"), []byte("[package]\nname = \"rust-demo\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"), 0o644); err != nil {
+		t.Fatalf("write Cargo.toml: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "src", "lib.rs"), []byte("pub fn add(a: i32, b: i32) -> i32 { a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write lib.rs: %v", err)
+	}
+
+	binDir := filepath.Join(tmp, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin dir: %v", err)
+	}
+	writeExecutable(t, filepath.Join(binDir, "cargo"), `#!/bin/sh
+if [ "$1" = "tarpaulin" ]; then
+  outdir=""
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = "--output-dir" ]; then
+      shift
+      outdir="$1"
+    fi
+    shift
+  done
+  mkdir -p "$outdir"
+  cat > "$outdir/lcov.info" <<'EOF'
+TN:
+SF:src/lib.rs
+DA:1,1
+DA:2,0
+end_of_record
+EOF
+  exit 0
+fi
+cat <<'EOF'
+running 1 test
+test tests::adds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+EOF
+`)
+	prependPath(t, binDir)
+
+	session := startServer(t)
+	defer session.Close()
+
+	payload := callTool(t, session, "run_tests", map[string]any{
+		"path":      projectDir,
+		"framework": "cargo-test",
+		"coverage":  true,
+	})
+	if payload["framework"] != "cargo-test" {
+		t.Fatalf("framework = %v, want cargo-test", payload["framework"])
+	}
+	if payload["status"] != "pass" {
+		t.Fatalf("status = %v, want pass; raw=%v", payload["status"], payload["raw_output"])
+	}
+	if payload["coverage_percent"] != float64(50) {
+		t.Fatalf("coverage_percent = %v, want 50", payload["coverage_percent"])
+	}
+
+	coveragePayload := callTool(t, session, "parse_coverage", map[string]any{
+		"data":      filepath.Join(projectDir, "target", "tarpaulin", "lcov.info"),
+		"framework": "cargo-test",
+	})
+	if coveragePayload["total_percent"] != float64(50) {
+		t.Fatalf("total_percent = %v, want 50", coveragePayload["total_percent"])
+	}
+	if coveragePayload["framework"] != "cargo-test" {
+		t.Fatalf("coverage framework = %v, want cargo-test", coveragePayload["framework"])
+	}
+}
+
+func TestE2E_RunTests_JavaCoverageLoop(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake shell commands are unix-style")
+	}
+
+	tmp := t.TempDir()
+	projectDir := filepath.Join(tmp, "java-demo")
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		t.Fatalf("mkdir java project: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatalf("write pom.xml: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "Calculator.java"), []byte("class Calculator { int add(int a, int b) { return a + b; } }\n"), 0o644); err != nil {
+		t.Fatalf("write Calculator.java: %v", err)
+	}
+
+	binDir := filepath.Join(tmp, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin dir: %v", err)
+	}
+	writeExecutable(t, filepath.Join(binDir, "mvn"), `#!/bin/sh
+mkdir -p target/site/jacoco
+cat > target/site/jacoco/jacoco.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="1" mi="0" ci="1"/>
+      <line nr="2" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="1"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="1"/>
+</report>
+EOF
+cat <<'EOF'
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+EOF
+`)
+	prependPath(t, binDir)
+
+	session := startServer(t)
+	defer session.Close()
+
+	payload := callTool(t, session, "run_tests", map[string]any{
+		"path":      projectDir,
+		"framework": "junit",
+		"coverage":  true,
+	})
+	if payload["framework"] != "junit" {
+		t.Fatalf("framework = %v, want junit", payload["framework"])
+	}
+	if payload["status"] != "pass" {
+		t.Fatalf("status = %v, want pass; raw=%v", payload["status"], payload["raw_output"])
+	}
+	if payload["coverage_percent"] != float64(50) {
+		t.Fatalf("coverage_percent = %v, want 50", payload["coverage_percent"])
+	}
+
+	coveragePayload := callTool(t, session, "parse_coverage", map[string]any{
+		"data":      filepath.Join(projectDir, "target", "site", "jacoco", "jacoco.xml"),
+		"framework": "junit",
+	})
+	if coveragePayload["total_percent"] != float64(50) {
+		t.Fatalf("total_percent = %v, want 50", coveragePayload["total_percent"])
+	}
+	if coveragePayload["framework"] != "junit" {
+		t.Fatalf("coverage framework = %v, want junit", coveragePayload["framework"])
+	}
 }
 
 // TestE2E_FullLoop 验证完整闭环：generate → run → parse → fix → coverage
