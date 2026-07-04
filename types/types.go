@@ -79,6 +79,7 @@ type CoverageReport struct {
 	Files        []CoverageFile       `json:"files"`
 	Summary      CoverageSummary      `json:"summary"`
 	Suggestions  []CoverageSuggestion `json:"suggestions,omitempty"`
+	TestTasks    []CoverageTestTask   `json:"test_tasks,omitempty"`
 }
 
 // CoverageFile 单文件覆盖率
@@ -114,5 +115,20 @@ type CoverageSuggestion struct {
 	UncoveredLines  []int    `json:"uncovered_lines,omitempty"`
 	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
 	Reason          string   `json:"reason"`
+	Confidence      float64  `json:"confidence"`
+}
+
+// CoverageTestTask 覆盖率驱动测试任务
+type CoverageTestTask struct {
+	ID              string   `json:"id"`
+	Framework       string   `json:"framework"`
+	File            string   `json:"file"`
+	Target          string   `json:"target"`
+	Kind            string   `json:"kind,omitempty"`
+	LineRange       string   `json:"line_range"`
+	UncoveredLines  []int    `json:"uncovered_lines,omitempty"`
+	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
+	Goal            string   `json:"goal"`
+	Command         string   `json:"command,omitempty"`
 	Confidence      float64  `json:"confidence"`
 }

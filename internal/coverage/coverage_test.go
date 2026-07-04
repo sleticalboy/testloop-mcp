@@ -122,6 +122,23 @@ func (Calculator) Divide(a, b int) int {
 	if !strings.Contains(divideSuggestion.Reason, "Calculator.Divide") {
 		t.Errorf("expected function-aware reason, got %q", divideSuggestion.Reason)
 	}
+
+	addTask := findCoverageTask(report.TestTasks, "Add")
+	if addTask == nil {
+		t.Fatalf("expected Add test task, got %+v", report.TestTasks)
+	}
+	if addTask.Framework != "go-test" || addTask.Kind != "function" {
+		t.Errorf("unexpected Add task metadata: %+v", addTask)
+	}
+	if !strings.Contains(addTask.Goal, "覆盖未执行行段 4-4") {
+		t.Errorf("unexpected Add task goal: %q", addTask.Goal)
+	}
+	if addTask.Command == "" || !strings.Contains(addTask.Command, "go test") {
+		t.Errorf("expected go test command, got %q", addTask.Command)
+	}
+	if !containsString(addTask.SuggestedInputs, "设置 a 覆盖未执行分支") {
+		t.Errorf("expected task input hints, got %+v", addTask.SuggestedInputs)
+	}
 }
 
 func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
@@ -140,6 +157,15 @@ func containsString(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func findCoverageTask(tasks []types.CoverageTestTask, target string) *types.CoverageTestTask {
+	for i := range tasks {
+		if tasks[i].Target == target {
+			return &tasks[i]
+		}
+	}
+	return nil
 }
 
 func TestParseJestCoverage(t *testing.T) {
@@ -186,6 +212,12 @@ func TestParseJestCoverage(t *testing.T) {
 	}
 	if report.Summary.CoveredStatements != 3 {
 		t.Errorf("CoveredStatements = %d, want 3", report.Summary.CoveredStatements)
+	}
+	if len(report.TestTasks) == 0 {
+		t.Fatal("expected non-empty test tasks for uncovered statements")
+	}
+	if report.TestTasks[0].Framework != "jest" || report.TestTasks[0].Command == "" {
+		t.Errorf("unexpected jest test task: %+v", report.TestTasks[0])
 	}
 
 	t.Logf("覆盖率: %.1f%%", report.TotalPercent)

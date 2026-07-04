@@ -35,10 +35,10 @@ type coveragePyFile struct {
 	ExecutedLines []int `json:"executed_lines"`
 	MissingLines  []int `json:"missing_lines"`
 	Summary       struct {
-		CoveredLines    int     `json:"covered_lines"`
-		NumStatements   int     `json:"num_statements"`
-		PercentCovered  float64 `json:"percent_covered"`
-		MissingLines    int     `json:"missing_lines"`
+		CoveredLines   int     `json:"covered_lines"`
+		NumStatements  int     `json:"num_statements"`
+		PercentCovered float64 `json:"percent_covered"`
+		MissingLines   int     `json:"missing_lines"`
 	} `json:"summary"`
 }
 
@@ -139,6 +139,7 @@ func ParsePytestCoverage(profileData string) (*types.CoverageReport, error) {
 	}
 
 	report.Suggestions = GenerateSuggestions(report)
+	report.TestTasks = GenerateTestTasks(report)
 	return report, nil
 }
 

@@ -123,6 +123,7 @@ func ParseGoCoverage(profileData string) (*types.CoverageReport, error) {
 	}
 
 	report.Suggestions = GenerateSuggestions(report)
+	report.TestTasks = GenerateTestTasks(report)
 	return report, nil
 }
 

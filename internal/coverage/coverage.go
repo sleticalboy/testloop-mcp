@@ -2,6 +2,8 @@ package coverage
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/binlee/testloop-mcp/types"
 )
@@ -102,4 +104,72 @@ func suggestedGoInputs(params []string) []string {
 		inputs = append(inputs, fmt.Sprintf("设置 %s 覆盖未执行分支", param))
 	}
 	return inputs
+}
+
+func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
+	tasks := make([]types.CoverageTestTask, 0, len(report.Suggestions))
+	for i, suggestion := range report.Suggestions {
+		target := suggestion.Function
+		if target == "" {
+			target = filepath.Base(suggestion.File)
+		}
+		task := types.CoverageTestTask{
+			ID:              fmt.Sprintf("%s-%d", sanitizeTaskID(report.Framework), i+1),
+			Framework:       report.Framework,
+			File:            suggestion.File,
+			Target:          target,
+			Kind:            suggestion.Kind,
+			LineRange:       suggestion.LineRange,
+			UncoveredLines:  suggestion.UncoveredLines,
+			SuggestedInputs: suggestion.SuggestedInputs,
+			Goal:            coverageTaskGoal(target, suggestion.LineRange),
+			Command:         coverageTaskCommand(report.Framework, suggestion.File),
+			Confidence:      suggestion.Confidence,
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks
+}
+
+func coverageTaskGoal(target string, lineRange string) string {
+	return fmt.Sprintf("为 %s 补充测试，覆盖未执行行段 %s", target, lineRange)
+}
+
+func coverageTaskCommand(framework string, file string) string {
+	switch framework {
+	case "go-test":
+		dir := filepath.Dir(file)
+		if dir == "." || dir == "" {
+			return "go test ./..."
+		}
+		return "go test ./" + filepath.ToSlash(dir)
+	case "jest":
+		return "npx jest " + file
+	case "vitest":
+		return "npx vitest run " + file
+	case "mocha":
+		return "npx mocha"
+	case "pytest":
+		return "pytest " + file
+	default:
+		return ""
+	}
+}
+
+func sanitizeTaskID(value string) string {
+	value = strings.ToLower(value)
+	var b strings.Builder
+	lastDash := false
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteByte('-')
+			lastDash = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }

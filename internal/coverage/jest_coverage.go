@@ -108,5 +108,6 @@ func ParseJestCoverage(profileData, framework string) (*types.CoverageReport, er
 	}
 
 	report.Suggestions = GenerateSuggestions(report)
+	report.TestTasks = GenerateTestTasks(report)
 	return report, nil
 }
