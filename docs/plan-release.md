@@ -14,6 +14,7 @@
 - [x] HTTP 模式可启动，并且 `/healthz` 健康检查返回 200。
 - [x] Docker 镜像可构建：`docker build -t testloop-mcp:release-check .`
 - [x] Docker 容器可启动，并且映射端口后的 `/healthz` 返回 200。
+- [x] GitHub Actions CI 已通过：测试、主服务构建、CLI 构建、Docker build。
 - [x] README 与 DESIGN 已说明 `generate_tests` 的 provider、gotests 优先路径和当前覆盖率支持范围。
 - [x] README 已明确 Rust `cargo tarpaulin` 与 Java JaCoCo 覆盖率尚未实现。
 
@@ -27,10 +28,9 @@
 - [x] 修正 Docker healthcheck 指向 `/mcp` 导致无 session GET 返回 400 的问题，新增 `/healthz` 探活端点。
 - [x] 修正 Dockerfile 运行时镜像安装不存在的 `musl-libc` 包的问题，运行时仅安装 `ca-certificates`。
 - [x] 优化 `.dockerignore`，排除根目录构建产物，Docker build context 从约 29MB 降到 KB 级。
+- [x] 新增 `CHANGELOG.md` 和 `docs/plan-release-notes.md`，准备 v0.1.0 发布说明。
 
 ## 发布前仍建议补充
 
-- [ ] 确认 GitHub Actions 或本地发布脚本是否需要补充。
-- [ ] 如果准备打 tag，补充 changelog/release notes。
 - [ ] Rust `cargo tarpaulin` 覆盖率解析仍未实现。
 - [ ] Java JaCoCo 覆盖率解析仍未实现。
