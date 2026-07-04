@@ -13,7 +13,7 @@ import (
 
 type parseResultsInput struct {
 	Output    string `json:"output" jsonschema:"测试执行的标准输出/错误输出原文"`
-	Framework string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/jest/pytest，默认 go-test"`
+	Framework string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认 go-test"`
 }
 
 func HandleParseResults(ctx context.Context, req *mcp.CallToolRequest, input parseResultsInput) (*mcp.CallToolResult, any, error) {
@@ -41,7 +41,7 @@ func parseResults(input parseResultsInput) (types.TestResult, error) {
 	if framework == "" {
 		framework = "go-test"
 	}
-	
+
 	result := parser.ParseTestOutput(input.Output, framework)
 	return result, nil
 }

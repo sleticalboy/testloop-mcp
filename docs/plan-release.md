@@ -30,7 +30,8 @@
 - [x] 优化 `.dockerignore`，排除根目录构建产物，Docker build context 从约 29MB 降到 KB 级。
 - [x] 新增 `CHANGELOG.md` 和 `docs/plan-release-notes.md`，准备 v0.1.0 发布说明。
 
-## 发布前仍建议补充
+## 后续建议补充
 
-- [ ] Rust `cargo tarpaulin` 覆盖率解析仍未实现。
-- [ ] Java JaCoCo 覆盖率解析仍未实现。
+- [x] Rust `cargo tarpaulin` LCOV 覆盖率解析已实现。
+- [x] Java JaCoCo XML 覆盖率解析已实现。
+- [ ] `run_tests` 的 coverage 模式可进一步集成 tarpaulin/JaCoCo 报告生成命令。

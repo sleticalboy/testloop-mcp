@@ -191,7 +191,7 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 }
 ```
 
-支持 Go coverprofile / Jest (Istanbul) coverage JSON / pytest coverage JSON 三种格式。
+支持 Go coverprofile / Istanbul coverage JSON（Jest/Vitest/Mocha）/ coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML。
 
 ---
 
@@ -235,7 +235,9 @@ testloop-mcp/
 │   │   ├── coverage.go              # 统一入口 + 改进建议生成
 │   │   ├── go_coverage.go           # Go coverprofile 解析
 │   │   ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析（Vitest/Mocha 共用）
-│   │   └── pytest_coverage.go       # coverage.py JSON 解析
+│   │   ├── pytest_coverage.go       # coverage.py JSON 解析
+│   │   ├── rust_coverage.go         # cargo tarpaulin LCOV 解析
+│   │   └── java_coverage.go         # JaCoCo XML 解析
 │   └── detector/
 │       └── detector.go              # 框架自动检测（package.json/pyproject.toml/go.mod，向上递归）
 ├── cmd/

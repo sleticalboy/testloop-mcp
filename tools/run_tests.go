@@ -24,7 +24,7 @@ type runTestsInput struct {
 // Register 把所有 Tools 注册到 server
 func Register(s *mcp.Server) {
 	mcp.AddTool[runTestsInput, any](s,
-		&mcp.Tool{Name: "run_tests", Description: "执行测试并返回结构化结果。支持 Go/Node/Python 项目。"},
+		&mcp.Tool{Name: "run_tests", Description: "执行测试并返回结构化结果。支持 Go/Rust/Node/Python/Java 项目。"},
 		HandleRunTests,
 	)
 	mcp.AddTool[parseResultsInput, any](s,
@@ -40,7 +40,7 @@ func Register(s *mcp.Server) {
 		HandleFixSuggestions,
 	)
 	mcp.AddTool[parseCoverageInput, any](s,
-		&mcp.Tool{Name: "parse_coverage", Description: "解析覆盖率数据（Go coverprofile / Jest coverage JSON / pytest coverage JSON），返回结构化覆盖率报告和改进建议。"},
+		&mcp.Tool{Name: "parse_coverage", Description: "解析覆盖率数据（Go coverprofile / Istanbul JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML），返回结构化覆盖率报告和改进建议。"},
 		HandleParseCoverage,
 	)
 }
@@ -122,8 +122,21 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		cmd.Dir = getProjectRoot(path)
 		output, err = cmd.CombinedOutput()
 
+	case "cargo-test":
+		args := []string{"test"}
+		if verbose {
+			args = append(args, "--", "--nocapture")
+		}
+		cmd := exec.CommandContext(ctx, "cargo", args...)
+		cmd.Dir = findProjectRoot(path, "Cargo.toml")
+		output, err = cmd.CombinedOutput()
+
+	case "junit":
+		cmd := javaTestCommand(ctx, path)
+		output, err = cmd.CombinedOutput()
+
 	default:
-		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, jest, vitest, mocha, pytest）", framework)
+		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, cargo-test, jest, vitest, mocha, pytest, junit）", framework)
 	}
 
 	// 测试失败是正常情况，继续解析输出
@@ -154,4 +167,48 @@ func getProjectRoot(path string) string {
 		return path
 	}
 	return filepath.Dir(path)
+}
+
+func javaTestCommand(ctx context.Context, path string) *exec.Cmd {
+	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
+	if fileExists(filepath.Join(root, "mvnw")) {
+		cmd := exec.CommandContext(ctx, "./mvnw", "test")
+		cmd.Dir = root
+		return cmd
+	}
+	if fileExists(filepath.Join(root, "pom.xml")) {
+		cmd := exec.CommandContext(ctx, "mvn", "test")
+		cmd.Dir = root
+		return cmd
+	}
+	if fileExists(filepath.Join(root, "gradlew")) {
+		cmd := exec.CommandContext(ctx, "./gradlew", "test")
+		cmd.Dir = root
+		return cmd
+	}
+	cmd := exec.CommandContext(ctx, "gradle", "test")
+	cmd.Dir = root
+	return cmd
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func findProjectRoot(path string, markers ...string) string {
+	root := getProjectRoot(path)
+	for i := 0; i < 8; i++ {
+		for _, marker := range markers {
+			if fileExists(filepath.Join(root, marker)) {
+				return root
+			}
+		}
+		parent := filepath.Dir(root)
+		if parent == root {
+			break
+		}
+		root = parent
+	}
+	return getProjectRoot(path)
 }

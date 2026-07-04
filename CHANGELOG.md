@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `parse_coverage` 支持 Rust `cargo tarpaulin --out Lcov` 生成的 LCOV。
+- `parse_coverage` 支持 Java JaCoCo XML。
+- Rust/Java 覆盖率报告会生成统一的 `CoverageReport`、`suggestions` 和 `test_tasks`。
+
 ## v0.1.0 - 2026-07-04
 
 首个可用版本，定位为面向 AI Coding Agent 的测试反馈与质量控制 MCP 层。

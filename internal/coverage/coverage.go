@@ -2,6 +2,7 @@ package coverage
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -21,9 +22,24 @@ func ParseCoverage(profileData, framework string) (*types.CoverageReport, error)
 		return ParseJestCoverage(profileData, "mocha")
 	case "pytest":
 		return ParsePytestCoverage(profileData)
+	case "cargo-test":
+		return ParseRustTarpaulinCoverage(profileData)
+	case "junit":
+		return ParseJaCoCoCoverage(profileData)
 	default:
 		return nil, fmt.Errorf("不支持的覆盖率框架: %s", framework)
 	}
+}
+
+func coverageInputContent(profileData string) (string, error) {
+	if _, err := os.Stat(profileData); err == nil {
+		data, err := os.ReadFile(profileData)
+		if err != nil {
+			return "", fmt.Errorf("读取覆盖率文件失败: %w", err)
+		}
+		return string(data), nil
+	}
+	return profileData, nil
 }
 
 // GenerateSuggestions 根据覆盖率报告生成改进建议
@@ -154,6 +170,10 @@ func coverageTaskCommand(framework string, file string) string {
 		return "npx mocha"
 	case "pytest":
 		return "pytest " + file
+	case "cargo-test":
+		return "cargo test"
+	case "junit":
+		return "mvn test"
 	default:
 		return ""
 	}

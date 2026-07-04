@@ -3,7 +3,6 @@ package coverage
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,16 +20,9 @@ var goCoverageLineRe = regexp.MustCompile(
 
 // ParseGoCoverage 解析 go test -coverprofile 输出的覆盖率 profile 文件内容或文件路径
 func ParseGoCoverage(profileData string) (*types.CoverageReport, error) {
-	// 如果传入的是文件路径，读取文件内容
-	var content string
-	if _, err := os.Stat(profileData); err == nil {
-		data, err := os.ReadFile(profileData)
-		if err != nil {
-			return nil, fmt.Errorf("读取覆盖率文件失败: %w", err)
-		}
-		content = string(data)
-	} else {
-		content = profileData
+	content, err := coverageInputContent(profileData)
+	if err != nil {
+		return nil, err
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(content))

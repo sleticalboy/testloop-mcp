@@ -11,7 +11,7 @@
 - **执行测试** — 支持 `go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit 5（Maven/Gradle），自动检测项目类型，可选收集覆盖率
 - **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
 - **修复建议** — 根据失败类型（期望值不匹配 / nil pointer / 数组越界 / 除零 / 类型不匹配等）生成结构化修复建议
-- **覆盖率分析** — 解析 Go coverprofile / Jest coverage JSON / pytest coverage JSON，输出文件级覆盖率、未覆盖 block 定位和改进建议
+- **覆盖率分析** — 解析 Go coverprofile / Istanbul coverage JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML，输出文件级覆盖率、未覆盖 block 定位和改进建议
 
 ## 架构概览
 
@@ -36,15 +36,15 @@ AI IDE (Claude Code / Cursor / Copilot)
 | 语言 | 测试框架 | 生成 | 执行 | 解析 | 覆盖率 |
 |------|---------|:----:|:----:|:----:|:------:|
 | Go | `go test` | ✅ | ✅ | ✅ | ✅ |
-| Rust | `cargo test` | ✅ | ✅ | ✅ | 🔲 |
+| Rust | `cargo test` | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Jest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Vitest | ✅ | ✅ | ✅ | ✅ |
 | Node.js | Mocha | ✅ | ✅ | ✅ | ✅ |
 | Python | pytest | ✅ | ✅ | ✅ | ✅ |
-| Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | 🔲 |
+| Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | ✅ |
 
 > 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。
-> 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）和 coverage.py JSON；Rust `cargo tarpaulin` 与 Java JaCoCo 仍在规划中，尚未实现。
+> 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）、coverage.py JSON、Rust `cargo tarpaulin --out Lcov` 生成的 LCOV，以及 Java JaCoCo XML。
 
 ## 安装
 
@@ -119,11 +119,13 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `path` | string | ✅ | 测试文件或目录路径 |
-| `framework` | string | — | `go-test` / `jest` / `vitest` / `mocha` / `pytest`，默认自动检测 |
+| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`，默认自动检测 |
 | `coverage` | bool | — | 是否收集覆盖率，默认 `false` |
 | `verbose` | bool | — | 详细输出，默认 `true` |
 
 **返回：** `{ status, framework, total, passed, failed, skipped, coverage_percent, failures[], raw_output }`
+
+Rust/Java 的覆盖率报告目前通过 `parse_coverage` 解析外部工具生成的文件：Rust 使用 `cargo tarpaulin --out Lcov`，Java 使用 JaCoCo XML。`run_tests` 的 `coverage` 参数暂不自动生成 tarpaulin/JaCoCo 报告。
 
 ---
 
@@ -134,7 +136,7 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `output` | string | ✅ | 测试执行的标准输出/错误输出原文 |
-| `framework` | string | — | 测试框架，默认 `go-test` |
+| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`，默认 `go-test` |
 
 **返回：** 同 `run_tests` 的结构化结果，聚焦失败用例的文件名、行号、错误信息。
 
@@ -162,8 +164,10 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `data` | string | ✅ | 覆盖率数据（coverprofile 文件路径/内容、Jest coverage JSON、pytest coverage JSON） |
-| `framework` | string | — | `go-test` / `jest` / `pytest`，默认 `go-test` |
+| `data` | string | ✅ | 覆盖率数据（coverprofile、Istanbul JSON、coverage.py JSON、LCOV、JaCoCo XML 的文件路径或内容） |
+| `framework` | string | — | `go-test` / `jest` / `vitest` / `mocha` / `pytest` / `cargo-test` / `junit`，默认 `go-test` |
+
+各语言覆盖率报告生成命令见 [docs/coverage-formats.md](./docs/coverage-formats.md)。
 
 **返回：**
 
@@ -229,7 +233,9 @@ testloop-mcp/
 │   │   ├── coverage.go              # 统一入口 + 改进建议生成
 │   │   ├── go_coverage.go           # Go coverprofile 解析
 │   │   ├── jest_coverage.go         # Jest/Istanbul coverage JSON 解析
-│   │   └── pytest_coverage.go       # coverage.py JSON 解析
+│   │   ├── pytest_coverage.go       # coverage.py JSON 解析
+│   │   ├── rust_coverage.go         # cargo tarpaulin LCOV 解析
+│   │   └── java_coverage.go         # JaCoCo XML 解析
 │   └── detector/
 │       └── detector.go              # 框架自动检测（package.json/pyproject.toml/go.mod）
 ├── cmd/
@@ -291,7 +297,7 @@ docker compose down                    # 停止
 - [x] `go test` / Jest / Vitest / Mocha / pytest 执行器
 - [x] 测试输出解析器（5 框架）
 - [x] `fix_suggestions` 修复建议（6 种失败类型）
-- [x] 覆盖率解析（Go / Jest / Vitest / Mocha / pytest）
+- [x] 覆盖率解析（Go / Jest / Vitest / Mocha / pytest / Rust tarpaulin LCOV / Java JaCoCo XML）
 - [x] 框架自动检测（package.json scripts/dependencies + pyproject.toml + go.mod，向上递归查找）
 - [x] Docker 部署（多阶段构建 + docker-compose）
 - [ ] VS Code Extension 配套

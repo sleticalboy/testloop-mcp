@@ -283,6 +283,87 @@ func TestParsePytestCoverage(t *testing.T) {
 	t.Logf("建议数: %d", len(report.Suggestions))
 }
 
+func TestParseRustTarpaulinCoverageLCOV(t *testing.T) {
+	raw := `TN:
+SF:src/lib.rs
+DA:1,1
+DA:2,1
+DA:3,0
+LF:3
+LH:2
+end_of_record
+SF:src/unused.rs
+DA:1,0
+LF:1
+LH:0
+end_of_record
+`
+
+	report, err := ParseRustTarpaulinCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseRustTarpaulinCoverage 失败: %v", err)
+	}
+	if report.Framework != "cargo-test" {
+		t.Errorf("Framework = %s, want cargo-test", report.Framework)
+	}
+	if len(report.Files) != 2 {
+		t.Fatalf("文件数 = %d, want 2", len(report.Files))
+	}
+	if report.Summary.TotalStatements != 4 || report.Summary.CoveredStatements != 2 {
+		t.Fatalf("unexpected summary: %+v", report.Summary)
+	}
+	if report.TotalPercent != 50 {
+		t.Fatalf("TotalPercent = %.1f, want 50.0", report.TotalPercent)
+	}
+	if !containsString(report.Summary.UncoveredFiles, "src/unused.rs") {
+		t.Fatalf("expected uncovered rust file, got %+v", report.Summary.UncoveredFiles)
+	}
+	if len(report.TestTasks) == 0 || report.TestTasks[0].Command != "cargo test" {
+		t.Fatalf("expected cargo test task, got %+v", report.TestTasks)
+	}
+}
+
+func TestParseJaCoCoCoverageXML(t *testing.T) {
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="10" mi="0" ci="1"/>
+      <line nr="11" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="1"/>
+    </sourcefile>
+    <sourcefile name="Unused.java">
+      <line nr="5" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="2" covered="1"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	if report.Framework != "junit" {
+		t.Errorf("Framework = %s, want junit", report.Framework)
+	}
+	if len(report.Files) != 2 {
+		t.Fatalf("文件数 = %d, want 2", len(report.Files))
+	}
+	if report.Summary.TotalStatements != 3 || report.Summary.CoveredStatements != 1 {
+		t.Fatalf("unexpected summary: %+v", report.Summary)
+	}
+	if report.Files[0].Path != "com/example/Calculator.java" {
+		t.Fatalf("unexpected java path: %s", report.Files[0].Path)
+	}
+	if !containsString(report.Summary.UncoveredFiles, "com/example/Unused.java") {
+		t.Fatalf("expected uncovered java file, got %+v", report.Summary.UncoveredFiles)
+	}
+	if len(report.TestTasks) == 0 || report.TestTasks[0].Command != "mvn test" {
+		t.Fatalf("expected mvn test task, got %+v", report.TestTasks)
+	}
+}
+
 func TestParseCoverageDispatch(t *testing.T) {
 	// go-test
 	goData := `mode: set
@@ -321,6 +402,26 @@ example.com/foo.go:1.1,2.1 1 1`
 	}
 	if r4.Framework != "mocha" {
 		t.Errorf("Framework = %s, want mocha", r4.Framework)
+	}
+
+	rustData := `SF:src/lib.rs
+DA:1,1
+end_of_record`
+	r5, err := ParseCoverage(rustData, "cargo-test")
+	if err != nil {
+		t.Fatalf("cargo-test 分发失败: %v", err)
+	}
+	if r5.Framework != "cargo-test" {
+		t.Errorf("Framework = %s, want cargo-test", r5.Framework)
+	}
+
+	jacocoData := `<report><package name="com/example"><sourcefile name="A.java"><line nr="1" mi="0" ci="1"/><counter type="LINE" missed="0" covered="1"/></sourcefile></package><counter type="LINE" missed="0" covered="1"/></report>`
+	r6, err := ParseCoverage(jacocoData, "junit")
+	if err != nil {
+		t.Fatalf("junit 分发失败: %v", err)
+	}
+	if r6.Framework != "junit" {
+		t.Errorf("Framework = %s, want junit", r6.Framework)
 	}
 
 	// 不支持的框架
