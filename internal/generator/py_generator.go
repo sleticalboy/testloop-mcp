@@ -30,6 +30,7 @@ type pyParamInfo struct {
 // pyFuncAnalysis 函数体分析结果
 type pyFuncAnalysis struct {
 	ReturnType string       // int/float/str/list/dict/bool/None/unknown
+	Returns    []string     // return expressions found in the function body
 	Raises     bool         // 函数体包含 raise
 	Boundaries []pyBoundary // 边界条件检测
 	HasReturn  bool         // 是否有 return 语句
@@ -154,12 +155,30 @@ func analyzePyBody(body string) pyFuncAnalysis {
 	a.HasReturn = len(returnMatches) > 0
 
 	if a.HasReturn {
+		a.Returns = extractPyReturnExpressions(returnMatches)
 		a.ReturnType = inferPyReturnType(returnMatches)
 	}
 
 	a.Boundaries = extractPyBoundaries(body)
 
 	return a
+}
+
+func extractPyReturnExpressions(matches [][]string) []string {
+	seen := make(map[string]bool)
+	returns := make([]string, 0, len(matches))
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		expr := strings.TrimSpace(m[1])
+		if expr == "" || seen[expr] {
+			continue
+		}
+		seen[expr] = true
+		returns = append(returns, expr)
+	}
+	return returns
 }
 
 func inferPyReturnType(matches [][]string) string {

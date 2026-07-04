@@ -51,19 +51,22 @@ type TestGenerationContext struct {
 	Language   string       `json:"language"`
 	Framework  string       `json:"framework"`
 	SourceFile string       `json:"source_file"`
+	Imports    []string     `json:"imports,omitempty"`
+	Types      []string     `json:"types,omitempty"`
 	Targets    []TestTarget `json:"targets"`
 }
 
 // TestTarget is a function or method that can be tested.
 type TestTarget struct {
-	Name          string   `json:"name"`
-	Kind          string   `json:"kind"`
-	ClassName     string   `json:"class_name,omitempty"`
-	Params        []string `json:"params,omitempty"`
-	Async         bool     `json:"async,omitempty"`
-	ReturnType    string   `json:"return_type,omitempty"`
-	HasErrorPath  bool     `json:"has_error_path,omitempty"`
-	BoundaryCases []string `json:"boundary_cases,omitempty"`
+	Name              string   `json:"name"`
+	Kind              string   `json:"kind"`
+	ClassName         string   `json:"class_name,omitempty"`
+	Params            []string `json:"params,omitempty"`
+	Async             bool     `json:"async,omitempty"`
+	ReturnType        string   `json:"return_type,omitempty"`
+	ReturnExpressions []string `json:"return_expressions,omitempty"`
+	HasErrorPath      bool     `json:"has_error_path,omitempty"`
+	BoundaryCases     []string `json:"boundary_cases,omitempty"`
 }
 
 // CoverageReport 覆盖率报告

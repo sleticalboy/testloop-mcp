@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/binlee/testloop-mcp/types"
@@ -32,6 +33,8 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 		Language:   jsLanguageName(ext),
 		Framework:  "jest",
 		SourceFile: srcPath,
+		Imports:    extractJSImports(string(source)),
+		Types:      extractJSTypes(string(source)),
 	}
 
 	for _, fn := range funcs {
@@ -54,14 +57,15 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 
 func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
 	target := types.TestTarget{
-		Name:          fn.Name,
-		Kind:          kind,
-		ClassName:     fn.ClassName,
-		Params:        jsParamNames(fn.Params),
-		Async:         fn.IsAsync,
-		ReturnType:    fn.Analysis.ReturnType,
-		HasErrorPath:  fn.Analysis.Throws,
-		BoundaryCases: jsBoundaryLabels(fn.Analysis.Boundaries),
+		Name:              fn.Name,
+		Kind:              kind,
+		ClassName:         fn.ClassName,
+		Params:            jsParamNames(fn.Params),
+		Async:             fn.IsAsync,
+		ReturnType:        fn.Analysis.ReturnType,
+		ReturnExpressions: fn.Analysis.Returns,
+		HasErrorPath:      fn.Analysis.Throws,
+		BoundaryCases:     jsBoundaryLabels(fn.Analysis.Boundaries),
 	}
 	if target.ReturnType == "" {
 		target.ReturnType = "unknown"
@@ -112,6 +116,8 @@ func buildPyGenerationContext(srcPath string) *types.TestGenerationContext {
 		Language:   "python",
 		Framework:  "pytest",
 		SourceFile: srcPath,
+		Imports:    extractPyImports(string(source)),
+		Types:      extractPyTypes(string(source)),
 	}
 
 	for _, fn := range funcs {
@@ -134,19 +140,83 @@ func buildPyGenerationContext(srcPath string) *types.TestGenerationContext {
 
 func pyTarget(fn pyFuncInfo, kind string) types.TestTarget {
 	target := types.TestTarget{
-		Name:          fn.Name,
-		Kind:          kind,
-		ClassName:     fn.ClassName,
-		Params:        pyParamNames(fn.Params),
-		Async:         fn.IsAsync,
-		ReturnType:    fn.Analysis.ReturnType,
-		HasErrorPath:  fn.Analysis.Raises,
-		BoundaryCases: pyBoundaryLabels(fn.Analysis.Boundaries),
+		Name:              fn.Name,
+		Kind:              kind,
+		ClassName:         fn.ClassName,
+		Params:            pyParamNames(fn.Params),
+		Async:             fn.IsAsync,
+		ReturnType:        fn.Analysis.ReturnType,
+		ReturnExpressions: fn.Analysis.Returns,
+		HasErrorPath:      fn.Analysis.Raises,
+		BoundaryCases:     pyBoundaryLabels(fn.Analysis.Boundaries),
 	}
 	if target.ReturnType == "" {
 		target.ReturnType = "unknown"
 	}
 	return target
+}
+
+var (
+	jsImportLineRe   = regexp.MustCompile(`(?m)^\s*import\s+[^;\n]+;?`)
+	jsRequireLineRe  = regexp.MustCompile(`(?m)^\s*(?:const|let|var)\s+[^=\n]+\s*=\s*require\([^)]+\)\s*;?`)
+	jsTypeDeclLineRe = regexp.MustCompile(`(?m)^\s*(?:export\s+)?(?:class|interface|type|enum)\s+([A-Za-z_$][\w$]*)`)
+	pyImportLineRe   = regexp.MustCompile(`(?m)^\s*(?:from\s+\S+\s+import\s+.+|import\s+.+)$`)
+	pyTypeDeclLineRe = regexp.MustCompile(`(?m)^\s*class\s+([A-Za-z_]\w*)`)
+)
+
+func extractJSImports(source string) []string {
+	return uniqueTrimmedMatchesFromRegexes(source, []regexMatchGroup{
+		{re: jsImportLineRe, group: 0},
+		{re: jsRequireLineRe, group: 0},
+	})
+}
+
+func extractJSTypes(source string) []string {
+	return uniqueTrimmedMatches(source, jsTypeDeclLineRe, 1)
+}
+
+func extractPyImports(source string) []string {
+	return uniqueTrimmedMatches(source, pyImportLineRe, 0)
+}
+
+func extractPyTypes(source string) []string {
+	return uniqueTrimmedMatches(source, pyTypeDeclLineRe, 1)
+}
+
+func uniqueTrimmedMatches(source string, re *regexp.Regexp, group int) []string {
+	return uniqueTrimmedMatchesFromRegexes(source, []regexMatchGroup{{re: re, group: group}})
+}
+
+type regexMatchGroup struct {
+	re    *regexp.Regexp
+	group int
+}
+
+func uniqueTrimmedMatchesFromRegexes(source string, regexes []regexMatchGroup) []string {
+	seen := make(map[string]bool)
+	var values []string
+	for _, matcher := range regexes {
+		values = append(values, uniqueTrimmedMatchesWithSeen(source, matcher.re, matcher.group, seen)...)
+	}
+	return values
+}
+
+func uniqueTrimmedMatchesWithSeen(source string, re *regexp.Regexp, group int, seen map[string]bool) []string {
+	matches := re.FindAllStringSubmatch(source, -1)
+	values := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) <= group {
+			continue
+		}
+		value := strings.TrimSpace(match[group])
+		value = strings.TrimSuffix(value, ";")
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		values = append(values, value)
+	}
+	return values
 }
 
 func pyParamNames(params []pyParamInfo) []string {

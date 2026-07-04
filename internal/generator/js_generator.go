@@ -31,6 +31,7 @@ type jsParamInfo struct {
 // jsFuncAnalysis 函数体分析结果
 type jsFuncAnalysis struct {
 	ReturnType string       // number/string/array/object/boolean/null/undefined/unknown
+	Returns    []string     // return expressions found in the function body
 	Throws     bool         // 函数体包含 throw
 	Boundaries []jsBoundary // 边界条件检测
 	HasReturn  bool         // 是否有 return 语句（非 void）
@@ -130,12 +131,30 @@ func analyzeJSBody(body string) jsFuncAnalysis {
 	a.HasReturn = len(returnMatches) > 0
 
 	if a.HasReturn {
+		a.Returns = extractJSReturnExpressions(returnMatches)
 		a.ReturnType = inferJSReturnType(returnMatches)
 	}
 
 	a.Boundaries = extractJSBoundaries(body)
 
 	return a
+}
+
+func extractJSReturnExpressions(matches [][]string) []string {
+	seen := make(map[string]bool)
+	returns := make([]string, 0, len(matches))
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		expr := strings.TrimSpace(m[1])
+		if expr == "" || seen[expr] {
+			continue
+		}
+		seen[expr] = true
+		returns = append(returns, expr)
+	}
+	return returns
 }
 
 func inferJSReturnType(matches [][]string) string {
