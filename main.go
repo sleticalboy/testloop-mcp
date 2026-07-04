@@ -43,10 +43,16 @@ func main() {
 			func(req *http.Request) *mcp.Server { return server },
 			&mcp.StreamableHTTPOptions{Stateless: *stateless},
 		)
+		mux := http.NewServeMux()
+		mux.Handle("/mcp", handler)
+		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok\n"))
+		})
 
 		httpServer := &http.Server{
 			Addr:    *addr,
-			Handler: handler,
+			Handler: mux,
 		}
 
 		// 优雅退出
@@ -60,6 +66,7 @@ func main() {
 
 		log.Printf("testloop-mcp Streamable HTTP 服务启动，监听 %s (stateless=%v)", *addr, *stateless)
 		log.Println("端点: POST/GET/DELETE http://" + *addr + "/mcp")
+		log.Println("健康检查: GET http://" + *addr + "/healthz")
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}

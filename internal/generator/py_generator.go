@@ -334,15 +334,21 @@ func genPytestFuncTest(fn pyFuncInfo) string {
 		}
 		sb.WriteString(fmt.Sprintf("\ndef test_%s_%s_boundary():\n", fn.Name, b.Param))
 		args := pyArgListWithBoundary(fn.Params, b)
-		if fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    result = asyncio.run(%s(%s))\n", fn.Name, args))
-		} else {
-			sb.WriteString(fmt.Sprintf("    result = %s(%s)\n", fn.Name, args))
-		}
 		if fn.Analysis.Raises {
-			sb.WriteString("    # 边界条件可能触发异常\n")
+			sb.WriteString("    with pytest.raises(Exception):\n")
+			if fn.IsAsync {
+				sb.WriteString(fmt.Sprintf("        asyncio.run(%s(%s))\n", fn.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("        %s(%s)\n", fn.Name, args))
+			}
+		} else {
+			if fn.IsAsync {
+				sb.WriteString(fmt.Sprintf("    result = asyncio.run(%s(%s))\n", fn.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("    result = %s(%s)\n", fn.Name, args))
+			}
+			sb.WriteString(genPyResultAssertion(fn.Analysis, "    "))
 		}
-		sb.WriteString(genPyResultAssertion(fn.Analysis, "    "))
 	}
 
 	if fn.Analysis.Raises {
@@ -425,21 +431,39 @@ func genPytestClassTest(cls pyClassInfo) string {
 			}
 			sb.WriteString(fmt.Sprintf("\n    def test_%s_%s_boundary(self):\n", method.Name, b.Param))
 			args := pyArgListWithBoundary(method.Params, b)
-			if method.IsStatic {
-				if method.IsAsync {
-					sb.WriteString(fmt.Sprintf("        result = asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
+			if method.Analysis.Raises {
+				if !method.IsStatic {
+					sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
+				}
+				sb.WriteString("        with pytest.raises(Exception):\n")
+				if method.IsStatic {
+					if method.IsAsync {
+						sb.WriteString(fmt.Sprintf("            asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
+					} else {
+						sb.WriteString(fmt.Sprintf("            %s.%s(%s)\n", cls.Name, method.Name, args))
+					}
+				} else if method.IsAsync {
+					sb.WriteString(fmt.Sprintf("            asyncio.run(instance.%s(%s))\n", method.Name, args))
 				} else {
-					sb.WriteString(fmt.Sprintf("        result = %s.%s(%s)\n", cls.Name, method.Name, args))
+					sb.WriteString(fmt.Sprintf("            instance.%s(%s)\n", method.Name, args))
 				}
 			} else {
-				sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
-				if method.IsAsync {
-					sb.WriteString(fmt.Sprintf("        result = asyncio.run(instance.%s(%s))\n", method.Name, args))
+				if method.IsStatic {
+					if method.IsAsync {
+						sb.WriteString(fmt.Sprintf("        result = asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
+					} else {
+						sb.WriteString(fmt.Sprintf("        result = %s.%s(%s)\n", cls.Name, method.Name, args))
+					}
 				} else {
-					sb.WriteString(fmt.Sprintf("        result = instance.%s(%s)\n", method.Name, args))
+					sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
+					if method.IsAsync {
+						sb.WriteString(fmt.Sprintf("        result = asyncio.run(instance.%s(%s))\n", method.Name, args))
+					} else {
+						sb.WriteString(fmt.Sprintf("        result = instance.%s(%s)\n", method.Name, args))
+					}
 				}
+				sb.WriteString(genPyResultAssertion(method.Analysis, "        "))
 			}
-			sb.WriteString(genPyResultAssertion(method.Analysis, "        "))
 		}
 	}
 

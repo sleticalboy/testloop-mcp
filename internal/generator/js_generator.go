@@ -321,15 +321,18 @@ func genJestFuncTest(fn jsFuncInfo) string {
 		sb.WriteString(fmt.Sprintf("  it('should handle %s = %s', %s => {\n",
 			b.Param, b.Value, jsAsyncArrow(fn.IsAsync)))
 		args := jsArgListWithBoundary(fn.Params, b)
-		if fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
-		} else {
-			sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
-		}
-
 		if fn.Analysis.Throws {
-			sb.WriteString("    expect(result).toBeDefined();\n")
+			if fn.IsAsync {
+				sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
+			}
 		} else {
+			if fn.IsAsync {
+				sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
+			}
 			sb.WriteString(genJSResultAssertion(fn.Analysis, "    "))
 		}
 		sb.WriteString("  });\n\n")
@@ -407,12 +410,20 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 				b.Param, b.Value, jsAsyncArrow(method.IsAsync)))
 			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 			args := jsArgListWithBoundary(method.Params, b)
-			if method.IsAsync {
-				sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
+			if method.Analysis.Throws {
+				if method.IsAsync {
+					sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
+				} else {
+					sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
+				}
 			} else {
-				sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
+				if method.IsAsync {
+					sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
+				} else {
+					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
+				}
+				sb.WriteString(genJSResultAssertion(method.Analysis, "      "))
 			}
-			sb.WriteString(genJSResultAssertion(method.Analysis, "      "))
 			sb.WriteString("    });\n\n")
 		}
 

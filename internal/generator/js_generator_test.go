@@ -235,6 +235,30 @@ func TestJSThrowArgsPreferInvalidBoundary(t *testing.T) {
 	}
 }
 
+func TestJSTestBoundaryUsesThrowForErrorPath(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "divide",
+		Params: []jsParamInfo{{Name: "a"}, {Name: "b"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "number",
+			HasReturn:  true,
+			Throws:     true,
+			Boundaries: []jsBoundary{{Param: "b", Value: "0", Type: "number"}},
+		},
+	}
+
+	code := genJestFuncTest(fn)
+	if !strings.Contains(code, "it('should handle b = 0'") {
+		t.Fatalf("missing boundary test:\n%s", code)
+	}
+	if !strings.Contains(code, "expect(() => divide(1, 0)).toThrow();") {
+		t.Fatalf("boundary should assert throw, got:\n%s", code)
+	}
+	if strings.Contains(code, "const result = divide(1, 0)") {
+		t.Fatalf("boundary should not call throwing input as normal result, got:\n%s", code)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {

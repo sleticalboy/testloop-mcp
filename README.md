@@ -260,6 +260,7 @@ go test ./internal/parser/ -v
 
 # 用 CLI 工具对指定文件生成测试（脱离 MCP）
 go run ./cmd/testgen demo/calc.go
+go run ./cmd/testgen -provider auto demo/calc.py /tmp/test_calc.py
 
 # 启动 MCP server
 go run main.go                          # stdio 模式（默认）
@@ -267,6 +268,7 @@ go run main.go --transport http --addr :8080  # Streamable HTTP 模式
 
 # Docker 部署
 docker compose up -d                   # HTTP 模式，监听 :8080
+curl http://localhost:8080/healthz     # 健康检查
 docker compose logs -f                 # 查看日志
 docker compose down                    # 停止
 ```

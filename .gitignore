@@ -1,7 +1,7 @@
 # Binaries
 testloop-mcp
 testloop-mcp.exe
-testgen
+/testgen
 
 # Go
 *.o

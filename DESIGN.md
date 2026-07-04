@@ -257,6 +257,7 @@ testloop-mcp/
 | Streamable HTTP | `--transport http --addr :8080` | 远程部署、多客户端、Web IDE 集成 |
 
 > 两种模式均已实现。HTTP 模式基于 go-sdk 的 `StreamableHTTPHandler`，支持有状态（默认）和无状态（`--stateless`）两种会话模式。
+> HTTP 模式额外提供 `GET /healthz` 健康检查端点，供 Docker/负载均衡探活使用；MCP 请求仍走 `/mcp`。
 >
 > **Docker 部署：** `docker compose up -d` 一键启动 HTTP 模式。多阶段构建（Go builder → alpine runtime），最终镜像约 15MB。
 

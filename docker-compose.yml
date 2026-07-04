@@ -8,7 +8,7 @@ services:
     command: ["--transport", "http", "--addr", ":8080"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/mcp"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3

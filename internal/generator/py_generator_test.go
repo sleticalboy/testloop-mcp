@@ -226,6 +226,30 @@ func TestPytestRaiseArgsPreferInvalidBoundary(t *testing.T) {
 	}
 }
 
+func TestPytestBoundaryUsesRaisesForErrorPath(t *testing.T) {
+	fn := pyFuncInfo{
+		Name:   "divide",
+		Params: []pyParamInfo{{Name: "a"}, {Name: "b"}},
+		Analysis: pyFuncAnalysis{
+			ReturnType: "float",
+			HasReturn:  true,
+			Raises:     true,
+			Boundaries: []pyBoundary{{Param: "b", Value: "0", Type: "number"}},
+		},
+	}
+
+	code := genPytestFuncTest(fn)
+	if !strings.Contains(code, "def test_divide_b_boundary():") {
+		t.Fatalf("missing boundary test:\n%s", code)
+	}
+	if !strings.Contains(code, "with pytest.raises(Exception):\n        divide(1, 0)") {
+		t.Fatalf("boundary should assert raise, got:\n%s", code)
+	}
+	if strings.Contains(code, "result = divide(1, 0)") {
+		t.Fatalf("boundary should not call raising input as normal result, got:\n%s", code)
+	}
+}
+
 func TestIsPyDunder(t *testing.T) {
 	if !isPyDunder("__init__") {
 		t.Error("__init__ should be dunder")
