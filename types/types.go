@@ -107,8 +107,12 @@ type CoverageSummary struct {
 
 // CoverageSuggestion 覆盖率改进建议
 type CoverageSuggestion struct {
-	File       string  `json:"file"`
-	LineRange  string  `json:"line_range"`
-	Reason     string  `json:"reason"`
-	Confidence float64 `json:"confidence"`
+	File            string   `json:"file"`
+	LineRange       string   `json:"line_range"`
+	Function        string   `json:"function,omitempty"`
+	Kind            string   `json:"kind,omitempty"`
+	UncoveredLines  []int    `json:"uncovered_lines,omitempty"`
+	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
+	Reason          string   `json:"reason"`
+	Confidence      float64  `json:"confidence"`
 }

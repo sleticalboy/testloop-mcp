@@ -2,6 +2,8 @@ package coverage
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/binlee/testloop-mcp/types"
@@ -63,6 +65,81 @@ example.com/foo/baz.go:1.1,2.1 1 1
 	if report.TotalPercent <= 0 {
 		t.Errorf("TotalPercent = %.1f, want > 0", report.TotalPercent)
 	}
+}
+
+func TestParseGoCoverageMapsUncoveredBlocksToFunctions(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "calc.go")
+	src := `package calc
+
+func Add(a, b int) int {
+	if a == 0 {
+		return b
+	}
+	return a + b
+}
+
+type Calculator struct{}
+
+func (Calculator) Divide(a, b int) int {
+	if b == 0 {
+		return 0
+	}
+	return a / b
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `mode: set
+` + srcPath + `:4.2,4.10 1 0
+` + srcPath + `:13.2,13.10 1 0
+`
+	report, err := ParseGoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseGoCoverage 失败: %v", err)
+	}
+
+	addSuggestion := findCoverageSuggestion(report.Suggestions, "Add")
+	if addSuggestion == nil {
+		t.Fatalf("expected Add suggestion, got %+v", report.Suggestions)
+	}
+	if addSuggestion.Kind != "function" || addSuggestion.LineRange != "4-4" {
+		t.Errorf("unexpected Add suggestion: %+v", addSuggestion)
+	}
+	if !containsString(addSuggestion.SuggestedInputs, "设置 a 覆盖未执行分支") {
+		t.Errorf("expected param-specific input hints, got %+v", addSuggestion.SuggestedInputs)
+	}
+
+	divideSuggestion := findCoverageSuggestion(report.Suggestions, "Calculator.Divide")
+	if divideSuggestion == nil {
+		t.Fatalf("expected Calculator.Divide suggestion, got %+v", report.Suggestions)
+	}
+	if divideSuggestion.Kind != "method" || divideSuggestion.UncoveredLines[0] != 13 {
+		t.Errorf("unexpected Divide suggestion: %+v", divideSuggestion)
+	}
+	if !strings.Contains(divideSuggestion.Reason, "Calculator.Divide") {
+		t.Errorf("expected function-aware reason, got %q", divideSuggestion.Reason)
+	}
+}
+
+func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
+	for i := range suggestions {
+		if suggestions[i].Function == fn {
+			return &suggestions[i]
+		}
+	}
+	return nil
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestParseJestCoverage(t *testing.T) {
