@@ -44,7 +44,7 @@ AI IDE (Claude Code / Cursor / Copilot)
 | Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | 🔲 |
 
 > 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。
-> 覆盖率：Rust (`cargo tarpaulin`)、Java (JaCoCo) 的支持正在路上。
+> 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）和 coverage.py JSON；Rust `cargo tarpaulin` 与 Java JaCoCo 仍在规划中，尚未实现。
 
 ## 安装
 
