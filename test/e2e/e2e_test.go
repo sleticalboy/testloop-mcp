@@ -150,6 +150,9 @@ func TestE2E_GenerateTests(t *testing.T) {
 	if payload["status"] != "ok" {
 		t.Fatalf("expected status=ok, got: %v", payload["status"])
 	}
+	if payload["provider"] != "static" {
+		t.Fatalf("expected provider=static, got: %v", payload["provider"])
+	}
 
 	testFile, _ := payload["test_file"].(string)
 	if testFile == "" {

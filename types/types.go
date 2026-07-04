@@ -47,6 +47,7 @@ type GenerateTestsOutput struct {
 	GeneratedCases int                    `json:"generated_cases"`
 	Preview        string                 `json:"preview,omitempty"`
 	Context        *TestGenerationContext `json:"context,omitempty"`
+	Provider       string                 `json:"provider,omitempty"`
 }
 
 // TestGenerationContext describes source structure for semantic test generation.

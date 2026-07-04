@@ -96,8 +96,11 @@ go build -o testloop-mcp .
 |------|------|:----:|------|
 | `file_path` | string | ✅ | 源文件路径（`.go` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
 | `framework` | string | — | 测试框架，默认根据文件扩展名自动选择 |
+| `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
 
-**返回：** `{ status, test_file, generated_cases, preview }`
+**返回：** `{ status, test_file, generated_cases, preview, context, provider }`
+
+**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
 
 **Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 

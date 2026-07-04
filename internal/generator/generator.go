@@ -7,8 +7,13 @@ import (
 	"strings"
 )
 
-// GenerateTests 根据源文件扩展名分发到对应的生成器
+// GenerateTests keeps the existing static generation behavior.
 func GenerateTests(srcPath string) (string, error) {
+	return GenerateTestsStatic(srcPath)
+}
+
+// GenerateTestsStatic 根据源文件扩展名分发到对应的静态生成器
+func GenerateTestsStatic(srcPath string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	switch ext {
 	case ".go":

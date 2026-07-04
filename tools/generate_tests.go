@@ -17,6 +17,7 @@ import (
 type generateTestsInput struct {
 	FilePath  string `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
 	Framework string `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
+	Provider  string `json:"provider,omitempty" jsonschema:"测试生成 provider: static、llm 或 auto，默认 static"`
 }
 
 func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input generateTestsInput) (*mcp.CallToolResult, any, error) {
@@ -30,8 +31,12 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, fmt.Errorf("文件不存在: %w", err)
 	}
 
-	// 调用 AST 分析生成测试代码
-	code, err := generator.GenerateTests(filePath)
+	provider, err := generator.NewTestProvider(input.Provider)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	code, err := generator.GenerateTestsWithProvider(ctx, filePath, provider)
 	if err != nil {
 		return nil, nil, fmt.Errorf("生成测试失败: %w", err)
 	}
@@ -48,6 +53,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		GeneratedCases: countGeneratedCases(code, filepath.Ext(filePath)),
 		Preview:        code,
 		Context:        generator.BuildGenerationContext(filePath),
+		Provider:       provider.Name(),
 	}
 
 	resultJSON, _ := json.Marshal(out)
