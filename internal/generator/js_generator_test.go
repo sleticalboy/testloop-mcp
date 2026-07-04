@@ -327,6 +327,9 @@ return prefix + text;`)
 	if !strings.Contains(code, "expect(result).toBe(('test'));") {
 		t.Fatalf("expected branch assertion, got:\n%s", code)
 	}
+	if !strings.Contains(code, "it('should handle mode = \\'short\\''") {
+		t.Fatalf("expected escaped boundary test name, got:\n%s", code)
+	}
 }
 
 func TestIsTestHelper(t *testing.T) {

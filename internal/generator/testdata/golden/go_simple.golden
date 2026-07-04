@@ -1,0 +1,38 @@
+package sample
+
+import (
+	"testing"
+)
+
+// TestAdd 测试 Add
+func TestAdd(t *testing.T) {
+	type testCase struct {
+		name string
+		skip bool
+		a    int
+		b    int
+		ret0 int
+	}
+
+	tests := []testCase{
+		{
+			name: "simple",
+			skip: false,
+			a:    1,
+			b:    2,
+			ret0: 1 + 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.skip {
+				t.Skip("TODO: fill in meaningful test inputs and expected values")
+			}
+			got := Add(tt.a, tt.b)
+			if got != tt.ret0 {
+				t.Errorf("got %v, want %v", got, tt.ret0)
+			}
+		})
+	}
+}

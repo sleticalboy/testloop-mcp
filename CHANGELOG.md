@@ -8,6 +8,7 @@
 - 边界用例会把边界值带入简单 return 表达式，生成更具体的断言。
 - Go 内置生成器会为简单纯函数生成可执行表驱动 case，不再默认只生成 TODO/skip。
 - Python/Jest 生成器会识别简单 if-return 分支，为普通路径和边界路径分别生成期望值。
+- Go/Python/Jest 生成器新增 golden tests，固定代表性输出。
 
 ## v0.2.0 - 2026-07-05
 

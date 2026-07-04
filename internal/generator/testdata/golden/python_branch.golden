@@ -1,0 +1,9 @@
+from python_branch import format_text
+
+def test_format_text():
+    result = format_text('test', 'test', 'test')
+    assert result == ('test' + 'test')
+
+def test_format_text_mode_boundary():
+    result = format_text("short", 'test', 'test')
+    assert result == ('test')

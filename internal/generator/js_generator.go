@@ -339,7 +339,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 			continue
 		}
 		sb.WriteString(fmt.Sprintf("  it('should handle %s = %s', %s => {\n",
-			b.Param, b.Value, jsAsyncArrow(fn.IsAsync)))
+			b.Param, jsEscapeTestNameValue(b.Value), jsAsyncArrow(fn.IsAsync)))
 		args := jsArgListWithBoundary(fn.Params, b)
 		if fn.Analysis.Throws {
 			if fn.IsAsync {
@@ -428,7 +428,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 				continue
 			}
 			sb.WriteString(fmt.Sprintf("    it('should handle %s = %s', %s => {\n",
-				b.Param, b.Value, jsAsyncArrow(method.IsAsync)))
+				b.Param, jsEscapeTestNameValue(b.Value), jsAsyncArrow(method.IsAsync)))
 			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 			args := jsArgListWithBoundary(method.Params, b)
 			if method.Analysis.Throws {
@@ -554,6 +554,10 @@ func jsAsyncArrow(isAsync bool) string {
 		return "async ()"
 	}
 	return "()"
+}
+
+func jsEscapeTestNameValue(value string) string {
+	return strings.ReplaceAll(value, "'", "\\'")
 }
 
 func jsParamExists(params []jsParamInfo, name string) bool {
