@@ -12,7 +12,7 @@ func GenerateTests(srcPath string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	switch ext {
 	case ".go":
-		return GenerateGoTests(srcPath)
+		return GenerateGoTestsPreferred(srcPath)
 	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
 		return GenerateJestTests(srcPath)
 	case ".py":

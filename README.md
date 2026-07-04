@@ -21,7 +21,7 @@ AI IDE (Claude Code / Cursor / Copilot)
         ▼
   testloop-mcp server
         │
-        ├── generate_tests    → AST 分析源码 → 生成表驱动测试文件
+        ├── generate_tests    → 社区工具/AST 分析源码 → 生成测试文件
         ├── run_tests         → 执行测试框架命令 → 结构化结果
         ├── parse_results     → 解析测试输出 → 提取失败详情
         ├── fix_suggestions   → 失败信息 + 源码 → 修复建议
@@ -90,7 +90,7 @@ go build -o testloop-mcp .
 
 ### `generate_tests`
 
-根据源文件生成测试代码。支持 Go（AST 分析）、JavaScript/TypeScript（Jest）、Python（pytest）。
+根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、JavaScript/TypeScript（Jest）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
@@ -99,7 +99,7 @@ go build -o testloop-mcp .
 
 **返回：** `{ status, test_file, generated_cases, preview }`
 
-**Go 生成器：** 基于 `go/ast` 原生 AST 分析，支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
+**Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 
 **JS/TS 生成器：** 正则 + 花括号匹配解析函数体，分析 `return` 语句推断返回类型（number/string/array/object/boolean）、检测 `throw` 生成 `toThrow()` 测试、检测 `if (param === value)` 边界条件生成针对性用例。支持 async 函数（`await` + `resolves`）、箭头函数表达式体、CommonJS / ES Module 导入。
 
@@ -265,14 +265,14 @@ docker compose down                    # 停止
 
 - **语言：** Go 1.25+
 - **MCP SDK：** [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) v1.6.1（官方 SDK）
-- **AST 分析：** Go 标准库 `go/ast`、`go/parser`、`go/token`、`go/format`
+- **测试生成：** Go 优先复用 `gotests`，并以内置 `go/ast`、`go/parser`、`go/token`、`go/format` 作为回退；其他语言使用 tree-sitter/轻量解析器
 - **传输层：** stdio（JSON-RPC over stdin/stdout）+ Streamable HTTP（`--transport http`）
 - **部署：** Docker 多阶段构建（alpine 基础镜像，~8MB 二进制）
 
 ## Roadmap
 
 - [x] MCP 服务器骨架（stdio + Streamable HTTP 传输）
-- [x] Go 测试生成器（AST → 表驱动测试）
+- [x] Go 测试生成器（优先 gotests，回退 AST → 表驱动测试）
 - [x] 泛型 / 通道 / 接口 / 变参 / `reflect.DeepEqual` 支持
 - [x] JavaScript/TypeScript 测试生成器（函数/箭头/类/async → Jest）
 - [x] Python 测试生成器（def/class/async → pytest）
