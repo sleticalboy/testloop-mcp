@@ -1,7 +1,8 @@
 package parser
 
 import (
-	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/binlee/testloop-mcp/types"
@@ -10,13 +11,14 @@ import (
 // ParseMochaTest 解析 Mocha 测试输出
 //
 // Mocha 输出格式示例：
-//   calc
-//     ✓ add() should add numbers
-//     ✓ subtract() should subtract numbers
-//     1) divide() should handle division by zero
 //
-//   1 passing (9ms)
-//   1 failing
+//	calc
+//	  ✓ add() should add numbers
+//	  ✓ subtract() should subtract numbers
+//	  1) divide() should handle division by zero
+//
+//	1 passing (9ms)
+//	1 failing
 func ParseMochaTest(output string) types.TestResult {
 	result := types.TestResult{
 		Status:    "pass",
@@ -26,77 +28,164 @@ func ParseMochaTest(output string) types.TestResult {
 	}
 
 	lines := strings.Split(output, "\n")
-	
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		
-		// 检测测试结果
-		// Mocha 用 ✓ 表示通过，✗ 或数字) 表示失败
-		if strings.HasPrefix(trimmed, "✓") || strings.HasPrefix(trimmed, "✔") {
-			result.Total++
-			result.Passed++
-		} else if strings.HasPrefix(trimmed, "✗") || strings.HasPrefix(trimmed, "✘") || (len(trimmed) > 0 && trimmed[0] >= '0' && trimmed[0] <= '9' && strings.Contains(trimmed, ")")) {
-			// Mocha 失败格式: "  1) test name"
-			result.Total++
-			result.Failed++
-			result.Status = "fail"
-			
-			// 提取测试名
-			if idx := strings.Index(trimmed, ")"); idx > 0 {
-				testName := strings.TrimSpace(trimmed[idx+1:])
-				result.Failures = append(result.Failures, types.TestFailure{
-					TestName: testName,
-					Error:    "测试失败",
-				})
-			}
-		}
-		
-		// 从摘要行获取统计
-		if strings.Contains(trimmed, "passing") {
-			// 格式: "  3 passing (9ms)"
-			fields := strings.Fields(trimmed)
-			if len(fields) > 0 {
-				// 提取数字
-				fmt.Sscanf(fields[0], "%d", &result.Passed)
-				result.Total += result.Passed
-			}
-		} else if strings.Contains(trimmed, "failing") {
-			fields := strings.Fields(trimmed)
-			if len(fields) > 0 {
-				fmt.Sscanf(fields[0], "%d", &result.Failed)
-				result.Total += result.Failed
-				result.Status = "fail"
+	parseMochaSummary(lines, &result)
+	result.Failures = parseMochaFailures(lines)
+
+	if result.Total == 0 {
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if isMochaPassLine(trimmed) {
+				result.Passed++
+				result.Total++
+			} else if isMochaSpecFailureLine(trimmed) {
+				result.Failed++
+				result.Total++
 			}
 		}
 	}
-
-	// 提取失败详情
-	extractMochaFailures(output, &result)
+	if result.Failed == 0 && len(result.Failures) > 0 {
+		result.Failed = len(result.Failures)
+		result.Total = result.Passed + result.Failed + result.Skipped
+	}
+	if result.Failed > 0 {
+		result.Status = "fail"
+	}
 
 	return result
 }
 
-func extractMochaFailures(output string, result *types.TestResult) {
-	lines := strings.Split(output, "\n")
-	inFailureSection := false
-	
+var (
+	mochaPassingRe     = regexp.MustCompile(`^(\d+)\s+passing\b`)
+	mochaFailingRe     = regexp.MustCompile(`^(\d+)\s+failing\b`)
+	mochaPendingRe     = regexp.MustCompile(`^(\d+)\s+pending\b`)
+	mochaFailureHeadRe = regexp.MustCompile(`^(\d+)\)\s+(.+)$`)
+	mochaLocationRe    = regexp.MustCompile(`\(([^():]+(?:/[^():]+)*):(\d+):(\d+)\)`)
+	mochaAtLocationRe  = regexp.MustCompile(`^\s*at\s+([^():]+(?:/[^():]+)*):(\d+):(\d+)`)
+)
+
+func parseMochaSummary(lines []string, result *types.TestResult) {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
-		// 检测失败详情开始
-		if strings.Contains(trimmed, "Failures:") || (strings.HasPrefix(trimmed, "1)") || strings.HasPrefix(trimmed, "2)")) {
-			inFailureSection = true
+		if matches := mochaPassingRe.FindStringSubmatch(trimmed); len(matches) == 2 {
+			result.Passed, _ = strconv.Atoi(matches[1])
 			continue
 		}
-		
-		if inFailureSection {
-			// 提取错误信息
-			if strings.HasPrefix(trimmed, "Error:") || strings.HasPrefix(trimmed, "AssertionError:") {
-				if len(result.Failures) > 0 {
-					idx := len(result.Failures) - 1
-					result.Failures[idx].Error = trimmed
-				}
-			}
+		if matches := mochaFailingRe.FindStringSubmatch(trimmed); len(matches) == 2 {
+			result.Failed, _ = strconv.Atoi(matches[1])
+			continue
+		}
+		if matches := mochaPendingRe.FindStringSubmatch(trimmed); len(matches) == 2 {
+			result.Skipped, _ = strconv.Atoi(matches[1])
 		}
 	}
+	result.Total = result.Passed + result.Failed + result.Skipped
+}
+
+func isMochaPassLine(trimmed string) bool {
+	return strings.HasPrefix(trimmed, "✓") || strings.HasPrefix(trimmed, "✔")
+}
+
+func isMochaSpecFailureLine(trimmed string) bool {
+	if strings.HasPrefix(trimmed, "✗") || strings.HasPrefix(trimmed, "✘") {
+		return true
+	}
+	return isMochaNumberedLine(trimmed)
+}
+
+func parseMochaFailures(lines []string) []types.TestFailure {
+	var failures []types.TestFailure
+	inFailureDetails := false
+	for i := 0; i < len(lines); i++ {
+		trimmed := strings.TrimSpace(lines[i])
+		if mochaFailingRe.MatchString(trimmed) {
+			inFailureDetails = true
+			continue
+		}
+		if !inFailureDetails || !mochaFailureHeadRe.MatchString(trimmed) {
+			continue
+		}
+		failure := types.TestFailure{
+			TestName: normalizeMochaFailureName(trimmed),
+			Error:    "测试失败",
+		}
+		next := i + 1
+		for next < len(lines) && !isMochaNumberedLine(strings.TrimSpace(lines[next])) && !isMochaSummaryLine(lines[next]) {
+			consumeMochaFailureLine(lines[next], &failure)
+			next++
+		}
+		failures = append(failures, failure)
+		i = next - 1
+	}
+	if len(failures) == 0 {
+		failures = parseMochaSpecFailures(lines)
+	}
+	return failures
+}
+
+func parseMochaSpecFailures(lines []string) []types.TestFailure {
+	var failures []types.TestFailure
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !isMochaSpecFailureLine(trimmed) {
+			continue
+		}
+		failures = append(failures, types.TestFailure{
+			TestName: normalizeMochaFailureName(trimmed),
+			Error:    "测试失败",
+		})
+	}
+	return failures
+}
+
+func isMochaNumberedLine(trimmed string) bool {
+	matches := mochaFailureHeadRe.FindStringSubmatch(trimmed)
+	return len(matches) == 3
+}
+
+func normalizeMochaFailureName(header string) string {
+	matches := mochaFailureHeadRe.FindStringSubmatch(header)
+	if len(matches) != 3 {
+		return strings.TrimSpace(header)
+	}
+	return strings.TrimSpace(matches[2])
+}
+
+func isMochaSummaryLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return mochaPassingRe.MatchString(trimmed) || mochaFailingRe.MatchString(trimmed) || mochaPendingRe.MatchString(trimmed)
+}
+
+func consumeMochaFailureLine(line string, failure *types.TestFailure) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return
+	}
+	if strings.HasSuffix(trimmed, ":") && !strings.HasPrefix(trimmed, "AssertionError") && !strings.HasPrefix(trimmed, "Error:") {
+		name := strings.TrimSuffix(trimmed, ":")
+		if failure.TestName == "" {
+			failure.TestName = name
+		} else if !strings.Contains(failure.TestName, name) {
+			failure.TestName += " " + name
+		}
+		return
+	}
+	if strings.HasPrefix(trimmed, "AssertionError") || strings.HasPrefix(trimmed, "Error:") || strings.Contains(trimmed, " expected ") {
+		failure.Error = trimmed
+	}
+	if file, lineNo, column := parseMochaLocation(trimmed); file != "" {
+		failure.File = file
+		failure.Line = lineNo
+		failure.Column = column
+	}
+}
+
+func parseMochaLocation(line string) (string, int, int) {
+	for _, re := range []*regexp.Regexp{mochaLocationRe, mochaAtLocationRe} {
+		if matches := re.FindStringSubmatch(line); len(matches) == 4 {
+			lineNo, _ := strconv.Atoi(matches[2])
+			column, _ := strconv.Atoi(matches[3])
+			return matches[1], lineNo, column
+		}
+	}
+	return "", 0, 0
 }
