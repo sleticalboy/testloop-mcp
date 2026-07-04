@@ -16,9 +16,12 @@ type TestResult struct {
 // TestFailure 单个测试失败详情
 type TestFailure struct {
 	TestName string `json:"test_name"`
-	File     string `json:"file"`
-	Line     int    `json:"line"`
+	File     string `json:"file,omitempty"`
+	Line     int    `json:"line,omitempty"`
+	Column   int    `json:"column,omitempty"`
 	Error    string `json:"error"`
+	Expected string `json:"expected,omitempty"`
+	Received string `json:"received,omitempty"`
 }
 
 // FixSuggestion 修复建议
