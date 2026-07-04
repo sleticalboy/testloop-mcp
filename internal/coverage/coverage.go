@@ -76,6 +76,7 @@ func enrichGoCoverageSuggestion(suggestion *types.CoverageSuggestion, block type
 	suggestion.Kind = fn.Kind
 	suggestion.UncoveredLines = lineRange(block.StartLine, block.EndLine)
 	suggestion.SuggestedInputs = suggestedGoInputs(fn.Params)
+	suggestion.GapType, suggestion.MissingBranches, suggestion.SuggestedInputs = analyzeGoCoverageGap(fn, block)
 	suggestion.Reason = fmt.Sprintf("%s 中的代码块未被测试覆盖", fn.Name)
 	suggestion.Confidence = 0.95
 }
@@ -120,6 +121,8 @@ func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 			Target:          target,
 			Kind:            suggestion.Kind,
 			LineRange:       suggestion.LineRange,
+			GapType:         suggestion.GapType,
+			MissingBranches: suggestion.MissingBranches,
 			UncoveredLines:  suggestion.UncoveredLines,
 			SuggestedInputs: suggestion.SuggestedInputs,
 			Goal:            coverageTaskGoal(target, suggestion.LineRange),

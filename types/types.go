@@ -112,6 +112,8 @@ type CoverageSuggestion struct {
 	LineRange       string   `json:"line_range"`
 	Function        string   `json:"function,omitempty"`
 	Kind            string   `json:"kind,omitempty"`
+	GapType         string   `json:"gap_type,omitempty"`
+	MissingBranches []string `json:"missing_branches,omitempty"`
 	UncoveredLines  []int    `json:"uncovered_lines,omitempty"`
 	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
 	Reason          string   `json:"reason"`
@@ -126,6 +128,8 @@ type CoverageTestTask struct {
 	Target          string   `json:"target"`
 	Kind            string   `json:"kind,omitempty"`
 	LineRange       string   `json:"line_range"`
+	GapType         string   `json:"gap_type,omitempty"`
+	MissingBranches []string `json:"missing_branches,omitempty"`
 	UncoveredLines  []int    `json:"uncovered_lines,omitempty"`
 	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
 	Goal            string   `json:"goal"`

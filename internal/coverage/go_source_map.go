@@ -17,6 +17,7 @@ type goFuncRange struct {
 	StartLine int
 	EndLine   int
 	Params    []string
+	Lines     []string
 }
 
 func mapGoFunctionsByFile(files []types.CoverageFile) map[string][]goFuncRange {
@@ -59,11 +60,16 @@ func fileExists(path string) bool {
 }
 
 func parseGoFunctionRanges(path string) []goFuncRange {
-	fs := token.NewFileSet()
-	file, err := parser.ParseFile(fs, path, nil, 0)
+	source, err := os.ReadFile(path)
 	if err != nil {
 		return nil
 	}
+	fs := token.NewFileSet()
+	file, err := parser.ParseFile(fs, path, source, 0)
+	if err != nil {
+		return nil
+	}
+	lines := strings.Split(string(source), "\n")
 
 	var ranges []goFuncRange
 	for _, decl := range file.Decls {
@@ -79,9 +85,25 @@ func parseGoFunctionRanges(path string) []goFuncRange {
 			StartLine: start,
 			EndLine:   end,
 			Params:    goParamNames(fn.Type.Params),
+			Lines:     sourceLines(lines, start, end),
 		})
 	}
 	return ranges
+}
+
+func sourceLines(lines []string, start int, end int) []string {
+	if start < 1 {
+		start = 1
+	}
+	if end > len(lines) {
+		end = len(lines)
+	}
+	if start > end {
+		return nil
+	}
+	copied := make([]string, end-start+1)
+	copy(copied, lines[start-1:end])
+	return copied
 }
 
 func goFunctionName(fn *ast.FuncDecl) string {
@@ -145,4 +167,63 @@ func findGoFunctionForBlock(ranges []goFuncRange, block types.CoverageBlock) *go
 		}
 	}
 	return nil
+}
+
+func analyzeGoCoverageGap(fn *goFuncRange, block types.CoverageBlock) (string, []string, []string) {
+	if fn == nil {
+		return "", nil, nil
+	}
+	lines := goBlockSourceLines(fn, block)
+	joined := strings.Join(lines, "\n")
+	trimmed := strings.TrimSpace(joined)
+	switch {
+	case strings.Contains(trimmed, "if ") || strings.HasPrefix(trimmed, "if"):
+		condition := extractGoCondition(trimmed, "if")
+		return "branch", []string{"未覆盖 if 分支: " + condition}, suggestedGoBranchInputs(fn.Params, condition)
+	case strings.Contains(trimmed, "switch ") || strings.HasPrefix(trimmed, "switch"):
+		return "branch", []string{"未覆盖 switch/case 分支"}, suggestedGoInputs(fn.Params)
+	case strings.Contains(trimmed, "return nil") || strings.Contains(trimmed, "error") || strings.Contains(trimmed, "err"):
+		return "error_path", []string{"未覆盖错误或空值返回路径"}, suggestedGoInputs(fn.Params)
+	case strings.Contains(trimmed, "return"):
+		return "return_path", []string{"未覆盖返回路径"}, suggestedGoInputs(fn.Params)
+	default:
+		return "statement", []string{"未覆盖普通语句块"}, suggestedGoInputs(fn.Params)
+	}
+}
+
+func goBlockSourceLines(fn *goFuncRange, block types.CoverageBlock) []string {
+	start := block.StartLine - fn.StartLine
+	end := block.EndLine - fn.StartLine
+	if start < 0 {
+		start = 0
+	}
+	if end >= len(fn.Lines) {
+		end = len(fn.Lines) - 1
+	}
+	if start > end || len(fn.Lines) == 0 {
+		return nil
+	}
+	return fn.Lines[start : end+1]
+}
+
+func extractGoCondition(line string, keyword string) string {
+	line = strings.TrimSpace(line)
+	line = strings.TrimPrefix(line, keyword)
+	line = strings.TrimSpace(line)
+	if idx := strings.Index(line, "{"); idx >= 0 {
+		line = line[:idx]
+	}
+	line = strings.Trim(line, "() ")
+	if line == "" {
+		return "条件表达式"
+	}
+	return line
+}
+
+func suggestedGoBranchInputs(params []string, condition string) []string {
+	inputs := suggestedGoInputs(params)
+	if condition != "" && condition != "条件表达式" {
+		inputs = append([]string{"构造满足条件 `" + condition + "` 的输入"}, inputs...)
+	}
+	return inputs
 }

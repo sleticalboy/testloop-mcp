@@ -108,8 +108,14 @@ func (Calculator) Divide(a, b int) int {
 	if addSuggestion.Kind != "function" || addSuggestion.LineRange != "4-4" {
 		t.Errorf("unexpected Add suggestion: %+v", addSuggestion)
 	}
-	if !containsString(addSuggestion.SuggestedInputs, "设置 a 覆盖未执行分支") {
-		t.Errorf("expected param-specific input hints, got %+v", addSuggestion.SuggestedInputs)
+	if addSuggestion.GapType != "branch" {
+		t.Errorf("expected branch gap type, got %q", addSuggestion.GapType)
+	}
+	if !containsString(addSuggestion.MissingBranches, "未覆盖 if 分支: a == 0") {
+		t.Errorf("expected if branch detail, got %+v", addSuggestion.MissingBranches)
+	}
+	if !containsString(addSuggestion.SuggestedInputs, "构造满足条件 `a == 0` 的输入") {
+		t.Errorf("expected condition-specific input hints, got %+v", addSuggestion.SuggestedInputs)
 	}
 
 	divideSuggestion := findCoverageSuggestion(report.Suggestions, "Calculator.Divide")
@@ -130,13 +136,16 @@ func (Calculator) Divide(a, b int) int {
 	if addTask.Framework != "go-test" || addTask.Kind != "function" {
 		t.Errorf("unexpected Add task metadata: %+v", addTask)
 	}
+	if addTask.GapType != "branch" || !containsString(addTask.MissingBranches, "未覆盖 if 分支: a == 0") {
+		t.Errorf("expected task branch details, got %+v", addTask)
+	}
 	if !strings.Contains(addTask.Goal, "覆盖未执行行段 4-4") {
 		t.Errorf("unexpected Add task goal: %q", addTask.Goal)
 	}
 	if addTask.Command == "" || !strings.Contains(addTask.Command, "go test") {
 		t.Errorf("expected go test command, got %q", addTask.Command)
 	}
-	if !containsString(addTask.SuggestedInputs, "设置 a 覆盖未执行分支") {
+	if !containsString(addTask.SuggestedInputs, "构造满足条件 `a == 0` 的输入") {
 		t.Errorf("expected task input hints, got %+v", addTask.SuggestedInputs)
 	}
 }
