@@ -55,4 +55,6 @@
 - [x] 新增 `Release Artifacts` workflow，支持 tag push 和手动指定 tag 触发。
 - [x] 当前先构建 Linux amd64 的 server/CLI 二进制压缩包，并生成 `checksums.txt`。
 - [x] workflow 会把产物上传到对应 GitHub Release；如果 Release 尚不存在，会先按 tag 创建。
+- [x] 已手动触发 `Release Artifacts` 回填 `v0.4.0` 资产，run `28739120265` 通过。
+- [x] `v0.4.0` Release 已包含 `testloop-mcp_v0.4.0_linux_amd64.tar.gz` 和 `checksums.txt`。
 - [ ] macOS、Windows 或更多架构需要结合 CGO 交叉编译工具链再扩展，暂不纳入第一版。
