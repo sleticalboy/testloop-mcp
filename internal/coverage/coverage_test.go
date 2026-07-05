@@ -570,6 +570,84 @@ public class Calculator {
 	}
 }
 
+func TestParseJavaCoverageMapsComplexTreeSitterMethods(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "com", "example")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	srcPath := filepath.Join(srcDir, "Service.java")
+	src := `package com.example;
+
+public class Service {
+    @Deprecated
+    public Service(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name");
+        }
+    }
+
+    @Override
+    public String format(
+            String prefix,
+            int count
+    ) {
+        if (count <= 0) {
+            return prefix;
+        }
+        return prefix + count;
+    }
+
+    static class Helper {
+        String label(String value) {
+            return value == null ? "" : value;
+        }
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="` + dir + `/com/example">
+    <sourcefile name="Service.java">
+      <line nr="6" mi="1" ci="0"/>
+      <line nr="15" mi="1" ci="0"/>
+      <line nr="23" mi="1" ci="0"/>
+      <counter type="LINE" missed="3" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="3" covered="0"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	constructor := findCoverageSuggestion(report.Suggestions, "Service.Service")
+	if constructor == nil {
+		t.Fatalf("expected Service constructor suggestion, got %+v", report.Suggestions)
+	}
+	if constructor.GapType != "branch" || !containsString(constructor.SuggestedInputs, "设置 name 覆盖未执行分支") {
+		t.Fatalf("unexpected constructor suggestion: %+v", constructor)
+	}
+	format := findCoverageSuggestion(report.Suggestions, "Service.format")
+	if format == nil {
+		t.Fatalf("expected Service.format suggestion, got %+v", report.Suggestions)
+	}
+	if !containsString(format.SuggestedInputs, "设置 prefix 覆盖未执行分支") || !containsString(format.SuggestedInputs, "设置 count 覆盖未执行分支") {
+		t.Fatalf("expected multiline method params, got %+v", format.SuggestedInputs)
+	}
+	helper := findCoverageSuggestion(report.Suggestions, "Service.Helper.label")
+	if helper == nil {
+		t.Fatalf("expected nested Helper.label suggestion, got %+v", report.Suggestions)
+	}
+	if helper.Kind != "method" {
+		t.Fatalf("unexpected nested method suggestion: %+v", helper)
+	}
+}
+
 func TestParseCoverageDispatch(t *testing.T) {
 	// go-test
 	goData := `mode: set

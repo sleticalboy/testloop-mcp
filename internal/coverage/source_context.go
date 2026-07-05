@@ -36,7 +36,10 @@ func mapSourceRangesByFile(files []types.CoverageFile, framework string) map[str
 		case "cargo-test":
 			ranges = parseRustFunctionRanges(sourcePath)
 		case "junit":
-			ranges = parseJavaMethodRanges(sourcePath)
+			ranges = parseJavaMethodRangesWithTreeSitter(sourcePath)
+			if len(ranges) == 0 {
+				ranges = parseJavaMethodRanges(sourcePath)
+			}
 		}
 		if len(ranges) > 0 {
 			result[file.Path] = ranges
