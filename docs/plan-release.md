@@ -16,7 +16,8 @@
 - [x] Docker 容器可启动，并且映射端口后的 `/healthz` 返回 200。
 - [x] GitHub Actions CI 已通过：测试、主服务构建、CLI 构建、Docker build。
 - [x] README 与 DESIGN 已说明 `generate_tests` 的 provider、gotests 优先路径和当前覆盖率支持范围。
-- [x] README 已明确 Rust `cargo tarpaulin` 与 Java JaCoCo 覆盖率尚未实现。
+- [x] README 已明确 Rust `cargo tarpaulin` 与 Java JaCoCo 覆盖率支持范围。
+- [x] README、LLM provider 文档和 v0.4.0 发布说明已说明 `coverage_task -> generate_tests` 的增量测试生成闭环。
 
 ## 本轮收口项
 
@@ -35,3 +36,4 @@
 - [x] Rust `cargo tarpaulin` LCOV 覆盖率解析已实现。
 - [x] Java JaCoCo XML 覆盖率解析已实现。
 - [x] `run_tests` 的 coverage 模式已集成 tarpaulin/JaCoCo 报告生成命令。
+- [x] `generate_tests` 已支持接收单个 `coverage_task`，并在 Go/Python/Jest/Rust/Java 中使用 task-aware 静态生成草稿。

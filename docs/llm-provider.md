@@ -6,7 +6,7 @@
 
 | provider | 行为 |
 | --- | --- |
-| `static` | 默认值。只使用内置静态生成器和 Go 的 `gotests` 优先路径。 |
+| `static` | 默认值。只使用内置静态生成器；Go 普通生成优先走 `gotests`，传入 `coverage_task` 时各语言会优先按任务目标生成增量测试草稿。 |
 | `llm` | 必须配置 `TESTLOOP_LLM_PROVIDER_CMD`，由外部命令返回最终测试代码。 |
 | `auto` | 配置了 `TESTLOOP_LLM_PROVIDER_CMD` 时走 LLM provider，否则自动回退 `static`。 |
 
@@ -23,11 +23,26 @@
     "source_file": "src/calc.py",
     "imports": [],
     "types": [],
-    "targets": []
+    "targets": [],
+    "coverage_task": {
+      "id": "pytest-1",
+      "framework": "pytest",
+      "file": "src/calc.py",
+      "target": "add",
+      "line_range": "2-2",
+      "gap_type": "return_path",
+      "test_file": "tests/test_calc.py",
+      "test_name": "test_add_covers_gap",
+      "suggested_inputs": ["构造满足条件 `a == 0` 的输入"],
+      "assertion_focus": ["断言未覆盖返回路径的具体结果"],
+      "priority": 100
+    }
   },
   "static_code": "from calc import add\n\n\ndef test_add():\n    ..."
 }
 ```
+
+`coverage_task` 只会在 MCP 调用方传入单个覆盖率任务时出现。外部 LLM provider 应优先遵守其中的 `target`、`test_file`、`test_name`、`suggested_inputs` 和 `assertion_focus`，并把 `static_code` 当作可修改草稿，而不是重新生成整文件测试。
 
 provider 的 stdout 支持两种返回格式：
 
@@ -58,3 +73,4 @@ export TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh"
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
 - provider 应只输出测试代码，不要输出解释性文本，否则会被写入测试文件。
 - `static_code` 是可用回退结果，LLM provider 可以基于它做增强，而不是从零生成。
+- 当存在 `context.coverage_task` 时，provider 应只补充该任务对应的增量测试，避免覆盖或扩写成整文件测试套件。
