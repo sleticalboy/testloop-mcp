@@ -177,6 +177,22 @@ func findCoverageTask(tasks []types.CoverageTestTask, target string) *types.Cove
 	return nil
 }
 
+func withWorkingDirectory(t *testing.T, dir string) {
+	t.Helper()
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+}
+
 func TestParseJestCoverage(t *testing.T) {
 	raw := `{
 		"/src/utils.js": {
@@ -447,6 +463,50 @@ end_of_record
 	}
 }
 
+func TestParseRustCoverageResolvesWorkspaceFixturePaths(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("crates", "core", "src", "lib.rs")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `pub struct Validator;
+
+impl Validator {
+    pub fn check(&self, value: Option<i32>) -> Result<i32, String> {
+        match value {
+            Some(v) if v > 0 => Ok(v),
+            _ => Err("invalid".to_string()),
+        }
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `TN:
+SF:crates/core/src/lib.rs
+DA:5,0
+DA:6,0
+end_of_record
+`
+	report, err := ParseRustTarpaulinCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseRustTarpaulinCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "Validator.check")
+	if suggestion == nil {
+		t.Fatalf("expected Validator.check suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.GapType != "branch" || !containsString(suggestion.MissingBranches, "未覆盖 match 分支") {
+		t.Fatalf("unexpected rust workspace suggestion: %+v", suggestion)
+	}
+	task := findCoverageTask(report.TestTasks, "Validator.check")
+	if task == nil || task.Command != "cargo test" {
+		t.Fatalf("expected cargo test task, got %+v", report.TestTasks)
+	}
+}
+
 func TestParseJaCoCoCoverageXML(t *testing.T) {
 	raw := `<?xml version="1.0" encoding="UTF-8"?>
 <report name="demo">
@@ -594,18 +654,7 @@ public class Calculator {
 
 func TestResolveJavaCoveragePathFromStandardSourceRoot(t *testing.T) {
 	dir := t.TempDir()
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chdir(oldWD); err != nil {
-			t.Fatalf("restore working directory: %v", err)
-		}
-	})
+	withWorkingDirectory(t, dir)
 
 	srcDir := filepath.Join("src", "main", "java", "com", "example")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
@@ -718,6 +767,74 @@ public class Service {
 	}
 	if helper.Kind != "method" {
 		t.Fatalf("unexpected nested method suggestion: %+v", helper)
+	}
+}
+
+func TestParseJavaCoverageResolvesMavenFixturePaths(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("src", "main", "java", "com", "example", "service", "OrderService.java")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `package com.example.service;
+
+public class OrderService {
+    public String status(String state) {
+        switch (state) {
+            case "paid":
+                return "closed";
+            default:
+                return "open";
+        }
+    }
+
+    static class Audit {
+        String describe(String user) {
+            if (user == null) {
+                return null;
+            }
+            return user;
+        }
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="com/example/service">
+    <sourcefile name="OrderService.java">
+      <line nr="5" mi="1" ci="0"/>
+      <line nr="15" mi="1" ci="0"/>
+      <counter type="LINE" missed="2" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="2" covered="0"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	status := findCoverageSuggestion(report.Suggestions, "OrderService.status")
+	if status == nil {
+		t.Fatalf("expected OrderService.status suggestion, got %+v", report.Suggestions)
+	}
+	if status.GapType != "branch" || !containsString(status.MissingBranches, "未覆盖 switch/case 分支") {
+		t.Fatalf("unexpected java maven status suggestion: %+v", status)
+	}
+	audit := findCoverageSuggestion(report.Suggestions, "OrderService.Audit.describe")
+	if audit == nil {
+		t.Fatalf("expected nested Audit.describe suggestion, got %+v", report.Suggestions)
+	}
+	if audit.GapType != "branch" || !containsString(audit.SuggestedInputs, "设置 user 覆盖未执行分支") {
+		t.Fatalf("unexpected java nested suggestion: %+v", audit)
+	}
+	task := findCoverageTask(report.TestTasks, "OrderService.status")
+	if task == nil || task.Command != "mvn test" {
+		t.Fatalf("expected mvn test task, got %+v", report.TestTasks)
 	}
 }
 
