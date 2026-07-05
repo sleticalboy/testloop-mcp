@@ -47,4 +47,12 @@
 - [x] `/tmp/testloop-mcp --transport http --addr :18080` 后 `GET /healthz` 返回 `ok`
 - [x] `docker build -t testloop-mcp:release-check .`
 - [x] `docker run -p 18081:8080 testloop-mcp:release-check` 后 `GET /healthz` 返回 `ok`
-- [x] 最新远端 CI 已通过：`28737511599`
+- [x] 最新远端 push CI 已通过：`28738856671`
+- [x] 手动触发 CI 已通过：`28738899059`
+
+## 发布产物
+
+- [x] 新增 `Release Artifacts` workflow，支持 tag push 和手动指定 tag 触发。
+- [x] 当前先构建 Linux amd64 的 server/CLI 二进制压缩包，并生成 `checksums.txt`。
+- [x] workflow 会把产物上传到对应 GitHub Release；如果 Release 尚不存在，会先按 tag 创建。
+- [ ] macOS、Windows 或更多架构需要结合 CGO 交叉编译工具链再扩展，暂不纳入第一版。
