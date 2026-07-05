@@ -1,11 +1,14 @@
 package generator
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 func TestGenerateGoTestsPreferredUsesGotestsWhenAvailable(t *testing.T) {
@@ -91,6 +94,83 @@ func TestGenerateGoTestsSeedsSimplePureFunction(t *testing.T) {
 	}
 	if strings.Contains(code, "name: \"todo\"") {
 		t.Fatalf("simple pure function should not generate TODO case:\n%s", code)
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskTargetsFunction(t *testing.T) {
+	src := `package sample
+
+func Add(a, b int) int {
+	return a + b
+}
+
+func Sub(a, b int) int {
+	return a - b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:             "go-test-1",
+		Framework:      "go-test",
+		Target:         "Add",
+		LineRange:      "3-3",
+		GapType:        "branch",
+		TestName:       "TestAddCoverageGap",
+		AssertionFocus: []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestAddCoverageGap",
+		"coverage task: go-test-1 | lines 3-3",
+		"name: \"coverage branch gap\"",
+		"Add(tt.a, tt.b)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "TestSub") || strings.Contains(code, "Sub(tt.a, tt.b)") {
+		t.Fatalf("task-aware generation should only target Add:\n%s", code)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsUsesGoCoverageTask(t *testing.T) {
+	src := `package sample
+
+func Add(a, b int) int {
+	return a + b
+}
+
+func Sub(a, b int) int {
+	return a - b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "go-test-1",
+		Framework: "go-test",
+		Target:    "Add",
+		LineRange: "3-3",
+		GapType:   "branch",
+		TestName:  "TestAddCoverageGap",
+	}
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{CoverageTask: &task})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "func TestAddCoverageGap") || strings.Contains(code, "TestSub") {
+		t.Fatalf("expected task-aware static Go output, got:\n%s", code)
 	}
 }
 

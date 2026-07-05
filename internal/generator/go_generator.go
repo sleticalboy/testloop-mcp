@@ -8,6 +8,8 @@ import (
 	"go/parser"
 	"go/token"
 	"strings"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 type funcInfo struct {
@@ -51,6 +53,17 @@ type methodSig struct {
 
 // GenerateGoTests 读取 Go 源文件，用 AST 分析生成表驱动测试代码
 func GenerateGoTests(srcPath string) (string, error) {
+	return generateGoTests(srcPath, nil)
+}
+
+func GenerateGoTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+	if task == nil {
+		return GenerateGoTests(srcPath)
+	}
+	return generateGoTests(srcPath, task)
+}
+
+func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, error) {
 	fs := token.NewFileSet()
 	node, err := parser.ParseFile(fs, srcPath, nil, parser.ParseComments)
 	if err != nil {
@@ -206,6 +219,10 @@ func GenerateGoTests(srcPath string) (string, error) {
 		funcs = append(funcs, info)
 	}
 
+	if task != nil {
+		funcs = filterGoFuncsForCoverageTask(funcs, task)
+	}
+
 	if len(funcs) == 0 && len(interfaces) == 0 {
 		return "// 未发现需要生成测试的 exported 函数或接口", nil
 	}
@@ -252,7 +269,7 @@ func GenerateGoTests(srcPath string) (string, error) {
 
 	// 生成函数/方法测试
 	for _, fn := range funcs {
-		buf.WriteString(genTableDrivenTest(fn))
+		buf.WriteString(genTableDrivenTestForTask(fn, task))
 	}
 
 	formatted, err := format.Source(buf.Bytes())
@@ -260,6 +277,34 @@ func GenerateGoTests(srcPath string) (string, error) {
 		return buf.String(), fmt.Errorf("格式化失败: %w", err)
 	}
 	return string(formatted), nil
+}
+
+func filterGoFuncsForCoverageTask(funcs []funcInfo, task *types.CoverageTestTask) []funcInfo {
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		return funcs
+	}
+	filtered := make([]funcInfo, 0, len(funcs))
+	for _, fn := range funcs {
+		if goFuncMatchesTarget(fn, target) {
+			filtered = append(filtered, fn)
+		}
+	}
+	if len(filtered) == 0 {
+		return funcs
+	}
+	return filtered
+}
+
+func goFuncMatchesTarget(fn funcInfo, target string) bool {
+	if fn.Name == target {
+		return true
+	}
+	if fn.IsMethod {
+		recv := strings.TrimPrefix(fn.ReceiverType, "*")
+		return recv+"."+fn.Name == target || recv+"_"+fn.Name == target
+	}
+	return false
 }
 
 func genMock(iface interfaceInfo) string {
@@ -348,6 +393,10 @@ func genMock(iface interfaceInfo) string {
 }
 
 func genTableDrivenTest(fn funcInfo) string {
+	return genTableDrivenTestForTask(fn, nil)
+}
+
+func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
 
 	// 泛型类型参数实例化（测试中用具体类型）
@@ -367,8 +416,14 @@ func genTableDrivenTest(fn funcInfo) string {
 		// 去掉指针前缀
 		testName = strings.TrimPrefix(testName, "*")
 	}
+	if task != nil && strings.TrimSpace(task.TestName) != "" {
+		testName = strings.TrimPrefix(strings.TrimSpace(task.TestName), "Test")
+	}
 
 	sb.WriteString(fmt.Sprintf("// Test%s 测试 %s\n", testName, fn.Name))
+	if task != nil {
+		sb.WriteString(fmt.Sprintf("// coverage task: %s\n", goCoverageTaskComment(task)))
+	}
 	sb.WriteString(fmt.Sprintf("func Test%s(t *testing.T) {\n", testName))
 
 	// 定义测试用例结构体
@@ -388,7 +443,7 @@ func genTableDrivenTest(fn funcInfo) string {
 	sb.WriteString("\ttests := []testCase{\n")
 	sb.WriteString("\t\t{\n")
 	if hasSeedCase {
-		sb.WriteString("\t\t\tname: \"simple\",\n")
+		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "simple")))
 		sb.WriteString("\t\t\tskip: false,\n")
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, seedCase.Inputs[p.Name]))
@@ -397,7 +452,7 @@ func genTableDrivenTest(fn funcInfo) string {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
 		}
 	} else {
-		sb.WriteString("\t\t\tname: \"todo\",\n")
+		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "todo")))
 		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, zeroValue(p.Type)))
@@ -499,6 +554,41 @@ func genTableDrivenTest(fn funcInfo) string {
 	sb.WriteString("}\n\n")
 
 	return sb.String()
+}
+
+func goCoverageTaskCaseName(task *types.CoverageTestTask, fallback string) string {
+	if task == nil {
+		return fallback
+	}
+	switch task.GapType {
+	case "branch":
+		return "coverage branch gap"
+	case "error_path":
+		return "coverage error path"
+	case "return_path":
+		return "coverage return path"
+	case "statement":
+		return "coverage statement gap"
+	default:
+		return "coverage gap"
+	}
+}
+
+func goCoverageTaskComment(task *types.CoverageTestTask) string {
+	parts := []string{}
+	if task.ID != "" {
+		parts = append(parts, task.ID)
+	}
+	if task.LineRange != "" {
+		parts = append(parts, "lines "+task.LineRange)
+	}
+	if len(task.AssertionFocus) > 0 {
+		parts = append(parts, strings.Join(task.AssertionFocus, "; "))
+	}
+	if len(parts) == 0 {
+		return "coverage gap"
+	}
+	return strings.Join(parts, " | ")
 }
 
 // needsDeepEqual 判断类型是否需要用 reflect.DeepEqual 比较

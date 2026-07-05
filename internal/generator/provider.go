@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/binlee/testloop-mcp/types"
@@ -39,6 +40,9 @@ func (StaticProvider) Name() string {
 func (StaticProvider) GenerateTests(_ context.Context, req TestGenerationRequest) (string, error) {
 	if strings.TrimSpace(req.StaticCode) != "" {
 		return req.StaticCode, nil
+	}
+	if req.Context != nil && req.Context.CoverageTask != nil && strings.EqualFold(filepath.Ext(req.SourceFile), ".go") {
+		return GenerateGoTestsForCoverageTask(req.SourceFile, req.Context.CoverageTask)
 	}
 	return GenerateTestsStatic(req.SourceFile)
 }
@@ -137,7 +141,7 @@ func GenerateTestsWithProviderOptions(ctx context.Context, srcPath string, provi
 		provider = StaticProvider{}
 	}
 
-	staticCode, err := GenerateTestsStatic(srcPath)
+	staticCode, err := generateTestsStaticWithOptions(srcPath, opts)
 	if err != nil {
 		return "", err
 	}
@@ -154,4 +158,11 @@ func GenerateTestsWithProviderOptions(ctx context.Context, srcPath string, provi
 		return "", fmt.Errorf("test provider %s returned empty output", provider.Name())
 	}
 	return code, nil
+}
+
+func generateTestsStaticWithOptions(srcPath string, opts GenerateTestsOptions) (string, error) {
+	if opts.CoverageTask != nil && strings.EqualFold(filepath.Ext(srcPath), ".go") {
+		return GenerateGoTestsForCoverageTask(srcPath, opts.CoverageTask)
+	}
+	return GenerateTestsStatic(srcPath)
 }
