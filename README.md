@@ -194,6 +194,20 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
   },
   "suggestions": [
     { "file": "example.com/pkg/calc.go", "line_range": "5-7", "reason": "此代码块未被测试覆盖", "confidence": 0.9 }
+  ],
+  "test_tasks": [
+    {
+      "id": "go-test-1",
+      "framework": "go-test",
+      "file": "example.com/pkg/calc.go",
+      "target": "Add",
+      "line_range": "5-7",
+      "goal": "为 Add 补充测试，覆盖未执行行段 5-7",
+      "command": "go test ./example.com/pkg",
+      "test_file": "example.com/pkg/calc_test.go",
+      "test_name": "TestAdd",
+      "assertion_focus": ["断言未覆盖分支的返回值或副作用"]
+    }
   ]
 }
 ```

@@ -135,5 +135,8 @@ type CoverageTestTask struct {
 	SuggestedInputs []string `json:"suggested_inputs,omitempty"`
 	Goal            string   `json:"goal"`
 	Command         string   `json:"command,omitempty"`
+	TestFile        string   `json:"test_file,omitempty"`
+	TestName        string   `json:"test_name,omitempty"`
+	AssertionFocus  []string `json:"assertion_focus,omitempty"`
 	Confidence      float64  `json:"confidence"`
 }

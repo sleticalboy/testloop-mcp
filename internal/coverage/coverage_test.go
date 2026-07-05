@@ -145,6 +145,15 @@ func (Calculator) Divide(a, b int) int {
 	if addTask.Command == "" || !strings.Contains(addTask.Command, "go test") {
 		t.Errorf("expected go test command, got %q", addTask.Command)
 	}
+	if addTask.TestFile != strings.TrimSuffix(srcPath, ".go")+"_test.go" {
+		t.Errorf("unexpected Add task test file: %q", addTask.TestFile)
+	}
+	if addTask.TestName != "TestAdd" {
+		t.Errorf("unexpected Add task test name: %q", addTask.TestName)
+	}
+	if !containsString(addTask.AssertionFocus, "断言未覆盖分支的返回值或副作用") {
+		t.Errorf("expected Add task assertion focus, got %+v", addTask.AssertionFocus)
+	}
 	if !containsString(addTask.SuggestedInputs, "构造满足条件 `a == 0` 的输入") {
 		t.Errorf("expected task input hints, got %+v", addTask.SuggestedInputs)
 	}
@@ -505,6 +514,15 @@ end_of_record
 	if task == nil || task.Command != "cargo test" {
 		t.Fatalf("expected cargo test task, got %+v", report.TestTasks)
 	}
+	if task.TestFile != "crates/core/src/lib.rs" {
+		t.Fatalf("unexpected rust task test file: %+v", task)
+	}
+	if task.TestName != "test_validator_check_covers_gap" {
+		t.Fatalf("unexpected rust task test name: %+v", task)
+	}
+	if !containsString(task.AssertionFocus, "未覆盖 match 分支") {
+		t.Fatalf("expected rust assertion focus, got %+v", task.AssertionFocus)
+	}
 }
 
 func TestParseJaCoCoCoverageXML(t *testing.T) {
@@ -835,6 +853,15 @@ public class OrderService {
 	task := findCoverageTask(report.TestTasks, "OrderService.status")
 	if task == nil || task.Command != "mvn test" {
 		t.Fatalf("expected mvn test task, got %+v", report.TestTasks)
+	}
+	if task.TestFile != filepath.Join("src", "test", "java", "com", "example", "service", "OrderServiceTest.java") {
+		t.Fatalf("unexpected java task test file: %+v", task)
+	}
+	if task.TestName != "shouldCoverOrderServiceStatusGap" {
+		t.Fatalf("unexpected java task test name: %+v", task)
+	}
+	if !containsString(task.AssertionFocus, "未覆盖 switch/case 分支") {
+		t.Fatalf("expected java assertion focus, got %+v", task.AssertionFocus)
 	}
 }
 
