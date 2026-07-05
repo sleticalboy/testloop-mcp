@@ -37,3 +37,14 @@
 - [x] Java JaCoCo XML 覆盖率解析已实现。
 - [x] `run_tests` 的 coverage 模式已集成 tarpaulin/JaCoCo 报告生成命令。
 - [x] `generate_tests` 已支持接收单个 `coverage_task`，并在 Go/Python/Jest/Rust/Java 中使用 task-aware 静态生成草稿。
+
+## v0.4.0 发布前复验
+
+- [x] `go test ./...`
+- [x] `go build -o /tmp/testloop-mcp .`
+- [x] `go build -o /tmp/testloop-testgen ./cmd/testgen`
+- [x] `docker compose config`
+- [x] `/tmp/testloop-mcp --transport http --addr :18080` 后 `GET /healthz` 返回 `ok`
+- [x] `docker build -t testloop-mcp:release-check .`
+- [x] `docker run -p 18081:8080 testloop-mcp:release-check` 后 `GET /healthz` 返回 `ok`
+- [x] 最新远端 CI 已通过：`28737511599`
