@@ -1,0 +1,17 @@
+// Generated tests for rust_task.rs
+// Run with: cargo test
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn test_validator_check_covers_gap() {
+        // coverage task: rust-task-1 | lines 8-8 | 未覆盖 match 分支 | 构造满足条件 `value == 0` 的输入
+        let instance = Validator::new();
+        let result = instance.check(0);
+        // TODO: replace with actual expected value
+        assert!(result == true || result == false);
+    }
+}

@@ -1,0 +1,15 @@
+// Generated tests for java_task.java
+// Run with: mvn test  or  gradle test
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class Java_taskTest {
+
+    @Test
+    void shouldCoverCalculatorAddGap() {
+        // coverage task: java-task-1 | lines 2-2 | 断言未覆盖分支的返回值或副作用 | 构造满足条件 `a == 0` 的输入
+        Calculator instance = new Calculator();
+        int result = instance.add(0, 0);
+        assertEquals(0, result);
+    }
+}

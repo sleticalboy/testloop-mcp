@@ -17,6 +17,7 @@
 - Go 静态生成器支持 `coverage_task` 模式，会优先只生成目标函数或方法的测试，并把 task 信息写入测试名、case 名和注释。
 - Python/Jest 静态生成器支持 `coverage_task` 模式，会按目标过滤测试草稿，并把建议输入转成更具体的调用参数和断言。
 - Rust/Java 静态生成器支持 `coverage_task` 模式，会优先生成目标函数或方法的测试骨架，减少整文件泛化输出。
+- 新增 Go/Python/Jest/Rust/Java task-aware 静态生成 golden tests，防止 coverage task 增量测试草稿退化。
 
 ## v0.3.0 - 2026-07-05
 

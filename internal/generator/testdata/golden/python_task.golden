@@ -1,0 +1,6 @@
+from python_task import add
+
+def test_add_zero_left_operand():
+    # coverage task: pytest-task-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a == 0` 的输入
+    result = add(0, 2)
+    assert result == (0 + 2)

@@ -1,0 +1,10 @@
+const { add } = require('./js_task');
+
+describe('add', () => {
+  it('covers add zero left operand', () => {
+    // coverage task: jest-task-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a === 0` 的输入
+    const result = add(0, 2);
+    expect(result).toBe((0 + 2));
+  });
+
+});
