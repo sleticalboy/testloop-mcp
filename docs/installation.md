@@ -6,14 +6,14 @@
 
 当前 Release 已提供 Linux amd64 产物：
 
-- `testloop-mcp_v0.4.0_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.1_linux_amd64.tar.gz`
 - `checksums.txt`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/testloop-mcp_v0.4.0_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/checksums.txt
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/testloop-mcp_v0.4.1_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/checksums.txt
 sha256sum -c checksums.txt
-tar -xzf testloop-mcp_v0.4.0_linux_amd64.tar.gz
+tar -xzf testloop-mcp_v0.4.1_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
@@ -36,14 +36,12 @@ go build -o testloop-mcp .
 go build -o testloop-testgen ./cmd/testgen
 ```
 
-当前 main 分支也可以直接用 `go install` 安装到 `$GOBIN` 或 `$GOPATH/bin`：
+也可以直接用 `go install` 安装到 `$GOBIN` 或 `$GOPATH/bin`：
 
 ```bash
-go install github.com/sleticalboy/testloop-mcp@main
-go install github.com/sleticalboy/testloop-mcp/cmd/testgen@main
+go install github.com/sleticalboy/testloop-mcp@latest
+go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 ```
-
-等包含 module path 修正的新版本发布后，可以把 `@main` 换成 `@latest`。
 
 ## Docker 运行
 

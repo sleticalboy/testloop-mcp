@@ -51,10 +51,10 @@ AI IDE (Claude Code / Cursor / Copilot)
 Linux amd64 用户可以直接下载 GitHub Release 二进制：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/testloop-mcp_v0.4.0_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/checksums.txt
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/testloop-mcp_v0.4.1_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/checksums.txt
 sha256sum -c checksums.txt
-tar -xzf testloop-mcp_v0.4.0_linux_amd64.tar.gz
+tar -xzf testloop-mcp_v0.4.1_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
@@ -67,11 +67,11 @@ go build -o testloop-mcp .
 go build -o testloop-testgen ./cmd/testgen
 ```
 
-当前 main 分支也可以直接安装到 Go bin 目录：
+也可以直接安装到 Go bin 目录：
 
 ```bash
-go install github.com/sleticalboy/testloop-mcp@main
-go install github.com/sleticalboy/testloop-mcp/cmd/testgen@main
+go install github.com/sleticalboy/testloop-mcp@latest
+go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 ```
 
 **前置要求：** Go 1.25+；源码构建需要 CGO 可用的 C 编译工具链。

@@ -23,7 +23,7 @@ func main() {
 
 	// 创建 MCP server
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "testloop-mcp", Version: "0.1.0"},
+		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.1"},
 		nil,
 	)
 
