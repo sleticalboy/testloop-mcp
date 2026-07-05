@@ -13,6 +13,9 @@ on:
 permissions:
   contents: write
 
+env:
+  HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
 jobs:
   build:
     name: Build ${{ matrix.asset }}
@@ -105,3 +108,70 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG_NAME" dist/*.tar.gz dist/*.sha256 --clobber
+
+  homebrew-tap-pr:
+    name: Update Homebrew tap
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          fi
+          echo "TAG_NAME=$tag" >> "$GITHUB_ENV"
+
+      - name: Checkout Homebrew tap
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: sleticalboy/homebrew-tap
+          token: ${{ env.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew formula
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="update-testloop-mcp-${TAG_NAME}"
+          git -C homebrew-tap checkout -B "$branch"
+          TESTLOOP_MCP_REPO="${{ github.repository }}" scripts/update-homebrew-tap.sh "$TAG_NAME" homebrew-tap
+
+      - name: Create Homebrew tap pull request
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ env.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd homebrew-tap
+          if git diff --quiet -- Formula/testloop-mcp.rb; then
+            echo "Formula is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/testloop-mcp.rb
+          git commit -m "Update testloop-mcp to ${TAG_NAME}"
+          git push --force-with-lease origin "update-testloop-mcp-${TAG_NAME}"
+          gh pr view "update-testloop-mcp-${TAG_NAME}" --repo sleticalboy/homebrew-tap >/dev/null 2>&1 || \
+            gh pr create \
+              --repo sleticalboy/homebrew-tap \
+              --base main \
+              --head "update-testloop-mcp-${TAG_NAME}" \
+              --title "Update testloop-mcp to ${TAG_NAME}" \
+              --body "Update testloop-mcp Homebrew formula for ${TAG_NAME}."
+
+      - name: Skip Homebrew tap update
+        if: ${{ env.HOMEBREW_TAP_TOKEN == '' }}
+        run: echo "HOMEBREW_TAP_TOKEN is not configured; skipping Homebrew tap PR."
