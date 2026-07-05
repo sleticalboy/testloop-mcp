@@ -87,6 +87,7 @@ jobs:
     needs: build
     env:
       TAG_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download build artifacts
