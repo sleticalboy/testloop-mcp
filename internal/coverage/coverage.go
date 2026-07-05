@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/binlee/testloop-mcp/types"
@@ -144,13 +145,14 @@ func suggestedGoInputs(params []string) []string {
 
 func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 	tasks := make([]types.CoverageTestTask, 0, len(report.Suggestions))
-	for i, suggestion := range report.Suggestions {
+	for _, suggestion := range report.Suggestions {
 		target := suggestion.Function
 		if target == "" {
 			target = filepath.Base(suggestion.File)
 		}
+		testFile := coverageTaskTestFile(report.Framework, suggestion.File)
+		priority, priorityReason := coverageTaskPriority(suggestion, testFile)
 		task := types.CoverageTestTask{
-			ID:              fmt.Sprintf("%s-%d", sanitizeTaskID(report.Framework), i+1),
 			Framework:       report.Framework,
 			File:            suggestion.File,
 			Target:          target,
@@ -162,12 +164,18 @@ func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 			SuggestedInputs: suggestion.SuggestedInputs,
 			Goal:            coverageTaskGoal(target, suggestion.LineRange),
 			Command:         coverageTaskCommand(report.Framework, suggestion.File),
-			TestFile:        coverageTaskTestFile(report.Framework, suggestion.File),
+			TestFile:        testFile,
 			TestName:        coverageTaskTestName(report.Framework, target),
 			AssertionFocus:  coverageTaskAssertionFocus(suggestion),
+			Priority:        priority,
+			PriorityReason:  priorityReason,
 			Confidence:      suggestion.Confidence,
 		}
 		tasks = append(tasks, task)
+	}
+	sortCoverageTasks(tasks)
+	for i := range tasks {
+		tasks[i].ID = fmt.Sprintf("%s-%d", sanitizeTaskID(report.Framework), i+1)
 	}
 	return tasks
 }
@@ -304,6 +312,70 @@ func coverageTaskAssertionFocus(suggestion types.CoverageSuggestion) []string {
 		focus = append(focus, fmt.Sprintf("覆盖未执行行: %s", intsCSV(suggestion.UncoveredLines)))
 	}
 	return focus
+}
+
+func coverageTaskPriority(suggestion types.CoverageSuggestion, testFile string) (int, string) {
+	score := 0
+	var reasons []string
+	if suggestion.Function != "" {
+		score += 40
+		reasons = append(reasons, "已定位到具体函数或方法")
+	} else if suggestion.LineRange == "entire file" {
+		score -= 20
+		reasons = append(reasons, "整文件泛化任务靠后处理")
+	}
+	switch suggestion.GapType {
+	case "branch":
+		score += 30
+		reasons = append(reasons, "分支缺口通常能生成高价值断言")
+	case "error_path":
+		score += 28
+		reasons = append(reasons, "错误或空值路径通常容易补充明确断言")
+	case "return_path":
+		score += 20
+		reasons = append(reasons, "返回路径可直接断言结果")
+	case "statement":
+		score += 10
+		reasons = append(reasons, "普通语句缺口有明确行号")
+	}
+	if len(suggestion.SuggestedInputs) > 0 {
+		score += 10
+		reasons = append(reasons, "已有建议输入")
+	}
+	if len(suggestion.UncoveredLines) > 0 {
+		score += 8
+		reasons = append(reasons, "已有未覆盖行列表")
+	}
+	if testFile != "" {
+		score += 6
+		reasons = append(reasons, "已有推荐测试文件")
+	}
+	score += int(suggestion.Confidence * 10)
+	if suggestion.Confidence > 0 {
+		reasons = append(reasons, fmt.Sprintf("置信度 %.2f", suggestion.Confidence))
+	}
+	if score < 0 {
+		score = 0
+	}
+	return score, strings.Join(reasons, "；")
+}
+
+func sortCoverageTasks(tasks []types.CoverageTestTask) {
+	sort.SliceStable(tasks, func(i int, j int) bool {
+		if tasks[i].Priority != tasks[j].Priority {
+			return tasks[i].Priority > tasks[j].Priority
+		}
+		if tasks[i].Confidence != tasks[j].Confidence {
+			return tasks[i].Confidence > tasks[j].Confidence
+		}
+		if tasks[i].File != tasks[j].File {
+			return tasks[i].File < tasks[j].File
+		}
+		if tasks[i].LineRange != tasks[j].LineRange {
+			return tasks[i].LineRange < tasks[j].LineRange
+		}
+		return tasks[i].Target < tasks[j].Target
+	})
 }
 
 func identifierWords(value string) []string {

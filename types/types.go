@@ -138,5 +138,7 @@ type CoverageTestTask struct {
 	TestFile        string   `json:"test_file,omitempty"`
 	TestName        string   `json:"test_name,omitempty"`
 	AssertionFocus  []string `json:"assertion_focus,omitempty"`
+	Priority        int      `json:"priority,omitempty"`
+	PriorityReason  string   `json:"priority_reason,omitempty"`
 	Confidence      float64  `json:"confidence"`
 }

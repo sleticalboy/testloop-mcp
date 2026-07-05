@@ -206,7 +206,9 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
       "command": "go test ./example.com/pkg",
       "test_file": "example.com/pkg/calc_test.go",
       "test_name": "TestAdd",
-      "assertion_focus": ["断言未覆盖分支的返回值或副作用"]
+      "assertion_focus": ["断言未覆盖分支的返回值或副作用"],
+      "priority": 103,
+      "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入"
     }
   ]
 }

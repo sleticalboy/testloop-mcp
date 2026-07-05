@@ -11,6 +11,7 @@
 - Rust 覆盖率源码映射改用 tree-sitter，支持属性标注函数、多行函数签名、`impl` 方法和 trait 默认方法，并保留轻量正则回退。
 - 新增 Rust workspace 和 Java Maven 风格覆盖率 fixture，验证相对报告路径、复杂源码目录和源码映射不会退化。
 - `test_tasks` 新增 `test_file`、`test_name` 和 `assertion_focus`，让 AI Agent 更容易把覆盖率缺口转成具体测试草稿。
+- `test_tasks` 新增 `priority` 和 `priority_reason`，并按函数/方法级缺口、分支/错误路径、建议输入、未覆盖行和置信度排序。
 
 ## v0.3.0 - 2026-07-05
 

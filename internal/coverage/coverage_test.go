@@ -145,6 +145,12 @@ func (Calculator) Divide(a, b int) int {
 	if addTask.Command == "" || !strings.Contains(addTask.Command, "go test") {
 		t.Errorf("expected go test command, got %q", addTask.Command)
 	}
+	if addTask.Priority <= 0 {
+		t.Errorf("expected Add task priority, got %+v", addTask)
+	}
+	if !strings.Contains(addTask.PriorityReason, "具体函数或方法") || !strings.Contains(addTask.PriorityReason, "分支缺口") {
+		t.Errorf("unexpected Add task priority reason: %q", addTask.PriorityReason)
+	}
 	if addTask.TestFile != strings.TrimSuffix(srcPath, ".go")+"_test.go" {
 		t.Errorf("unexpected Add task test file: %q", addTask.TestFile)
 	}
@@ -156,6 +162,9 @@ func (Calculator) Divide(a, b int) int {
 	}
 	if !containsString(addTask.SuggestedInputs, "构造满足条件 `a == 0` 的输入") {
 		t.Errorf("expected task input hints, got %+v", addTask.SuggestedInputs)
+	}
+	if len(report.TestTasks) < 3 || report.TestTasks[0].LineRange == "entire file" || report.TestTasks[len(report.TestTasks)-1].LineRange != "entire file" {
+		t.Errorf("expected entire-file task to sort last, got %+v", report.TestTasks)
 	}
 }
 
