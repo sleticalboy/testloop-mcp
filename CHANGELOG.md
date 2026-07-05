@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Release Artifacts workflow 准备生成 Linux amd64、Linux arm64 和 macOS arm64 三类 tarball，并统一生成 `checksums.txt`。
+- 新增 `scripts/install.sh`，支持检测平台、下载 release 资产、校验 checksum、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`。
+
 ## v0.4.1 - 2026-07-05
 
 ### Added

@@ -13,13 +13,14 @@
 5. [x] 验证 `go install github.com/sleticalboy/testloop-mcp@main` 和 `go install github.com/sleticalboy/testloop-mcp/cmd/testgen@main` 可从远端安装并正常显示 help。
 6. [x] 准备 v0.4.1 patch release，把 module path 修正纳入正式版本，并将安装文档切回 `@latest`。
 7. [x] 发布 v0.4.1，并验证 Release 资产和 `go install @latest`。
-8. [ ] 后续评估是否发布 macOS、Windows 和多架构二进制。
-9. [ ] 后续评估 Homebrew tap 或一键安装脚本，降低本地安装门槛。
+8. [x] 评估并准备 Linux arm64、macOS arm64 和多架构二进制发布。
+9. [x] 新增一键安装脚本，降低本地安装门槛；Homebrew tap 继续暂缓。
 
 ## 暂缓项
 
-- 多平台二进制：项目使用 CGO，跨平台构建需要额外工具链验证，先不在第十四阶段一次性铺开。
-- 包管理器发布：需要稳定版本节奏和产物命名后再接入 Homebrew 或其他分发渠道。
+- Windows 预构建二进制：项目使用 CGO 和 tree-sitter，Windows runner 需要额外 MinGW/MSYS2 工具链验证，暂时保留 `go install` 和源码构建路径。
+- Homebrew tap：需要稳定版本节奏和产物命名后再接入。
+- 当前 `v0.4.1` release 仍只有 Linux amd64 资产；新增平台资产会从下一次 tag release 开始产出。
 
 ## v0.4.1 发布验证
 
@@ -29,3 +30,9 @@
 - [x] Release 资产包含 `testloop-mcp_v0.4.1_linux_amd64.tar.gz` 和 `checksums.txt`。
 - [x] `go install github.com/sleticalboy/testloop-mcp@latest` 验证通过。
 - [x] `go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest` 验证通过。
+
+## 下一版分发改进
+
+- [x] Release Artifacts workflow 改为 matrix build，准备生成 `linux_amd64`、`linux_arm64` 和 `darwin_arm64` 三类 tarball。
+- [x] checksums 改为在发布 job 中统一生成，避免多平台 job 并发上传时互相覆盖。
+- [x] 新增 `scripts/install.sh`，支持检测平台、下载 release 资产、校验 checksum、安装到 `~/.local/bin`，并在资产缺失时回退到 `go install`。

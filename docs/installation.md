@@ -2,9 +2,29 @@
 
 本文面向想直接使用 testloop-mcp 的用户，覆盖二进制下载、校验、本地构建、Docker 运行和常见 MCP 客户端接入方式。
 
-## 推荐方式：下载 Release 二进制
+## 推荐方式：安装脚本
 
-当前 Release 已提供 Linux amd64 产物：
+安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt`。当前 release 没有对应资产时，会自动回退到 `go install`。
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
+```
+
+可选环境变量：
+
+```bash
+TESTLOOP_MCP_VERSION=v0.4.1 sh scripts/install.sh
+TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
+```
+
+脚本会安装两个命令：
+
+- `testloop-mcp`
+- `testloop-testgen`
+
+## 手动下载 Release 二进制
+
+当前 `v0.4.1` Release 已提供 Linux amd64 产物：
 
 - `testloop-mcp_v0.4.1_linux_amd64.tar.gz`
 - `checksums.txt`
@@ -19,7 +39,7 @@ chmod +x testloop-mcp testloop-testgen
 ./testloop-testgen --help
 ```
 
-macOS、Windows 和其他架构暂未发布预构建二进制。可以先用源码构建方式安装。
+后续 release workflow 已准备生成 Linux amd64、Linux arm64 和 macOS arm64 产物。Windows 和当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
 
 ## 从源码构建
 

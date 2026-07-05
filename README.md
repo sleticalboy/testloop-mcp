@@ -48,7 +48,13 @@ AI IDE (Claude Code / Cursor / Copilot)
 
 ## 安装
 
-Linux amd64 用户可以直接下载 GitHub Release 二进制：
+推荐使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产；当前 release 没有匹配资产时，会自动回退到 `go install`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
+```
+
+当前 `v0.4.1` Release 已提供 Linux amd64 二进制：
 
 ```bash
 curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/testloop-mcp_v0.4.1_linux_amd64.tar.gz
@@ -58,7 +64,7 @@ tar -xzf testloop-mcp_v0.4.1_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
-macOS、Windows 或需要从源码构建：
+后续 release workflow 已准备生成 Linux amd64、Linux arm64 和 macOS arm64 资产。Windows 或需要从源码构建：
 
 ```bash
 git clone https://github.com/sleticalboy/testloop-mcp.git
