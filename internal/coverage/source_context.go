@@ -15,6 +15,7 @@ type sourceRange struct {
 	StartLine int
 	EndLine   int
 	Params    []string
+	Lines     []string
 }
 
 var (
@@ -86,12 +87,14 @@ func parseRustFunctionRanges(path string) []sourceRange {
 			continue
 		}
 		start := i + 1
+		end := findBraceRangeEnd(lines, i)
 		ranges = append(ranges, sourceRange{
 			Name:      matches[1],
 			Kind:      "function",
 			StartLine: start,
-			EndLine:   findBraceRangeEnd(lines, i),
+			EndLine:   end,
 			Params:    parseParamNames(matches[2]),
+			Lines:     rangeSourceLines(lines, start, end),
 		})
 	}
 	return ranges
@@ -118,12 +121,14 @@ func parseJavaMethodRanges(path string) []sourceRange {
 			name = classStack[len(classStack)-1] + "." + name
 		}
 		start := i + 1
+		end := findBraceRangeEnd(lines, i)
 		ranges = append(ranges, sourceRange{
 			Name:      name,
 			Kind:      "method",
 			StartLine: start,
-			EndLine:   findBraceRangeEnd(lines, i),
+			EndLine:   end,
 			Params:    parseParamNames(matches[2]),
+			Lines:     rangeSourceLines(lines, start, end),
 		})
 	}
 	return ranges
@@ -135,6 +140,22 @@ func readSourceLines(path string) ([]string, bool) {
 		return nil, false
 	}
 	return strings.Split(string(source), "\n"), true
+}
+
+func rangeSourceLines(lines []string, startLine int, endLine int) []string {
+	if startLine < 1 {
+		startLine = 1
+	}
+	if endLine < startLine {
+		endLine = startLine
+	}
+	if startLine > len(lines) {
+		return nil
+	}
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+	return lines[startLine-1 : endLine]
 }
 
 func findBraceRangeEnd(lines []string, startIdx int) int {
@@ -204,4 +225,81 @@ func findSourceRangeForBlock(ranges []sourceRange, block types.CoverageBlock) *s
 		}
 	}
 	return nil
+}
+
+func analyzeSourceCoverageGap(fn *sourceRange, block types.CoverageBlock) (string, []string, []string) {
+	if fn == nil {
+		return "", nil, nil
+	}
+	lines := sourceBlockLines(fn, block)
+	joined := strings.Join(lines, "\n")
+	trimmed := strings.TrimSpace(joined)
+	switch {
+	case containsBranchKeyword(trimmed, "if"):
+		condition := extractSourceCondition(trimmed, "if")
+		return "branch", []string{"未覆盖 if 分支: " + condition}, suggestedSourceBranchInputs(fn.Params, condition)
+	case containsBranchKeyword(trimmed, "match"):
+		return "branch", []string{"未覆盖 match 分支"}, suggestedGoInputs(fn.Params)
+	case containsBranchKeyword(trimmed, "switch"):
+		return "branch", []string{"未覆盖 switch/case 分支"}, suggestedGoInputs(fn.Params)
+	case containsAny(trimmed, "Err(", "None", "return null", "throw ", "Exception", "error", "Error"):
+		return "error_path", []string{"未覆盖错误或空值返回路径"}, suggestedGoInputs(fn.Params)
+	case strings.Contains(trimmed, "return") || strings.Contains(trimmed, "Ok(") || strings.Contains(trimmed, "Some("):
+		return "return_path", []string{"未覆盖返回路径"}, suggestedGoInputs(fn.Params)
+	default:
+		return "statement", []string{"未覆盖普通语句块"}, suggestedGoInputs(fn.Params)
+	}
+}
+
+func sourceBlockLines(fn *sourceRange, block types.CoverageBlock) []string {
+	start := block.StartLine - fn.StartLine
+	end := block.EndLine - fn.StartLine
+	if start < 0 {
+		start = 0
+	}
+	if end >= len(fn.Lines) {
+		end = len(fn.Lines) - 1
+	}
+	if start > end || len(fn.Lines) == 0 {
+		return nil
+	}
+	return fn.Lines[start : end+1]
+}
+
+func containsBranchKeyword(source string, keyword string) bool {
+	trimmed := strings.TrimSpace(source)
+	return strings.HasPrefix(trimmed, keyword) || strings.Contains(trimmed, "\n"+keyword+" ") || strings.Contains(trimmed, " "+keyword+" ")
+}
+
+func extractSourceCondition(source string, keyword string) string {
+	source = strings.TrimSpace(source)
+	if idx := strings.Index(source, keyword); idx >= 0 {
+		source = source[idx+len(keyword):]
+	}
+	source = strings.TrimSpace(source)
+	if idx := strings.Index(source, "{"); idx >= 0 {
+		source = source[:idx]
+	}
+	source = strings.Trim(source, "() ")
+	if source == "" {
+		return "条件表达式"
+	}
+	return source
+}
+
+func suggestedSourceBranchInputs(params []string, condition string) []string {
+	inputs := suggestedGoInputs(params)
+	if condition != "" && condition != "条件表达式" {
+		inputs = append([]string{"构造满足条件 `" + condition + "` 的输入"}, inputs...)
+	}
+	return inputs
+}
+
+func containsAny(source string, values ...string) bool {
+	for _, value := range values {
+		if strings.Contains(source, value) {
+			return true
+		}
+	}
+	return false
 }

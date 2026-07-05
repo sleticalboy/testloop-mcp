@@ -97,8 +97,7 @@ func enrichSourceCoverageSuggestion(suggestion *types.CoverageSuggestion, block 
 	suggestion.Kind = fn.Kind
 	suggestion.UncoveredLines = lineRange(block.StartLine, block.EndLine)
 	suggestion.SuggestedInputs = suggestedGoInputs(fn.Params)
-	suggestion.GapType = "statement"
-	suggestion.MissingBranches = []string{"未覆盖函数或方法内的语句"}
+	suggestion.GapType, suggestion.MissingBranches, suggestion.SuggestedInputs = analyzeSourceCoverageGap(fn, block)
 	suggestion.Reason = fmt.Sprintf("%s 中的代码行未被测试覆盖", fn.Name)
 	suggestion.Confidence = 0.9
 }

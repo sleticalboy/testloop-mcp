@@ -356,6 +356,15 @@ end_of_record
 	if suggestion.Kind != "function" || suggestion.LineRange != "2-2" {
 		t.Fatalf("unexpected rust suggestion: %+v", suggestion)
 	}
+	if suggestion.GapType != "branch" {
+		t.Fatalf("expected rust branch gap type, got %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, "未覆盖 if 分支: a == 0") {
+		t.Fatalf("expected rust branch detail, got %+v", suggestion.MissingBranches)
+	}
+	if !containsString(suggestion.SuggestedInputs, "构造满足条件 `a == 0` 的输入") {
+		t.Fatalf("expected rust condition input hints, got %+v", suggestion.SuggestedInputs)
+	}
 	if !containsString(suggestion.SuggestedInputs, "设置 a 覆盖未执行分支") {
 		t.Fatalf("expected rust param hints, got %+v", suggestion.SuggestedInputs)
 	}
@@ -457,6 +466,56 @@ public class Calculator {
 	task := findCoverageTask(report.TestTasks, "Calculator.add")
 	if task == nil || task.Kind != "method" {
 		t.Fatalf("expected Calculator.add task, got %+v", report.TestTasks)
+	}
+}
+
+func TestParseJavaCoverageClassifiesErrorPath(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "com", "example")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	srcPath := filepath.Join(srcDir, "Calculator.java")
+	src := `package com.example;
+
+public class Calculator {
+    public int divide(int a, int b) {
+        if (b == 0) {
+            throw new IllegalArgumentException("zero");
+        }
+        return a / b;
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="` + dir + `/com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="4" mi="0" ci="1"/>
+      <line nr="5" mi="0" ci="1"/>
+      <line nr="6" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="2"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="2"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "Calculator.divide")
+	if suggestion == nil {
+		t.Fatalf("expected Calculator.divide suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.GapType != "error_path" {
+		t.Fatalf("expected java error path, got %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, "未覆盖错误或空值返回路径") {
+		t.Fatalf("expected java error path detail, got %+v", suggestion.MissingBranches)
 	}
 }
 

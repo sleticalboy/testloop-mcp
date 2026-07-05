@@ -11,7 +11,7 @@
 - **执行测试** — 支持 `go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit 5（Maven/Gradle），自动检测项目类型，可选收集覆盖率
 - **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
 - **修复建议** — 根据失败类型（期望值不匹配 / nil pointer / 数组越界 / 除零 / 类型不匹配等）生成结构化修复建议
-- **覆盖率分析** — 解析 Go coverprofile / Istanbul coverage JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML，输出文件级覆盖率、未覆盖 block 定位和改进建议；Go/Rust/Java 会尽量把缺口映射到具体函数或方法
+- **覆盖率分析** — 解析 Go coverprofile / Istanbul coverage JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML，输出文件级覆盖率、未覆盖 block 定位和改进建议；Go/Rust/Java 会尽量把缺口映射到具体函数或方法，并识别常见分支、返回、错误路径
 
 ## 架构概览
 
@@ -44,7 +44,7 @@ AI IDE (Claude Code / Cursor / Copilot)
 | Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | ✅ |
 
 > 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。
-> 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）、coverage.py JSON、Rust `cargo tarpaulin --out Lcov` 生成的 LCOV，以及 Java JaCoCo XML。Go/Rust/Java 覆盖率建议会尽量定位到具体函数或方法，便于 AI Agent 直接补测试。
+> 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）、coverage.py JSON、Rust `cargo tarpaulin --out Lcov` 生成的 LCOV，以及 Java JaCoCo XML。Go/Rust/Java 覆盖率建议会尽量定位到具体函数或方法，并输出常见分支/返回/错误路径分类，便于 AI Agent 直接补测试。
 
 ## 安装
 
