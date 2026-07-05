@@ -323,6 +323,48 @@ end_of_record
 	}
 }
 
+func TestParseRustCoverageMapsUncoveredLinesToFunctions(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "lib.rs")
+	src := `pub fn add(a: i32, b: i32) -> i32 {
+    if a == 0 {
+        return b;
+    }
+    a + b
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `TN:
+SF:` + srcPath + `
+DA:1,1
+DA:2,0
+DA:3,0
+DA:4,1
+end_of_record
+`
+	report, err := ParseRustTarpaulinCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseRustTarpaulinCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "add")
+	if suggestion == nil {
+		t.Fatalf("expected add suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.Kind != "function" || suggestion.LineRange != "2-2" {
+		t.Fatalf("unexpected rust suggestion: %+v", suggestion)
+	}
+	if !containsString(suggestion.SuggestedInputs, "设置 a 覆盖未执行分支") {
+		t.Fatalf("expected rust param hints, got %+v", suggestion.SuggestedInputs)
+	}
+	task := findCoverageTask(report.TestTasks, "add")
+	if task == nil || task.Kind != "function" {
+		t.Fatalf("expected add task, got %+v", report.TestTasks)
+	}
+}
+
 func TestParseJaCoCoCoverageXML(t *testing.T) {
 	raw := `<?xml version="1.0" encoding="UTF-8"?>
 <report name="demo">
@@ -361,6 +403,111 @@ func TestParseJaCoCoCoverageXML(t *testing.T) {
 	}
 	if len(report.TestTasks) == 0 || report.TestTasks[0].Command != "mvn test" {
 		t.Fatalf("expected mvn test task, got %+v", report.TestTasks)
+	}
+}
+
+func TestParseJaCoCoCoverageMapsUncoveredLinesToMethods(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "com", "example")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	srcPath := filepath.Join(srcDir, "Calculator.java")
+	src := `package com.example;
+
+public class Calculator {
+    public int add(int a, int b) {
+        if (a == 0) {
+            return b;
+        }
+        return a + b;
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="` + dir + `/com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="4" mi="0" ci="1"/>
+      <line nr="5" mi="1" ci="0"/>
+      <line nr="6" mi="1" ci="0"/>
+      <counter type="LINE" missed="2" covered="1"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="2" covered="1"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "Calculator.add")
+	if suggestion == nil {
+		t.Fatalf("expected Calculator.add suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.Kind != "method" || suggestion.LineRange != "5-5" {
+		t.Fatalf("unexpected java suggestion: %+v", suggestion)
+	}
+	if !containsString(suggestion.SuggestedInputs, "设置 a 覆盖未执行分支") {
+		t.Fatalf("expected java param hints, got %+v", suggestion.SuggestedInputs)
+	}
+	task := findCoverageTask(report.TestTasks, "Calculator.add")
+	if task == nil || task.Kind != "method" {
+		t.Fatalf("expected Calculator.add task, got %+v", report.TestTasks)
+	}
+}
+
+func TestResolveJavaCoveragePathFromStandardSourceRoot(t *testing.T) {
+	dir := t.TempDir()
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+
+	srcDir := filepath.Join("src", "main", "java", "com", "example")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `package com.example;
+
+public class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+}
+`
+	if err := os.WriteFile(filepath.Join(srcDir, "Calculator.java"), []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="4" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="0"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "Calculator.add")
+	if suggestion == nil {
+		t.Fatalf("expected Calculator.add suggestion, got %+v", report.Suggestions)
 	}
 }
 

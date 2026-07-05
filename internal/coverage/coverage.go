@@ -46,8 +46,12 @@ func coverageInputContent(profileData string) (string, error) {
 func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestion {
 	var suggestions []types.CoverageSuggestion
 	var goFunctions map[string][]goFuncRange
+	var sourceRanges map[string][]sourceRange
 	if report.Framework == "go-test" {
 		goFunctions = mapGoFunctionsByFile(report.Files)
+	}
+	if report.Framework == "cargo-test" || report.Framework == "junit" {
+		sourceRanges = mapSourceRangesByFile(report.Files, report.Framework)
 	}
 
 	for _, file := range report.Files {
@@ -65,6 +69,7 @@ func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestio
 					Confidence: 0.9,
 				}
 				enrichGoCoverageSuggestion(&suggestion, block, goFunctions[file.Path])
+				enrichSourceCoverageSuggestion(&suggestion, block, sourceRanges[file.Path])
 				suggestions = append(suggestions, suggestion)
 			}
 		}
@@ -81,6 +86,21 @@ func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestio
 	}
 
 	return suggestions
+}
+
+func enrichSourceCoverageSuggestion(suggestion *types.CoverageSuggestion, block types.CoverageBlock, ranges []sourceRange) {
+	fn := findSourceRangeForBlock(ranges, block)
+	if fn == nil {
+		return
+	}
+	suggestion.Function = fn.Name
+	suggestion.Kind = fn.Kind
+	suggestion.UncoveredLines = lineRange(block.StartLine, block.EndLine)
+	suggestion.SuggestedInputs = suggestedGoInputs(fn.Params)
+	suggestion.GapType = "statement"
+	suggestion.MissingBranches = []string{"未覆盖函数或方法内的语句"}
+	suggestion.Reason = fmt.Sprintf("%s 中的代码行未被测试覆盖", fn.Name)
+	suggestion.Confidence = 0.9
 }
 
 func enrichGoCoverageSuggestion(suggestion *types.CoverageSuggestion, block types.CoverageBlock, ranges []goFuncRange) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Rust `cargo tarpaulin` LCOV 覆盖率建议会尝试把未覆盖行映射到具体 `fn`，并在 `test_tasks` 中使用函数目标。
+- Java JaCoCo 覆盖率建议会尝试把未覆盖行映射到具体类方法，并支持常见 `src/main/java` 源码目录解析。
+
 ## v0.3.0 - 2026-07-05
 
 ### Added
