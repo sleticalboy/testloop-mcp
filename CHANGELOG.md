@@ -6,7 +6,7 @@
 
 - Release Artifacts workflow 改为由每个 matrix build job 直接上传对应 tarball 和 `.sha256`，避免单独 publish job 等不到 runner 时阻塞发版。
 - 安装脚本兼容聚合 `checksums.txt` 和单资产 `.sha256` 两种校验文件。
-- 新增 Homebrew Formula 草案和生成脚本，为后续接入正式 tap 仓库做准备。
+- 新增 Homebrew Formula 草案、生成脚本和 tap 同步脚本，为后续自动化更新 `sleticalboy/homebrew-tap` 做准备。
 
 ## v0.4.2 - 2026-07-05
 

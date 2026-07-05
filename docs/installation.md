@@ -75,14 +75,26 @@ go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 Formula/testloop-mcp.rb
 ```
 
-更新到最新 GitHub Release：
+只更新当前仓库内的公式：
 
 ```bash
 scripts/generate-homebrew-formula.sh v0.4.2
 ruby -c Formula/testloop-mcp.rb
 ```
 
-正式 tap 仓库创建后，可以把 `Formula/testloop-mcp.rb` 同步过去，再提供 `brew install sleticalboy/tap/testloop-mcp` 路径。
+同步到 `sleticalboy/homebrew-tap` 工作区：
+
+```bash
+scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
+```
+
+不传 `tap-dir` 时，脚本会把 `sleticalboy/homebrew-tap` 克隆到临时目录并更新公式。默认不会自动提交；确认无误后可用以下环境变量提交和推送 tap 仓库：
+
+```bash
+TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
+```
+
+正式 tap 更新后，可以提供 `brew install sleticalboy/tap/testloop-mcp` 路径。
 
 ## Docker 运行
 

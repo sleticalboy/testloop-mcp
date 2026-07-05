@@ -15,12 +15,13 @@
 7. [x] 发布 v0.4.1，并验证 Release 资产和 `go install @latest`。
 8. [x] 评估并准备 Linux arm64、macOS arm64 和多架构二进制发布。
 9. [x] 新增一键安装脚本，降低本地安装门槛。
-10. [x] 准备 Homebrew Formula 草案和更新脚本，正式 tap 仓库继续暂缓。
+10. [x] 准备 Homebrew Formula 草案和本地生成脚本。
+11. [x] 接入 `sleticalboy/homebrew-tap` 同步脚本，支持本地验证后可选提交推送。
 
 ## 暂缓项
 
 - Windows 预构建二进制：项目使用 CGO 和 tree-sitter，Windows runner 需要额外 MinGW/MSYS2 工具链验证，暂时保留 `go install` 和源码构建路径。
-- Homebrew tap：公式和更新脚本已在本仓库准备好；正式 tap 仓库创建、CI 和 PR 自动化后续再接入。
+- Homebrew tap CI/PR 自动化：先保留本地同步脚本；后续 release workflow 稳定后再接 GitHub Actions 自动开 PR。
 
 ## v0.4.1 发布验证
 
@@ -55,4 +56,5 @@
 
 - [x] 新增 `Formula/testloop-mcp.rb`，基于 `v0.4.2` 三平台 release 资产填写 URL 和 sha256。
 - [x] 新增 `scripts/generate-homebrew-formula.sh`，可从 GitHub Release asset digest 重新生成 formula。
-- [ ] 正式创建或接入 `homebrew-tap` 仓库后，再加入自动同步/PR 流程。
+- [x] 新增 `scripts/update-homebrew-tap.sh`，可更新 `sleticalboy/homebrew-tap` 工作区并运行 Ruby/Homebrew style 校验。
+- [ ] release workflow 稳定后，再加入自动同步/PR 流程。
