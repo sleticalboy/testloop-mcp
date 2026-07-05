@@ -97,10 +97,13 @@ go build -o testloop-mcp .
 | `file_path` | string | ✅ | 源文件路径（`.go` / `.rs` / `.java` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
 | `framework` | string | — | 测试框架，默认根据文件扩展名自动选择 |
 | `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
+| `coverage_task` | object | — | `parse_coverage` 返回的单个 `test_tasks` 项，用于按覆盖率缺口生成测试 |
 
-**返回：** `{ status, test_file, generated_cases, preview, context, provider }`
+**返回：** `{ status, test_file, generated_cases, preview, context, coverage_task, provider }`
 
-**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
+传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`，便于 Agent 或 LLM provider 按单个覆盖率缺口生成增量测试。
+
+**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
 
 LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examples/llm-provider.sh](./examples/llm-provider.sh)。
 

@@ -2,11 +2,14 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 func TestNewTestProviderAutoFallsBackToStaticWhenCommandMissing(t *testing.T) {
@@ -51,6 +54,47 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderIncludesCoverageTask(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	srcPath := writeProviderSource(t)
+	requestPath := filepath.Join(t.TempDir(), "request.json")
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+cat > "`+requestPath+`"
+cat <<'EOF'
+{"code":"from calc import add\n\n\ndef test_coverage_task():\n    assert add(1, 2) == 3\n"}
+EOF
+`)
+
+	coverageTask := testCoverageTask()
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, ExternalLLMProvider{Command: command}, GenerateTestsOptions{
+		CoverageTask: &coverageTask,
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "test_coverage_task") {
+		t.Fatalf("expected llm provider output, got:\n%s", code)
+	}
+
+	raw, err := os.ReadFile(requestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var req TestGenerationRequest
+	if err := json.Unmarshal(raw, &req); err != nil {
+		t.Fatalf("parse provider request: %v\n%s", err, raw)
+	}
+	if req.Context == nil || req.Context.CoverageTask == nil {
+		t.Fatalf("expected coverage task in provider context, got %+v", req.Context)
+	}
+	if req.Context.CoverageTask.Target != "add" || req.Context.CoverageTask.TestName != "test_add_covers_gap" {
+		t.Fatalf("unexpected coverage task context: %+v", req.Context.CoverageTask)
+	}
+}
+
 func TestParseLLMProviderOutputAcceptsRawCode(t *testing.T) {
 	code, err := parseLLMProviderOutput([]byte("package demo\n\nfunc TestRaw(t *testing.T) {}\n"))
 	if err != nil {
@@ -58,6 +102,21 @@ func TestParseLLMProviderOutputAcceptsRawCode(t *testing.T) {
 	}
 	if !strings.Contains(code, "TestRaw") {
 		t.Fatalf("unexpected raw code output: %q", code)
+	}
+}
+
+func testCoverageTask() types.CoverageTestTask {
+	return types.CoverageTestTask{
+		ID:             "pytest-1",
+		Framework:      "pytest",
+		File:           "calc.py",
+		Target:         "add",
+		LineRange:      "2-2",
+		GapType:        "branch",
+		TestFile:       filepath.Join("tests", "test_calc.py"),
+		TestName:       "test_add_covers_gap",
+		AssertionFocus: []string{"断言未覆盖分支"},
+		Priority:       100,
 	}
 }
 

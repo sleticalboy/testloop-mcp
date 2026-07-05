@@ -225,6 +225,55 @@ func TestE2E_GenerateTests_Context(t *testing.T) {
 	}
 }
 
+func TestE2E_GenerateTests_WithCoverageTask(t *testing.T) {
+	session := startServer(t)
+	defer session.Close()
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "calc.py")
+	if err := os.WriteFile(srcPath, []byte("def add(a, b):\n    return a + b\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	testPath := filepath.Join(dir, "tests", "test_calc.py")
+	payload := callTool(t, session, "generate_tests", map[string]any{
+		"file_path": srcPath,
+		"coverage_task": map[string]any{
+			"id":              "pytest-1",
+			"framework":       "pytest",
+			"file":            srcPath,
+			"target":          "add",
+			"line_range":      "2-2",
+			"gap_type":        "return_path",
+			"goal":            "为 add 补充测试，覆盖未执行行段 2-2",
+			"test_file":       testPath,
+			"test_name":       "test_add_covers_gap",
+			"assertion_focus": []string{"断言未覆盖返回路径的具体结果"},
+			"priority":        100,
+			"confidence":      0.9,
+		},
+	})
+
+	if payload["status"] != "ok" {
+		t.Fatalf("expected status=ok, got: %v", payload["status"])
+	}
+	if payload["test_file"] != testPath {
+		t.Fatalf("expected task test file %q, got %v", testPath, payload["test_file"])
+	}
+	if _, err := os.Stat(testPath); err != nil {
+		t.Fatalf("expected generated test file at task path: %v", err)
+	}
+	contextPayload, ok := payload["context"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected context object, got: %T", payload["context"])
+	}
+	if _, ok := contextPayload["coverage_task"].(map[string]any); !ok {
+		t.Fatalf("expected coverage_task in context, got %+v", contextPayload)
+	}
+	if _, ok := payload["coverage_task"].(map[string]any); !ok {
+		t.Fatalf("expected coverage_task in output, got %+v", payload)
+	}
+}
+
 // TestE2E_RunTests 验证 run_tests 端到端
 func TestE2E_RunTests(t *testing.T) {
 	session := startServer(t)

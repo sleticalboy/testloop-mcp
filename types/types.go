@@ -35,9 +35,10 @@ type FixSuggestion struct {
 
 // GenerateTestsInput generate_tests 工具输入
 type GenerateTestsInput struct {
-	FilePath       string   `json:"file_path"`
-	Framework      string   `json:"framework,omitempty"`
-	CoverageTarget []string `json:"coverage_target,omitempty"`
+	FilePath       string            `json:"file_path"`
+	Framework      string            `json:"framework,omitempty"`
+	CoverageTarget []string          `json:"coverage_target,omitempty"`
+	CoverageTask   *CoverageTestTask `json:"coverage_task,omitempty"`
 }
 
 // GenerateTestsOutput generate_tests 工具输出
@@ -47,17 +48,19 @@ type GenerateTestsOutput struct {
 	GeneratedCases int                    `json:"generated_cases"`
 	Preview        string                 `json:"preview,omitempty"`
 	Context        *TestGenerationContext `json:"context,omitempty"`
+	CoverageTask   *CoverageTestTask      `json:"coverage_task,omitempty"`
 	Provider       string                 `json:"provider,omitempty"`
 }
 
 // TestGenerationContext describes source structure for semantic test generation.
 type TestGenerationContext struct {
-	Language   string       `json:"language"`
-	Framework  string       `json:"framework"`
-	SourceFile string       `json:"source_file"`
-	Imports    []string     `json:"imports,omitempty"`
-	Types      []string     `json:"types,omitempty"`
-	Targets    []TestTarget `json:"targets"`
+	Language     string            `json:"language"`
+	Framework    string            `json:"framework"`
+	SourceFile   string            `json:"source_file"`
+	Imports      []string          `json:"imports,omitempty"`
+	Types        []string          `json:"types,omitempty"`
+	Targets      []TestTarget      `json:"targets"`
+	CoverageTask *CoverageTestTask `json:"coverage_task,omitempty"`
 }
 
 // TestTarget is a function or method that can be tested.

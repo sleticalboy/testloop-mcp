@@ -15,9 +15,10 @@ import (
 )
 
 type generateTestsInput struct {
-	FilePath  string `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
-	Framework string `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
-	Provider  string `json:"provider,omitempty" jsonschema:"测试生成 provider: static、llm 或 auto，默认 static"`
+	FilePath     string                  `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
+	Framework    string                  `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
+	Provider     string                  `json:"provider,omitempty" jsonschema:"测试生成 provider: static、llm 或 auto，默认 static"`
+	CoverageTask *types.CoverageTestTask `json:"coverage_task,omitempty" jsonschema:"parse_coverage 返回的单个 test_tasks 项，用于按覆盖率缺口生成测试"`
 }
 
 func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input generateTestsInput) (*mcp.CallToolResult, any, error) {
@@ -36,22 +37,31 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, err
 	}
 
-	code, err := generator.GenerateTestsWithProvider(ctx, filePath, provider)
+	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask}
+	code, err := generator.GenerateTestsWithProviderOptions(ctx, filePath, provider, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("生成测试失败: %w", err)
 	}
 
 	testFile := generator.TestFileName(filePath)
+	if input.CoverageTask != nil && strings.TrimSpace(input.CoverageTask.TestFile) != "" {
+		testFile = input.CoverageTask.TestFile
+	}
+	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil && filepath.Dir(testFile) != "." {
+		return nil, nil, fmt.Errorf("创建测试目录失败: %w", err)
+	}
 	if err := os.WriteFile(testFile, []byte(code), 0644); err != nil {
 		return nil, nil, fmt.Errorf("写入测试文件失败: %w", err)
 	}
 
+	genCtx := generator.BuildGenerationContextWithOptions(filePath, opts)
 	out := types.GenerateTestsOutput{
 		Status:         "ok",
 		TestFile:       testFile,
 		GeneratedCases: countGeneratedCases(code, filepath.Ext(filePath)),
 		Preview:        code,
-		Context:        generator.BuildGenerationContext(filePath),
+		Context:        genCtx,
+		CoverageTask:   input.CoverageTask,
 		Provider:       provider.Name(),
 	}
 

@@ -11,14 +11,48 @@ import (
 
 // BuildGenerationContext extracts source structure for semantic test generation.
 func BuildGenerationContext(srcPath string) *types.TestGenerationContext {
+	return BuildGenerationContextWithOptions(srcPath, GenerateTestsOptions{})
+}
+
+func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions) *types.TestGenerationContext {
 	ext := strings.ToLower(filepath.Ext(srcPath))
+	var ctx *types.TestGenerationContext
 	switch ext {
 	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
-		return buildJSGenerationContext(srcPath, ext)
+		ctx = buildJSGenerationContext(srcPath, ext)
 	case ".py":
-		return buildPyGenerationContext(srcPath)
+		ctx = buildPyGenerationContext(srcPath)
+	}
+	if opts.CoverageTask == nil {
+		return ctx
+	}
+	if ctx == nil {
+		ctx = &types.TestGenerationContext{
+			Language:   languageNameForPath(srcPath),
+			Framework:  opts.CoverageTask.Framework,
+			SourceFile: srcPath,
+		}
+	}
+	ctx.CoverageTask = opts.CoverageTask
+	return ctx
+}
+
+func languageNameForPath(srcPath string) string {
+	switch strings.ToLower(filepath.Ext(srcPath)) {
+	case ".go":
+		return "go"
+	case ".rs":
+		return "rust"
+	case ".java":
+		return "java"
+	case ".py":
+		return "python"
+	case ".ts", ".tsx":
+		return "typescript"
+	case ".js", ".jsx", ".mjs", ".cjs":
+		return "javascript"
 	default:
-		return nil
+		return ""
 	}
 }
 

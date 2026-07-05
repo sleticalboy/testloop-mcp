@@ -26,6 +26,10 @@ type TestGenerationRequest struct {
 	StaticCode string                       `json:"static_code,omitempty"`
 }
 
+type GenerateTestsOptions struct {
+	CoverageTask *types.CoverageTestTask
+}
+
 type StaticProvider struct{}
 
 func (StaticProvider) Name() string {
@@ -125,6 +129,10 @@ func NewTestProvider(mode string) (TestProvider, error) {
 }
 
 func GenerateTestsWithProvider(ctx context.Context, srcPath string, provider TestProvider) (string, error) {
+	return GenerateTestsWithProviderOptions(ctx, srcPath, provider, GenerateTestsOptions{})
+}
+
+func GenerateTestsWithProviderOptions(ctx context.Context, srcPath string, provider TestProvider, opts GenerateTestsOptions) (string, error) {
 	if provider == nil {
 		provider = StaticProvider{}
 	}
@@ -136,7 +144,7 @@ func GenerateTestsWithProvider(ctx context.Context, srcPath string, provider Tes
 
 	code, err := provider.GenerateTests(ctx, TestGenerationRequest{
 		SourceFile: srcPath,
-		Context:    BuildGenerationContext(srcPath),
+		Context:    BuildGenerationContextWithOptions(srcPath, opts),
 		StaticCode: staticCode,
 	})
 	if err != nil {
