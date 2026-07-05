@@ -20,7 +20,6 @@
 
 - Windows 预构建二进制：项目使用 CGO 和 tree-sitter，Windows runner 需要额外 MinGW/MSYS2 工具链验证，暂时保留 `go install` 和源码构建路径。
 - Homebrew tap：需要稳定版本节奏和产物命名后再接入。
-- 当前 `v0.4.1` release 仍只有 Linux amd64 资产；新增平台资产会从下一次 tag release 开始产出。
 
 ## v0.4.1 发布验证
 
@@ -36,3 +35,12 @@
 - [x] Release Artifacts workflow 改为 matrix build，准备生成 `linux_amd64`、`linux_arm64` 和 `darwin_arm64` 三类 tarball。
 - [x] checksums 改为在发布 job 中统一生成，避免多平台 job 并发上传时互相覆盖。
 - [x] 新增 `scripts/install.sh`，支持检测平台、下载 release 资产、校验 checksum、安装到 `~/.local/bin`，并在资产缺失时回退到 `go install`。
+
+## v0.4.2 发布验证
+
+- [x] Tag `v0.4.2` 指向 `f119ca0d505d738b7fb7bb00d1b59f722b4ca972`。
+- [x] GitHub Release 已创建：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.2
+- [x] Release 资产包含 `testloop-mcp_v0.4.2_linux_amd64.tar.gz`、`testloop-mcp_v0.4.2_linux_arm64.tar.gz`、`testloop-mcp_v0.4.2_darwin_arm64.tar.gz` 和 `checksums.txt`。
+- [x] `checksums.txt` 已校验 macOS arm64 资产。
+- [x] `TESTLOOP_MCP_VERSION=v0.4.2 sh scripts/install.sh` 已验证可直接下载 macOS arm64 release 资产并安装 `testloop-mcp` / `testloop-testgen`。
+- [x] Release Artifacts build jobs 已在 run `28746080130` 中验证 Linux amd64、Linux arm64 和 macOS arm64 均可构建；publish job 因 runner 队列取消，最终资产使用同一批成功构建 artifact 手动上传。

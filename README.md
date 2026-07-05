@@ -54,17 +54,17 @@ AI IDE (Claude Code / Cursor / Copilot)
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
 ```
 
-当前 `v0.4.1` Release 已提供 Linux amd64 二进制：
+当前 `v0.4.2` Release 已提供 Linux amd64、Linux arm64 和 macOS arm64 二进制。手动下载示例：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/testloop-mcp_v0.4.1_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/checksums.txt
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/testloop-mcp_v0.4.2_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/checksums.txt
 sha256sum -c checksums.txt
-tar -xzf testloop-mcp_v0.4.1_linux_amd64.tar.gz
+tar -xzf testloop-mcp_v0.4.2_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
-后续 release workflow 已准备生成 Linux amd64、Linux arm64 和 macOS arm64 资产。Windows 或需要从源码构建：
+Windows 或需要从源码构建：
 
 ```bash
 git clone https://github.com/sleticalboy/testloop-mcp.git

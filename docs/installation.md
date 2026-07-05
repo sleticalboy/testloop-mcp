@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 可选环境变量：
 
 ```bash
-TESTLOOP_MCP_VERSION=v0.4.1 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.4.2 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
@@ -24,22 +24,24 @@ TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 
 ## 手动下载 Release 二进制
 
-当前 `v0.4.1` Release 已提供 Linux amd64 产物：
+当前 `v0.4.2` Release 已提供以下产物：
 
-- `testloop-mcp_v0.4.1_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.2_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.2_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.2_darwin_arm64.tar.gz`
 - `checksums.txt`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/testloop-mcp_v0.4.1_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.1/checksums.txt
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/testloop-mcp_v0.4.2_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/checksums.txt
 sha256sum -c checksums.txt
-tar -xzf testloop-mcp_v0.4.1_linux_amd64.tar.gz
+tar -xzf testloop-mcp_v0.4.2_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
 ```
 
-后续 release workflow 已准备生成 Linux amd64、Linux arm64 和 macOS arm64 产物。Windows 和当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
+Windows 和当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
 
 ## 从源码构建
 
