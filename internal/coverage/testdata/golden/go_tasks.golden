@@ -1,0 +1,34 @@
+[
+  {
+    "id": "go-test-1",
+    "framework": "go-test",
+    "file": "testdata/golden/go/pkg/calc.go",
+    "target": "Add",
+    "kind": "function",
+    "line_range": "4-4",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: a == 0"
+    ],
+    "uncovered_lines": [
+      4
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `a == 0` 的输入",
+      "设置 a 覆盖未执行分支",
+      "设置 b 覆盖未执行分支"
+    ],
+    "goal": "为 Add 补充测试，覆盖未执行行段 4-4",
+    "command": "go test ./testdata/golden/go/pkg",
+    "test_file": "testdata/golden/go/pkg/calc_test.go",
+    "test_name": "TestAdd",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用",
+      "未覆盖 if 分支: a == 0",
+      "覆盖未执行行: 4"
+    ],
+    "priority": 103,
+    "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.95",
+    "confidence": 0.95
+  }
+]

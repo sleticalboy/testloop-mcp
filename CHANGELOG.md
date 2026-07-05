@@ -13,6 +13,7 @@
 - `test_tasks` 新增 `test_file`、`test_name` 和 `assertion_focus`，让 AI Agent 更容易把覆盖率缺口转成具体测试草稿。
 - `test_tasks` 新增 `priority` 和 `priority_reason`，并按函数/方法级缺口、分支/错误路径、建议输入、未覆盖行和置信度排序。
 - `generate_tests` 支持接收单个 `coverage_task`，并把任务上下文传给 LLM provider、回写到返回 context，同时优先写入任务推荐的 `test_file`。
+- Go/Rust/Java coverage task 输出新增 JSON golden 快照测试，固定面向 Agent 的任务契约。
 
 ## v0.3.0 - 2026-07-05
 

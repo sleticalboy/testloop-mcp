@@ -1,6 +1,8 @@
 package coverage
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,6 +67,104 @@ example.com/foo/baz.go:1.1,2.1 1 1
 	if report.TotalPercent <= 0 {
 		t.Errorf("TotalPercent = %.1f, want > 0", report.TotalPercent)
 	}
+}
+
+func TestCoverageTaskGoldenOutputs(t *testing.T) {
+	tests := []struct {
+		name   string
+		golden string
+		run    func(t *testing.T) []types.CoverageTestTask
+	}{
+		{
+			name:   "go task contract",
+			golden: "testdata/golden/go_tasks.golden",
+			run: func(t *testing.T) []types.CoverageTestTask {
+				raw := `mode: set
+testdata/golden/go/pkg/calc.go:4.2,4.10 1 0
+testdata/golden/go/pkg/calc.go:7.2,7.14 1 1
+`
+				report, err := ParseGoCoverage(raw)
+				if err != nil {
+					t.Fatalf("ParseGoCoverage 失败: %v", err)
+				}
+				return report.TestTasks
+			},
+		},
+		{
+			name:   "rust task contract",
+			golden: "testdata/golden/rust_tasks.golden",
+			run: func(t *testing.T) []types.CoverageTestTask {
+				raw := `TN:
+SF:crates/core/src/lib.rs
+DA:5,0
+DA:8,1
+end_of_record
+`
+				withWorkingDirectory(t, filepath.Join("testdata", "golden"))
+				report, err := ParseRustTarpaulinCoverage(raw)
+				if err != nil {
+					t.Fatalf("ParseRustTarpaulinCoverage 失败: %v", err)
+				}
+				return report.TestTasks
+			},
+		},
+		{
+			name:   "java task contract",
+			golden: "testdata/golden/java_tasks.golden",
+			run: func(t *testing.T) []types.CoverageTestTask {
+				raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="com/example">
+    <sourcefile name="TaskService.java">
+      <line nr="5" mi="1" ci="0"/>
+      <line nr="9" mi="0" ci="1"/>
+      <counter type="LINE" missed="1" covered="1"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="2" covered="0"/>
+</report>`
+				withWorkingDirectory(t, filepath.Join("testdata", "golden"))
+				report, err := ParseJaCoCoCoverage(raw)
+				if err != nil {
+					t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+				}
+				return report.TestTasks
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			goldenPath, err := filepath.Abs(tt.golden)
+			if err != nil {
+				t.Fatalf("resolve golden path: %v", err)
+			}
+			gotBytes, err := marshalCoverageTasksGolden(tt.run(t))
+			if err != nil {
+				t.Fatalf("marshal tasks: %v", err)
+			}
+			got := string(gotBytes)
+			wantBytes, err := os.ReadFile(goldenPath)
+			if err != nil {
+				t.Fatalf("read golden: %v", err)
+			}
+			want := string(wantBytes)
+			if strings.TrimSpace(got) != strings.TrimSpace(want) {
+				t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+			}
+		})
+	}
+}
+
+func marshalCoverageTasksGolden(tasks []types.CoverageTestTask) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(tasks); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func TestParseGoCoverageMapsUncoveredBlocksToFunctions(t *testing.T) {

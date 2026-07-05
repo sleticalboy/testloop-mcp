@@ -1,0 +1,32 @@
+[
+  {
+    "id": "junit-1",
+    "framework": "junit",
+    "file": "com/example/TaskService.java",
+    "target": "TaskService.status",
+    "kind": "method",
+    "line_range": "5-5",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 switch/case 分支"
+    ],
+    "uncovered_lines": [
+      5
+    ],
+    "suggested_inputs": [
+      "设置 state 覆盖未执行分支"
+    ],
+    "goal": "为 TaskService.status 补充测试，覆盖未执行行段 5-5",
+    "command": "mvn test",
+    "test_file": "src/test/java/com/example/TaskServiceTest.java",
+    "test_name": "shouldCoverTaskServiceStatusGap",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用",
+      "未覆盖 switch/case 分支",
+      "覆盖未执行行: 5"
+    ],
+    "priority": 103,
+    "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.90",
+    "confidence": 0.9
+  }
+]
