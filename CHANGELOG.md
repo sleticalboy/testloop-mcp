@@ -8,6 +8,7 @@
 - Java JaCoCo 覆盖率建议会尝试把未覆盖行映射到具体类方法，并支持常见 `src/main/java` 源码目录解析。
 - Rust/Java 覆盖率建议会对 `if`、`match`、`switch`、错误/空值返回和普通返回做轻量语义分类，生成更具体的 `gap_type`、`missing_branches` 和输入提示。
 - Java 覆盖率源码映射改用 tree-sitter，支持注解、多行方法签名、构造函数和内部类，并保留轻量正则回退。
+- Rust 覆盖率源码映射改用 tree-sitter，支持属性标注函数、多行函数签名、`impl` 方法和 trait 默认方法，并保留轻量正则回退。
 
 ## v0.3.0 - 2026-07-05
 

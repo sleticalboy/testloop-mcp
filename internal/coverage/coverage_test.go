@@ -374,6 +374,79 @@ end_of_record
 	}
 }
 
+func TestParseRustCoverageMapsComplexTreeSitterItems(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "lib.rs")
+	src := `#[inline]
+pub fn clamp(
+    value: i32,
+    max: i32,
+) -> i32 {
+    if value > max {
+        return max;
+    }
+    value
+}
+
+pub struct Calculator;
+
+impl Calculator {
+    pub fn divide(&self, a: i32, b: i32) -> Result<i32, String> {
+        if b == 0 {
+            return Err("zero".to_string());
+        }
+        Ok(a / b)
+    }
+}
+
+pub trait Named {
+    fn label(&self, raw: Option<String>) -> String {
+        match raw {
+            Some(value) => value,
+            None => "empty".to_string(),
+        }
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `TN:
+SF:` + srcPath + `
+DA:6,0
+DA:16,0
+DA:17,0
+DA:25,0
+DA:26,0
+end_of_record
+`
+	report, err := ParseRustTarpaulinCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseRustTarpaulinCoverage 失败: %v", err)
+	}
+	clamp := findCoverageSuggestion(report.Suggestions, "clamp")
+	if clamp == nil {
+		t.Fatalf("expected clamp suggestion, got %+v", report.Suggestions)
+	}
+	if clamp.Kind != "function" || !containsString(clamp.SuggestedInputs, "设置 value 覆盖未执行分支") || !containsString(clamp.SuggestedInputs, "设置 max 覆盖未执行分支") {
+		t.Fatalf("unexpected clamp suggestion: %+v", clamp)
+	}
+	divide := findCoverageSuggestion(report.Suggestions, "Calculator.divide")
+	if divide == nil {
+		t.Fatalf("expected Calculator.divide suggestion, got %+v", report.Suggestions)
+	}
+	if divide.Kind != "method" || !containsString(divide.SuggestedInputs, "设置 a 覆盖未执行分支") || !containsString(divide.SuggestedInputs, "设置 b 覆盖未执行分支") {
+		t.Fatalf("unexpected divide suggestion: %+v", divide)
+	}
+	label := findCoverageSuggestion(report.Suggestions, "Named.label")
+	if label == nil {
+		t.Fatalf("expected Named.label suggestion, got %+v", report.Suggestions)
+	}
+	if label.GapType != "branch" || !containsString(label.MissingBranches, "未覆盖 match 分支") {
+		t.Fatalf("unexpected trait method suggestion: %+v", label)
+	}
+}
+
 func TestParseJaCoCoCoverageXML(t *testing.T) {
 	raw := `<?xml version="1.0" encoding="UTF-8"?>
 <report name="demo">
