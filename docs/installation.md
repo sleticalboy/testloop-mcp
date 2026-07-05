@@ -41,6 +41,8 @@ chmod +x testloop-mcp testloop-testgen
 ./testloop-testgen --help
 ```
 
+后续自动发布产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应 tarball 的 `.sha256`。
+
 Windows 和当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
 
 ## 从源码构建
@@ -64,6 +66,23 @@ go build -o testloop-testgen ./cmd/testgen
 go install github.com/sleticalboy/testloop-mcp@latest
 go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 ```
+
+## Homebrew tap 准备
+
+仓库内提供了可复制到 tap 仓库的公式草案：
+
+```bash
+Formula/testloop-mcp.rb
+```
+
+更新到最新 GitHub Release：
+
+```bash
+scripts/generate-homebrew-formula.sh v0.4.2
+ruby -c Formula/testloop-mcp.rb
+```
+
+正式 tap 仓库创建后，可以把 `Formula/testloop-mcp.rb` 同步过去，再提供 `brew install sleticalboy/tap/testloop-mcp` 路径。
 
 ## Docker 运行
 
