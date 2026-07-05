@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CalculatorTest {
 
     @Test
-    void () {
+    void calculator() {
         Calculator instance = new Calculator();
         assertNotNull(instance);
     }

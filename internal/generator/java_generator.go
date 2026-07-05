@@ -3,6 +3,9 @@ package generator
 import (
 	"fmt"
 	"strings"
+	"unicode"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 // ============================================================
@@ -11,7 +14,21 @@ import (
 
 // GenerateJavaTests 为 Java 源码生成 JUnit 5 测试
 func GenerateJavaTests(source []byte, filePath string) (string, string, error) {
+	return generateJavaTests(source, filePath, nil)
+}
+
+func GenerateJavaTestsForCoverageTask(source []byte, filePath string, task *types.CoverageTestTask) (string, string, error) {
+	if task == nil {
+		return GenerateJavaTests(source, filePath)
+	}
+	return generateJavaTests(source, filePath, task)
+}
+
+func generateJavaTests(source []byte, filePath string, task *types.CoverageTestTask) (string, string, error) {
 	funcs, classes := parseJavaWithTreeSitter(source)
+	if task != nil {
+		funcs = filterJavaFuncsForCoverageTask(funcs, task)
+	}
 
 	if len(funcs) == 0 && len(classes) == 0 {
 		return "", "", fmt.Errorf("no testable methods found in %s", filePath)
@@ -40,7 +57,7 @@ func GenerateJavaTests(source []byte, filePath string) (string, string, error) {
 		if !m.IsPublic {
 			continue
 		}
-		javaWriteMethodTest(&b, m, className)
+		javaWriteMethodTestForCoverageTask(&b, m, className, task)
 	}
 
 	b.WriteString("}\n")
@@ -48,27 +65,59 @@ func GenerateJavaTests(source []byte, filePath string) (string, string, error) {
 	return testFileName, b.String(), nil
 }
 
+func filterJavaFuncsForCoverageTask(funcs []javaFuncInfo, task *types.CoverageTestTask) []javaFuncInfo {
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		return funcs
+	}
+	filtered := make([]javaFuncInfo, 0, len(funcs))
+	for _, m := range funcs {
+		if taskTargetMatches(target, m.ClassName, m.Name) {
+			filtered = append(filtered, m)
+		}
+	}
+	if len(filtered) == 0 {
+		return funcs
+	}
+	return filtered
+}
+
 // javaWriteMethodTest 为单个 Java 方法写一个 @Test 方法
 func javaWriteMethodTest(b *strings.Builder, m javaFuncInfo, className string) {
+	javaWriteMethodTestForCoverageTask(b, m, className, nil)
+}
+
+func javaWriteMethodTestForCoverageTask(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask) {
 	indent := "    "
 
 	b.WriteString(fmt.Sprintf("\n    @Test\n"))
-	b.WriteString(fmt.Sprintf("    void %s() {\n", javaTestMethodName(m.Name)))
+	testName := javaTestMethodName(m.Name)
+	if task != nil && strings.TrimSpace(task.TestName) != "" {
+		testName = sanitizeJavaTestMethodName(task.TestName, testName)
+	}
+	b.WriteString(fmt.Sprintf("    void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, comment))
+	}
 
 	// 构造调用参数
-	args := javaBuildArgs(m.Params)
+	args := javaBuildArgsForCoverageTask(m.Params, task)
+	callClassName := className
+	if m.ClassName != "" {
+		callClassName = m.ClassName
+	}
 
 	if m.IsConstructor {
 		// 构造函数测试
-		b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, className, className, args))
+		b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, args))
 		b.WriteString(fmt.Sprintf("%s    assertNotNull(instance);\n", indent))
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
-		callExpr := fmt.Sprintf("%s.%s(%s)", className, m.Name, args)
+		callExpr := fmt.Sprintf("%s.%s(%s)", callClassName, m.Name, args)
 		javaWriteCallAndAssert(b, callExpr, m, indent)
 	} else {
 		// 实例方法：先创建实例
-		b.WriteString(fmt.Sprintf("%s    %s instance = new %s();\n", indent, className, className))
+		b.WriteString(fmt.Sprintf("%s    %s instance = new %s();\n", indent, callClassName, callClassName))
 		callExpr := fmt.Sprintf("instance.%s(%s)", m.Name, args)
 		javaWriteCallAndAssert(b, callExpr, m, indent)
 	}
@@ -103,9 +152,18 @@ func javaWriteCallAndAssert(b *strings.Builder, callExpr string, m javaFuncInfo,
 
 // javaBuildArgs 构造调用参数列表字符串
 func javaBuildArgs(params []javaParamInfo) string {
+	return javaBuildArgsForCoverageTask(params, nil)
+}
+
+func javaBuildArgsForCoverageTask(params []javaParamInfo, task *types.CoverageTestTask) string {
+	values := coverageTaskInputValues(task, "java")
 	var parts []string
 	for _, p := range params {
-		parts = append(parts, javaInferDefaultValue(p.Type))
+		if value := values[p.Name]; value != "" {
+			parts = append(parts, value)
+		} else {
+			parts = append(parts, javaInferDefaultValue(p.Type))
+		}
 	}
 	return strings.Join(parts, ", ")
 }
@@ -121,4 +179,25 @@ func javaTestMethodName(methodName string) string {
 // GenerateJavaTestsForSource 导出供 generator.go 调用
 func GenerateJavaTestsForSource(source []byte, filePath string) (string, string, error) {
 	return GenerateJavaTests(source, filePath)
+}
+
+func sanitizeJavaTestMethodName(name, fallback string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fallback
+	}
+	var sb strings.Builder
+	for i, r := range name {
+		if r == '_' || unicode.IsLetter(r) || (unicode.IsDigit(r) && i > 0) {
+			sb.WriteRune(r)
+		}
+	}
+	got := sb.String()
+	if got == "" {
+		return fallback
+	}
+	if unicode.IsDigit([]rune(got)[0]) {
+		return fallback
+	}
+	return got
 }

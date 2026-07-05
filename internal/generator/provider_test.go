@@ -113,6 +113,41 @@ func TestGenerateTestsWithProviderOptionsUsesPythonCoverageTask(t *testing.T) {
 	}
 }
 
+func TestGenerateTestsWithProviderOptionsUsesJavaCoverageTask(t *testing.T) {
+	src := `public class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+
+    public int sub(int a, int b) {
+        return a - b;
+    }
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "Calculator.java")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	coverageTask := types.CoverageTestTask{
+		ID:        "java-1",
+		Framework: "junit",
+		Target:    "Calculator.add",
+		LineRange: "2-2",
+		GapType:   "branch",
+		TestName:  "shouldCoverCalculatorAddGap",
+	}
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{
+		CoverageTask: &coverageTask,
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "void shouldCoverCalculatorAddGap()") || strings.Contains(code, "instance.sub(") {
+		t.Fatalf("expected task-aware Java static output, got:\n%s", code)
+	}
+}
+
 func TestParseLLMProviderOutputAcceptsRawCode(t *testing.T) {
 	code, err := parseLLMProviderOutput([]byte("package demo\n\nfunc TestRaw(t *testing.T) {}\n"))
 	if err != nil {

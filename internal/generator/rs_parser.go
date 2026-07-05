@@ -15,6 +15,7 @@ import (
 // rsFuncInfo Rust 函数信息
 type rsFuncInfo struct {
 	Name       string
+	Owner      string // impl/trait owner, e.g. Validator for Validator.check
 	Params     []rsParamInfo
 	ReturnType string // 原始返回类型字符串，如 "i32", "Result<String, Error>", "Option<i32>"
 	IsAsync    bool
@@ -124,6 +125,7 @@ func rsWalkImpl(node *sitter.Node, source []byte, funcs *[]rsFuncInfo, structs *
 			child := body.Child(i)
 			if child.Type() == "function_item" {
 				info := rsExtractFuncInfo(child, source)
+				info.Owner = typeName
 				info.IsMethod = info.HasSelf
 				// 关联函数（非方法）用 TypeName::func() 调用
 				if !info.IsMethod && info.Name != "new" && info.Name != "default" {

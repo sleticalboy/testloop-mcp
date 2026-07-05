@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 	"strings"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 // ============================================================
@@ -11,7 +13,21 @@ import (
 
 // GenerateRustTests 为 Rust 源码生成 #[test] 测试
 func GenerateRustTests(source []byte, filePath string) (string, string, error) {
+	return generateRustTests(source, filePath, nil)
+}
+
+func GenerateRustTestsForCoverageTask(source []byte, filePath string, task *types.CoverageTestTask) (string, string, error) {
+	if task == nil {
+		return GenerateRustTests(source, filePath)
+	}
+	return generateRustTests(source, filePath, task)
+}
+
+func generateRustTests(source []byte, filePath string, task *types.CoverageTestTask) (string, string, error) {
 	funcs, structs := parseRustWithTreeSitter(source)
+	if task != nil {
+		funcs = filterRustFuncsForCoverageTask(funcs, task)
+	}
 
 	if len(funcs) == 0 {
 		return "", "", fmt.Errorf("no testable functions found in %s", filePath)
@@ -39,10 +55,10 @@ func GenerateRustTests(source []byte, filePath string) (string, string, error) {
 		}
 
 		// 普通函数测试
-		rsWriteFuncTest(&b, f, structs)
+		rsWriteFuncTestForCoverageTask(&b, f, structs, task)
 
 		// 如果返回 Result，额外生成 Err 分支测试
-		if f.HasResult {
+		if f.HasResult && task == nil {
 			rsWriteResultErrTest(&b, f, structs)
 		}
 	}
@@ -52,15 +68,43 @@ func GenerateRustTests(source []byte, filePath string) (string, string, error) {
 	return testFileName, b.String(), nil
 }
 
+func filterRustFuncsForCoverageTask(funcs []rsFuncInfo, task *types.CoverageTestTask) []rsFuncInfo {
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		return funcs
+	}
+	filtered := make([]rsFuncInfo, 0, len(funcs))
+	for _, f := range funcs {
+		if taskTargetMatches(target, f.Owner, f.Name) {
+			filtered = append(filtered, f)
+		}
+	}
+	if len(filtered) == 0 {
+		return funcs
+	}
+	return filtered
+}
+
 // rsWriteFuncTest 为单个函数写一个 #[test] 块
 func rsWriteFuncTest(b *strings.Builder, f rsFuncInfo, structs []rsStructInfo) {
+	rsWriteFuncTestForCoverageTask(b, f, structs, nil)
+}
+
+func rsWriteFuncTestForCoverageTask(b *strings.Builder, f rsFuncInfo, structs []rsStructInfo, task *types.CoverageTestTask) {
 	indent := "    "
 
 	b.WriteString(fmt.Sprintf("\n    #[test]\n"))
-	b.WriteString(fmt.Sprintf("    fn test_%s() {\n", f.Name))
+	testName := "test_" + f.Name
+	if task != nil && strings.TrimSpace(task.TestName) != "" {
+		testName = sanitizeRustTestName(task.TestName, testName)
+	}
+	b.WriteString(fmt.Sprintf("    fn %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, comment))
+	}
 
 	// 构造调用参数
-	args := rsBuildArgs(f, structs)
+	args := rsBuildArgsForCoverageTask(f, structs, task)
 
 	var callExpr string
 	if f.IsMethod {
@@ -148,18 +192,30 @@ func rsWriteResultErrTest(b *strings.Builder, f rsFuncInfo, structs []rsStructIn
 
 // rsBuildArgs 构造调用参数列表字符串
 func rsBuildArgs(f rsFuncInfo, structs []rsStructInfo) string {
+	return rsBuildArgsForCoverageTask(f, structs, nil)
+}
+
+func rsBuildArgsForCoverageTask(f rsFuncInfo, structs []rsStructInfo, task *types.CoverageTestTask) string {
+	values := coverageTaskInputValues(task, "rust")
 	var parts []string
 	for _, p := range f.Params {
 		if p.IsSelf {
 			continue
 		}
-		parts = append(parts, rsInferDefaultValue(p.Type))
+		if value := values[p.Name]; value != "" {
+			parts = append(parts, value)
+		} else {
+			parts = append(parts, rsInferDefaultValue(p.Type))
+		}
 	}
 	return strings.Join(parts, ", ")
 }
 
 // rsInferTypeName 根据函数信息推断所属的类型名（用于 impl 块方法）
 func rsInferTypeName(f rsFuncInfo, structs []rsStructInfo) string {
+	if f.Owner != "" {
+		return f.Owner
+	}
 	// 简单策略：从函数名推断，或者从 structs 列表里找
 	// 实际项目中，解析器应该记录 impl 块对应的类型名
 	// 这里用一个简化实现：如果 funcs 里有 self，返回第一个 struct 的名字
@@ -172,4 +228,8 @@ func rsInferTypeName(f rsFuncInfo, structs []rsStructInfo) string {
 // GenerateRustTestsForSource 导出供 generator.go 调用
 func GenerateRustTestsForSource(source []byte, filePath string) (string, string, error) {
 	return GenerateRustTests(source, filePath)
+}
+
+func sanitizeRustTestName(name, fallback string) string {
+	return sanitizePythonTestName(name, fallback)
 }

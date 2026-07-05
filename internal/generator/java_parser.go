@@ -15,6 +15,7 @@ import (
 // javaFuncInfo Java 方法信息
 type javaFuncInfo struct {
 	Name          string
+	ClassName     string
 	Params        []javaParamInfo
 	ReturnType    string // void / int / String / boolean / 自定义类型
 	IsStatic      bool
@@ -97,10 +98,13 @@ func javaWalkClassBody(node *sitter.Node, source []byte, funcs *[]javaFuncInfo, 
 		case "method_declaration":
 			if info := javaExtractMethodInfo(child, source); !javaIsTestHelper(info.Name) {
 				// 标记是否属于当前类（通过 IsStatic 等方式无法区分，这里简单处理）
+				info.ClassName = classInfo.Name
 				*funcs = append(*funcs, info)
 			}
 		case "constructor_declaration":
 			info := javaExtractConstructorInfo(child, source)
+			info.Name = classInfo.Name
+			info.ClassName = classInfo.Name
 			info.IsConstructor = true
 			*funcs = append(*funcs, info)
 		case "class_declaration", "enum_declaration", "interface_declaration":

@@ -175,6 +175,20 @@ func generateTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) 
 		return GeneratePytestTestsForCoverageTask(srcPath, task)
 	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
 		return GenerateJestTestsForCoverageTask(srcPath, task)
+	case ".rs":
+		source, err := os.ReadFile(srcPath)
+		if err != nil {
+			return "", fmt.Errorf("读取 Rust 源文件失败: %w", err)
+		}
+		_, content, err := GenerateRustTestsForCoverageTask(source, srcPath, task)
+		return content, err
+	case ".java":
+		source, err := os.ReadFile(srcPath)
+		if err != nil {
+			return "", fmt.Errorf("读取 Java 源文件失败: %w", err)
+		}
+		_, content, err := GenerateJavaTestsForCoverageTask(source, srcPath, task)
+		return content, err
 	default:
 		return GenerateTestsStatic(srcPath)
 	}

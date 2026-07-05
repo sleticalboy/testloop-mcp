@@ -24,7 +24,9 @@ func taskTargetMatches(target, className, name string) bool {
 	if className == "" {
 		return false
 	}
-	return target == className+"."+name || target == className+"_"+name
+	return target == className+"."+name ||
+		target == className+"_"+name ||
+		strings.HasSuffix(target, "."+className+"."+name)
 }
 
 func coverageTaskInputValues(task *types.CoverageTestTask, language string) map[string]string {
@@ -71,8 +73,16 @@ func normalizeTaskLiteral(value, language string) string {
 		return unicode.IsSpace(r) || r == ',' || r == ';' || r == ':'
 	})
 	switch strings.ToLower(value) {
-	case "null", "undefined", "none":
-		if language == "python" {
+	case "undefined":
+		if language == "javascript" {
+			return "undefined"
+		}
+		if language == "python" || language == "rust" {
+			return "None"
+		}
+		return "null"
+	case "null", "none":
+		if language == "python" || language == "rust" {
 			return "None"
 		}
 		return "null"
