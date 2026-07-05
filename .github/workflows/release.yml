@@ -53,7 +53,7 @@ jobs:
           mkdir -p dist/package
           CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/package/testloop-mcp .
           CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/package/testloop-testgen ./cmd/testgen
-          cp README.md dist/package/
+          cp README.md LICENSE dist/package/
           tar -czf "dist/testloop-mcp_${TAG_NAME}_linux_amd64.tar.gz" -C dist/package .
           rm -rf dist/package
 

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseJestTest 解析 Jest 测试输出

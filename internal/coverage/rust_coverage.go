@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseRustTarpaulinCoverage parses LCOV data produced by cargo tarpaulin.

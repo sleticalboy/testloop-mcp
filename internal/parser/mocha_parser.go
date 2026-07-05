@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseMochaTest 解析 Mocha 测试输出

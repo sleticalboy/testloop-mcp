@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // Go coverage profile 行格式:

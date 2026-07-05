@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 var (

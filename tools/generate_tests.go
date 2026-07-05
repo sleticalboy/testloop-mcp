@@ -10,8 +10,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/binlee/testloop-mcp/internal/generator"
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/internal/generator"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 type generateTestsInput struct {

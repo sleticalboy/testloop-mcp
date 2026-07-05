@@ -1,4 +1,4 @@
-module github.com/binlee/testloop-mcp
+module github.com/sleticalboy/testloop-mcp
 
 go 1.25.8
 

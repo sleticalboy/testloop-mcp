@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParsePytestTest 解析 pytest 测试输出

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseCoverage 解析覆盖率数据

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // coverage.py JSON 输出结构

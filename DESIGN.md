@@ -200,7 +200,7 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 ```
 testloop-mcp/
 ├── main.go                          # 入口，启动 MCP server（stdio / Streamable HTTP）
-├── go.mod                           # github.com/binlee/testloop-mcp, go 1.25
+├── go.mod                           # github.com/sleticalboy/testloop-mcp, go 1.25
 ├── types/
 │   └── types.go                     # 公共类型定义（TestResult/TestFailure/FixSuggestion/CoverageReport 等）
 ├── tools/

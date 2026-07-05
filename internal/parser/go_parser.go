@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseGoTest 解析 `go test -v` 输出，返回结构化结果

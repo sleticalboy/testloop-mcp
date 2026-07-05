@@ -10,9 +10,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/binlee/testloop-mcp/internal/coverage"
-	"github.com/binlee/testloop-mcp/internal/detector"
-	"github.com/binlee/testloop-mcp/internal/parser"
+	"github.com/sleticalboy/testloop-mcp/internal/coverage"
+	"github.com/sleticalboy/testloop-mcp/internal/detector"
+	"github.com/sleticalboy/testloop-mcp/internal/parser"
 )
 
 type runTestsInput struct {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestParseGoCoverage(t *testing.T) {

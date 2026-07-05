@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ---- 类型定义 ----

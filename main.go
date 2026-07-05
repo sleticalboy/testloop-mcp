@@ -12,7 +12,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/binlee/testloop-mcp/tools"
+	"github.com/sleticalboy/testloop-mcp/tools"
 )
 
 func main() {

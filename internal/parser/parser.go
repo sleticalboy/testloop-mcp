@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseTestOutput 根据框架类型解析测试输出

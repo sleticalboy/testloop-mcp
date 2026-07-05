@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestGeneratePytestTests(t *testing.T) {

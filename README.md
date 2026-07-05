@@ -1,6 +1,6 @@
 # testloop-mcp
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/binlee/testloop-mcp)](https://goreportcard.com/report/github.com/binlee/testloop-mcp)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sleticalboy/testloop-mcp)](https://goreportcard.com/report/github.com/sleticalboy/testloop-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **testloop-mcp** 是一个基于 [MCP (Model Context Protocol)](https://modelcontextprotocol.io) 的智能测试生成与执行反馈闭环服务器。让 AI Coding 工具（Claude Code / Cursor / VS Code Copilot 等）能够自动生成测试、执行测试、解析失败原因、生成修复建议，并分析覆盖率——形成完整的测试闭环。
@@ -48,15 +48,46 @@ AI IDE (Claude Code / Cursor / Copilot)
 
 ## 安装
 
+Linux amd64 用户可以直接下载 GitHub Release 二进制：
+
 ```bash
-git clone https://github.com/binlee/testloop-mcp.git
-cd testloop-mcp
-go build -o testloop-mcp .
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/testloop-mcp_v0.4.0_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.0/checksums.txt
+sha256sum -c checksums.txt
+tar -xzf testloop-mcp_v0.4.0_linux_amd64.tar.gz
+./testloop-mcp --help
 ```
 
-**前置要求：** Go 1.25+
+macOS、Windows 或需要从源码构建：
+
+```bash
+git clone https://github.com/sleticalboy/testloop-mcp.git
+cd testloop-mcp
+go build -o testloop-mcp .
+go build -o testloop-testgen ./cmd/testgen
+```
+
+当前 main 分支也可以直接安装到 Go bin 目录：
+
+```bash
+go install github.com/sleticalboy/testloop-mcp@main
+go install github.com/sleticalboy/testloop-mcp/cmd/testgen@main
+```
+
+**前置要求：** Go 1.25+；源码构建需要 CGO 可用的 C 编译工具链。
+
+更完整的下载、校验、Docker 和客户端接入说明见 [安装与接入](./docs/installation.md)。
 
 ## 配置接入
+
+### Codex
+
+`~/.codex/config.toml`:
+
+```toml
+[mcp_servers.testloop]
+command = "/absolute/path/to/testloop-mcp"
+```
 
 ### Claude Code / Claude Desktop
 
@@ -66,7 +97,7 @@ go build -o testloop-mcp .
 {
   "mcpServers": {
     "testloop": {
-      "command": "/path/to/testloop-mcp"
+      "command": "/absolute/path/to/testloop-mcp"
     }
   }
 }
@@ -80,7 +111,7 @@ go build -o testloop-mcp .
 {
   "mcpServers": {
     "testloop": {
-      "command": "path/to/testloop-mcp"
+      "command": "/absolute/path/to/testloop-mcp"
     }
   }
 }
@@ -229,7 +260,7 @@ LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examp
 ```
 testloop-mcp/
 ├── main.go                          # MCP server 入口，注册 5 个工具
-├── go.mod                           # github.com/binlee/testloop-mcp, go 1.25
+├── go.mod                           # github.com/sleticalboy/testloop-mcp, go 1.25
 ├── types/
 │   └── types.go                     # 所有共享类型定义
 ├── tools/
@@ -311,7 +342,7 @@ docker compose down                    # 停止
 - **MCP SDK：** [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) v1.6.1（官方 SDK）
 - **测试生成：** Go 优先复用 `gotests`，并以内置 `go/ast`、`go/parser`、`go/token`、`go/format` 作为回退；其他语言使用 tree-sitter/轻量解析器
 - **传输层：** stdio（JSON-RPC over stdin/stdout）+ Streamable HTTP（`--transport http`）
-- **部署：** Docker 多阶段构建（alpine 基础镜像，~8MB 二进制）
+- **部署：** GitHub Release 二进制 + Docker 多阶段构建（alpine 基础镜像，~8MB 二进制）
 
 ## Roadmap
 

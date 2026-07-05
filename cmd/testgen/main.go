@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/binlee/testloop-mcp/internal/generator"
+	"github.com/sleticalboy/testloop-mcp/internal/generator"
 )
 
 func main() {

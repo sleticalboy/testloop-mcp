@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binlee/testloop-mcp/types"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestGenerateRustTestsForCoverageTaskTargetsFunction(t *testing.T) {

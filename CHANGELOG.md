@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- 新增 `docs/installation.md`，补齐 Release 下载、checksum 校验、源码构建、Docker 运行和 Codex / Claude / Cursor 接入说明。
+- 新增 MIT `LICENSE` 文件。
+
+### Changed
+
+- Go module path 和文档仓库地址统一为 `github.com/sleticalboy/testloop-mcp`，为后续新版本支持 `go install github.com/sleticalboy/testloop-mcp@latest` 做准备。
+
 ## v0.4.0 - 2026-07-05
 
 ### Added

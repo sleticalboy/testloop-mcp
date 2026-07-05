@@ -11,7 +11,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/binlee/testloop-mcp/tools"
+	"github.com/sleticalboy/testloop-mcp/tools"
 )
 
 // startServer 启动 MCP server 并返回一个已连接的 ClientSession
@@ -373,9 +373,9 @@ func TestE2E_ParseCoverage(t *testing.T) {
 
 	// 模拟 Go coverprofile 数据
 	coverData := `mode: set
-github.com/binlee/testloop-mcp/demo/calc.go:1.1,8.1 1 1
-github.com/binlee/testloop-mcp/demo/calc.go:11.1,13.1 1 0
-github.com/binlee/testloop-mcp/demo/calc.go:15.1,21.2 1 1`
+github.com/sleticalboy/testloop-mcp/demo/calc.go:1.1,8.1 1 1
+github.com/sleticalboy/testloop-mcp/demo/calc.go:11.1,13.1 1 0
+github.com/sleticalboy/testloop-mcp/demo/calc.go:15.1,21.2 1 1`
 
 	payload := callTool(t, session, "parse_coverage", map[string]any{
 		"data":      coverData,
@@ -639,7 +639,7 @@ func TestE2E_FullLoop(t *testing.T) {
 	coverResult, err := session.CallTool(ctx, &mcp.CallToolParams{
 		Name: "parse_coverage",
 		Arguments: map[string]any{
-			"data":      "mode: set\ngithub.com/binlee/testloop-mcp/demo/calc.go:1.1,8.1 1 1\n",
+			"data":      "mode: set\ngithub.com/sleticalboy/testloop-mcp/demo/calc.go:1.1,8.1 1 1\n",
 			"framework": "go-test",
 		},
 	})

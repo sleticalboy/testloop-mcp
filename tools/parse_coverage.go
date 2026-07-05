@@ -7,7 +7,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/binlee/testloop-mcp/internal/coverage"
+	"github.com/sleticalboy/testloop-mcp/internal/coverage"
 )
 
 type parseCoverageInput struct {
