@@ -44,3 +44,8 @@
 - [x] `checksums.txt` 已校验 macOS arm64 资产。
 - [x] `TESTLOOP_MCP_VERSION=v0.4.2 sh scripts/install.sh` 已验证可直接下载 macOS arm64 release 资产并安装 `testloop-mcp` / `testloop-testgen`。
 - [x] Release Artifacts build jobs 已在 run `28746080130` 中验证 Linux amd64、Linux arm64 和 macOS arm64 均可构建；publish job 因 runner 队列取消，最终资产使用同一批成功构建 artifact 手动上传。
+
+## 下一版自动发布修正
+
+- [x] Release Artifacts workflow 去掉单独 publish job，改为每个 matrix build job 直接上传本平台 tarball 和 `.sha256`。
+- [x] `scripts/install.sh` 兼容聚合 `checksums.txt` 和单资产 `.sha256`，下一版 release 即使不生成聚合 checksum 也能正常安装。

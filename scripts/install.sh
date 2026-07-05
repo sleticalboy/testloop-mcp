@@ -89,11 +89,15 @@ if ! download "${base_url}/${asset}" "${tmp_dir}/${asset}" 2>/dev/null; then
   exit 0
 fi
 
-download "${base_url}/checksums.txt" "${tmp_dir}/checksums.txt"
-
 (
   cd "$tmp_dir"
-  grep "  ${asset}\$" checksums.txt > selected-checksum.txt || fail "checksum for ${asset} not found"
+  if download "${base_url}/checksums.txt" checksums.txt 2>/dev/null; then
+    grep "  ${asset}\$" checksums.txt > selected-checksum.txt || fail "checksum for ${asset} not found"
+  elif download "${base_url}/${asset}.sha256" selected-checksum.txt 2>/dev/null; then
+    :
+  else
+    fail "checksum for ${asset} not found"
+  fi
   cmd="$(checksum_cmd)"
   $cmd -c selected-checksum.txt
 )
