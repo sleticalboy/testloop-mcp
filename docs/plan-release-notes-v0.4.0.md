@@ -54,12 +54,12 @@ v0.4.0 聚焦覆盖率驱动的测试生成闭环。这个版本让 `parse_cover
 ## 发布前验证
 
 - [x] `go test ./...`
+- [x] 主服务构建通过
+- [x] CLI 构建通过
+- [x] Docker 镜像构建通过
 - [x] GitHub Actions CI passed
 
-## 建议发布命令
+## 发布信息
 
-```bash
-git tag v0.4.0
-git push origin v0.4.0
-gh release create v0.4.0 --title "testloop-mcp v0.4.0" --notes-file docs/plan-release-notes-v0.4.0.md
-```
+- Tag: `v0.4.0`
+- Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.0
