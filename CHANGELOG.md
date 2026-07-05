@@ -15,6 +15,7 @@
 - `generate_tests` 支持接收单个 `coverage_task`，并把任务上下文传给 LLM provider、回写到返回 context，同时优先写入任务推荐的 `test_file`。
 - Go/Rust/Java coverage task 输出新增 JSON golden 快照测试，固定面向 Agent 的任务契约。
 - Go 静态生成器支持 `coverage_task` 模式，会优先只生成目标函数或方法的测试，并把 task 信息写入测试名、case 名和注释。
+- Python/Jest 静态生成器支持 `coverage_task` 模式，会按目标过滤测试草稿，并把建议输入转成更具体的调用参数和断言。
 
 ## v0.3.0 - 2026-07-05
 

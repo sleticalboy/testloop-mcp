@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 // ---- 类型定义 ----
@@ -76,6 +78,17 @@ func (a jsFuncAnalysis) returnTypeForAssert() string {
 
 // GenerateJestTests 读取 JS/TS 源文件，用 tree-sitter 解析后生成 Jest 测试代码
 func GenerateJestTests(srcPath string) (string, error) {
+	return generateJestTests(srcPath, nil)
+}
+
+func GenerateJestTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+	if task == nil {
+		return GenerateJestTests(srcPath)
+	}
+	return generateJestTests(srcPath, task)
+}
+
+func generateJestTests(srcPath string, task *types.CoverageTestTask) (string, error) {
 	source, err := os.ReadFile(srcPath)
 	if err != nil {
 		return "", fmt.Errorf("读取源文件失败: %w", err)
@@ -83,6 +96,9 @@ func GenerateJestTests(srcPath string) (string, error) {
 
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	funcs, classes, isESModule := parseJSWithTreeSitter(source, ext)
+	if task != nil {
+		funcs, classes = filterJSTargetsForCoverageTask(funcs, classes, task)
+	}
 
 	if len(funcs) == 0 && len(classes) == 0 {
 		return "// 未发现需要生成测试的函数或类", nil
@@ -99,14 +115,58 @@ func GenerateJestTests(srcPath string) (string, error) {
 	}
 
 	for _, fn := range funcs {
-		buf.WriteString(genJestFuncTest(fn))
+		if task != nil {
+			buf.WriteString(genJestFuncTestForCoverageTask(fn, task))
+		} else {
+			buf.WriteString(genJestFuncTest(fn))
+		}
 	}
 
 	for _, cls := range classes {
-		buf.WriteString(genJestClassTest(cls, isESModule, moduleName))
+		if task != nil {
+			buf.WriteString(genJestClassTestForCoverageTask(cls, task))
+		} else {
+			buf.WriteString(genJestClassTest(cls, isESModule, moduleName))
+		}
 	}
 
 	return buf.String(), nil
+}
+
+func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, task *types.CoverageTestTask) ([]jsFuncInfo, []jsClassInfo) {
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		return funcs, classes
+	}
+
+	filteredFuncs := make([]jsFuncInfo, 0, len(funcs))
+	for _, fn := range funcs {
+		if taskTargetMatches(target, "", fn.Name) {
+			filteredFuncs = append(filteredFuncs, fn)
+		}
+	}
+
+	filteredClasses := make([]jsClassInfo, 0, len(classes))
+	for _, cls := range classes {
+		if taskTargetMatches(target, cls.Name, cls.Name) {
+			filteredClasses = append(filteredClasses, cls)
+			continue
+		}
+		methods := make([]jsFuncInfo, 0, len(cls.Methods))
+		for _, method := range cls.Methods {
+			if taskTargetMatches(target, cls.Name, method.Name) {
+				methods = append(methods, method)
+			}
+		}
+		if len(methods) > 0 {
+			filteredClasses = append(filteredClasses, jsClassInfo{Name: cls.Name, Methods: methods})
+		}
+	}
+
+	if len(filteredFuncs) == 0 && len(filteredClasses) == 0 {
+		return funcs, classes
+	}
+	return filteredFuncs, filteredClasses
 }
 
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----
@@ -386,6 +446,39 @@ func genJestFuncTest(fn jsFuncInfo) string {
 	return sb.String()
 }
 
+func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) string {
+	var sb strings.Builder
+	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
+	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
+	args := jsArgListForCoverageTask(fn.Params, task, boundary)
+
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
+	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	if fn.Analysis.Throws || task.GapType == "error_path" {
+		if fn.IsAsync {
+			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
+		} else {
+			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
+		}
+		sb.WriteString("  });\n\n")
+		sb.WriteString("});\n\n")
+		return sb.String()
+	}
+
+	if fn.IsAsync {
+		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
+	} else {
+		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
+	}
+	sb.WriteString(genJSResultAssertionWithTaskArgs(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    "))
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
 func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) string {
 	var sb strings.Builder
 
@@ -457,11 +550,54 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 	return sb.String()
 }
 
+func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", cls.Name))
+	for _, method := range cls.Methods {
+		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
+		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
+		args := jsArgListForCoverageTask(method.Params, task, boundary)
+
+		sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+		sb.WriteString(fmt.Sprintf("    it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(method.IsAsync)))
+		if comment := coverageTaskComment(task); comment != "" {
+			sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+		}
+		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+		if method.Analysis.Throws || task.GapType == "error_path" {
+			if method.IsAsync {
+				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
+			}
+			sb.WriteString("    });\n\n")
+			sb.WriteString("  });\n\n")
+			continue
+		}
+		if method.IsAsync {
+			sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
+		} else {
+			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
+		}
+		sb.WriteString(genJSResultAssertionWithTaskArgs(method.Analysis, method.Params, boundary, coverageTaskInputValues(task, "javascript"), "      "))
+		sb.WriteString("    });\n\n")
+		sb.WriteString("  });\n\n")
+	}
+	sb.WriteString("});\n\n")
+
+	return sb.String()
+}
+
 func genJSResultAssertion(a jsFuncAnalysis, indent string) string {
 	return genJSResultAssertionWithArgs(a, nil, nil, indent)
 }
 
 func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, indent string) string {
+	return genJSResultAssertionWithTaskArgs(a, params, boundary, nil, indent)
+}
+
+func genJSResultAssertionWithTaskArgs(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string) string {
 	var sb strings.Builder
 
 	if !a.HasReturn {
@@ -469,7 +605,7 @@ func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, bounda
 		return sb.String()
 	}
 
-	if expected, ok := jsExpectedReturnExpr(a, params, boundary); ok {
+	if expected, ok := jsExpectedReturnExprWithValues(a, params, boundary, values); ok {
 		sb.WriteString(indent + "expect(result).toBe(" + expected + ");\n")
 		return sb.String()
 	}
@@ -500,6 +636,10 @@ func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, bounda
 }
 
 func jsExpectedReturnExpr(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary) (string, bool) {
+	return jsExpectedReturnExprWithValues(a, params, boundary, nil)
+}
+
+func jsExpectedReturnExprWithValues(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string) (string, bool) {
 	expr := ""
 	if boundary != nil && boundary.ReturnExpr != "" {
 		expr = strings.TrimSpace(boundary.ReturnExpr)
@@ -523,6 +663,9 @@ func jsExpectedReturnExpr(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBo
 		value := jsArgValue(p, i)
 		if boundary != nil && p.Name == boundary.Param {
 			value = boundary.Value
+		}
+		if values != nil && values[p.Name] != "" {
+			value = values[p.Name]
 		}
 		expr = replaceIdentifier(expr, p.Name, value)
 	}
@@ -560,6 +703,13 @@ func jsEscapeTestNameValue(value string) string {
 	return strings.ReplaceAll(value, "'", "\\'")
 }
 
+func jsCoverageTaskTestName(task *types.CoverageTestTask, fallback string) string {
+	if task == nil || strings.TrimSpace(task.TestName) == "" {
+		return fallback
+	}
+	return strings.TrimSpace(task.TestName)
+}
+
 func jsParamExists(params []jsParamInfo, name string) bool {
 	for _, p := range params {
 		if p.Name == name {
@@ -582,6 +732,44 @@ func jsArgListWithBoundary(params []jsParamInfo, b jsBoundary) string {
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsArgListForCoverageTask(params []jsParamInfo, task *types.CoverageTestTask, boundary *jsBoundary) string {
+	values := coverageTaskInputValues(task, "javascript")
+	if boundary != nil {
+		values[boundary.Param] = boundary.Value
+	}
+	return jsArgListWithValues(params, values)
+}
+
+func jsArgListWithValues(params []jsParamInfo, values map[string]string) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := make([]string, len(params))
+	for i, p := range params {
+		if value := values[p.Name]; value != "" {
+			args[i] = value
+		} else {
+			args[i] = jsArgValue(p, i)
+		}
+	}
+	return strings.Join(args, ", ")
+}
+
+func jsBoundaryForCoverageTask(boundaries []jsBoundary, task *types.CoverageTestTask) *jsBoundary {
+	values := coverageTaskInputValues(task, "javascript")
+	for _, b := range boundaries {
+		if values[b.Param] == b.Value {
+			boundary := b
+			return &boundary
+		}
+	}
+	if task != nil && (task.GapType == "branch" || task.GapType == "error_path") && len(boundaries) == 1 {
+		boundary := boundaries[0]
+		return &boundary
+	}
+	return nil
 }
 
 func jsArgList(params []jsParamInfo) string {

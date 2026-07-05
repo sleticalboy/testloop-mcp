@@ -2,8 +2,11 @@ package generator
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 func TestGenerateJestTests(t *testing.T) {
@@ -329,6 +332,51 @@ return prefix + text;`)
 	}
 	if !strings.Contains(code, "it('should handle mode = \\'short\\''") {
 		t.Fatalf("expected escaped boundary test name, got:\n%s", code)
+	}
+}
+
+func TestGenerateJestTestsForCoverageTaskUsesTaskNameAndInputs(t *testing.T) {
+	src := `function add(a, b) {
+  return a + b;
+}
+
+function sub(a, b) {
+  return a - b;
+}
+
+module.exports = { add, sub };
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "jest-1",
+		Framework:       "jest",
+		Target:          "add",
+		LineRange:       "2-2",
+		GapType:         "return_path",
+		TestName:        "covers add zero left operand",
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"it('covers add zero left operand'",
+		"coverage task: jest-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
+		"const result = add(0, 2);",
+		"expect(result).toBe((0 + 2));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "describe('sub'") || strings.Contains(code, "sub(") {
+		t.Fatalf("task-aware generation should only target add:\n%s", code)
 	}
 }
 

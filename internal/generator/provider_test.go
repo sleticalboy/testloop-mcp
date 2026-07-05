@@ -95,6 +95,24 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderOptionsUsesPythonCoverageTask(t *testing.T) {
+	srcPath := writeProviderSource(t)
+	coverageTask := testCoverageTask()
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{
+		CoverageTask: &coverageTask,
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "def test_add_covers_gap():") {
+		t.Fatalf("expected task test name in static output, got:\n%s", code)
+	}
+	if !strings.Contains(code, "coverage task: pytest-1") {
+		t.Fatalf("expected coverage task comment in static output, got:\n%s", code)
+	}
+}
+
 func TestParseLLMProviderOutputAcceptsRawCode(t *testing.T) {
 	code, err := parseLLMProviderOutput([]byte("package demo\n\nfunc TestRaw(t *testing.T) {}\n"))
 	if err != nil {

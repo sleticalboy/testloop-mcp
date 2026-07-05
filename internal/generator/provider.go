@@ -41,8 +41,8 @@ func (StaticProvider) GenerateTests(_ context.Context, req TestGenerationRequest
 	if strings.TrimSpace(req.StaticCode) != "" {
 		return req.StaticCode, nil
 	}
-	if req.Context != nil && req.Context.CoverageTask != nil && strings.EqualFold(filepath.Ext(req.SourceFile), ".go") {
-		return GenerateGoTestsForCoverageTask(req.SourceFile, req.Context.CoverageTask)
+	if req.Context != nil && req.Context.CoverageTask != nil {
+		return generateTestsForCoverageTask(req.SourceFile, req.Context.CoverageTask)
 	}
 	return GenerateTestsStatic(req.SourceFile)
 }
@@ -161,8 +161,21 @@ func GenerateTestsWithProviderOptions(ctx context.Context, srcPath string, provi
 }
 
 func generateTestsStaticWithOptions(srcPath string, opts GenerateTestsOptions) (string, error) {
-	if opts.CoverageTask != nil && strings.EqualFold(filepath.Ext(srcPath), ".go") {
-		return GenerateGoTestsForCoverageTask(srcPath, opts.CoverageTask)
+	if opts.CoverageTask != nil {
+		return generateTestsForCoverageTask(srcPath, opts.CoverageTask)
 	}
 	return GenerateTestsStatic(srcPath)
+}
+
+func generateTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+	switch strings.ToLower(filepath.Ext(srcPath)) {
+	case ".go":
+		return GenerateGoTestsForCoverageTask(srcPath, task)
+	case ".py":
+		return GeneratePytestTestsForCoverageTask(srcPath, task)
+	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+		return GenerateJestTestsForCoverageTask(srcPath, task)
+	default:
+		return GenerateTestsStatic(srcPath)
+	}
 }

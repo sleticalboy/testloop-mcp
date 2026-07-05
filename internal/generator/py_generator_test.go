@@ -1,8 +1,12 @@
 package generator
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 func TestGeneratePytestTests(t *testing.T) {
@@ -316,6 +320,47 @@ return prefix + text`)
 	}
 	if !strings.Contains(code, "assert result == ('test')") {
 		t.Fatalf("expected branch assertion, got:\n%s", code)
+	}
+}
+
+func TestGeneratePytestTestsForCoverageTaskUsesTaskNameAndInputs(t *testing.T) {
+	src := `def add(a, b):
+    return a + b
+
+def sub(a, b):
+    return a - b
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.py")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "pytest-1",
+		Framework:       "pytest",
+		Target:          "add",
+		LineRange:       "2-2",
+		GapType:         "return_path",
+		TestName:        "test_add_zero_left_operand",
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"def test_add_zero_left_operand():",
+		"coverage task: pytest-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a == 0` 的输入",
+		"result = add(0, 2)",
+		"assert result == (0 + 2)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "test_sub") || strings.Contains(code, "sub(") {
+		t.Fatalf("task-aware generation should only target add:\n%s", code)
 	}
 }
 

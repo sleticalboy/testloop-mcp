@@ -5,6 +5,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/binlee/testloop-mcp/types"
 )
 
 // ---- 类型定义 ----
@@ -54,12 +56,26 @@ type pyClassInfo struct {
 
 // GeneratePytestTests 读取 Python 源文件，用 tree-sitter 解析后生成 pytest 测试代码
 func GeneratePytestTests(srcPath string) (string, error) {
+	return generatePytestTests(srcPath, nil)
+}
+
+func GeneratePytestTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+	if task == nil {
+		return GeneratePytestTests(srcPath)
+	}
+	return generatePytestTests(srcPath, task)
+}
+
+func generatePytestTests(srcPath string, task *types.CoverageTestTask) (string, error) {
 	source, err := os.ReadFile(srcPath)
 	if err != nil {
 		return "", fmt.Errorf("读取源文件失败: %w", err)
 	}
 
 	funcs, classes := parsePyWithTreeSitter(source)
+	if task != nil {
+		funcs, classes = filterPyTargetsForCoverageTask(funcs, classes, task)
+	}
 
 	if len(funcs) == 0 && len(classes) == 0 {
 		return "# 未发现需要生成测试的函数或类", nil
@@ -124,14 +140,58 @@ func GeneratePytestTests(srcPath string) (string, error) {
 	buf.WriteString("\n")
 
 	for _, fn := range funcs {
-		buf.WriteString(genPytestFuncTest(fn))
+		if task != nil {
+			buf.WriteString(genPytestFuncTestForCoverageTask(fn, task))
+		} else {
+			buf.WriteString(genPytestFuncTest(fn))
+		}
 	}
 
 	for _, cls := range classes {
-		buf.WriteString(genPytestClassTest(cls))
+		if task != nil {
+			buf.WriteString(genPytestClassTestForCoverageTask(cls, task))
+		} else {
+			buf.WriteString(genPytestClassTest(cls))
+		}
 	}
 
 	return buf.String(), nil
+}
+
+func filterPyTargetsForCoverageTask(funcs []pyFuncInfo, classes []pyClassInfo, task *types.CoverageTestTask) ([]pyFuncInfo, []pyClassInfo) {
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		return funcs, classes
+	}
+
+	filteredFuncs := make([]pyFuncInfo, 0, len(funcs))
+	for _, fn := range funcs {
+		if taskTargetMatches(target, "", fn.Name) {
+			filteredFuncs = append(filteredFuncs, fn)
+		}
+	}
+
+	filteredClasses := make([]pyClassInfo, 0, len(classes))
+	for _, cls := range classes {
+		if taskTargetMatches(target, cls.Name, cls.Name) {
+			filteredClasses = append(filteredClasses, cls)
+			continue
+		}
+		methods := make([]pyFuncInfo, 0, len(cls.Methods))
+		for _, method := range cls.Methods {
+			if taskTargetMatches(target, cls.Name, method.Name) {
+				methods = append(methods, method)
+			}
+		}
+		if len(methods) > 0 {
+			filteredClasses = append(filteredClasses, pyClassInfo{Name: cls.Name, Methods: methods})
+		}
+	}
+
+	if len(filteredFuncs) == 0 && len(filteredClasses) == 0 {
+		return funcs, classes
+	}
+	return filteredFuncs, filteredClasses
 }
 
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----
@@ -388,6 +448,37 @@ func genPytestFuncTest(fn pyFuncInfo) string {
 	return sb.String()
 }
 
+func genPytestFuncTestForCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask) string {
+	var sb strings.Builder
+	testName := sanitizePythonTestName(task.TestName, "test_"+fn.Name+"_covers_gap")
+	boundary := pyBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
+	args := pyArgListForCoverageTask(fn.Params, task, boundary)
+
+	sb.WriteString(fmt.Sprintf("def %s():\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    # coverage task: %s\n", comment))
+	}
+	if fn.Analysis.Raises || task.GapType == "error_path" {
+		sb.WriteString("    with pytest.raises(Exception):\n")
+		if fn.IsAsync {
+			sb.WriteString(fmt.Sprintf("        asyncio.run(%s(%s))\n", fn.Name, args))
+		} else {
+			sb.WriteString(fmt.Sprintf("        %s(%s)\n", fn.Name, args))
+		}
+		sb.WriteString("\n")
+		return sb.String()
+	}
+
+	if fn.IsAsync {
+		sb.WriteString(fmt.Sprintf("    result = asyncio.run(%s(%s))\n", fn.Name, args))
+	} else {
+		sb.WriteString(fmt.Sprintf("    result = %s(%s)\n", fn.Name, args))
+	}
+	sb.WriteString(genPyResultAssertionWithTaskArgs(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "python"), "    "))
+	sb.WriteString("\n")
+	return sb.String()
+}
+
 func genPytestClassTest(cls pyClassInfo) string {
 	var sb strings.Builder
 
@@ -492,11 +583,69 @@ func genPytestClassTest(cls pyClassInfo) string {
 	return sb.String()
 }
 
+func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTestTask) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("class Test%s:\n", cls.Name))
+	for _, method := range cls.Methods {
+		if method.Name == "__init__" {
+			continue
+		}
+
+		testName := sanitizePythonTestName(task.TestName, "test_"+method.Name+"_covers_gap")
+		boundary := pyBoundaryForCoverageTask(method.Analysis.Boundaries, task)
+		args := pyArgListForCoverageTask(method.Params, task, boundary)
+
+		sb.WriteString(fmt.Sprintf("    def %s(self):\n", testName))
+		if comment := coverageTaskComment(task); comment != "" {
+			sb.WriteString(fmt.Sprintf("        # coverage task: %s\n", comment))
+		}
+		if !method.IsStatic {
+			sb.WriteString(fmt.Sprintf("        instance = %s()\n", cls.Name))
+		}
+		if method.Analysis.Raises || task.GapType == "error_path" {
+			sb.WriteString("        with pytest.raises(Exception):\n")
+			if method.IsStatic {
+				if method.IsAsync {
+					sb.WriteString(fmt.Sprintf("            asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
+				} else {
+					sb.WriteString(fmt.Sprintf("            %s.%s(%s)\n", cls.Name, method.Name, args))
+				}
+			} else if method.IsAsync {
+				sb.WriteString(fmt.Sprintf("            asyncio.run(instance.%s(%s))\n", method.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("            instance.%s(%s)\n", method.Name, args))
+			}
+			sb.WriteString("\n")
+			continue
+		}
+		if method.IsStatic {
+			if method.IsAsync {
+				sb.WriteString(fmt.Sprintf("        result = asyncio.run(%s.%s(%s))\n", cls.Name, method.Name, args))
+			} else {
+				sb.WriteString(fmt.Sprintf("        result = %s.%s(%s)\n", cls.Name, method.Name, args))
+			}
+		} else if method.IsAsync {
+			sb.WriteString(fmt.Sprintf("        result = asyncio.run(instance.%s(%s))\n", method.Name, args))
+		} else {
+			sb.WriteString(fmt.Sprintf("        result = instance.%s(%s)\n", method.Name, args))
+		}
+		sb.WriteString(genPyResultAssertionWithTaskArgs(method.Analysis, method.Params, boundary, coverageTaskInputValues(task, "python"), "        "))
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
 func genPyResultAssertion(a pyFuncAnalysis, indent string) string {
 	return genPyResultAssertionWithArgs(a, nil, nil, indent)
 }
 
 func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary, indent string) string {
+	return genPyResultAssertionWithTaskArgs(a, params, boundary, nil, indent)
+}
+
+func genPyResultAssertionWithTaskArgs(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary, values map[string]string, indent string) string {
 	var sb strings.Builder
 
 	if !a.HasReturn {
@@ -504,7 +653,7 @@ func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, bounda
 		return sb.String()
 	}
 
-	if expected, ok := pyExpectedReturnExpr(a, params, boundary); ok {
+	if expected, ok := pyExpectedReturnExprWithValues(a, params, boundary, values); ok {
 		sb.WriteString(indent + "assert result == " + expected + "\n")
 		return sb.String()
 	}
@@ -534,6 +683,10 @@ func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, bounda
 }
 
 func pyExpectedReturnExpr(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary) (string, bool) {
+	return pyExpectedReturnExprWithValues(a, params, boundary, nil)
+}
+
+func pyExpectedReturnExprWithValues(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary, values map[string]string) (string, bool) {
 	expr := ""
 	if boundary != nil && boundary.ReturnExpr != "" {
 		expr = strings.TrimSpace(boundary.ReturnExpr)
@@ -556,6 +709,9 @@ func pyExpectedReturnExpr(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBo
 		value := pyArgValue(p, i)
 		if boundary != nil && p.Name == boundary.Param {
 			value = boundary.Value
+		}
+		if values != nil && values[p.Name] != "" {
+			value = values[p.Name]
 		}
 		expr = replaceIdentifier(expr, p.Name, value)
 	}
@@ -605,6 +761,44 @@ func pyArgListWithBoundary(params []pyParamInfo, b pyBoundary) string {
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func pyArgListForCoverageTask(params []pyParamInfo, task *types.CoverageTestTask, boundary *pyBoundary) string {
+	values := coverageTaskInputValues(task, "python")
+	if boundary != nil {
+		values[boundary.Param] = boundary.Value
+	}
+	return pyArgListWithValues(params, values)
+}
+
+func pyArgListWithValues(params []pyParamInfo, values map[string]string) string {
+	if len(params) == 0 {
+		return ""
+	}
+	args := make([]string, len(params))
+	for i, p := range params {
+		if value := values[p.Name]; value != "" {
+			args[i] = value
+		} else {
+			args[i] = pyArgValue(p, i)
+		}
+	}
+	return strings.Join(args, ", ")
+}
+
+func pyBoundaryForCoverageTask(boundaries []pyBoundary, task *types.CoverageTestTask) *pyBoundary {
+	values := coverageTaskInputValues(task, "python")
+	for _, b := range boundaries {
+		if values[b.Param] == b.Value {
+			boundary := b
+			return &boundary
+		}
+	}
+	if task != nil && (task.GapType == "branch" || task.GapType == "error_path") && len(boundaries) == 1 {
+		boundary := boundaries[0]
+		return &boundary
+	}
+	return nil
 }
 
 func pyArgList(params []pyParamInfo) string {
