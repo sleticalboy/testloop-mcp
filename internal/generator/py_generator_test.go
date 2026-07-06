@@ -458,6 +458,122 @@ func TestPytestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestPytestFuncCoverageTaskCoversAsyncAndErrorBranches(t *testing.T) {
+	asyncTask := types.CoverageTestTask{
+		TestName: "covers async lookup",
+		SuggestedInputs: []string{
+			"构造满足条件 `user_id == 42` 的输入",
+		},
+	}
+	asyncFunc := pyFuncInfo{
+		Name:    "lookup",
+		IsAsync: true,
+		Params:  []pyParamInfo{{Name: "user_id"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn: true,
+			Returns:   []string{"user_id"},
+		},
+	}
+	code := genPytestFuncTestForCoverageTask(asyncFunc, &asyncTask)
+	for _, want := range []string{
+		"def test_covers_async_lookup():",
+		"result = asyncio.run(lookup(42))",
+		"assert result == (42)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in async function task output:\n%s", want, code)
+		}
+	}
+
+	errorTask := types.CoverageTestTask{
+		GapType:  "error_path",
+		TestName: "!!!",
+		SuggestedInputs: []string{
+			"构造满足条件 `url == None` 的输入",
+		},
+	}
+	errorFunc := pyFuncInfo{
+		Name:    "fetch",
+		IsAsync: true,
+		Params:  []pyParamInfo{{Name: "url"}},
+	}
+	code = genPytestFuncTestForCoverageTask(errorFunc, &errorTask)
+	for _, want := range []string{
+		"def test_fetch_covers_gap():",
+		"with pytest.raises(Exception):\n        asyncio.run(fetch(None))",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in error-path function task output:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "result =") {
+		t.Fatalf("error-path task should not assign result:\n%s", code)
+	}
+}
+
+func TestPytestClassCoverageTaskCoversStaticAsyncAndInstanceErrorBranches(t *testing.T) {
+	task := types.CoverageTestTask{
+		GapType:  "branch",
+		TestName: "test_worker_gap",
+		SuggestedInputs: []string{
+			"构造满足条件 `value == 7` 的输入",
+		},
+	}
+	cls := pyClassInfo{
+		Name: "Worker",
+		Methods: []pyFuncInfo{
+			{
+				Name:     "stat",
+				IsStatic: true,
+				Params:   []pyParamInfo{{Name: "value"}},
+				Analysis: pyFuncAnalysis{
+					HasReturn: true,
+					Returns:   []string{"value"},
+				},
+			},
+			{
+				Name:     "async_stat",
+				IsStatic: true,
+				IsAsync:  true,
+				Params:   []pyParamInfo{{Name: "url"}},
+				Analysis: pyFuncAnalysis{
+					HasReturn: true,
+					Returns:   []string{"url"},
+				},
+			},
+			{
+				Name:    "async_instance",
+				IsAsync: true,
+				Params:  []pyParamInfo{{Name: "flag"}},
+				Analysis: pyFuncAnalysis{
+					HasReturn: true,
+					Returns:   []string{"flag"},
+				},
+			},
+			{
+				Name:   "fail",
+				Params: []pyParamInfo{{Name: "enabled"}},
+				Analysis: pyFuncAnalysis{
+					Raises:     true,
+					Boundaries: []pyBoundary{{Param: "enabled", Value: "False"}},
+				},
+			},
+		},
+	}
+
+	code := genPytestClassTestForCoverageTask(cls, &task)
+	for _, want := range []string{
+		"result = Worker.stat(7)\n        assert result == (7)",
+		"result = asyncio.run(Worker.async_stat('https://example.com'))\n        assert result == ('https://example.com')",
+		"instance = Worker()\n        result = asyncio.run(instance.async_instance(True))\n        assert result == (True)",
+		"instance = Worker()\n        with pytest.raises(Exception):\n            instance.fail(False)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in class task output:\n%s", want, code)
+		}
+	}
+}
+
 func TestPytestClassTestCoversAsyncStaticRaisesAndBoundaries(t *testing.T) {
 	cls := pyClassInfo{
 		Name: "Service",
@@ -534,6 +650,23 @@ func TestPytestAssertionAndArgCompatHelpers(t *testing.T) {
 	args := pyDefaultArgs([]pyParamInfo{{Name: "items"}, {Name: "kwargs", IsKwargs: true}})
 	if args != "[], {}" {
 		t.Fatalf("pyDefaultArgs() = %q", args)
+	}
+	if got := pyPlaceholderArgList([]pyParamInfo{{Name: "args", IsArgs: true}, {Name: "kwargs", IsKwargs: true}, {Name: "value"}}); got != "(), {}, None" {
+		t.Fatalf("pyPlaceholderArgList() = %q", got)
+	}
+	if got := pyArgListWithValues([]pyParamInfo{{Name: "enabled"}, {Name: "title"}}, map[string]string{"title": "'custom'"}); got != "True, 'custom'" {
+		t.Fatalf("pyArgListWithValues() = %q", got)
+	}
+	boundaries := []pyBoundary{{Param: "mode", Value: "'short'"}, {Param: "enabled", Value: "False"}}
+	task := &types.CoverageTestTask{SuggestedInputs: []string{"构造满足条件 `enabled == False` 的输入"}}
+	if got := pyBoundaryForCoverageTask(boundaries, task); got == nil || got.Param != "enabled" {
+		t.Fatalf("pyBoundaryForCoverageTask(exact) = %+v", got)
+	}
+	if got := pyBoundaryForCoverageTask([]pyBoundary{{Param: "mode", Value: "'short'"}}, &types.CoverageTestTask{GapType: "branch"}); got == nil || got.Param != "mode" {
+		t.Fatalf("pyBoundaryForCoverageTask(branch fallback) = %+v", got)
+	}
+	if got := pyBoundaryForCoverageTask(boundaries, nil); got != nil {
+		t.Fatalf("pyBoundaryForCoverageTask(nil) = %+v", got)
 	}
 }
 
