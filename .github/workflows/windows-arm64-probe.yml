@@ -1,0 +1,83 @@
+name: Windows ARM64 Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Build and Run Windows ARM64
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up MSYS2 CLANGARM64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          path-type: inherit
+          update: true
+          install: >-
+            base-devel
+            git
+            mingw-w64-clang-aarch64-clang
+            unzip
+            zip
+
+      - name: Download dependencies
+        shell: msys2 {0}
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          set -euo pipefail
+          go env GOOS GOARCH GOHOSTOS GOHOSTARCH CGO_ENABLED CC CXX
+          go mod download
+
+      - name: Build Windows ARM64 package
+        shell: msys2 {0}
+        env:
+          CGO_ENABLED: "1"
+          CC: clang
+          CXX: clang++
+        run: |
+          set -euo pipefail
+          bash scripts/package-release-asset.sh probe windows_arm64 windows arm64
+
+      - name: Verify and run package
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cd dist
+          archive="testloop-mcp_probe_windows_arm64.zip"
+          sha256sum -c "${archive}.sha256"
+          unzip -Z1 "$archive" | sort > contents.txt
+          grep -Fx LICENSE contents.txt
+          grep -Fx README.md contents.txt
+          grep -Fx testloop-mcp.exe contents.txt
+          grep -Fx testloop-testgen.exe contents.txt
+          rm -rf unpack
+          mkdir unpack
+          unzip -q "$archive" -d unpack
+
+          set +e
+          ./unpack/testloop-mcp.exe --help > mcp-help.txt 2>&1
+          mcp_status=$?
+          ./unpack/testloop-testgen.exe --help > testgen-help.txt 2>&1
+          testgen_status=$?
+          set -e
+
+          test "$mcp_status" -eq 2
+          test "$testgen_status" -eq 2
+          grep -F "Usage of testloop-mcp" mcp-help.txt
+          grep -F "Usage: testgen" testgen-help.txt
