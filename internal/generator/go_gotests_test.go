@@ -97,6 +97,80 @@ func TestGenerateGoTestsSeedsSimplePureFunction(t *testing.T) {
 	}
 }
 
+func TestGenerateGoTestsCoversCompositeSourceBranches(t *testing.T) {
+	src := `package sample
+
+type Store struct {
+	Name string
+	Count int
+}
+
+type Writer interface {
+	Write(data []byte) (int, error)
+	Close()
+}
+
+func Identity[T any](value T) T {
+	return value
+}
+
+func Join(prefix string, parts ...string) string {
+	return prefix
+}
+
+func (s *Store) Names(limit int) []string {
+	return []string{s.Name}
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "composite.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, err := GenerateGoTests(srcPath)
+	if err != nil {
+		t.Fatalf("GenerateGoTests() error = %v", err)
+	}
+	for _, want := range []string{
+		"\"reflect\"",
+		"func makeTestStore() Store",
+		"Name:  \"\"",
+		"Count: 0",
+		"type WriterMock struct",
+		"WriteFn func([]byte) (int, error)",
+		"func (m *WriterMock) Close()",
+		"func TestIdentity(t *testing.T)",
+		"value int",
+		"Identity[int](tt.value)",
+		"func TestJoin(t *testing.T)",
+		"parts  []string",
+		"Join(tt.prefix, tt.parts...)",
+		"func TestStore_Names(t *testing.T)",
+		"s := &Store{}",
+		"got := s.Names(tt.limit)",
+		"if !reflect.DeepEqual(got, tt.ret0)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
+func TestGenerateGoTestsReturnsMessageWhenNoFuncsOrInterfaces(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "empty.go")
+	if err := os.WriteFile(srcPath, []byte("package sample\n\ntype Store struct{ Name string }\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, err := GenerateGoTests(srcPath)
+	if err != nil {
+		t.Fatalf("GenerateGoTests() error = %v", err)
+	}
+	if code != "// 未发现需要生成测试的 exported 函数或接口" {
+		t.Fatalf("GenerateGoTests() = %q", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskTargetsFunction(t *testing.T) {
 	src := `package sample
 
