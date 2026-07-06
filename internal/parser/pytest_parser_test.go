@@ -180,6 +180,19 @@ custom pytest failure detail without traceback prefixes
 	}
 }
 
+func TestSummarizePytestFailureUsesDefaultWhenOnlyFramesRemain(t *testing.T) {
+	got := summarizePytestFailure([]string{
+		"",
+		">       assert add(1, 2) == 4",
+		"|       + where 3 = add(1, 2)",
+		"_______________________________ captured stdout _______________________________",
+	})
+
+	if got != "测试失败，请查看详细输出" {
+		t.Fatalf("Expected default summary, got %q", got)
+	}
+}
+
 func TestParsePytestSummaryOnly(t *testing.T) {
 	output := `============================== test session starts ==============================
 collected 3 items

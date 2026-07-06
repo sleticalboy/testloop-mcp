@@ -182,6 +182,19 @@ Tests:       1 failed, 1 total`
 	}
 }
 
+func TestSummarizeJestFailureUsesDefaultWhenOnlyFramesRemain(t *testing.T) {
+	got := summarizeJestFailure([]string{
+		"",
+		"      at Object.<anonymous> (sum.test.js:4:3)",
+		"    > 4 | expect(result).toBe(3)",
+		"      5 | })",
+	})
+
+	if got != "测试失败，请查看详细输出" {
+		t.Fatalf("Expected default summary, got %q", got)
+	}
+}
+
 func TestParseVitestFailure(t *testing.T) {
 	output := ` FAIL  src/sum.test.ts > sum > adds values
 AssertionError: expected 4 to be 3 // Object.is equality

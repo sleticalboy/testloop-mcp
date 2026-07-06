@@ -191,3 +191,46 @@ func TestParseGoTest_JSONSkipsMalformedEventsAndKeepsRawFailureDetails(t *testin
 		t.Fatalf("非结构化详情不应设置 file/line: %+v", failure)
 	}
 }
+
+func TestParseGoFailureDetailInvalidFormats(t *testing.T) {
+	tests := []struct {
+		name       string
+		detail     string
+		wantMsg    string
+		wantParsed bool
+	}{
+		{
+			name:       "no colon",
+			detail:     "plain failure detail",
+			wantMsg:    "plain failure detail",
+			wantParsed: false,
+		},
+		{
+			name:       "missing message separator",
+			detail:     "calc_test.go:42",
+			wantMsg:    "calc_test.go:42",
+			wantParsed: false,
+		},
+		{
+			name:       "non numeric line",
+			detail:     "calc_test.go:line: got 4",
+			wantMsg:    "got 4",
+			wantParsed: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file, line, msg, ok := parseGoFailureDetail(tt.detail)
+			if ok != tt.wantParsed {
+				t.Fatalf("ok = %v, want %v", ok, tt.wantParsed)
+			}
+			if file != "" || line != 0 {
+				t.Fatalf("unexpected location: %s:%d", file, line)
+			}
+			if msg != tt.wantMsg {
+				t.Fatalf("message = %q, want %q", msg, tt.wantMsg)
+			}
+		})
+	}
+}

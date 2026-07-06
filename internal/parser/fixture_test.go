@@ -103,6 +103,48 @@ ok  	example.com/calc	0.001s`
 	}
 }
 
+func TestParseTestOutputDispatchesRemainingFrameworks(t *testing.T) {
+	tests := []struct {
+		name      string
+		framework string
+		output    string
+		wantTotal int
+	}{
+		{
+			name:      "go-test",
+			framework: "go-test",
+			output: `=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+PASS`,
+			wantTotal: 1,
+		},
+		{
+			name:      "cargo-test",
+			framework: "cargo-test",
+			output:    `test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`,
+			wantTotal: 2,
+		},
+		{
+			name:      "junit",
+			framework: "junit",
+			output:    `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`,
+			wantTotal: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseTestOutput(tt.output, tt.framework)
+			if result.Framework != tt.framework {
+				t.Fatalf("Framework = %q, want %q", result.Framework, tt.framework)
+			}
+			if result.Status != "pass" || result.Total != tt.wantTotal {
+				t.Fatalf("Unexpected result: status=%s total=%d", result.Status, result.Total)
+			}
+		})
+	}
+}
+
 func readParserFixture(t *testing.T, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))
