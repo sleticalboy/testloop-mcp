@@ -39,6 +39,18 @@ jobs:
             runner: windows-latest
             goos: windows
             goarch: amd64
+            msystem: UCRT64
+            cgo_package: mingw-w64-ucrt-x86_64-gcc
+            cc: gcc
+            cxx: g++
+          - asset: windows_arm64
+            runner: windows-11-arm
+            goos: windows
+            goarch: arm64
+            msystem: CLANGARM64
+            cgo_package: mingw-w64-clang-aarch64-clang
+            cc: clang
+            cxx: clang++
 
     steps:
       - name: Checkout
@@ -79,13 +91,13 @@ jobs:
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: ${{ matrix.msystem }}
           path-type: inherit
           update: true
           install: >-
             base-devel
             git
-            mingw-w64-ucrt-x86_64-gcc
+            ${{ matrix.cgo_package }}
             unzip
             zip
 
@@ -96,6 +108,9 @@ jobs:
       - name: Download dependencies
         if: runner.os == 'Windows'
         shell: msys2 {0}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: go mod download
 
       - name: Build binaries
@@ -107,6 +122,10 @@ jobs:
       - name: Build binaries
         if: runner.os == 'Windows'
         shell: msys2 {0}
+        env:
+          CGO_ENABLED: "1"
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: |
           set -euo pipefail
           .release/package-release-asset.sh "$TAG_NAME" "${{ matrix.asset }}" "${{ matrix.goos }}" "${{ matrix.goarch }}"
@@ -142,6 +161,19 @@ jobs:
           grep -Fx README.md contents.txt
           grep -Fx testloop-mcp.exe contents.txt
           grep -Fx testloop-testgen.exe contents.txt
+          rm -rf unpack
+          mkdir unpack
+          unzip -q "$archive" -d unpack
+          set +e
+          ./unpack/testloop-mcp.exe --help > mcp-help.txt 2>&1
+          mcp_status=$?
+          ./unpack/testloop-testgen.exe --help > testgen-help.txt 2>&1
+          testgen_status=$?
+          set -e
+          test "$mcp_status" -eq 2
+          test "$testgen_status" -eq 2
+          grep -F "Usage of testloop-mcp" mcp-help.txt
+          grep -F "Usage: testgen" testgen-help.txt
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7

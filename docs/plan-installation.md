@@ -10,8 +10,8 @@
 - [x] `LICENSE` 已补齐，README License badge 指向有效文件。
 - [x] `docs/installation.md` 覆盖 Homebrew、Release 下载、checksum 校验、源码构建、Docker、stdio、Streamable HTTP 和常见客户端配置。
 - [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`。
-- [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64。
-- [x] Release Artifacts workflow 上传前会校验 `.sha256`，并检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`。
+- [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64。
+- [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
 
 ## 当前发布
@@ -108,24 +108,23 @@ _暂无。_
 
 10. 提交发布验证记录，保持 `raw.md` 不进提交。
 
-## 暂缓项
+## 待跟进项
 
-- Windows arm64 预构建二进制：项目使用 CGO 和 tree-sitter，当前先发布 Windows amd64；Windows arm64 暂缓到工具链需求明确后再评估。
+- Windows arm64 预构建二进制：已用 `Windows ARM64 Probe` workflow 验证 `windows-11-arm` + MSYS2 `CLANGARM64` 可完成 CGO 构建、zip 校验和 `.exe --help` 运行验证；下一次正式 release 会纳入 `windows_arm64` 资产。
 - Homebrew Tap workflow 自动开 PR：依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时 workflow 会成功跳过 PR 步骤，不影响 Release Artifacts 上传资产，也不影响本地脚本同步 tap。
 
 ## Windows arm64 评估
 
-当前不把 Windows arm64 加入 Release Artifacts matrix。
+当前已把 Windows arm64 加入 Release Artifacts matrix，作为下一次正式 release 的新增资产。
 
-原因：
+已验证路径：
 
 - 项目依赖 `github.com/smacker/go-tree-sitter`，`go list` 可确认 `go-tree-sitter` 及 Java/Rust/JS/Python/TypeScript grammar 包都包含 CGO 文件。
 - Windows amd64 已通过 `windows-latest` + MSYS2 UCRT64 + `mingw-w64-ucrt-x86_64-gcc` 验证。
-- Windows arm64 不是只新增 `GOARCH=arm64` 就能可靠产出的目标；它需要可验证的 Windows ARM64 CGO 编译器、链接器和运行/解包校验链路。
-- 当前 GitHub-hosted release workflow 没有现成的 Windows ARM64 runner 验证路径，盲目交叉编译会产生无法运行验证的资产。
+- Windows arm64 已通过手动 `Windows ARM64 Probe` workflow `28784385589` 验证：`windows-11-arm` runner、MSYS2 `CLANGARM64`、`mingw-w64-clang-aarch64-clang`、`CC=clang`、`CXX=clang++` 可以打包 `windows_arm64` zip。
+- Probe 已完成 `.sha256` 校验、zip 内容检查，并在 ARM64 runner 上运行 `testloop-mcp.exe --help` 和 `testloop-testgen.exe --help`。
 
-重新评估条件：
+正式发布前仍需确认：
 
-- 有稳定的 Windows ARM64 runner，或能在 CI 中安装并验证 Windows ARM64 CGO toolchain。
-- 能在 workflow 中完成 `go build`、`.zip` 打包、`.sha256` 校验、zip 内容检查，以及至少 `--help` 级别的二进制运行验证。
-- 用户侧确实有 Windows ARM64 预构建二进制需求；否则继续使用源码构建或 `go install` 回退更稳。
+- 下一次 tag release 的 `Release Artifacts` workflow 中 `windows_arm64` matrix 项通过。
+- GitHub-hosted `windows-11-arm` 仍处于 public preview 时，如果平台临时排队或不可用，不应阻塞 Linux/macOS/Windows amd64 资产发布；必要时可回退为 probe-only。
