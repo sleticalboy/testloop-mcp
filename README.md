@@ -61,13 +61,13 @@ brew install testloop-mcp
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
 ```
 
-当前 `v0.4.3` Release 已提供 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 二进制。手动下载示例：
+当前 `v0.4.4` Release 已提供 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 二进制。手动下载示例：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.4.3_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.4.4_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.4.4_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
@@ -76,13 +76,13 @@ tar -xzf testloop-mcp_v0.4.3_linux_amd64.tar.gz
 Windows amd64 可直接下载 zip：
 
 ```powershell
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_windows_amd64.zip
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_windows_amd64.zip.sha256
-$expected = (Get-Content .\testloop-mcp_v0.4.3_windows_amd64.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\testloop-mcp_v0.4.3_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_windows_amd64.zip
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_windows_amd64.zip.sha256
+$expected = (Get-Content .\testloop-mcp_v0.4.4_windows_amd64.zip.sha256).Split()[0]
+$actual = (Get-FileHash .\testloop-mcp_v0.4.4_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive .\testloop-mcp_v0.4.3_windows_amd64.zip
-.\testloop-mcp_v0.4.3_windows_amd64\testloop-mcp.exe --help
+Expand-Archive .\testloop-mcp_v0.4.4_windows_amd64.zip
+.\testloop-mcp_v0.4.4_windows_amd64\testloop-mcp.exe --help
 ```
 
 其他未覆盖平台或需要从源码构建：

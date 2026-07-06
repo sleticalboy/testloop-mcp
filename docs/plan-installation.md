@@ -87,3 +87,15 @@
 - [x] `v0.4.3` 已通过 Release Artifacts run `28763866528` 回填 Windows amd64 zip 和 `.sha256`。
 - [x] `scripts/install.sh` 已支持 Windows shell 下下载、校验、解压并安装 `windows_amd64` zip；已用 `TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.3` 在本机验证。
 - [x] 临时 Windows Release Probe workflow 已移除；后续以正式 Release Artifacts matrix 维护 Windows 打包链路。
+
+## v0.4.4 发布准备
+
+- [x] `CHANGELOG.md` 已整理 `v0.4.4 - 2026-07-06`。
+- [x] 新增 `docs/plan-release-notes-v0.4.4.md`。
+- [x] MCP server implementation version 更新为 `0.4.4`。
+- [x] README 和安装文档已更新到 `v0.4.4` release 资产命名。
+- [ ] Tag `v0.4.4` 已推送。
+- [ ] Release Artifacts run 已通过，并上传四平台资产与 `.sha256`。
+- [ ] `TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh` 已验证可直接下载 release 资产并安装。
+- [ ] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.4`。
+- [ ] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.4` 可用。

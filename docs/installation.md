@@ -29,14 +29,14 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 可选环境变量：
 
 ```bash
-TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
 维护者调试平台选择时也可以显式覆盖检测结果：
 
 ```bash
-TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh
 ```
 
 脚本会安装两个命令：
@@ -46,22 +46,22 @@ TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.3 sh s
 
 ## 手动下载 Release 二进制
 
-当前 `v0.4.3` Release 已提供以下产物：
+当前 `v0.4.4` Release 已提供以下产物：
 
-- `testloop-mcp_v0.4.3_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.3_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.3_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.3_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.3_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.3_windows_amd64.zip`
-- `testloop-mcp_v0.4.3_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.4_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.4_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.4_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.4_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.4_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.4_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.4_windows_amd64.zip`
+- `testloop-mcp_v0.4.4_windows_amd64.zip.sha256`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.4.3_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.4.4_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.4.4_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
@@ -72,14 +72,14 @@ chmod +x testloop-mcp testloop-testgen
 Windows amd64 可直接下载 zip：
 
 ```powershell
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_windows_amd64.zip
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_windows_amd64.zip.sha256
-$expected = (Get-Content .\testloop-mcp_v0.4.3_windows_amd64.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\testloop-mcp_v0.4.3_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_windows_amd64.zip
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.4/testloop-mcp_v0.4.4_windows_amd64.zip.sha256
+$expected = (Get-Content .\testloop-mcp_v0.4.4_windows_amd64.zip.sha256).Split()[0]
+$actual = (Get-FileHash .\testloop-mcp_v0.4.4_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive .\testloop-mcp_v0.4.3_windows_amd64.zip
-.\testloop-mcp_v0.4.3_windows_amd64\testloop-mcp.exe --help
-.\testloop-mcp_v0.4.3_windows_amd64\testloop-testgen.exe --help
+Expand-Archive .\testloop-mcp_v0.4.4_windows_amd64.zip
+.\testloop-mcp_v0.4.4_windows_amd64\testloop-mcp.exe --help
+.\testloop-mcp_v0.4.4_windows_amd64\testloop-testgen.exe --help
 ```
 
 当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
@@ -119,20 +119,20 @@ Formula/testloop-mcp.rb
 只更新当前仓库内的公式：
 
 ```bash
-scripts/generate-homebrew-formula.sh v0.4.3
+scripts/generate-homebrew-formula.sh v0.4.4
 ruby -c Formula/testloop-mcp.rb
 ```
 
 同步到 `sleticalboy/homebrew-tap` 工作区：
 
 ```bash
-scripts/update-homebrew-tap.sh v0.4.3 ../homebrew-tap
+scripts/update-homebrew-tap.sh v0.4.4 ../homebrew-tap
 ```
 
 不传 `tap-dir` 时，脚本会把 `sleticalboy/homebrew-tap` 克隆到临时目录并更新公式。默认不会自动提交；确认无误后可用以下环境变量提交和推送 tap 仓库：
 
 ```bash
-TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.3 ../homebrew-tap
+TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.4 ../homebrew-tap
 ```
 
 也可以在 GitHub Actions 里手动触发 `Homebrew Tap` workflow，输入 release tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
