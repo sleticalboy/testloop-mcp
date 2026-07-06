@@ -2,12 +2,15 @@
 
 ## Unreleased
 
+## v0.4.3 - 2026-07-06
+
 ### Changed
 
 - Release Artifacts workflow 改为由每个 matrix build job 直接上传对应 tarball 和 `.sha256`，避免单独 publish job 等不到 runner 时阻塞发版。
 - 安装脚本兼容聚合 `checksums.txt` 和单资产 `.sha256` 两种校验文件。
 - 新增 Homebrew Formula 草案、生成脚本和独立 Homebrew Tap workflow，用于按 tag 更新 `sleticalboy/homebrew-tap` PR，避免阻塞 release 资产发布。
 - README 和安装文档新增 `brew tap sleticalboy/tap && brew install testloop-mcp` 安装路径。
+- MCP server implementation version 更新为 `0.4.3`。
 
 ## v0.4.2 - 2026-07-05
 

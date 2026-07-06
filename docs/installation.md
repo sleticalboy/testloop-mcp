@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 可选环境变量：
 
 ```bash
-TESTLOOP_MCP_VERSION=v0.4.2 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
@@ -40,18 +40,20 @@ TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 
 ## 手动下载 Release 二进制
 
-当前 `v0.4.2` Release 已提供以下产物：
+当前 `v0.4.3` Release 已提供以下产物：
 
-- `testloop-mcp_v0.4.2_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.2_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.2_darwin_arm64.tar.gz`
-- `checksums.txt`
+- `testloop-mcp_v0.4.3_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.3_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.3_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.3_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.3_darwin_arm64.tar.gz.sha256`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/testloop-mcp_v0.4.2_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.2/checksums.txt
-sha256sum -c checksums.txt
-tar -xzf testloop-mcp_v0.4.2_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.3/testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.4.3_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.4.3_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
@@ -96,20 +98,20 @@ Formula/testloop-mcp.rb
 只更新当前仓库内的公式：
 
 ```bash
-scripts/generate-homebrew-formula.sh v0.4.2
+scripts/generate-homebrew-formula.sh v0.4.3
 ruby -c Formula/testloop-mcp.rb
 ```
 
 同步到 `sleticalboy/homebrew-tap` 工作区：
 
 ```bash
-scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
+scripts/update-homebrew-tap.sh v0.4.3 ../homebrew-tap
 ```
 
 不传 `tap-dir` 时，脚本会把 `sleticalboy/homebrew-tap` 克隆到临时目录并更新公式。默认不会自动提交；确认无误后可用以下环境变量提交和推送 tap 仓库：
 
 ```bash
-TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
+TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.3 ../homebrew-tap
 ```
 
 也可以在 GitHub Actions 里手动触发 `Homebrew Tap` workflow，输入 release tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。

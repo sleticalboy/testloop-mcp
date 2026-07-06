@@ -61,3 +61,9 @@
 - [x] 新增 `scripts/update-homebrew-tap.sh`，可更新 `sleticalboy/homebrew-tap` 工作区并运行 Ruby/Homebrew style 校验。
 - [x] 新增 `.github/workflows/homebrew-tap.yml`，手动输入 tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
 - [x] `brew install --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `v0.4.2` 可用。
+
+## v0.4.3 发布准备
+
+- [x] `CHANGELOG.md` 已整理 `v0.4.3 - 2026-07-06`。
+- [x] 新增 `docs/plan-release-notes-v0.4.3.md`。
+- [x] MCP server implementation version 更新为 `0.4.3`。
