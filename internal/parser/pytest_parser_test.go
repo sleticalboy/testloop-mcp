@@ -3,6 +3,8 @@ package parser
 import (
 	"strings"
 	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestParsePytestTest(t *testing.T) {
@@ -177,6 +179,33 @@ custom pytest failure detail without traceback prefixes
 	}
 	if failure.Error != "custom pytest failure detail without traceback prefixes" {
 		t.Errorf("Expected fallback failure summary, got %q", failure.Error)
+	}
+}
+
+func TestParsePytestTestFailureBlockWithoutSummary(t *testing.T) {
+	output := `=================================== FAILURES ===================================
+_______________________________ test_plain ________________________________
+
+custom pytest failure detail without summary`
+
+	result := ParsePytestTest(output)
+
+	if result.Status != "fail" || result.Failed != 1 || result.Total != 1 {
+		t.Fatalf("Expected one failed test, got status=%s failed=%d total=%d", result.Status, result.Failed, result.Total)
+	}
+	if len(result.Failures) != 1 || result.Failures[0].Error != "custom pytest failure detail without summary" {
+		t.Fatalf("Unexpected failures: %+v", result.Failures)
+	}
+}
+
+func TestConsumePytestFailureLineKeepsFirstTracebackExpression(t *testing.T) {
+	failure := types.TestFailure{}
+
+	consumePytestFailureLine(">       first_call()", &failure)
+	consumePytestFailureLine(">       second_call()", &failure)
+
+	if failure.Expected != "first_call()" {
+		t.Fatalf("Expected first traceback expression, got %q", failure.Expected)
 	}
 }
 

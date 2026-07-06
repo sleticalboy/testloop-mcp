@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/types"
+)
 
 func TestParseMochaTestPass(t *testing.T) {
 	output := `  calc
@@ -90,5 +94,34 @@ func TestParseMochaTestPendingSummary(t *testing.T) {
 	}
 	if result.Total != 2 || result.Passed != 1 || result.Skipped != 1 || result.Failed != 0 {
 		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
+func TestParseMochaTestDerivesFailedCountFromFailures(t *testing.T) {
+	output := `  calc
+    1) divide() should handle division by zero
+
+  1 passing (12ms)`
+
+	result := ParseMochaTest(output)
+
+	if result.Status != "fail" {
+		t.Fatalf("Expected fail status, got %s", result.Status)
+	}
+	if result.Total != 2 || result.Passed != 1 || result.Failed != 1 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d failed=%d", result.Total, result.Passed, result.Failed)
+	}
+	if len(result.Failures) != 1 || result.Failures[0].TestName != "divide() should handle division by zero" {
+		t.Fatalf("Unexpected failures: %+v", result.Failures)
+	}
+}
+
+func TestConsumeMochaFailureLineSetsEmptyTestName(t *testing.T) {
+	failure := types.TestFailure{}
+
+	consumeMochaFailureLine("calc:", &failure)
+
+	if failure.TestName != "calc" {
+		t.Fatalf("Expected calc test name, got %q", failure.TestName)
 	}
 }

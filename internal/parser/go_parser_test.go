@@ -163,6 +163,34 @@ not json despite later JSON output
 	}
 }
 
+func TestParseGoTest_WhitespaceOutputIsTextPass(t *testing.T) {
+	result := ParseGoTest(" \n\t\n")
+
+	if result.Status != "pass" || result.Total != 0 || len(result.Failures) != 0 {
+		t.Fatalf("空白输出应按空文本通过解析: status=%s total=%d failures=%+v", result.Status, result.Total, result.Failures)
+	}
+}
+
+func TestParseGoTest_JSONFailureWithoutDetailsUsesDefaultError(t *testing.T) {
+	output := `
+{"Action":"run","Package":"example.com/calc","Test":"TestNoOutput"}
+{"Action":"fail","Package":"example.com/calc","Test":"TestNoOutput","Elapsed":0}
+`
+
+	result := ParseGoTest(output)
+
+	if result.Status != "fail" || result.Failed != 1 || result.Total != 1 {
+		t.Fatalf("统计错误: status=%s failed=%d total=%d", result.Status, result.Failed, result.Total)
+	}
+	if len(result.Failures) != 1 {
+		t.Fatalf("期望 1 个失败，实际 %d", len(result.Failures))
+	}
+	failure := result.Failures[0]
+	if failure.TestName != "TestNoOutput" || failure.Error != "test failed" {
+		t.Fatalf("默认失败详情错误: %+v", failure)
+	}
+}
+
 func TestParseGoTest_JSONSkipsMalformedEventsAndKeepsRawFailureDetails(t *testing.T) {
 	output := `
 {"Action":"run","Package":"example.com/calc","Test":"TestLogOnly"}
