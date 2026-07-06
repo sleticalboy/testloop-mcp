@@ -23,7 +23,7 @@ var (
 	// Individual test failure: "   [FAILED] com.example.CalcTest::testAdd"
 	javaFailureRE = regexp.MustCompile(`\[FAILED\]\s+(\S+)`)
 	// Maven failure detail: "Failed tests:  \n  testAdd(com.example.CalcTest)"
-	javaMavenFailureRE = regexp.MustCompile(`\s+(\w+)\((\S+)\)`)
+	javaMavenFailureRE = regexp.MustCompile(`^(\w+)\((\S+)\)$`)
 )
 
 // ParseJUnitTest 解析 Java JUnit 测试输出（Maven/Gradle/JUnit 5）
@@ -89,8 +89,8 @@ func ParseJUnitTest(output string) types.TestResult {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Maven: "Failed tests:" 或 "Errors:"
-		if strings.HasPrefix(line, "Failed tests:") || strings.HasPrefix(line, "Errors:") {
+		// Maven: "Failed tests:"/"Errors:" lines may be prefixed by "[ERROR]".
+		if isJavaMavenFailureSection(line) {
 			inFailureSection = true
 			continue
 		}
@@ -126,4 +126,10 @@ func ParseJUnitTest(output string) types.TestResult {
 	}
 
 	return result
+}
+
+func isJavaMavenFailureSection(line string) bool {
+	line = strings.TrimPrefix(line, "[ERROR]")
+	line = strings.TrimSpace(line)
+	return strings.HasPrefix(line, "Failed tests:") || strings.HasPrefix(line, "Errors:")
 }
