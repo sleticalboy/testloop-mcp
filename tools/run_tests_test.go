@@ -108,6 +108,13 @@ func TestCollectJavaCoveragePercentReadsMavenReport(t *testing.T) {
 	if percent != 50 {
 		t.Fatalf("percent = %.1f, want 50.0", percent)
 	}
+
+	if percent := collectCoveragePercent(context.Background(), "junit", dir, 12.5); percent != 50 {
+		t.Fatalf("collectCoveragePercent junit = %.1f, want 50.0", percent)
+	}
+	if percent := collectCoveragePercent(context.Background(), "go-test", dir, 12.5); percent != 12.5 {
+		t.Fatalf("collectCoveragePercent passthrough = %.1f, want 12.5", percent)
+	}
 }
 
 func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {

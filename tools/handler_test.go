@@ -55,6 +55,22 @@ func TestHandleParseResultsRequiresOutput(t *testing.T) {
 	}
 }
 
+func TestParseResultsCompatibilityDefaultsToGoTest(t *testing.T) {
+	output := strings.Join([]string{
+		`{"Action":"run","Package":"example.com/calc","Test":"TestAdd"}`,
+		`{"Action":"fail","Package":"example.com/calc","Test":"TestAdd","Elapsed":0}`,
+		`{"Action":"fail","Package":"example.com/calc","Elapsed":0}`,
+	}, "\n")
+
+	result, err := parseResults(parseResultsInput{Output: output})
+	if err != nil {
+		t.Fatalf("parseResults returned error: %v", err)
+	}
+	if result.Framework != "go-test" || result.Status != "fail" || result.Failed != 1 {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+}
+
 func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	data := strings.Join([]string{
 		"mode: set",
@@ -175,6 +191,29 @@ func TestHandleGenerateTestsUsesCoverageTaskTestFile(t *testing.T) {
 	}
 	if !strings.Contains(string(content), "TestAddCoverageTask") {
 		t.Fatalf("generated test file missing task test name:\n%s", content)
+	}
+}
+
+func TestCountGeneratedCasesByLanguage(t *testing.T) {
+	tests := []struct {
+		name string
+		ext  string
+		code string
+		want int
+	}{
+		{name: "go", ext: ".go", code: "func TestAdd(t *testing.T) {}\nfunc helper() {}", want: 1},
+		{name: "jest single", ext: ".js", code: "it('adds', () => {})\nit(\"subs\", () => {})", want: 2},
+		{name: "python", ext: ".py", code: "def test_add():\n    pass\n    def test_nested():\n        pass", want: 2},
+		{name: "rust", ext: ".rs", code: "#[test]\nfn adds() {}\n#[test]\nfn subs() {}", want: 2},
+		{name: "java", ext: ".java", code: "@Test\nvoid adds() {}\n@Test\nvoid subs() {}", want: 2},
+		{name: "unknown", ext: ".txt", code: "func TestAdd() {}", want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := countGeneratedCases(tt.code, tt.ext); got != tt.want {
+				t.Fatalf("countGeneratedCases = %d, want %d", got, tt.want)
+			}
+		})
 	}
 }
 
