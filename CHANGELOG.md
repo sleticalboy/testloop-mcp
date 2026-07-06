@@ -11,7 +11,7 @@
 ### Changed
 
 - Release 资产打包逻辑抽到 `scripts/package-release-asset.sh`，workflow 复用同一脚本生成 tarball/zip 和 `.sha256`。
-- Release Artifacts workflow 新增 `windows_amd64` matrix 项，后续 tag release 会上传 Windows zip 和 `.sha256`。
+- Release Artifacts workflow 新增 `windows_amd64` matrix 项，从该版本起 tag release 会上传 Windows zip 和 `.sha256`。
 - 安装脚本支持在 Git Bash/MSYS/Cygwin 等 Windows shell 下下载、校验并安装 `windows_amd64` zip 资产，缺少匹配资产或解压工具时仍回退到 `go install`。
 - 移除临时 Windows Release Probe workflow；Windows 打包链路已合入正式 Release Artifacts matrix。
 - MCP server implementation version 更新为 `0.4.4`。

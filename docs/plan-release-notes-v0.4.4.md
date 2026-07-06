@@ -11,7 +11,7 @@ v0.4.4 是 Windows 分发和安装体验完善版本。这个版本不改变 MCP
 ## 主要变化
 
 - Release 资产打包逻辑抽到 `scripts/package-release-asset.sh`，正式 workflow 和本地调试复用同一套 tarball/zip 打包逻辑。
-- Release Artifacts workflow 新增 `windows_amd64` matrix 项，后续 tag release 会上传 Windows zip 和 `.sha256`。
+- Release Artifacts workflow 新增 `windows_amd64` matrix 项，从该版本起 tag release 会上传 Windows zip 和 `.sha256`。
 - 安装脚本支持在 Git Bash/MSYS/Cygwin 等 Windows shell 下下载、校验、解压并安装 `windows_amd64` zip。
 - 安装脚本在缺少匹配资产或缺少 zip 解压工具时仍会回退到 `go install`。
 - 移除临时 Windows Release Probe workflow，Windows 打包链路统一由正式 Release Artifacts matrix 维护。
