@@ -33,6 +33,36 @@ func TestNewTestProviderLLMRequiresCommand(t *testing.T) {
 	}
 }
 
+func TestNewTestProviderReturnsLLMAndRejectsUnsupportedMode(t *testing.T) {
+	t.Setenv(EnvLLMProviderCommand, "testloop-fake-provider")
+
+	provider, err := NewTestProvider(" llm ")
+	if err != nil {
+		t.Fatalf("NewTestProvider(llm) error = %v", err)
+	}
+	if provider.Name() != "llm-command" {
+		t.Fatalf("provider.Name() = %q, want llm-command", provider.Name())
+	}
+
+	_, err = NewTestProvider("unknown")
+	if err == nil || !strings.Contains(err.Error(), "unsupported test provider") {
+		t.Fatalf("NewTestProvider(unknown) error = %v, want unsupported provider error", err)
+	}
+}
+
+func TestStaticProviderUsesProvidedStaticCode(t *testing.T) {
+	code, err := StaticProvider{}.GenerateTests(context.Background(), TestGenerationRequest{
+		SourceFile: "missing.py",
+		StaticCode: "def test_static():\n    assert True\n",
+	})
+	if err != nil {
+		t.Fatalf("StaticProvider.GenerateTests() error = %v", err)
+	}
+	if !strings.Contains(code, "test_static") {
+		t.Fatalf("expected static code passthrough, got:\n%s", code)
+	}
+}
+
 func TestGenerateTestsWithProviderUsesExternalLLMCommand(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell script fake provider is unix-only")
@@ -51,6 +81,29 @@ EOF
 	}
 	if !strings.Contains(code, "test_generated_by_llm") {
 		t.Fatalf("expected llm provider output, got:\n%s", code)
+	}
+}
+
+func TestExternalLLMProviderRejectsEmptyCommand(t *testing.T) {
+	_, err := ExternalLLMProvider{}.GenerateTests(context.Background(), TestGenerationRequest{})
+	if err == nil || !strings.Contains(err.Error(), EnvLLMProviderCommand+" is empty") {
+		t.Fatalf("ExternalLLMProvider.GenerateTests() error = %v, want empty command error", err)
+	}
+}
+
+func TestExternalLLMProviderReturnsCommandFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+echo "provider exploded" >&2
+exit 7
+`)
+
+	_, err := ExternalLLMProvider{Command: command}.GenerateTests(context.Background(), TestGenerationRequest{})
+	if err == nil || !strings.Contains(err.Error(), "provider exploded") {
+		t.Fatalf("ExternalLLMProvider.GenerateTests() error = %v, want stderr failure", err)
 	}
 }
 
@@ -92,6 +145,27 @@ EOF
 	}
 	if req.Context.CoverageTask.Target != "add" || req.Context.CoverageTask.TestName != "test_add_covers_gap" {
 		t.Fatalf("unexpected coverage task context: %+v", req.Context.CoverageTask)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsRejectsProviderEmptyOutput(t *testing.T) {
+	srcPath := writeProviderSource(t)
+
+	_, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, emptyProvider{}, GenerateTestsOptions{})
+	if err == nil || !strings.Contains(err.Error(), "returned empty output") {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v, want empty provider output error", err)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsPropagatesStaticGenerationError(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "notes.txt")
+	if err := os.WriteFile(srcPath, []byte("not source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{})
+	if err == nil || !strings.Contains(err.Error(), "不支持的文件类型") {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v, want unsupported type error", err)
 	}
 }
 
@@ -156,6 +230,37 @@ func TestParseLLMProviderOutputAcceptsRawCode(t *testing.T) {
 	if !strings.Contains(code, "TestRaw") {
 		t.Fatalf("unexpected raw code output: %q", code)
 	}
+}
+
+func TestParseLLMProviderOutputRejectsInvalidResponses(t *testing.T) {
+	tests := []struct {
+		name string
+		out  []byte
+		want string
+	}{
+		{name: "empty", out: []byte("  \n"), want: "empty output"},
+		{name: "invalid json", out: []byte("{not-json"), want: "parse llm provider json output"},
+		{name: "missing code", out: []byte(`{"code":"   "}`), want: "missing code"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseLLMProviderOutput(tt.out)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("parseLLMProviderOutput() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+type emptyProvider struct{}
+
+func (emptyProvider) Name() string {
+	return "empty"
+}
+
+func (emptyProvider) GenerateTests(context.Context, TestGenerationRequest) (string, error) {
+	return " \n", nil
 }
 
 func testCoverageTask() types.CoverageTestTask {
