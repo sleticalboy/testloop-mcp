@@ -35,6 +35,26 @@ func TestDetectFramework_PyFile(t *testing.T) {
 	}
 }
 
+func TestDetectFramework_RustFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "lib.rs", "pub fn add() {}")
+	path := filepath.Join(dir, "lib.rs")
+
+	if fw := DetectFramework(path); fw != "cargo-test" {
+		t.Errorf("got %s, want cargo-test", fw)
+	}
+}
+
+func TestDetectFramework_JavaFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "Calculator.java", "class Calculator {}")
+	path := filepath.Join(dir, "Calculator.java")
+
+	if fw := DetectFramework(path); fw != "junit" {
+		t.Errorf("got %s, want junit", fw)
+	}
+}
+
 func TestDetectFramework_JSFile_VitestViaScript(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "package.json", `{
@@ -91,6 +111,34 @@ func TestDetectFramework_JSFile_VitestViaDevDeps(t *testing.T) {
 	}
 }
 
+func TestDetectFramework_JSFile_MochaViaDependencies(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "package.json", `{
+		"scripts": {},
+		"dependencies": { "mocha": "^10.0.0" }
+	}`)
+	writeFile(t, dir, "app.js", "")
+	path := filepath.Join(dir, "app.js")
+
+	if fw := DetectFramework(path); fw != "mocha" {
+		t.Errorf("got %s, want mocha", fw)
+	}
+}
+
+func TestDetectFramework_JSFile_JestViaDependencies(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "package.json", `{
+		"scripts": {},
+		"dependencies": { "jest": "^29.0.0" }
+	}`)
+	writeFile(t, dir, "app.js", "")
+	path := filepath.Join(dir, "app.js")
+
+	if fw := DetectFramework(path); fw != "jest" {
+		t.Errorf("got %s, want jest", fw)
+	}
+}
+
 func TestDetectFramework_JSFile_NoTestDep_DefaultsJest(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "package.json", `{
@@ -111,6 +159,42 @@ func TestDetectFramework_Dir_GoMod(t *testing.T) {
 
 	if fw := DetectFramework(dir); fw != "go-test" {
 		t.Errorf("got %s, want go-test", fw)
+	}
+}
+
+func TestDetectFramework_Dir_CargoToml(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "Cargo.toml", "[package]\nname = \"app\"\n")
+
+	if fw := DetectFramework(dir); fw != "cargo-test" {
+		t.Errorf("got %s, want cargo-test", fw)
+	}
+}
+
+func TestDetectFramework_Dir_SetupPy(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "setup.py", "from setuptools import setup\n")
+
+	if fw := DetectFramework(dir); fw != "pytest" {
+		t.Errorf("got %s, want pytest", fw)
+	}
+}
+
+func TestDetectFramework_Dir_PomXML(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "pom.xml", "<project/>")
+
+	if fw := DetectFramework(dir); fw != "junit" {
+		t.Errorf("got %s, want junit", fw)
+	}
+}
+
+func TestDetectFramework_Dir_GradleKts(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "build.gradle.kts", "plugins {}\n")
+
+	if fw := DetectFramework(dir); fw != "junit" {
+		t.Errorf("got %s, want junit", fw)
 	}
 }
 
