@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -53,7 +54,7 @@ func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input f
 	}
 
 	// 生成修复建议
-	suggestions := generateFixSuggestions(failures, string(sourceCode), string(testCode), sourceFile)
+	suggestions := generateFixSuggestions(failures, string(sourceCode), string(testCode), sourceFile, input.TestCode)
 
 	resultJSON, _ := json.Marshal(suggestions)
 	return &mcp.CallToolResult{
@@ -61,7 +62,7 @@ func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input f
 	}, nil, nil
 }
 
-func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, sourceFile string) []types.FixSuggestion {
+func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, sourceFile, testFile string) []types.FixSuggestion {
 	var suggestions []types.FixSuggestion
 
 	for _, failure := range failures {
@@ -76,8 +77,7 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 
 		errorMsg := failure.Error
 		lowerError := strings.ToLower(errorMsg)
-		sourceLine := lineAt(sourceCode, failure.Line)
-		testLine := lineAt(testCode, failure.Line)
+		sourceLine, testLine := failureContextLines(failure, sourceCode, testCode, sourceFile, testFile)
 
 		if strings.Contains(lowerError, "got") && strings.Contains(lowerError, "want") {
 			suggestion.SuggestedFix = analyzeGotWant(errorMsg, sourceLine, testLine)
@@ -230,6 +230,46 @@ func appendContextLines(sb *strings.Builder, sourceLine, testLine string) {
 		sb.WriteString(strings.TrimSpace(testLine))
 		sb.WriteByte('\n')
 	}
+}
+
+func failureContextLines(failure types.TestFailure, sourceCode, testCode, sourceFile, testFile string) (string, string) {
+	if failure.Line <= 0 {
+		return "", ""
+	}
+	switch {
+	case samePath(failure.File, sourceFile):
+		return lineAt(sourceCode, failure.Line), ""
+	case testFile != "" && samePath(failure.File, testFile):
+		return "", lineAt(testCode, failure.Line)
+	case failure.File == "":
+		return lineAt(sourceCode, failure.Line), ""
+	case looksLikeTestFile(failure.File):
+		return "", lineAt(testCode, failure.Line)
+	default:
+		return "", ""
+	}
+}
+
+func samePath(a, b string) bool {
+	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
+		return false
+	}
+	if filepath.Clean(a) == filepath.Clean(b) {
+		return true
+	}
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	return errA == nil && errB == nil && filepath.Clean(absA) == filepath.Clean(absB)
+}
+
+func looksLikeTestFile(path string) bool {
+	base := strings.ToLower(filepath.Base(path))
+	return strings.Contains(base, "_test.") ||
+		strings.HasPrefix(base, "test_") ||
+		strings.HasSuffix(base, ".test.js") ||
+		strings.HasSuffix(base, ".spec.js") ||
+		strings.HasSuffix(base, ".test.ts") ||
+		strings.HasSuffix(base, ".spec.ts")
 }
 
 func lineAt(text string, line int) string {
