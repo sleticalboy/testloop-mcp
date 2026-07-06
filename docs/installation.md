@@ -228,6 +228,8 @@ testloop-mcp --print-config=codex | testloop-mcp --check-config -
 testloop-mcp --doctor-config
 ```
 
+诊断只读取配置，不会写入文件；如果配置文件存在但没有 `testloop` server，会列出已发现的其他 MCP server。
+
 `~/.codex/config.toml`:
 
 ```toml

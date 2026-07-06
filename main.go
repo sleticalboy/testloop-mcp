@@ -211,20 +211,27 @@ func doctorClientConfig(stdout, stderr io.Writer) int {
 	found := false
 	allOK := true
 	for _, info := range recommendedConfigPaths() {
-		if _, err := os.Stat(info.Path); err != nil {
+		data, err := os.ReadFile(info.Path)
+		if err != nil {
 			continue
 		}
 		found = true
 		fmt.Fprintf(stdout, "- %s: ", info.Name)
-		var checkOut, checkErr strings.Builder
-		code := checkClientConfig(serverConfig{checkConfig: info.Path}, strings.NewReader(""), &checkOut, &checkErr)
-		if code == 0 {
-			fmt.Fprint(stdout, strings.TrimSpace(checkOut.String()))
-			fmt.Fprintln(stdout)
-		} else {
+
+		entries := parseClientConfigEntries(data)
+		if len(entries) == 0 {
 			allOK = false
-			fmt.Fprint(stdout, strings.TrimSpace(checkErr.String()))
-			fmt.Fprintln(stdout)
+			fmt.Fprintln(stdout, "invalid MCP config; no command or url entries found")
+			continue
+		}
+		testloopEntries := filterConfigEntries(entries, "testloop")
+		if len(testloopEntries) == 0 {
+			fmt.Fprintln(stdout, "missing testloop server")
+			fmt.Fprintf(stdout, "  other_servers: %s\n", strings.Join(configEntryNames(entries), ", "))
+			continue
+		}
+		if !validateConfigEntries(stdout, stdout, testloopEntries) {
+			allOK = false
 		}
 	}
 	if !found {
@@ -234,6 +241,52 @@ func doctorClientConfig(stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func validateConfigEntries(stdout, stderr io.Writer, entries []clientConfigEntry) bool {
+	ok := true
+	for _, entry := range entries {
+		switch {
+		case strings.TrimSpace(entry.Command) != "":
+			if err := validateConfigCommand(entry.Command); err != nil {
+				fmt.Fprintf(stderr, "error: %s command 无效: %v\n", entry.Name, err)
+				ok = false
+			} else {
+				fmt.Fprintf(stdout, "ok: %s command %s\n", entry.Name, entry.Command)
+			}
+		case strings.TrimSpace(entry.URL) != "":
+			if err := validateConfigURL(entry.URL); err != nil {
+				fmt.Fprintf(stderr, "error: %s url 无效: %v\n", entry.Name, err)
+				ok = false
+			} else {
+				fmt.Fprintf(stdout, "ok: %s url %s\n", entry.Name, entry.URL)
+			}
+		}
+	}
+	return ok
+}
+
+func filterConfigEntries(entries []clientConfigEntry, name string) []clientConfigEntry {
+	var filtered []clientConfigEntry
+	for _, entry := range entries {
+		if entry.Name == name {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
+func configEntryNames(entries []clientConfigEntry) []string {
+	seen := map[string]bool{}
+	var names []string
+	for _, entry := range entries {
+		if seen[entry.Name] {
+			continue
+		}
+		seen[entry.Name] = true
+		names = append(names, entry.Name)
+	}
+	return names
 }
 
 func recommendedConfigPaths() []configPathInfo {

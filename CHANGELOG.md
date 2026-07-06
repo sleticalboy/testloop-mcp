@@ -6,7 +6,7 @@
 
 - 主二进制新增 `--print-config`，可输出 Codex、Codex HTTP、Claude Code / Claude Desktop 和 Cursor 的 MCP 配置片段。
 - 主二进制新增 `--check-config`，可读取配置文件或 stdin，检查 MCP server 的 `command` 是否存在且可执行，或 `url` 是否是合法 HTTP endpoint。
-- 主二进制新增 `--doctor-config`，可输出推荐配置路径并只读校验已存在的 Codex、Claude 和 Cursor 配置。
+- 主二进制新增 `--doctor-config`，可输出推荐配置路径、只读校验已存在的 Codex、Claude 和 Cursor 配置，并区分缺少 `testloop` server 与其他 MCP server 正常配置。
 - 新增 `docs/agent-workflow.md`，展示 `run_tests -> parse_results -> parse_coverage -> generate_tests -> run_tests` 的 Agent 闭环顺序。
 - 新增 `scripts/generate-client-config.sh`，作为源码仓库里的配置片段生成辅助入口。
 

@@ -323,6 +323,35 @@ func TestDoctorClientConfigChecksExistingConfig(t *testing.T) {
 	}
 }
 
+func TestDoctorClientConfigReportsMissingTestloopServer(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Chdir(dir)
+	codexDir := filepath.Join(dir, ".codex")
+	if err := os.MkdirAll(codexDir, 0o755); err != nil {
+		t.Fatalf("mkdir codex: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(codexDir, "config.toml"), []byte("[mcp_servers.context7]\ncommand = \"true\"\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var stdout, stderr bytes.Buffer
+
+	code := doctorClientConfig(&stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	got := stdout.String()
+	for _, want := range []string{
+		"Codex: missing testloop server",
+		"other_servers: context7",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in doctor output:\n%s", want, got)
+		}
+	}
+}
+
 func TestHTTPMuxHealthz(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
