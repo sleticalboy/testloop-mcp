@@ -42,7 +42,38 @@
 }
 ```
 
-## 2. 生成覆盖率报告
+## 2. 修复真实失败
+
+当 `run_tests` 或 `parse_results` 返回 `status: "fail"` 时，不要先补覆盖率。先把 `failures[]` 序列化成 JSON 字符串，连同源码路径交给 `fix_suggestions`：
+
+```json
+{
+  "tool": "fix_suggestions",
+  "arguments": {
+    "failures": "[{\"test_name\":\"TestDivideByZero\",\"file\":\"./demo/calc.go\",\"line\":18,\"error\":\"got nil, want divide by zero error\"}]",
+    "source_code": "./demo/calc.go",
+    "test_code": "./demo/calc_test.go"
+  }
+}
+```
+
+`fix_suggestions` 返回结构化修复建议：
+
+```json
+[
+  {
+    "file": "./demo/calc.go",
+    "line": 18,
+    "issue": "got nil, want divide by zero error",
+    "suggested_fix": "期望值不匹配...",
+    "confidence": 0.8
+  }
+]
+```
+
+Agent 应把建议当作定位线索，而不是直接盲改。修改源码或测试后，重新调用 `run_tests`。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
+
+## 3. 生成覆盖率报告
 
 `parse_coverage` 解析已有报告文件，不负责替代生态工具生成报告。Go 项目可先让 Agent 执行：
 
@@ -64,7 +95,7 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 返回里的 `test_tasks[]` 是面向 Agent 的增量测试计划，包含目标函数、未覆盖行、建议测试文件、测试函数名、断言重点和建议输入。
 
-## 3. 按覆盖率任务生成增量测试
+## 4. 按覆盖率任务生成增量测试
 
 取 `parse_coverage` 返回的一个 `test_tasks[]` 项，作为 `generate_tests.coverage_task` 传入：
 
@@ -96,7 +127,7 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 `generate_tests` 会把任务写入 `context.coverage_task`，并优先使用任务里的 `test_file`、`test_name`、`suggested_inputs` 和 `assertion_focus` 收窄生成范围。
 
-## 4. 重新运行并收敛
+## 5. 重新运行并收敛
 
 生成测试后再次调用：
 
