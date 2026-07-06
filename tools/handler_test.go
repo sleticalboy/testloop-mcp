@@ -303,6 +303,9 @@ func TestHandleFixSuggestionsGotWant(t *testing.T) {
 		t.Fatalf("suggestions len = %d, want 1", len(suggestions))
 	}
 	if suggestions[0].Confidence != 0.8 ||
+		suggestions[0].Category != "expectation_mismatch" ||
+		suggestions[0].ContextFile != source ||
+		suggestions[0].ContextLine != 2 ||
 		!strings.Contains(suggestions[0].SuggestedFix, "实际值: 2") ||
 		!strings.Contains(suggestions[0].SuggestedFix, "源码附近行") ||
 		!strings.Contains(suggestions[0].SuggestedFix, "func Add") {
@@ -345,6 +348,11 @@ func TestHandleFixSuggestionsUsesTestLineForTestFailure(t *testing.T) {
 	}
 	if len(suggestions) != 1 {
 		t.Fatalf("suggestions len = %d, want 1", len(suggestions))
+	}
+	if suggestions[0].Category != "expectation_mismatch" ||
+		suggestions[0].ContextFile != testFile ||
+		suggestions[0].ContextLine != 2 {
+		t.Fatalf("unexpected structured context: %+v", suggestions[0])
 	}
 	got := suggestions[0].SuggestedFix
 	if !strings.Contains(got, "测试附近行") || !strings.Contains(got, "Add(1, 1)") {
@@ -395,6 +403,9 @@ func TestHandleFixSuggestionsMatchesRelativeTestFailurePath(t *testing.T) {
 	if len(suggestions) != 1 {
 		t.Fatalf("suggestions len = %d, want 1", len(suggestions))
 	}
+	if suggestions[0].ContextFile != testFile || suggestions[0].ContextLine != 2 {
+		t.Fatalf("unexpected relative path context: %+v", suggestions[0])
+	}
 	if got := suggestions[0].SuggestedFix; !strings.Contains(got, "测试附近行") || !strings.Contains(got, "Add(1, 1)") {
 		t.Fatalf("suggestion missing relative test context: %+v", suggestions[0])
 	}
@@ -435,17 +446,21 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 	}
 	checks := []struct {
 		wantConfidence float64
+		wantCategory   string
 		wantTexts      []string
 	}{
-		{0.9, []string{"nil"}},
-		{0.9, []string{"边界检查", "失败索引: 2", "当前长度: 1"}},
-		{0.95, []string{"除零检查", "除数是否为 0"}},
-		{0.7, []string{"拼写正确", "符号: missingSymbol"}},
-		{0.7, []string{"类型转换", "函数签名"}},
+		{0.9, "runtime_panic", []string{"nil"}},
+		{0.9, "index_out_of_range", []string{"边界检查", "失败索引: 2", "当前长度: 1"}},
+		{0.95, "divide_by_zero", []string{"除零检查", "除数是否为 0"}},
+		{0.7, "undefined_symbol", []string{"拼写正确", "符号: missingSymbol"}},
+		{0.7, "type_mismatch", []string{"类型转换", "函数签名"}},
 	}
 	for i, check := range checks {
 		if suggestions[i].Confidence != check.wantConfidence {
 			t.Fatalf("suggestion %d = %+v, want confidence %.1f", i, suggestions[i], check.wantConfidence)
+		}
+		if suggestions[i].Category != check.wantCategory {
+			t.Fatalf("suggestion %d = %+v, want category %q", i, suggestions[i], check.wantCategory)
 		}
 		for _, wantText := range check.wantTexts {
 			if !strings.Contains(suggestions[i].SuggestedFix, wantText) {

@@ -362,6 +362,9 @@ func TestE2E_FixSuggestions(t *testing.T) {
 	if first["suggested_fix"] == nil {
 		t.Error("suggested_fix is missing")
 	}
+	if first["category"] != "expectation_mismatch" {
+		t.Errorf("category = %v, want expectation_mismatch", first["category"])
+	}
 
 	t.Logf("fix_suggestions: %d suggestions, first confidence=%v", len(suggestions), first["confidence"])
 }

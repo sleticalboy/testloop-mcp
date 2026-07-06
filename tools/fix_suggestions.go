@@ -77,30 +77,39 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 
 		errorMsg := failure.Error
 		lowerError := strings.ToLower(errorMsg)
-		sourceLine, testLine := failureContextLines(failure, sourceCode, testCode, sourceFile, testFile)
+		context := failureContextLines(failure, sourceCode, testCode, sourceFile, testFile)
+		suggestion.ContextFile = context.File
+		suggestion.ContextLine = context.Line
 
 		if strings.Contains(lowerError, "got") && strings.Contains(lowerError, "want") {
-			suggestion.SuggestedFix = analyzeGotWant(errorMsg, sourceLine, testLine)
+			suggestion.Category = "expectation_mismatch"
+			suggestion.SuggestedFix = analyzeGotWant(errorMsg, context.SourceLine, context.TestLine)
 			suggestion.Confidence = 0.8
 		} else if strings.Contains(lowerError, "index out of range") {
-			suggestion.SuggestedFix = analyzeIndexOutOfRange(errorMsg, sourceLine)
+			suggestion.Category = "index_out_of_range"
+			suggestion.SuggestedFix = analyzeIndexOutOfRange(errorMsg, context.SourceLine)
 			suggestion.Confidence = 0.9
 		} else if strings.Contains(lowerError, "division by zero") || strings.Contains(lowerError, "divide by zero") {
-			suggestion.SuggestedFix = analyzeDivideByZero(sourceLine)
+			suggestion.Category = "divide_by_zero"
+			suggestion.SuggestedFix = analyzeDivideByZero(context.SourceLine)
 			suggestion.Confidence = 0.95
 		} else if strings.Contains(lowerError, "nil pointer") ||
 			strings.Contains(lowerError, "invalid memory address") ||
 			strings.Contains(lowerError, "panic: runtime error") {
-			suggestion.SuggestedFix = analyzeRuntimePanic(errorMsg, sourceLine)
+			suggestion.Category = "runtime_panic"
+			suggestion.SuggestedFix = analyzeRuntimePanic(errorMsg, context.SourceLine)
 			suggestion.Confidence = 0.9
 		} else if strings.Contains(lowerError, "undefined:") {
+			suggestion.Category = "undefined_symbol"
 			suggestion.SuggestedFix = analyzeUndefined(errorMsg)
 			suggestion.Confidence = 0.7
 		} else if strings.Contains(lowerError, "type mismatch") || strings.Contains(lowerError, "cannot use") {
-			suggestion.SuggestedFix = analyzeTypeMismatch(errorMsg, sourceLine)
+			suggestion.Category = "type_mismatch"
+			suggestion.SuggestedFix = analyzeTypeMismatch(errorMsg, context.SourceLine)
 			suggestion.Confidence = 0.7
 		} else {
-			suggestion.SuggestedFix = analyzeGenericFailure(errorMsg, sourceLine, testLine)
+			suggestion.Category = "generic_failure"
+			suggestion.SuggestedFix = analyzeGenericFailure(errorMsg, context.SourceLine, context.TestLine)
 			suggestion.Confidence = 0.5
 		}
 
@@ -232,22 +241,38 @@ func appendContextLines(sb *strings.Builder, sourceLine, testLine string) {
 	}
 }
 
-func failureContextLines(failure types.TestFailure, sourceCode, testCode, sourceFile, testFile string) (string, string) {
+type failureContext struct {
+	SourceLine string
+	TestLine   string
+	File       string
+	Line       int
+}
+
+func failureContextLines(failure types.TestFailure, sourceCode, testCode, sourceFile, testFile string) failureContext {
 	if failure.Line <= 0 {
-		return "", ""
+		return failureContext{}
 	}
 	switch {
 	case samePath(failure.File, sourceFile):
-		return lineAt(sourceCode, failure.Line), ""
+		return newFailureContext(lineAt(sourceCode, failure.Line), "", sourceFile, failure.Line)
 	case testFile != "" && samePath(failure.File, testFile):
-		return "", lineAt(testCode, failure.Line)
+		return newFailureContext("", lineAt(testCode, failure.Line), testFile, failure.Line)
 	case failure.File == "":
-		return lineAt(sourceCode, failure.Line), ""
+		return newFailureContext(lineAt(sourceCode, failure.Line), "", sourceFile, failure.Line)
 	case looksLikeTestFile(failure.File):
-		return "", lineAt(testCode, failure.Line)
+		return newFailureContext("", lineAt(testCode, failure.Line), testFile, failure.Line)
 	default:
-		return "", ""
+		return failureContext{}
 	}
+}
+
+func newFailureContext(sourceLine, testLine, file string, line int) failureContext {
+	ctx := failureContext{SourceLine: sourceLine, TestLine: testLine}
+	if strings.TrimSpace(sourceLine) != "" || strings.TrimSpace(testLine) != "" {
+		ctx.File = file
+		ctx.Line = line
+	}
+	return ctx
 }
 
 func samePath(a, b string) bool {

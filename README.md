@@ -250,9 +250,9 @@ Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md
 | `source_code` | string | ✅ | 源代码文件路径 |
 | `test_code` | string | — | 测试代码文件路径（可选，增强分析） |
 
-**返回：** `[{ file, line, issue, suggested_fix, confidence }]`
+**返回：** `[{ file, line, issue, category, context_file, context_line, suggested_fix, confidence }]`
 
-识别的失败类型：期望值不匹配（`got X, want Y`）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。建议会尽量带上实际/期望值、越界索引和长度、相关源码行等上下文，便于 Agent 判断是修测试还是修实现。
+识别的失败类型：期望值不匹配（`got X, want Y`）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。返回会用 `category` 标识失败类型，并在能匹配到源码或测试文件时填充 `context_file` / `context_line`；建议文本也会尽量带上实际/期望值、越界索引和长度、相关源码行等上下文，便于 Agent 判断是修测试还是修实现。
 
 ---
 

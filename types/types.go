@@ -29,6 +29,9 @@ type FixSuggestion struct {
 	File         string  `json:"file"`
 	Line         int     `json:"line"`
 	Issue        string  `json:"issue"`
+	Category     string  `json:"category,omitempty"`
+	ContextFile  string  `json:"context_file,omitempty"`
+	ContextLine  int     `json:"context_line,omitempty"`
 	SuggestedFix string  `json:"suggested_fix"`
 	Confidence   float64 `json:"confidence"`
 }

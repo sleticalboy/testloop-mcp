@@ -65,13 +65,16 @@
     "file": "./demo/calc.go",
     "line": 18,
     "issue": "got nil, want divide by zero error",
+    "category": "expectation_mismatch",
+    "context_file": "./demo/calc_test.go",
+    "context_line": 12,
     "suggested_fix": "期望值不匹配...",
     "confidence": 0.8
   }
 ]
 ```
 
-Agent 应把建议当作定位线索，而不是直接盲改。修改源码或测试后，重新调用 `run_tests`。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
+Agent 应优先读取 `category`、`context_file` 和 `context_line` 定位问题，再把 `suggested_fix` 当作修复线索，而不是直接盲改。修改源码或测试后，重新调用 `run_tests`。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
 
 ## 3. 生成覆盖率报告
 
