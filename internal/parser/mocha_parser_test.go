@@ -61,14 +61,34 @@ func TestParseMochaTestFailureDetails(t *testing.T) {
 func TestParseMochaTestFallbackCountsWithoutSummary(t *testing.T) {
 	output := `  calc
     ✓ add() should add numbers
-    1) divide() should handle division by zero`
+    ✔ subtract() should subtract numbers
+    1) divide() should handle division by zero
+    ✘ multiply() should detect overflow`
 
 	result := ParseMochaTest(output)
 
 	if result.Status != "fail" {
 		t.Errorf("Expected fail status, got %s", result.Status)
 	}
-	if result.Total != 2 || result.Passed != 1 || result.Failed != 1 {
+	if result.Total != 4 || result.Passed != 2 || result.Failed != 2 {
 		t.Errorf("Unexpected fallback counts: total=%d passed=%d failed=%d", result.Total, result.Passed, result.Failed)
+	}
+}
+
+func TestParseMochaTestPendingSummary(t *testing.T) {
+	output := `  calc
+    ✓ add() should add numbers
+    - subtract() should subtract numbers
+
+  1 passing (9ms)
+  1 pending`
+
+	result := ParseMochaTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 2 || result.Passed != 1 || result.Skipped != 1 || result.Failed != 0 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
 	}
 }

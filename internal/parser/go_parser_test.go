@@ -120,3 +120,74 @@ func TestParseGoTest_JSONSkipOutputIsNotFailure(t *testing.T) {
 		t.Fatalf("统计错误: passed=%d skipped=%d total=%d", result.Passed, result.Skipped, result.Total)
 	}
 }
+
+func TestParseGoTest_JSONPackageFailureWithoutTestFailure(t *testing.T) {
+	output := `
+{"Action":"output","Package":"example.com/calc","Output":"setup failed\n"}
+{"Action":"fail","Package":"example.com/calc","Elapsed":0}
+`
+
+	result := ParseGoTest(output)
+
+	if result.Status != "fail" {
+		t.Fatalf("期望 status=fail，实际 %s", result.Status)
+	}
+	if result.Total != 0 || result.Failed != 0 {
+		t.Fatalf("包级失败不应伪造测试计数: total=%d failed=%d", result.Total, result.Failed)
+	}
+	if len(result.Failures) != 1 {
+		t.Fatalf("期望 1 个包级失败，实际 %d", len(result.Failures))
+	}
+	failure := result.Failures[0]
+	if failure.TestName != "example.com/calc" || failure.Error != "package failed" {
+		t.Fatalf("包级失败错误: %+v", failure)
+	}
+}
+
+func TestParseGoTest_TextParserWhenFirstNonEmptyLineIsNotJSON(t *testing.T) {
+	output := `
+not json despite later JSON output
+{"Action":"run","Package":"example.com/calc","Test":"TestLogOnly"}
+{"Action":"output","Package":"example.com/calc","Test":"TestLogOnly","Output":"unexpected log detail\n"}
+{"Action":"fail","Package":"example.com/calc","Test":"TestLogOnly","Elapsed":0}
+{"Action":"output","Package":"example.com/calc","Output":"coverage: not-a-number of statements\n"}
+`
+
+	result := ParseGoTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("首个非空行不是 JSON 时应按文本输出解析，实际 %s", result.Status)
+	}
+	if result.CoveragePercent != 0 || len(result.Failures) != 0 {
+		t.Fatalf("文本解析不应读取 JSON 事件: coverage=%.1f failures=%+v", result.CoveragePercent, result.Failures)
+	}
+}
+
+func TestParseGoTest_JSONSkipsMalformedEventsAndKeepsRawFailureDetails(t *testing.T) {
+	output := `
+{"Action":"run","Package":"example.com/calc","Test":"TestLogOnly"}
+{malformed json
+{"Action":"output","Package":"example.com/calc","Test":"TestLogOnly","Output":"unexpected log detail\n"}
+{"Action":"fail","Package":"example.com/calc","Test":"TestLogOnly","Elapsed":0}
+{"Action":"output","Package":"example.com/calc","Output":"coverage: not-a-number of statements\n"}
+`
+
+	result := ParseGoTest(output)
+
+	if result.Status != "fail" || result.Total != 1 || result.Failed != 1 {
+		t.Fatalf("统计错误: status=%s total=%d failed=%d", result.Status, result.Total, result.Failed)
+	}
+	if result.CoveragePercent != 0 {
+		t.Fatalf("无效 coverage 应回退为 0，实际 %.1f", result.CoveragePercent)
+	}
+	if len(result.Failures) != 1 {
+		t.Fatalf("期望 1 个失败，实际 %d", len(result.Failures))
+	}
+	failure := result.Failures[0]
+	if failure.TestName != "TestLogOnly" || failure.Error != "unexpected log detail" {
+		t.Fatalf("失败详情错误: %+v", failure)
+	}
+	if failure.File != "" || failure.Line != 0 {
+		t.Fatalf("非结构化详情不应设置 file/line: %+v", failure)
+	}
+}
