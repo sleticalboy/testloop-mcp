@@ -112,10 +112,10 @@
 - 修正 Alpine 运行时镜像安装不存在的 `musl-libc` 包的问题。
 - 修正 `.gitignore` 误伤 `cmd/testgen/main.go` 的问题。
 
-### Known Limitations
+### Known Limitations at Release
 
-- Rust `cargo tarpaulin` 覆盖率解析尚未实现。
-- Java JaCoCo 覆盖率解析尚未实现。
+- Rust `cargo tarpaulin` 覆盖率解析在 v0.1.0 发布时尚未实现。
+- Java JaCoCo 覆盖率解析在 v0.1.0 发布时尚未实现。
 - LLM provider 当前是命令协议适配层，不内置具体模型厂商。
 - 静态测试生成仍以可运行骨架和上下文增强为主，不承诺替代通用 AI Agent 的完整语义测试生成。
 
