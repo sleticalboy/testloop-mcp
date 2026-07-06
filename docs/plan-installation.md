@@ -67,3 +67,8 @@
 - [x] `CHANGELOG.md` 已整理 `v0.4.3 - 2026-07-06`。
 - [x] 新增 `docs/plan-release-notes-v0.4.3.md`。
 - [x] MCP server implementation version 更新为 `0.4.3`。
+- [x] Tag `v0.4.3` 已推送并指向 `ddd645d5943cda338c5175882ddd4a873c239ffb`。
+- [x] Release Artifacts run `28761435820` 已通过，并上传三平台 tarball 与 `.sha256`。
+- [x] `TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh` 已验证可直接下载 release 资产并安装。
+- [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.3`。
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.3` 可用。
