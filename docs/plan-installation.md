@@ -104,3 +104,4 @@
 ## 下一版发布维护
 
 - [x] Release Artifacts workflow 已补充上传前资产验证：校验 `.sha256`，并检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`。
+- [x] Release Artifacts workflow run `28765386761` 已验证 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 的上传前资产校验均通过。
