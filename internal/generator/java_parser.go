@@ -223,6 +223,13 @@ func javaExtractParams(node *sitter.Node, source []byte) []javaParamInfo {
 			if nameNode != nil {
 				p.Name = nameNode.Content(source)
 			}
+			if p.Type == "" || p.Name == "" {
+				parts := strings.Fields(strings.TrimSpace(child.Content(source)))
+				if len(parts) >= 2 {
+					p.Type = parts[0]
+					p.Name = parts[len(parts)-1]
+				}
+			}
 			params = append(params, p)
 		}
 	}

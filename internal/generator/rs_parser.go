@@ -292,6 +292,9 @@ func rsInferDefaultValue(typ string) string {
 	if typ == "" {
 		return "()"
 	}
+	if strings.HasPrefix(strings.TrimSpace(typ), "&str") {
+		return "\"test\""
+	}
 	// 去掉 & 和 mut
 	typ = strings.TrimPrefix(typ, "&")
 	typ = strings.TrimPrefix(typ, "mut ")
@@ -308,10 +311,8 @@ func rsInferDefaultValue(typ string) string {
 		return "false"
 	case typ == "char":
 		return "'a'"
-	case typ == "String" || strings.HasPrefix(typ, "&str"):
+	case typ == "String":
 		return "\"test\".to_string()"
-	case strings.HasPrefix(typ, "&str"):
-		return "\"test\""
 	case strings.HasPrefix(typ, "Option<"):
 		return "None"
 	case strings.HasPrefix(typ, "Vec<"):

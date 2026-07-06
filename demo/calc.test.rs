@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn test_greet() {
-        let result = Calculator::greet(str::new());
+        let result = Calculator::greet("test");
         // TODO: replace with actual expected value
         assert!(result == "test".to_string());
     }
@@ -44,13 +44,13 @@ mod tests {
 
     #[test]
     fn test_fetch_data() {
-        let result = Calculator::fetch_data(str::new());
+        let result = Calculator::fetch_data("test");
         assert!(result.is_ok() || result.is_err());
     }
 
     #[test]
     fn test_fetch_data_returns_err_for_invalid_input() {
-        let result = Calculator::fetch_data(str::new());
+        let result = Calculator::fetch_data("test");
         // This may return Err depending on input
         if let Err(e) = result {
             println!("Got expected error: {{:?}}", e);
