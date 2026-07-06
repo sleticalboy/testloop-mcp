@@ -48,7 +48,14 @@ AI IDE (Claude Code / Cursor / Copilot)
 
 ## 安装
 
-推荐使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产；当前 release 没有匹配资产时，会自动回退到 `go install`：
+macOS / Linux 推荐使用 Homebrew：
+
+```bash
+brew tap sleticalboy/tap
+brew install testloop-mcp
+```
+
+也可以使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产；当前 release 没有匹配资产时，会自动回退到 `go install`：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh

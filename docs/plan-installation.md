@@ -18,6 +18,7 @@
 10. [x] 准备 Homebrew Formula 草案和本地生成脚本。
 11. [x] 接入 `sleticalboy/homebrew-tap` 同步脚本，支持本地验证后可选提交推送。
 12. [x] 新增独立 Homebrew Tap workflow，按 release tag 创建或更新 tap PR，避免阻塞 Release Artifacts workflow。
+13. [x] README 和安装文档将 Homebrew tap 更新为可用安装路径。
 
 ## 暂缓项
 
@@ -59,3 +60,4 @@
 - [x] 新增 `scripts/generate-homebrew-formula.sh`，可从 GitHub Release asset digest 重新生成 formula。
 - [x] 新增 `scripts/update-homebrew-tap.sh`，可更新 `sleticalboy/homebrew-tap` 工作区并运行 Ruby/Homebrew style 校验。
 - [x] 新增 `.github/workflows/homebrew-tap.yml`，手动输入 tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
+- [x] `brew install --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `v0.4.2` 可用。

@@ -1,8 +1,24 @@
 # 安装与接入
 
-本文面向想直接使用 testloop-mcp 的用户，覆盖二进制下载、校验、本地构建、Docker 运行和常见 MCP 客户端接入方式。
+本文面向想直接使用 testloop-mcp 的用户，覆盖 Homebrew、二进制下载、校验、本地构建、Docker 运行和常见 MCP 客户端接入方式。
 
-## 推荐方式：安装脚本
+## 推荐方式：Homebrew
+
+macOS / Linux 可以通过 `sleticalboy/tap` 安装：
+
+```bash
+brew tap sleticalboy/tap
+brew install testloop-mcp
+```
+
+验证命令：
+
+```bash
+testloop-mcp --help
+testloop-testgen --help
+```
+
+## 安装脚本
 
 安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt`。当前 release 没有对应资产时，会自动回退到 `go install`。
 
@@ -67,9 +83,11 @@ go install github.com/sleticalboy/testloop-mcp@latest
 go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 ```
 
-## Homebrew tap 准备
+## Homebrew tap 维护
 
-仓库内提供了可复制到 tap 仓库的公式草案：
+维护者可以用仓库内的公式和脚本更新 `sleticalboy/homebrew-tap`。
+
+仓库内的公式草案：
 
 ```bash
 Formula/testloop-mcp.rb
@@ -94,7 +112,7 @@ scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
 TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.2 ../homebrew-tap
 ```
 
-正式 tap 更新后，可以提供 `brew install sleticalboy/tap/testloop-mcp` 路径。
+也可以在 GitHub Actions 里手动触发 `Homebrew Tap` workflow，输入 release tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
 
 ## Docker 运行
 
