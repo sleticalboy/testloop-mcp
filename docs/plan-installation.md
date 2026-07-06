@@ -22,7 +22,7 @@
 
 ## 暂缓项
 
-- Windows 预构建二进制：项目使用 CGO 和 tree-sitter，Windows runner 需要额外 MinGW/MSYS2 工具链验证，暂时保留 `go install` 和源码构建路径。
+- Windows 预构建二进制：项目使用 CGO 和 tree-sitter，正式 release matrix 暂不纳入；先通过独立 Windows Release Probe workflow 验证 MinGW/MSYS2 工具链。
 - Homebrew tap 发布结果：独立 Homebrew Tap workflow 依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时不能自动开 PR，但不影响 Release Artifacts workflow 上传资产。
 
 ## v0.4.1 发布验证
@@ -77,3 +77,4 @@
 
 - [x] 新增 `scripts/package-release-asset.sh`，将 release 资产构建、打包和 `.sha256` 生成从 workflow YAML 中抽出。
 - [x] Release Artifacts workflow 改为调用 `scripts/package-release-asset.sh`，为后续调试单平台和扩展 Windows zip 资产降低改动面。
+- [x] 新增 `.github/workflows/windows-release-probe.yml`，手动验证 `windows_amd64` zip 构建和 `.sha256`，不影响正式 release matrix。

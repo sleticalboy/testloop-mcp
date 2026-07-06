@@ -5,6 +5,7 @@
 ### Changed
 
 - Release 资产打包逻辑抽到 `scripts/package-release-asset.sh`，workflow 复用同一脚本生成 tarball/zip 和 `.sha256`。
+- 新增手动触发的 Windows Release Probe workflow，用于隔离验证 `windows_amd64` CGO 打包链路。
 
 ## v0.4.3 - 2026-07-06
 

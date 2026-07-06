@@ -1,0 +1,66 @@
+name: Windows Release Probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Archive tag label to build, for example v0.4.3"
+        required: true
+        default: "v0.4.3"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-amd64:
+    name: Build windows_amd64
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            base-devel
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            zip
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build windows asset
+        run: |
+          set -euo pipefail
+          scripts/package-release-asset.sh "${{ inputs.tag }}" windows_amd64 windows amd64
+
+      - name: Inspect archive
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c "testloop-mcp_${{ inputs.tag }}_windows_amd64.zip.sha256"
+          unzip -l "testloop-mcp_${{ inputs.tag }}_windows_amd64.zip"
+
+      - name: Upload probe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-probe
+          path: |
+            dist/testloop-mcp_${{ inputs.tag }}_windows_amd64.zip
+            dist/testloop-mcp_${{ inputs.tag }}_windows_amd64.zip.sha256
+          if-no-files-found: error
