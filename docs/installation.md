@@ -20,7 +20,7 @@ testloop-testgen --help
 
 ## 安装脚本
 
-安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt` 或单资产 `.sha256`。Linux/macOS 会安装 tarball，Git Bash/MSYS/Cygwin 等 Windows shell 会安装 `windows_amd64` zip；当前 release 没有对应资产时，会自动回退到 `go install`。
+安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt` 或单资产 `.sha256`。Linux/macOS 会安装 tarball，Git Bash/MSYS/Cygwin 等 Windows shell 会安装 `windows_amd64` 或 `windows_arm64` zip；当前 release 没有对应资产时，会自动回退到 `go install`。
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 可选环境变量：
 
 ```bash
-TESTLOOP_MCP_VERSION=v0.4.6 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
@@ -38,7 +38,7 @@ TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```bash
 mkdir -p "$HOME/.local/bin"
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-TESTLOOP_MCP_VERSION=v0.4.6 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
 testloop-mcp.exe --help
 testloop-testgen.exe --help
 ```
@@ -46,13 +46,13 @@ testloop-testgen.exe --help
 也可以显式安装到已有的 Windows 用户 bin 目录：
 
 ```bash
-TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.4.6 sh scripts/install.sh
+TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
 ```
 
 维护者调试平台选择时也可以显式覆盖检测结果：
 
 ```bash
-TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.6 sh scripts/install.sh
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
 ```
 
 脚本会安装两个命令：
@@ -64,22 +64,24 @@ Windows shell 下对应文件名为 `testloop-mcp.exe` 和 `testloop-testgen.exe
 
 ## 手动下载 Release 二进制
 
-当前 `v0.4.6` Release 已提供以下产物：
+当前 `v0.4.7` Release 已提供以下产物：
 
-- `testloop-mcp_v0.4.6_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.6_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.6_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_windows_amd64.zip`
-- `testloop-mcp_v0.4.6_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.7_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.7_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.7_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_windows_amd64.zip`
+- `testloop-mcp_v0.4.7_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.7_windows_arm64.zip`
+- `testloop-mcp_v0.4.7_windows_arm64.zip.sha256`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.4.6_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.4.7_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
@@ -87,17 +89,17 @@ chmod +x testloop-mcp testloop-testgen
 
 Release 产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应资产的 `.sha256`。
 
-Windows amd64 可直接下载 zip：
+Windows amd64/arm64 可直接下载 zip：
 
 ```powershell
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_windows_amd64.zip
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_windows_amd64.zip.sha256
-$expected = (Get-Content .\testloop-mcp_v0.4.6_windows_amd64.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\testloop-mcp_v0.4.6_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip.sha256
+$expected = (Get-Content .\testloop-mcp_v0.4.7_windows_amd64.zip.sha256).Split()[0]
+$actual = (Get-FileHash .\testloop-mcp_v0.4.7_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive .\testloop-mcp_v0.4.6_windows_amd64.zip
-.\testloop-mcp_v0.4.6_windows_amd64\testloop-mcp.exe --help
-.\testloop-mcp_v0.4.6_windows_amd64\testloop-testgen.exe --help
+Expand-Archive .\testloop-mcp_v0.4.7_windows_amd64.zip
+.\testloop-mcp_v0.4.7_windows_amd64\testloop-mcp.exe --help
+.\testloop-mcp_v0.4.7_windows_amd64\testloop-testgen.exe --help
 ```
 
 当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
@@ -137,20 +139,20 @@ Formula/testloop-mcp.rb
 只更新当前仓库内的公式：
 
 ```bash
-scripts/generate-homebrew-formula.sh v0.4.6
+scripts/generate-homebrew-formula.sh v0.4.7
 ruby -c Formula/testloop-mcp.rb
 ```
 
 同步到 `sleticalboy/homebrew-tap` 工作区：
 
 ```bash
-scripts/update-homebrew-tap.sh v0.4.6 ../homebrew-tap
+scripts/update-homebrew-tap.sh v0.4.7 ../homebrew-tap
 ```
 
 不传 `tap-dir` 时，脚本会把 `sleticalboy/homebrew-tap` 克隆到临时目录并更新公式。默认不会自动提交；确认无误后可用以下环境变量提交和推送 tap 仓库：
 
 ```bash
-TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.6 ../homebrew-tap
+TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.4.7 ../homebrew-tap
 ```
 
 也可以在 GitHub Actions 里手动触发 `Homebrew Tap` workflow，输入 release tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。

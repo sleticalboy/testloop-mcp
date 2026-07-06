@@ -44,7 +44,7 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 
 func newTestloopServer() *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.6"},
+		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.7"},
 		nil,
 	)
 	tools.Register(server)

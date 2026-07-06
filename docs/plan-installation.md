@@ -46,7 +46,9 @@
 
 ## 准备中版本
 
-_暂无。_
+- 目标版本：`v0.4.7`
+- 发布说明草案：`docs/plan-release-notes-v0.4.7.md`
+- 重点：正式发布 Windows arm64 预构建 zip，并让 Windows release 资产上传前执行 `.exe --help` 运行验证。
 
 ## 版本摘要
 
@@ -58,6 +60,7 @@ _暂无。_
 | `v0.4.4` | 正式覆盖 Windows amd64 zip，安装脚本支持 Windows zip，移除临时 probe | Release run `28764619084`；asset verification run `28765386761`；Homebrew tap 升级到 `0.4.4` 并通过 `brew test` |
 | `v0.4.5` | 补强内置静态测试生成器和 parser/helper 回归测试 | Release run `28777039765`；Homebrew tap 升级到 `0.4.5` 并通过 `brew test` |
 | `v0.4.6` | 将发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive | Release run `28782811885`；Homebrew tap 升级到 `0.4.6` 并通过 `brew test` |
+| `v0.4.7` | 准备正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | 待推送 tag、生成资产并更新 Homebrew tap |
 
 ## 发布维护流程
 

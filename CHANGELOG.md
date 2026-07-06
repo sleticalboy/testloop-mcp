@@ -4,6 +4,15 @@
 
 _暂无。_
 
+## v0.4.7 - 2026-07-06
+
+### Changed
+
+- MCP server implementation version 更新为 `0.4.7`。
+- Release Artifacts workflow 新增 `windows_arm64` matrix 项，使用 `windows-11-arm` runner、MSYS2 `CLANGARM64` 和 `mingw-w64-clang-aarch64-clang` 构建 Windows ARM64 zip。
+- Windows release 资产上传前会校验 `.sha256`、检查 zip 内容，并实际运行 `testloop-mcp.exe --help` 和 `testloop-testgen.exe --help`。
+- README、安装文档和发布维护记录同步到 `v0.4.7`。
+
 ## v0.4.6 - 2026-07-06
 
 ### Changed

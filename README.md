@@ -55,7 +55,7 @@ brew tap sleticalboy/tap
 brew install testloop-mcp
 ```
 
-也可以使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产，支持 Linux/macOS tarball 和 Windows amd64 zip；当前 release 没有匹配资产时，会自动回退到 `go install`：
+也可以使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产，支持 Linux/macOS tarball 和 Windows amd64/arm64 zip；当前 release 没有匹配资产时，会自动回退到 `go install`：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
@@ -63,28 +63,28 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 
 Windows Git Bash/MSYS 用户需要确保安装目录在 `PATH` 中；详细说明见 [安装与接入](docs/installation.md)。
 
-当前 `v0.4.6` Release 已提供 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 二进制。手动下载示例：
+当前 `v0.4.7` Release 已提供 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 二进制。手动下载示例：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.4.6_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.4.7_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
 Release 产物会同时提供单资产 `.sha256` 文件，安装脚本会自动选择可用的校验文件。
 
-Windows amd64 可直接下载 zip：
+Windows amd64/arm64 可直接下载 zip：
 
 ```powershell
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_windows_amd64.zip
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.6/testloop-mcp_v0.4.6_windows_amd64.zip.sha256
-$expected = (Get-Content .\testloop-mcp_v0.4.6_windows_amd64.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\testloop-mcp_v0.4.6_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip
+curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip.sha256
+$expected = (Get-Content .\testloop-mcp_v0.4.7_windows_amd64.zip.sha256).Split()[0]
+$actual = (Get-FileHash .\testloop-mcp_v0.4.7_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive .\testloop-mcp_v0.4.6_windows_amd64.zip
-.\testloop-mcp_v0.4.6_windows_amd64\testloop-mcp.exe --help
+Expand-Archive .\testloop-mcp_v0.4.7_windows_amd64.zip
+.\testloop-mcp_v0.4.7_windows_amd64\testloop-mcp.exe --help
 ```
 
 其他未覆盖平台或需要从源码构建：
