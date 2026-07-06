@@ -289,6 +289,7 @@ func TestDoctorClientConfigReportsRecommendedPaths(t *testing.T) {
 		filepath.Join(".cursor", "mcp.json"),
 		"existing_config_checks:",
 		"- none found",
+		"suggestion: start with `testloop-mcp --print-config=codex --config-command",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in doctor output:\n%s", want, got)
@@ -345,6 +346,31 @@ func TestDoctorClientConfigReportsMissingTestloopServer(t *testing.T) {
 	for _, want := range []string{
 		"Codex: missing testloop server",
 		"other_servers: context7",
+		"suggestion: run `testloop-mcp --print-config=codex --config-command",
+		filepath.Join(dir, ".codex", "config.toml"),
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in doctor output:\n%s", want, got)
+		}
+	}
+}
+
+func TestDoctorClientConfigReportsMissingPathSuggestion(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("PATH", dir)
+	t.Chdir(dir)
+	var stdout, stderr bytes.Buffer
+
+	code := doctorClientConfig(&stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	got := stdout.String()
+	for _, want := range []string{
+		"path: missing testloop-mcp",
+		"suggestion: install testloop-mcp or pass an absolute binary path with --config-command",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in doctor output:\n%s", want, got)

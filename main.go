@@ -196,10 +196,13 @@ func doctorClientConfig(stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "binary: %s\n", exe)
 
+	configCommand := exe
 	if pathBinary, err := exec.LookPath("testloop-mcp"); err == nil {
 		fmt.Fprintf(stdout, "path: ok %s\n", pathBinary)
+		configCommand = pathBinary
 	} else {
 		fmt.Fprintf(stdout, "path: missing testloop-mcp\n")
+		fmt.Fprintln(stdout, "  suggestion: install testloop-mcp or pass an absolute binary path with --config-command")
 	}
 
 	fmt.Fprintln(stdout, "recommended_config_paths:")
@@ -222,25 +225,42 @@ func doctorClientConfig(stdout, stderr io.Writer) int {
 		if len(entries) == 0 {
 			allOK = false
 			fmt.Fprintln(stdout, "invalid MCP config; no command or url entries found")
+			fmt.Fprintf(stdout, "  suggestion: run `testloop-mcp --print-config=%s --config-command %s` and merge it into %s\n", clientConfigName(info.Name), strconv.Quote(configCommand), info.Path)
 			continue
 		}
 		testloopEntries := filterConfigEntries(entries, "testloop")
 		if len(testloopEntries) == 0 {
 			fmt.Fprintln(stdout, "missing testloop server")
 			fmt.Fprintf(stdout, "  other_servers: %s\n", strings.Join(configEntryNames(entries), ", "))
+			fmt.Fprintf(stdout, "  suggestion: run `testloop-mcp --print-config=%s --config-command %s` and merge it into %s\n", clientConfigName(info.Name), strconv.Quote(configCommand), info.Path)
 			continue
 		}
 		if !validateConfigEntries(stdout, stdout, testloopEntries) {
 			allOK = false
+			fmt.Fprintf(stdout, "  suggestion: update the testloop server with `testloop-mcp --print-config=%s --config-command %s`\n", clientConfigName(info.Name), strconv.Quote(configCommand))
 		}
 	}
 	if !found {
 		fmt.Fprintln(stdout, "- none found")
+		fmt.Fprintf(stdout, "  suggestion: start with `testloop-mcp --print-config=codex --config-command %s` or choose claude/cursor for another client\n", strconv.Quote(configCommand))
 	}
 	if !allOK {
 		return 1
 	}
 	return 0
+}
+
+func clientConfigName(name string) string {
+	switch strings.ToLower(name) {
+	case "codex":
+		return "codex"
+	case "claude":
+		return "claude"
+	case "cursor":
+		return "cursor"
+	default:
+		return "codex"
+	}
 }
 
 func validateConfigEntries(stdout, stderr io.Writer, entries []clientConfigEntry) bool {

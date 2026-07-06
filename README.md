@@ -131,7 +131,7 @@ testloop-mcp --check-config ~/.codex/config.toml
 testloop-mcp --doctor-config
 ```
 
-诊断会区分“配置文件存在但缺少 `testloop` server”和“已有其他 MCP server 配置正常”。
+诊断会区分“配置文件存在但缺少 `testloop` server”和“已有其他 MCP server 配置正常”，并给出可复制的 `--print-config` 修复建议。
 
 ### Codex
 
