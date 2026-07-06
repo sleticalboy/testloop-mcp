@@ -85,7 +85,7 @@ chmod +x testloop-mcp testloop-testgen
 ./testloop-testgen --help
 ```
 
-后续自动发布产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应资产的 `.sha256`。
+Release 产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应资产的 `.sha256`。
 
 Windows amd64 可直接下载 zip：
 

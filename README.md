@@ -73,7 +73,7 @@ tar -xzf testloop-mcp_v0.4.4_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
-后续自动发布产物会同时提供单资产 `.sha256` 文件，安装脚本会自动选择可用的校验文件。
+Release 产物会同时提供单资产 `.sha256` 文件，安装脚本会自动选择可用的校验文件。
 
 Windows amd64 可直接下载 zip：
 
