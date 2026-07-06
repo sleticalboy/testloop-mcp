@@ -18,6 +18,7 @@ v0.4.5 是测试生成质量和发布前验证版本。这个版本不改变 MCP
 - JS/Python parser 补充分支测试，覆盖 TypeScript 参数形态、解构参数、helper 过滤、decorated Python definition、staticmethod 和 receiver 参数剥离。
 - Java parser 补充分支测试，覆盖 interface、enum、内部类和 helper 方法过滤。
 - `internal/generator` 本地语句覆盖率提升到 `91.7%`。
+- Homebrew formula 测试改为使用 `shell_output(..., 2)` 断言 help 输出，修复 Go `flag` 的 `--help` 退出码导致 `brew test` 失败的问题。
 
 ## 验证
 
@@ -31,20 +32,21 @@ v0.4.5 是测试生成质量和发布前验证版本。这个版本不改变 MCP
 - [x] `ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |f| YAML.load_file(f) }'`
 - [x] `go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml`
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.5-local-package scripts/package-release-asset.sh v0.4.5 darwin_arm64 darwin arm64` 已验证本地打包、checksum 和 tarball 内容
-- [ ] 远端 CI passed
+- [x] 远端 CI passed
 - [x] Tag `v0.4.5` 已推送并指向 `9a903470aea214f34a356ab63e6aefa0eaade833`
-- [ ] Release Artifacts run `28777039765` 通过（当前排队）
-- [ ] `v0.4.5` Release 已包含 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 四类资产及各自 `.sha256`
-- [ ] `TESTLOOP_MCP_VERSION=v0.4.5 sh scripts/install.sh` 已验证可直接下载 release 资产并安装
-- [ ] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
-- [ ] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.5`
-- [ ] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
-- [ ] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
-- [ ] `brew upgrade --formula sleticalboy/tap/testloop-mcp`
-- [ ] `brew test sleticalboy/tap/testloop-mcp`
+- [x] Release Artifacts run `28777039765` 通过
+- [x] `v0.4.5` Release 已包含 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 四类资产及各自 `.sha256`
+- [x] `TESTLOOP_MCP_VERSION=v0.4.5 sh scripts/install.sh` 已验证可直接下载 release 资产并安装
+- [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
+- [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.5`，commit `a0d357b`
+- [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
+- [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 已验证可从 `0.4.4` 升级到 `0.4.5`
+- [x] `brew test sleticalboy/tap/testloop-mcp`
 
 ## 发布信息
 
 - Tag: `v0.4.5` -> `9a903470aea214f34a356ab63e6aefa0eaade833`
-- Release Artifacts run: `28777039765`（当前排队）
-- Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.5（待创建）
+- Release Artifacts run: `28777039765`
+- Homebrew tap commit: `a0d357b Update testloop-mcp to v0.4.5`
+- Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.5
