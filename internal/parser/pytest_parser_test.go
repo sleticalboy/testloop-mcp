@@ -209,6 +209,19 @@ func TestConsumePytestFailureLineKeepsFirstTracebackExpression(t *testing.T) {
 	}
 }
 
+func TestConsumePytestFailureLineKeepsExistingErrorForLocation(t *testing.T) {
+	failure := types.TestFailure{Error: "existing error"}
+
+	consumePytestFailureLine("test_calc.py:4: AssertionError", &failure)
+
+	if failure.File != "test_calc.py" || failure.Line != 4 {
+		t.Fatalf("Expected location test_calc.py:4, got %s:%d", failure.File, failure.Line)
+	}
+	if failure.Error != "existing error" {
+		t.Fatalf("Expected existing error to remain, got %q", failure.Error)
+	}
+}
+
 func TestSummarizePytestFailureUsesDefaultWhenOnlyFramesRemain(t *testing.T) {
 	got := summarizePytestFailure([]string{
 		"",
