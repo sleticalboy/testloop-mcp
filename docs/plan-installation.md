@@ -116,12 +116,11 @@ _暂无。_
 
 ## 待跟进项
 
-- Windows arm64 预构建二进制：已用 `Windows ARM64 Probe` workflow 验证 `windows-11-arm` + MSYS2 `CLANGARM64` 可完成 CGO 构建、zip 校验和 `.exe --help` 运行验证；下一次正式 release 会纳入 `windows_arm64` 资产。
 - Homebrew Tap workflow 自动开 PR：依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时 workflow 会成功跳过 PR 步骤，不影响 Release Artifacts 上传资产，也不影响本地脚本同步 tap。
 
-## Windows arm64 评估
+## Windows arm64 发布验证
 
-当前已把 Windows arm64 加入 Release Artifacts matrix，作为下一次正式 release 的新增资产。
+Windows arm64 已在 `v0.4.7` 正式纳入 Release Artifacts matrix，并发布 `testloop-mcp_v0.4.7_windows_arm64.zip` 和对应 `.sha256`。
 
 已验证路径：
 
@@ -129,8 +128,8 @@ _暂无。_
 - Windows amd64 已通过 `windows-latest` + MSYS2 UCRT64 + `mingw-w64-ucrt-x86_64-gcc` 验证。
 - Windows arm64 已通过手动 `Windows ARM64 Probe` workflow `28784385589` 验证：`windows-11-arm` runner、MSYS2 `CLANGARM64`、`mingw-w64-clang-aarch64-clang`、`CC=clang`、`CXX=clang++` 可以打包 `windows_arm64` zip。
 - Probe 已完成 `.sha256` 校验、zip 内容检查，并在 ARM64 runner 上运行 `testloop-mcp.exe --help` 和 `testloop-testgen.exe --help`。
+- `v0.4.7` 的 `Release Artifacts` workflow `28784950785` 中 `windows_arm64` matrix 项通过，正式 release 页面已包含 Windows arm64 zip。
 
-正式发布前仍需确认：
+后续维护注意：
 
-- 下一次 tag release 的 `Release Artifacts` workflow 中 `windows_arm64` matrix 项通过。
 - GitHub-hosted `windows-11-arm` 仍处于 public preview 时，如果平台临时排队或不可用，不应阻塞 Linux/macOS/Windows amd64 资产发布；必要时可回退为 probe-only。
