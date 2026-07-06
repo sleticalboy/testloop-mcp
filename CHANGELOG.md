@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Release Artifacts workflow 会在上传前校验生成资产的 `.sha256`，并检查 tarball/zip 内包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+
 ## v0.4.4 - 2026-07-06
 
 ### Changed

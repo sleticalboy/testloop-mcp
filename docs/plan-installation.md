@@ -100,3 +100,7 @@
 - [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`。
 - [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.4`，commit `39e2ce3`。
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.4` 可用。
+
+## 下一版发布维护
+
+- [x] Release Artifacts workflow 已补充上传前资产验证：校验 `.sha256`，并检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`。
