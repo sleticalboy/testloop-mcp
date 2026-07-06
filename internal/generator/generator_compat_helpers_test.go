@@ -170,6 +170,104 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	}
 }
 
+func TestGoTableDrivenTestBranches(t *testing.T) {
+	voidTest := genTableDrivenTestForTask(funcInfo{
+		Name: "Notify",
+		Params: []paramInfo{
+			{Name: "message", Type: "string"},
+		},
+	}, nil)
+	for _, want := range []string{
+		"func TestNotify(t *testing.T)",
+		"message string",
+		"Notify(tt.message)",
+	} {
+		if !strings.Contains(voidTest, want) {
+			t.Fatalf("expected %q in void test:\n%s", want, voidTest)
+		}
+	}
+
+	errorTest := genTableDrivenTestForTask(funcInfo{
+		Name: "Validate",
+		Returns: []paramInfo{
+			{Name: "err", Type: "error"},
+		},
+	}, nil)
+	for _, want := range []string{
+		"func TestValidate(t *testing.T)",
+		"err := Validate()",
+		"if err != nil",
+		"unexpected error",
+	} {
+		if !strings.Contains(errorTest, want) {
+			t.Fatalf("expected %q in error test:\n%s", want, errorTest)
+		}
+	}
+
+	multiReturnTest := genTableDrivenTestForTask(funcInfo{
+		Name: "Lookup",
+		Returns: []paramInfo{
+			{Name: "items", Type: "[]string"},
+			{Name: "err", Type: "error"},
+		},
+	}, nil)
+	for _, want := range []string{
+		"got0, got1 := Lookup()",
+		"if !reflect.DeepEqual(got0, tt.items)",
+		"items: got %v, want %v",
+		"if got1 != nil",
+	} {
+		if !strings.Contains(multiReturnTest, want) {
+			t.Fatalf("expected %q in multi-return test:\n%s", want, multiReturnTest)
+		}
+	}
+
+	taskTest := genTableDrivenTestForTask(funcInfo{
+		Name:       "Sum",
+		TypeParams: []string{"T"},
+		Params: []paramInfo{
+			{Name: "values", Type: "[]int", Variadic: true},
+		},
+		Returns: []paramInfo{
+			{Name: "ret0", Type: "int"},
+		},
+	}, &types.CoverageTestTask{
+		ID:        "go-task-2",
+		GapType:   "statement",
+		TestName:  "TestCustomSumGap",
+		LineRange: "10-12",
+	})
+	for _, want := range []string{
+		"func TestCustomSumGap(t *testing.T)",
+		"coverage task: go-task-2 | lines 10-12",
+		"name: \"coverage statement gap\"",
+		"Sum[int](tt.values...)",
+	} {
+		if !strings.Contains(taskTest, want) {
+			t.Fatalf("expected %q in task test:\n%s", want, taskTest)
+		}
+	}
+}
+
+func TestGoFunctionTargetMatching(t *testing.T) {
+	if !goFuncMatchesTarget(funcInfo{Name: "Add"}, "Add") {
+		t.Fatal("function name should match target")
+	}
+	if goFuncMatchesTarget(funcInfo{Name: "Add"}, "Calculator.Add") {
+		t.Fatal("non-method should not match class-qualified target")
+	}
+
+	method := funcInfo{Name: "Save", IsMethod: true, ReceiverType: "*Store"}
+	for _, target := range []string{"Store.Save", "Store_Save"} {
+		if !goFuncMatchesTarget(method, target) {
+			t.Fatalf("method should match target %q", target)
+		}
+	}
+	if goFuncMatchesTarget(method, "Other.Save") {
+		t.Fatal("method should not match unrelated receiver")
+	}
+}
+
 func TestJavaGeneratorSourceAndCompatHelpers(t *testing.T) {
 	source := []byte(`public class Service {
     public static int add(int a, int b) {
