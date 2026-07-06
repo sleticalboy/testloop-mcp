@@ -49,6 +49,8 @@
 ## 准备中版本
 
 - 目标版本：`v0.4.5`
+- Tag：`v0.4.5` -> `9a903470aea214f34a356ab63e6aefa0eaade833`
+- Release Artifacts run：`28777039765`（当前排队）
 - 发布说明草案：`docs/plan-release-notes-v0.4.5.md`
 - 重点：补强内置静态测试生成器的回归测试，覆盖 Go、Python、Jest、Java 和 Rust 的 coverage-task、parser、参数推断和 helper 分支。
 - 本地验证：`go test ./...`、`git diff --check`、release 脚本语法检查、workflow lint 和本机 `darwin_arm64` 打包模拟已通过。

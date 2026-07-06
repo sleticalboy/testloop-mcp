@@ -32,8 +32,8 @@ v0.4.5 是测试生成质量和发布前验证版本。这个版本不改变 MCP
 - [x] `go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml`
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.5-local-package scripts/package-release-asset.sh v0.4.5 darwin_arm64 darwin arm64` 已验证本地打包、checksum 和 tarball 内容
 - [ ] 远端 CI passed
-- [ ] Tag `v0.4.5` 已推送
-- [ ] Release Artifacts run 通过
+- [x] Tag `v0.4.5` 已推送并指向 `9a903470aea214f34a356ab63e6aefa0eaade833`
+- [ ] Release Artifacts run `28777039765` 通过（当前排队）
 - [ ] `v0.4.5` Release 已包含 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 四类资产及各自 `.sha256`
 - [ ] `TESTLOOP_MCP_VERSION=v0.4.5 sh scripts/install.sh` 已验证可直接下载 release 资产并安装
 - [ ] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
@@ -45,5 +45,6 @@ v0.4.5 是测试生成质量和发布前验证版本。这个版本不改变 MCP
 
 ## 发布信息
 
-- Tag: `v0.4.5`（待推送）
+- Tag: `v0.4.5` -> `9a903470aea214f34a356ab63e6aefa0eaade833`
+- Release Artifacts run: `28777039765`（当前排队）
 - Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.5（待创建）
