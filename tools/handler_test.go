@@ -355,6 +355,51 @@ func TestHandleFixSuggestionsUsesTestLineForTestFailure(t *testing.T) {
 	}
 }
 
+func TestHandleFixSuggestionsMatchesRelativeTestFailurePath(t *testing.T) {
+	dir := t.TempDir()
+	demoDir := filepath.Join(dir, "demo")
+	if err := os.MkdirAll(demoDir, 0o755); err != nil {
+		t.Fatalf("mkdir demo: %v", err)
+	}
+	source := filepath.Join(demoDir, "calc.go")
+	if err := os.WriteFile(source, []byte("package demo\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	testFile := filepath.Join(demoDir, "calc_test.go")
+	if err := os.WriteFile(testFile, []byte("package demo\nif got := Add(1, 1); got != 3 { t.Fatalf(\"got %d, want 3\", got) }\n"), 0o644); err != nil {
+		t.Fatalf("write test file: %v", err)
+	}
+	failuresJSON, err := json.Marshal([]types.TestFailure{{
+		TestName: "TestAdd",
+		File:     filepath.Join("demo", "calc_test.go"),
+		Line:     2,
+		Error:    "got 2, want 3",
+	}})
+	if err != nil {
+		t.Fatalf("marshal failures: %v", err)
+	}
+
+	result, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{
+		Failures:   string(failuresJSON),
+		SourceCode: source,
+		TestCode:   testFile,
+	})
+	if err != nil {
+		t.Fatalf("HandleFixSuggestions returned error: %v", err)
+	}
+
+	var suggestions []types.FixSuggestion
+	if err := json.Unmarshal([]byte(resultText(t, result)), &suggestions); err != nil {
+		t.Fatalf("unmarshal suggestions: %v", err)
+	}
+	if len(suggestions) != 1 {
+		t.Fatalf("suggestions len = %d, want 1", len(suggestions))
+	}
+	if got := suggestions[0].SuggestedFix; !strings.Contains(got, "测试附近行") || !strings.Contains(got, "Add(1, 1)") {
+		t.Fatalf("suggestion missing relative test context: %+v", suggestions[0])
+	}
+}
+
 func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")

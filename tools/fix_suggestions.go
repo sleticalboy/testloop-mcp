@@ -254,12 +254,23 @@ func samePath(a, b string) bool {
 	if strings.TrimSpace(a) == "" || strings.TrimSpace(b) == "" {
 		return false
 	}
-	if filepath.Clean(a) == filepath.Clean(b) {
+	cleanA := filepath.Clean(a)
+	cleanB := filepath.Clean(b)
+	if cleanA == cleanB {
 		return true
 	}
 	absA, errA := filepath.Abs(a)
 	absB, errB := filepath.Abs(b)
-	return errA == nil && errB == nil && filepath.Clean(absA) == filepath.Clean(absB)
+	if errA == nil && errB == nil && filepath.Clean(absA) == filepath.Clean(absB) {
+		return true
+	}
+	return pathHasSuffix(cleanA, cleanB) || pathHasSuffix(cleanB, cleanA)
+}
+
+func pathHasSuffix(path, suffix string) bool {
+	path = filepath.ToSlash(filepath.Clean(path))
+	suffix = filepath.ToSlash(filepath.Clean(suffix))
+	return path != "." && suffix != "." && path != suffix && strings.HasSuffix(path, "/"+suffix)
 }
 
 func looksLikeTestFile(path string) bool {
