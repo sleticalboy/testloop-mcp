@@ -53,6 +53,7 @@ TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.4.7 sh scrip
 
 ```bash
 TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=arm64 TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh
 ```
 
 脚本会安装两个命令：
@@ -89,17 +90,18 @@ chmod +x testloop-mcp testloop-testgen
 
 Release 产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应资产的 `.sha256`。
 
-Windows amd64/arm64 可直接下载 zip：
+Windows amd64/arm64 可直接下载 zip；将 `$arch` 设为 `amd64` 或 `arm64`：
 
 ```powershell
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip
-curl.exe -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_amd64.zip.sha256
-$expected = (Get-Content .\testloop-mcp_v0.4.7_windows_amd64.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\testloop-mcp_v0.4.7_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+$arch = "amd64"
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_$arch.zip"
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.4.7/testloop-mcp_v0.4.7_windows_$arch.zip.sha256"
+$expected = (Get-Content ".\testloop-mcp_v0.4.7_windows_$arch.zip.sha256").Split()[0]
+$actual = (Get-FileHash ".\testloop-mcp_v0.4.7_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive .\testloop-mcp_v0.4.7_windows_amd64.zip
-.\testloop-mcp_v0.4.7_windows_amd64\testloop-mcp.exe --help
-.\testloop-mcp_v0.4.7_windows_amd64\testloop-testgen.exe --help
+Expand-Archive ".\testloop-mcp_v0.4.7_windows_$arch.zip"
+& ".\testloop-mcp_v0.4.7_windows_$arch\testloop-mcp.exe" --help
+& ".\testloop-mcp_v0.4.7_windows_$arch\testloop-testgen.exe" --help
 ```
 
 当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。

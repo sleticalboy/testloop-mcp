@@ -40,6 +40,7 @@
 - [x] 远端 CI passed
 - [x] Release Artifacts run `28784950785` passed
 - [x] `TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh` 可直接下载 release 资产并安装
+- [x] `TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=arm64 TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh` 可直接下载 Windows ARM64 zip，并安装 Aarch64 `testloop-mcp.exe` / `testloop-testgen.exe`
 - [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
 - [x] Windows arm64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
 - [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
@@ -92,6 +93,7 @@ _暂无。_
    ```bash
    TESTLOOP_MCP_VERSION=vX.Y.Z sh scripts/install.sh
    TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=vX.Y.Z sh scripts/install.sh
+   TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=arm64 TESTLOOP_MCP_VERSION=vX.Y.Z sh scripts/install.sh
    ```
 
 8. 更新 Homebrew formula：
