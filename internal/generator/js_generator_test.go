@@ -184,6 +184,61 @@ const arrow = (a, b) => a + b;
 	}
 }
 
+func TestTreeSitterJS_ParsesTSParamsAndSkipsHelpers(t *testing.T) {
+	source := []byte(`export function typed(text: string, count?: number, enabled = true, ...items: string[]) {
+  return text;
+}
+function test(name: string) { return name; }
+const destructured = ({ id } = {}) => id;
+class Widget {
+  constructor(name: string) {}
+  static(value: string) { return value; }
+  render(props?: Record<string, unknown>) { return props; }
+}
+`)
+	funcs, classes, isESModule := parseJSWithTreeSitter(source, ".ts")
+	if !isESModule {
+		t.Fatal("export statement should mark source as ES module")
+	}
+
+	var typedFn *jsFuncInfo
+	var destructuredFn *jsFuncInfo
+	for i := range funcs {
+		switch funcs[i].Name {
+		case "typed":
+			typedFn = &funcs[i]
+		case "destructured":
+			destructuredFn = &funcs[i]
+		case "test":
+			t.Fatalf("test helper should be skipped: %+v", funcs[i])
+		}
+	}
+	if typedFn == nil {
+		t.Fatalf("typed function not parsed: %+v", funcs)
+	}
+	if len(typedFn.Params) != 4 {
+		t.Fatalf("typed params = %+v, want 4 params", typedFn.Params)
+	}
+	if typedFn.Params[0].Name != "text" || typedFn.Params[1].Name != "count" || !typedFn.Params[1].HasDefault ||
+		typedFn.Params[2].Name != "enabled" ||
+		typedFn.Params[3].Name != "...items" || typedFn.Params[3].IsRest {
+		t.Fatalf("unexpected typed params: %+v", typedFn.Params)
+	}
+	if destructuredFn == nil || len(destructuredFn.Params) != 1 || destructuredFn.Params[0].Name != "id" || destructuredFn.Params[0].HasDefault {
+		t.Fatalf("unexpected destructured params: %+v", destructuredFn)
+	}
+
+	if len(classes) != 1 || classes[0].Name != "Widget" {
+		t.Fatalf("classes = %+v, want Widget", classes)
+	}
+	if len(classes[0].Methods) != 1 || classes[0].Methods[0].Name != "render" {
+		t.Fatalf("constructor and keyword method should be skipped, got methods: %+v", classes[0].Methods)
+	}
+	if len(classes[0].Methods[0].Params) != 1 || classes[0].Methods[0].Params[0].Name != "props" || !classes[0].Methods[0].Params[0].HasDefault {
+		t.Fatalf("unexpected render params: %+v", classes[0].Methods[0].Params)
+	}
+}
+
 func TestJSTestArgsUseSemanticDefaults(t *testing.T) {
 	params := []jsParamInfo{
 		{Name: "url"},

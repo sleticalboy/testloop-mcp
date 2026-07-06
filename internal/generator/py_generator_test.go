@@ -176,6 +176,68 @@ func TestTreeSitterPython_SelfStripped(t *testing.T) {
 	}
 }
 
+func TestTreeSitterPython_DecoratedDefinitionsAndHelperFiltering(t *testing.T) {
+	source := []byte(`@trace
+def traced(value=1):
+    return value
+
+def setUp():
+    return None
+
+@service
+class Worker:
+    def __init__(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    @staticmethod
+    def build(cls, value: int = 1, *args, **kwargs):
+        return value
+
+    def run(cls, mode):
+        return mode
+`)
+	funcs, classes := parsePyWithTreeSitter(source)
+	if len(funcs) != 1 || funcs[0].Name != "traced" {
+		t.Fatalf("expected only decorated top-level traced function, got %+v", funcs)
+	}
+	if len(funcs[0].Params) != 1 || funcs[0].Params[0].Name != "value" || !funcs[0].Params[0].HasDefault {
+		t.Fatalf("unexpected traced params: %+v", funcs[0].Params)
+	}
+
+	if len(classes) != 1 || classes[0].Name != "Worker" {
+		t.Fatalf("expected decorated Worker class, got %+v", classes)
+	}
+	if len(classes[0].Methods) != 2 {
+		t.Fatalf("__init__ and tearDown should be skipped, got methods %+v", classes[0].Methods)
+	}
+	var build *pyFuncInfo
+	var run *pyFuncInfo
+	for i := range classes[0].Methods {
+		switch classes[0].Methods[i].Name {
+		case "build":
+			build = &classes[0].Methods[i]
+		case "run":
+			run = &classes[0].Methods[i]
+		case "tearDown", "__init__":
+			t.Fatalf("helper method should be skipped: %+v", classes[0].Methods[i])
+		}
+	}
+	if build == nil || !build.IsStatic {
+		t.Fatalf("build should be parsed as static method: %+v", build)
+	}
+	if len(build.Params) != 4 || build.Params[0].Name != "cls" ||
+		build.Params[1].Name != "value" || !build.Params[1].HasDefault ||
+		!build.Params[2].IsArgs || !build.Params[3].IsKwargs {
+		t.Fatalf("static method params should not strip cls and should keep varargs: %+v", build.Params)
+	}
+	if run == nil || len(run.Params) != 1 || run.Params[0].Name != "mode" {
+		t.Fatalf("instance method should strip cls/self receiver, got %+v", run)
+	}
+}
+
 func TestPytestArgsUseSemanticDefaults(t *testing.T) {
 	params := []pyParamInfo{
 		{Name: "url"},
