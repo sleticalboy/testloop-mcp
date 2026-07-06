@@ -1,6 +1,10 @@
 package generator
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/types"
+)
 
 func TestJavaParserExtractsConstructorsThrowsVarargsAndGenerics(t *testing.T) {
 	source := []byte(`public class Service {
@@ -91,6 +95,43 @@ func TestJavaInferDefaultValueAndAssert(t *testing.T) {
 	}
 }
 
+func TestJavaGeneratorFilterAndNameHelpers(t *testing.T) {
+	funcs := []javaFuncInfo{
+		{Name: "add", ClassName: "Calculator"},
+		{Name: "sub", ClassName: "Calculator"},
+	}
+
+	got := filterJavaFuncsForCoverageTask(funcs, &types.CoverageTestTask{})
+	if len(got) != 2 {
+		t.Fatalf("empty target should keep all funcs: %+v", got)
+	}
+
+	got = filterJavaFuncsForCoverageTask(funcs, &types.CoverageTestTask{Target: "Calculator.add"})
+	if len(got) != 1 || got[0].Name != "add" {
+		t.Fatalf("class method target filtered incorrectly: %+v", got)
+	}
+
+	got = filterJavaFuncsForCoverageTask(funcs, &types.CoverageTestTask{Target: "missing"})
+	if len(got) != 2 {
+		t.Fatalf("missing target should fall back to all funcs: %+v", got)
+	}
+
+	tests := map[string]string{
+		"":                 "fallback",
+		"should cover gap": "shouldcovergap",
+		"valid_name_2":     "valid_name_2",
+		"1bad":             "bad",
+		"---":              "fallback",
+	}
+	for input, want := range tests {
+		t.Run(input, func(t *testing.T) {
+			if got := sanitizeJavaTestMethodName(input, "fallback"); got != want {
+				t.Fatalf("sanitizeJavaTestMethodName(%q) = %q, want %q", input, got, want)
+			}
+		})
+	}
+}
+
 func TestRustParserExtractsTraitMethodsSelfAndModifiers(t *testing.T) {
 	source := []byte(`pub trait Validator {
     fn check(&self, value: i32) -> bool {
@@ -143,6 +184,39 @@ impl Counter {
 	}
 	if increment.Owner != "Counter" || !increment.IsPub || !increment.HasOption {
 		t.Fatalf("unexpected increment method: %+v", increment)
+	}
+}
+
+func TestRustGeneratorFilterAndTypeHelpers(t *testing.T) {
+	funcs := []rsFuncInfo{
+		{Name: "add"},
+		{Name: "check", Owner: "Validator"},
+		{Name: "skip", Owner: "Validator"},
+	}
+
+	got := filterRustFuncsForCoverageTask(funcs, &types.CoverageTestTask{})
+	if len(got) != 3 {
+		t.Fatalf("empty target should keep all funcs: %+v", got)
+	}
+
+	got = filterRustFuncsForCoverageTask(funcs, &types.CoverageTestTask{Target: "Validator.check"})
+	if len(got) != 1 || got[0].Name != "check" {
+		t.Fatalf("method target filtered incorrectly: %+v", got)
+	}
+
+	got = filterRustFuncsForCoverageTask(funcs, &types.CoverageTestTask{Target: "missing"})
+	if len(got) != 3 {
+		t.Fatalf("missing target should fall back to all funcs: %+v", got)
+	}
+
+	if got := rsInferTypeName(rsFuncInfo{Owner: "Counter"}, nil); got != "Counter" {
+		t.Fatalf("rsInferTypeName(owner) = %q", got)
+	}
+	if got := rsInferTypeName(rsFuncInfo{}, []rsStructInfo{{Name: "Fallback"}}); got != "Fallback" {
+		t.Fatalf("rsInferTypeName(fallback struct) = %q", got)
+	}
+	if got := rsInferTypeName(rsFuncInfo{}, nil); got != "" {
+		t.Fatalf("rsInferTypeName(no owner) = %q", got)
 	}
 }
 
