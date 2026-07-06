@@ -489,6 +489,41 @@ func TestJestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestJestFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:    "fetchData",
+		IsAsync: true,
+		Params:  []jsParamInfo{{Name: "url"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "object",
+			HasReturn:  true,
+			Throws:     true,
+			Boundaries: []jsBoundary{{Param: "url", Value: "undefined", Type: "undefined"}},
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:              "jest-error-1",
+		GapType:         "error_path",
+		LineRange:       "4-6",
+		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+	}
+
+	code := genJestFuncTestForCoverageTask(fn, &task)
+	for _, want := range []string{
+		"describe('fetchData'",
+		"it('should cover fetchData coverage gap', async () => {",
+		"coverage task: jest-error-1 | lines 4-6 | 构造满足条件 `url === undefined` 的输入",
+		"await expect(fetchData(undefined)).rejects.toThrow();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in coverage task output:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "const result =") {
+		t.Fatalf("error-path coverage task should not assign result:\n%s", code)
+	}
+}
+
 func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got := genJSResultAssertion(jsFuncAnalysis{}, "  "); got != "  // void function, verify no exception\n" {
 		t.Fatalf("genJSResultAssertion() = %q", got)

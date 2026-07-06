@@ -458,6 +458,71 @@ func TestPytestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestPytestClassTestCoversAsyncStaticRaisesAndBoundaries(t *testing.T) {
+	cls := pyClassInfo{
+		Name: "Service",
+		Methods: []pyFuncInfo{
+			{Name: "__init__"},
+			{
+				Name:     "fetch",
+				IsStatic: true,
+				IsAsync:  true,
+				Params:   []pyParamInfo{{Name: "url"}},
+				Analysis: pyFuncAnalysis{
+					ReturnType: "str",
+					HasReturn:  true,
+				},
+			},
+			{
+				Name:   "normalize",
+				Params: []pyParamInfo{{Name: "prefix"}, {Name: "text"}},
+				Analysis: pyFuncAnalysis{
+					ReturnType: "str",
+					Returns:    []string{"prefix + text"},
+					HasReturn:  true,
+					Boundaries: []pyBoundary{{Param: "prefix", Value: "'>'", ReturnExpr: "text"}},
+				},
+			},
+			{
+				Name:    "load",
+				IsAsync: true,
+				Params:  []pyParamInfo{{Name: "url"}},
+				Analysis: pyFuncAnalysis{
+					Raises:     true,
+					Boundaries: []pyBoundary{{Param: "url", Value: "None"}},
+				},
+			},
+			{
+				Name:     "parse",
+				IsStatic: true,
+				Params:   []pyParamInfo{{Name: "payload"}},
+				Analysis: pyFuncAnalysis{
+					Raises:     true,
+					Boundaries: []pyBoundary{{Param: "payload", Value: "None"}},
+				},
+			},
+		},
+	}
+
+	code := genPytestClassTest(cls)
+	for _, want := range []string{
+		"class TestService:",
+		"def test_fetch(self):\n        result = asyncio.run(Service.fetch('https://example.com'))",
+		"def test_normalize_prefix_boundary(self):\n        instance = Service()\n        result = instance.normalize('>', 'test')\n        assert result == ('test')",
+		"def test_load_raises(self):\n        instance = Service()\n        with pytest.raises(Exception):\n            asyncio.run(instance.load(None))",
+		"def test_load_url_boundary(self):\n        instance = Service()\n        with pytest.raises(Exception):\n            asyncio.run(instance.load(None))",
+		"def test_parse_raises(self):\n        with pytest.raises(Exception):\n            Service.parse(None)",
+		"def test_parse_payload_boundary(self):\n        with pytest.raises(Exception):\n            Service.parse(None)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in class pytest output:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "test___init__") {
+		t.Fatalf("__init__ should be skipped:\n%s", code)
+	}
+}
+
 func TestPytestAssertionAndArgCompatHelpers(t *testing.T) {
 	if got := genPyResultAssertion(pyFuncAnalysis{}, "  "); got != "  # void function, verify no exception\n" {
 		t.Fatalf("genPyResultAssertion() = %q", got)
