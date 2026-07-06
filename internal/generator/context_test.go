@@ -90,6 +90,58 @@ export function add(a, b) {
 	assertContains(t, target.ReturnExpressions, "trim(name)")
 }
 
+func TestBuildGenerationContextCoverageTaskForStaticLanguages(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:        "go-1",
+		Framework: "go-test",
+		Target:    "Add",
+	}
+
+	ctx := BuildGenerationContextWithOptions(filepath.Join(t.TempDir(), "calc.go"), GenerateTestsOptions{CoverageTask: &task})
+
+	if ctx == nil {
+		t.Fatal("expected coverage task context")
+	}
+	if ctx.Language != "go" || ctx.Framework != "go-test" || ctx.CoverageTask == nil {
+		t.Fatalf("unexpected context: %+v", ctx)
+	}
+}
+
+func TestBuildGenerationContextReturnsNilForMissingOrEmptyTargets(t *testing.T) {
+	if ctx := BuildGenerationContext(filepath.Join(t.TempDir(), "missing.ts")); ctx != nil {
+		t.Fatalf("expected nil context for missing source, got %+v", ctx)
+	}
+
+	srcPath := filepath.Join(t.TempDir(), "empty.py")
+	if err := os.WriteFile(srcPath, []byte("import math\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if ctx := BuildGenerationContext(srcPath); ctx != nil {
+		t.Fatalf("expected nil context when no targets exist, got %+v", ctx)
+	}
+}
+
+func TestLanguageNameForPath(t *testing.T) {
+	tests := map[string]string{
+		"calc.go":       "go",
+		"lib.rs":        "rust",
+		"Example.java":  "java",
+		"calc.py":       "python",
+		"widget.tsx":    "typescript",
+		"component.jsx": "javascript",
+		"module.mjs":    "javascript",
+		"unknown.txt":   "",
+	}
+
+	for path, want := range tests {
+		t.Run(path, func(t *testing.T) {
+			if got := languageNameForPath(path); got != want {
+				t.Fatalf("languageNameForPath(%q) = %q, want %q", path, got, want)
+			}
+		})
+	}
+}
+
 func assertContains(t *testing.T, values []string, want string) {
 	t.Helper()
 	for _, value := range values {
