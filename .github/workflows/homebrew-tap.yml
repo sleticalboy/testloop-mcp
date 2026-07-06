@@ -1,0 +1,74 @@
+name: Homebrew Tap
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish to Homebrew, for example v0.4.2"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+jobs:
+  pull-request:
+    name: Create Homebrew tap PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Homebrew tap token
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
+            echo "HOMEBREW_TAP_TOKEN is not configured." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: sleticalboy/homebrew-tap
+          token: ${{ env.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          branch="update-testloop-mcp-${TAG_NAME}"
+          git -C homebrew-tap checkout -B "$branch"
+          TESTLOOP_MCP_REPO="${{ github.repository }}" scripts/update-homebrew-tap.sh "$TAG_NAME" homebrew-tap
+
+      - name: Create Homebrew tap pull request
+        env:
+          GH_TOKEN: ${{ env.HOMEBREW_TAP_TOKEN }}
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          cd homebrew-tap
+          if git diff --quiet -- Formula/testloop-mcp.rb; then
+            echo "Formula is already up to date."
+            exit 0
+          fi
+
+          branch="update-testloop-mcp-${TAG_NAME}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/testloop-mcp.rb
+          git commit -m "Update testloop-mcp to ${TAG_NAME}"
+          git push --force-with-lease origin "$branch"
+          gh pr view "$branch" --repo sleticalboy/homebrew-tap >/dev/null 2>&1 || \
+            gh pr create \
+              --repo sleticalboy/homebrew-tap \
+              --base main \
+              --head "$branch" \
+              --title "Update testloop-mcp to ${TAG_NAME}" \
+              --body "Update testloop-mcp Homebrew formula for ${TAG_NAME}."

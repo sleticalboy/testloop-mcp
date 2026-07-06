@@ -17,12 +17,12 @@
 9. [x] 新增一键安装脚本，降低本地安装门槛。
 10. [x] 准备 Homebrew Formula 草案和本地生成脚本。
 11. [x] 接入 `sleticalboy/homebrew-tap` 同步脚本，支持本地验证后可选提交推送。
-12. [x] release workflow 接入 Homebrew tap 自动 PR 流程；没有 `HOMEBREW_TAP_TOKEN` 时自动跳过。
+12. [x] 新增独立 Homebrew Tap workflow，按 release tag 创建或更新 tap PR，避免阻塞 Release Artifacts workflow。
 
 ## 暂缓项
 
 - Windows 预构建二进制：项目使用 CGO 和 tree-sitter，Windows runner 需要额外 MinGW/MSYS2 工具链验证，暂时保留 `go install` 和源码构建路径。
-- Homebrew tap 发布结果：release workflow 已接入自动 PR，但依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时会跳过，不影响 release 资产上传。
+- Homebrew tap 发布结果：独立 Homebrew Tap workflow 依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时不能自动开 PR，但不影响 Release Artifacts workflow 上传资产。
 
 ## v0.4.1 发布验证
 
@@ -58,4 +58,4 @@
 - [x] 新增 `Formula/testloop-mcp.rb`，基于 `v0.4.2` 三平台 release 资产填写 URL 和 sha256。
 - [x] 新增 `scripts/generate-homebrew-formula.sh`，可从 GitHub Release asset digest 重新生成 formula。
 - [x] 新增 `scripts/update-homebrew-tap.sh`，可更新 `sleticalboy/homebrew-tap` 工作区并运行 Ruby/Homebrew style 校验。
-- [x] release workflow 在 matrix build 上传资产后，自动创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
+- [x] 新增 `.github/workflows/homebrew-tap.yml`，手动输入 tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
