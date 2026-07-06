@@ -177,6 +177,8 @@ command = "/absolute/path/to/testloop-mcp"
 
 LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examples/llm-provider.sh](./examples/llm-provider.sh)。
 
+Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md)。
+
 **Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 
 **JS/TS 生成器：** tree-sitter + 函数体分析，识别函数、类方法、async、参数、CommonJS / ES Module 导入，分析 `return` 语句推断返回类型（number/string/array/object/boolean）、检测 `throw` 生成 `toThrow()` 测试、检测 `if (param === value)` 边界条件生成针对性用例。
