@@ -35,6 +35,39 @@ Ran all test suites.`
 	}
 }
 
+func TestParseJestTestSummaryWithoutTotal(t *testing.T) {
+	output := `PASS  ./sum.test.js
+  ✓ adds 1 + 2 to equal 3
+
+Tests:       1 passed, 1 skipped`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 2 || result.Passed != 1 || result.Skipped != 1 || result.Failed != 0 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
+func TestParseJestTestCountsResultLinesWithoutSummary(t *testing.T) {
+	output := `PASS  ./sum.test.js
+  ✓ adds numbers
+  √ subtracts numbers
+  ✕ multiplies numbers
+  × divides numbers`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "fail" {
+		t.Fatalf("Expected fail status, got %s", result.Status)
+	}
+	if result.Total != 4 || result.Passed != 2 || result.Failed != 2 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d failed=%d", result.Total, result.Passed, result.Failed)
+	}
+}
+
 func TestParseJestTestFailure(t *testing.T) {
 	output := `FAIL  ./sum.test.js
   ✕ adds 1 + 2 to equal 3 (1 ms)

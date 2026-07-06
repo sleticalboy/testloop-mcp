@@ -35,6 +35,24 @@ test_calc.py::test_subtract PASSED                                       [100%]
 	}
 }
 
+func TestParsePytestTestErrorSkipAndDuplicateResultLines(t *testing.T) {
+	output := `test_calc.py::test_add PASSED                                            [ 25%]
+test_calc.py::test_add PASSED                                            [ 25%]
+test_calc.py::test_todo SKIPPED                                          [ 50%]
+test_calc.py::test_setup ERROR                                           [100%]
+
+========================= 1 passed, 1 skipped, 1 error in 0.01s =========================`
+
+	result := ParsePytestTest(output)
+
+	if result.Status != "fail" {
+		t.Fatalf("Expected fail status, got %s", result.Status)
+	}
+	if result.Total != 3 || result.Passed != 1 || result.Skipped != 1 || result.Failed != 1 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
 func TestParsePytestTestFailure(t *testing.T) {
 	output := `test_calc.py::test_add FAILED                                            [ 33%]
 test_calc.py::test_add_negative PASSED                                   [ 66%]
