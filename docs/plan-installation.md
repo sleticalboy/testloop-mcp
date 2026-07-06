@@ -50,7 +50,7 @@
 
 ## 准备中版本
 
-_暂无。_
+- `v0.4.8`：编辑器接入体验增强版本，新增 `--print-config`、`--check-config`、`--doctor-config` 和 Agent 闭环工作流文档。当前处于 release prep，尚未发布 tag 或 release 资产。
 
 ## 版本摘要
 
@@ -63,6 +63,7 @@ _暂无。_
 | `v0.4.5` | 补强内置静态测试生成器和 parser/helper 回归测试 | Release run `28777039765`；Homebrew tap 升级到 `0.4.5` 并通过 `brew test` |
 | `v0.4.6` | 将发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive | Release run `28782811885`；Homebrew tap 升级到 `0.4.6` 并通过 `brew test` |
 | `v0.4.7` | 正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | Release run `28784950785`；Homebrew tap 升级到 `0.4.7` 并通过 `brew test` |
+| `v0.4.8` | 编辑器接入体验增强，补齐 MCP 客户端配置生成、校验、诊断和 Agent 闭环示例 | 准备中：本地 `go test ./...`、配置命令 smoke 和发布资料已准备 |
 
 ## 发布维护流程
 

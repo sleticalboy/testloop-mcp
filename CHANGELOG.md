@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+_暂无。_
+
+## v0.4.8 - 2026-07-06
+
 ### Added
 
 - 主二进制新增 `--print-config`，可输出 Codex、Codex HTTP、Claude Code / Claude Desktop 和 Cursor 的 MCP 配置片段。
