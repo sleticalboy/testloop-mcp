@@ -4,46 +4,56 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/sleticalboy/testloop-mcp/internal/generator"
 )
 
 func main() {
-	providerMode := flag.String("provider", "static", "test provider: static, llm, or auto")
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: testgen [flags] <source_file> [output_file]\n\n")
-		flag.PrintDefaults()
-	}
-	flag.Parse()
+	os.Exit(runTestgen(os.Args[1:], os.Stdout, os.Stderr))
+}
 
-	if flag.NArg() < 1 {
-		flag.Usage()
-		os.Exit(1)
+func runTestgen(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("testgen", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	providerMode := flags.String("provider", "static", "test provider: static, llm, or auto")
+	flags.Usage = func() {
+		fmt.Fprintf(stderr, "Usage: testgen [flags] <source_file> [output_file]\n\n")
+		flags.PrintDefaults()
+	}
+	if err := flags.Parse(args); err != nil {
+		return 2
 	}
 
-	srcFile := flag.Arg(0)
+	if flags.NArg() < 1 {
+		flags.Usage()
+		return 1
+	}
+
+	srcFile := flags.Arg(0)
 	outputFile := generator.TestFileName(srcFile)
-	if flag.NArg() > 1 {
-		outputFile = flag.Arg(1)
+	if flags.NArg() > 1 {
+		outputFile = flags.Arg(1)
 	}
 
 	provider, err := generator.NewTestProvider(*providerMode)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Provider error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Provider error: %v\n", err)
+		return 1
 	}
 
 	code, err := generator.GenerateTestsWithProvider(context.Background(), srcFile, provider)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Error: %v\n", err)
+		return 1
 	}
 
 	if err := os.WriteFile(outputFile, []byte(code), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Write error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Write error: %v\n", err)
+		return 1
 	}
 
-	fmt.Printf("Generated: %s (provider=%s)\n", outputFile, provider.Name())
+	fmt.Fprintf(stdout, "Generated: %s (provider=%s)\n", outputFile, provider.Name())
+	return 0
 }
