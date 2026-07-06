@@ -35,6 +35,10 @@ jobs:
             runner: macos-26
             goos: darwin
             goarch: arm64
+          - asset: windows_amd64
+            runner: windows-latest
+            goos: windows
+            goarch: amd64
 
     steps:
       - name: Checkout
@@ -51,6 +55,13 @@ jobs:
             git fetch --tags --force origin
             git checkout "$tag"
           fi
+          mkdir -p .release
+          if git cat-file -e "${GITHUB_SHA}:scripts/package-release-asset.sh" 2>/dev/null; then
+            git show "${GITHUB_SHA}:scripts/package-release-asset.sh" > .release/package-release-asset.sh
+          else
+            cp scripts/package-release-asset.sh .release/package-release-asset.sh
+          fi
+          chmod +x .release/package-release-asset.sh
           echo "TAG_NAME=$tag" >> "$GITHUB_ENV"
 
       - name: Set up Go
@@ -63,13 +74,40 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
+      - name: Set up MSYS2
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          path-type: inherit
+          update: true
+          install: >-
+            base-devel
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            zip
+
       - name: Download dependencies
+        if: runner.os != 'Windows'
+        run: go mod download
+
+      - name: Download dependencies
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: go mod download
 
       - name: Build binaries
+        if: runner.os != 'Windows'
         run: |
           set -euo pipefail
-          scripts/package-release-asset.sh "$TAG_NAME" "${{ matrix.asset }}" "${{ matrix.goos }}" "${{ matrix.goarch }}"
+          .release/package-release-asset.sh "$TAG_NAME" "${{ matrix.asset }}" "${{ matrix.goos }}" "${{ matrix.goarch }}"
+
+      - name: Build binaries
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          .release/package-release-asset.sh "$TAG_NAME" "${{ matrix.asset }}" "${{ matrix.goos }}" "${{ matrix.goarch }}"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

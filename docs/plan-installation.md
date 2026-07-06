@@ -22,7 +22,7 @@
 
 ## 暂缓项
 
-- Windows 预构建二进制：项目使用 CGO 和 tree-sitter，正式 release matrix 暂不纳入；先通过独立 Windows Release Probe workflow 验证 MinGW/MSYS2 工具链。
+- Windows arm64 预构建二进制：项目使用 CGO 和 tree-sitter，当前先发布 Windows amd64；Windows arm64 暂缓到工具链需求明确后再评估。
 - Homebrew tap 发布结果：独立 Homebrew Tap workflow 依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时不能自动开 PR，但不影响 Release Artifacts workflow 上传资产。
 
 ## v0.4.1 发布验证
@@ -80,3 +80,6 @@
 - [x] 新增 `.github/workflows/windows-release-probe.yml`，手动验证 `windows_amd64` zip 构建和 `.sha256`，不影响正式 release matrix。
 - [x] Windows Release Probe 首次运行已确认 MSYS2 安装成功，但 `go mod download` 在 MSYS2 shell 中找不到 `go`；workflow 已调整为 `path-type: inherit`。
 - [x] Windows Release Probe 显式安装 `zip` 和 `unzip`，避免压缩包检查步骤依赖 runner 预装工具。
+- [x] Windows Release Probe run `28763453059` 已通过，下载 artifact 校验 `.sha256` 成功，zip 内包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`。
+- [x] Release Artifacts workflow 已加入 `windows_amd64` matrix 项，后续 tag release 会上传 Windows zip 和 `.sha256`。
+- [x] Release Artifacts workflow 会把触发 ref 中的 `scripts/package-release-asset.sh` 复制到 `.release/` 后再 checkout 指定 tag，避免手动回填旧 tag 时目标 tag 缺少新脚本。
