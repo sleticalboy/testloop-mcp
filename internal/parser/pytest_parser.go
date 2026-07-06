@@ -54,12 +54,15 @@ func ParsePytestTest(output string) types.TestResult {
 	}
 
 	result.Failures = parsePytestFailures(lines)
+	if result.Total == 0 {
+		parsePytestSummary(output, &result)
+	}
 	if result.Failed == 0 && len(result.Failures) > 0 {
 		result.Failed = len(result.Failures)
 		result.Status = "fail"
 	}
-	if result.Total == 0 {
-		parsePytestSummary(output, &result)
+	if result.Total == 0 && len(result.Failures) > 0 {
+		result.Total = len(result.Failures)
 	}
 	if result.Failed > 0 {
 		result.Status = "fail"

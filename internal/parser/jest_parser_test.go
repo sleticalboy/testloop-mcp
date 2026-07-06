@@ -119,6 +119,36 @@ Tests:       1 failed, 1 total`
 	}
 }
 
+func TestParseJestTestFailureUsesFallbackSummary(t *testing.T) {
+	output := `FAIL  ./sum.test.js
+  ● sum › reports custom matcher details
+
+    custom matcher failed without structured assertion output
+      at Object.<anonymous> (sum.test.js:4:3)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "fail" || result.Failed != 1 {
+		t.Fatalf("Expected one failed test, got status=%s failed=%d", result.Status, result.Failed)
+	}
+	if len(result.Failures) != 1 {
+		t.Fatalf("Expected one failure detail, got %d", len(result.Failures))
+	}
+	failure := result.Failures[0]
+	if failure.TestName != "reports custom matcher details" {
+		t.Errorf("Expected normalized test name, got %q", failure.TestName)
+	}
+	if failure.Error != "custom matcher failed without structured assertion output" {
+		t.Errorf("Expected fallback failure summary, got %q", failure.Error)
+	}
+	if failure.File != "sum.test.js" || failure.Line != 4 || failure.Column != 3 {
+		t.Errorf("Expected stack location sum.test.js:4:3, got %s:%d:%d", failure.File, failure.Line, failure.Column)
+	}
+}
+
 func TestParseVitestFailure(t *testing.T) {
 	output := ` FAIL  src/sum.test.ts > sum > adds values
 AssertionError: expected 4 to be 3 // Object.is equality

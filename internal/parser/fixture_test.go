@@ -87,6 +87,22 @@ func TestParseFrameworkFailureFixtures(t *testing.T) {
 	}
 }
 
+func TestParseTestOutputDefaultsUnknownFrameworkToGoTest(t *testing.T) {
+	output := `=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+PASS
+ok  	example.com/calc	0.001s`
+
+	result := ParseTestOutput(output, "unknown")
+
+	if result.Framework != "go-test" {
+		t.Fatalf("Framework = %q, want go-test", result.Framework)
+	}
+	if result.Status != "pass" || result.Passed != 1 || result.Total != 1 {
+		t.Fatalf("Unexpected go-test result: status=%s passed=%d total=%d", result.Status, result.Passed, result.Total)
+	}
+}
+
 func readParserFixture(t *testing.T, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))

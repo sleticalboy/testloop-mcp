@@ -137,6 +137,31 @@ calc.py:7: ValueError
 	}
 }
 
+func TestParsePytestTestFailureUsesFallbackSummary(t *testing.T) {
+	output := `=================================== FAILURES ===================================
+_______________________________ test_plain ________________________________
+
+custom pytest failure detail without traceback prefixes
+
+============================== 1 failed in 0.01s ===============================`
+
+	result := ParsePytestTest(output)
+
+	if result.Status != "fail" || result.Failed != 1 || result.Total != 1 {
+		t.Fatalf("Expected one failed test, got status=%s failed=%d total=%d", result.Status, result.Failed, result.Total)
+	}
+	if len(result.Failures) != 1 {
+		t.Fatalf("Expected one failure detail, got %d", len(result.Failures))
+	}
+	failure := result.Failures[0]
+	if failure.TestName != "test_plain" {
+		t.Errorf("Expected test_plain, got %q", failure.TestName)
+	}
+	if failure.Error != "custom pytest failure detail without traceback prefixes" {
+		t.Errorf("Expected fallback failure summary, got %q", failure.Error)
+	}
+}
+
 func TestParsePytestSummaryOnly(t *testing.T) {
 	output := `============================== test session starts ==============================
 collected 3 items
