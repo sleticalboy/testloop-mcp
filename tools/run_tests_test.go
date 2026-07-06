@@ -47,6 +47,36 @@ func TestJavaTestCommandPrefersWrappers(t *testing.T) {
 	}
 }
 
+func TestJavaTestCommandPrefersGradleWrapper(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("wrapper command paths are unix-style")
+	}
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("plugins {}\n"), 0o644); err != nil {
+		t.Fatalf("write build.gradle: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "gradlew"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write gradlew: %v", err)
+	}
+	testFile := filepath.Join(dir, "src", "test", "CalculatorTest.java")
+	if err := os.MkdirAll(filepath.Dir(testFile), 0o755); err != nil {
+		t.Fatalf("mkdir test dir: %v", err)
+	}
+	if err := os.WriteFile(testFile, []byte("class CalculatorTest {}\n"), 0o644); err != nil {
+		t.Fatalf("write test file: %v", err)
+	}
+
+	cmd := javaTestCommand(context.Background(), testFile, true)
+	want := []string{"./gradlew", "test", "jacocoTestReport"}
+	if !equalStrings(cmd.Args, want) {
+		t.Fatalf("args = %v, want %v", cmd.Args, want)
+	}
+	if cmd.Dir != dir {
+		t.Fatalf("dir = %s, want %s", cmd.Dir, dir)
+	}
+}
+
 func TestCollectJavaCoveragePercentReadsMavenReport(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
@@ -77,6 +107,49 @@ func TestCollectJavaCoveragePercentReadsMavenReport(t *testing.T) {
 	}
 	if percent != 50 {
 		t.Fatalf("percent = %.1f, want 50.0", percent)
+	}
+}
+
+func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "calc_test.go")
+	if err := os.WriteFile(file, []byte("package calc\n"), 0o644); err != nil {
+		t.Fatalf("write go file: %v", err)
+	}
+
+	if got := normalizeGoTestPath(file); got != dir {
+		t.Fatalf("normalizeGoTestPath(%q) = %q, want %q", file, got, dir)
+	}
+	if got := normalizeGoTestPath(dir); got != dir {
+		t.Fatalf("normalizeGoTestPath(%q) = %q, want %q", dir, got, dir)
+	}
+}
+
+func TestFindProjectRootWalksParents(t *testing.T) {
+	dir := t.TempDir()
+	nested := filepath.Join(dir, "pkg", "calc")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("mkdir nested: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\n"), 0o644); err != nil {
+		t.Fatalf("write Cargo.toml: %v", err)
+	}
+	source := filepath.Join(nested, "calc.rs")
+	if err := os.WriteFile(source, []byte("fn add() {}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	if got := findProjectRoot(source, "Cargo.toml"); got != dir {
+		t.Fatalf("findProjectRoot = %q, want %q", got, dir)
+	}
+}
+
+func TestHandleRunTestsValidatesInput(t *testing.T) {
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{}); err == nil {
+		t.Fatal("expected missing path error")
+	}
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{Path: ".", Framework: "unknown"}); err == nil {
+		t.Fatal("expected unsupported framework error")
 	}
 }
 
