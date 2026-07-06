@@ -125,6 +125,12 @@ testloop-mcp --print-config=all
 testloop-mcp --check-config ~/.codex/config.toml
 ```
 
+也可以查看推荐配置路径和本机诊断：
+
+```bash
+testloop-mcp --doctor-config
+```
+
 ### Codex
 
 `~/.codex/config.toml`:

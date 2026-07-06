@@ -68,6 +68,19 @@ func TestParseServerConfigRejectsUnsupportedTransport(t *testing.T) {
 	}
 }
 
+func TestParseServerConfigRejectsMultipleConfigActions(t *testing.T) {
+	var stderr bytes.Buffer
+
+	_, code := parseServerConfig([]string{"--print-config=codex", "--check-config=-"}, &stderr)
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "不能同时使用") {
+		t.Fatalf("stderr missing mutual exclusion error: %q", stderr.String())
+	}
+}
+
 func TestPrintClientConfigCodex(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cfg := serverConfig{
@@ -253,6 +266,60 @@ command = "` + binary + `"
 	got := stdout.String()
 	if strings.Count(got, "ok: testloop") != 3 {
 		t.Fatalf("expected three validated entries, got:\n%s", got)
+	}
+}
+
+func TestDoctorClientConfigReportsRecommendedPaths(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Chdir(dir)
+	var stdout, stderr bytes.Buffer
+
+	code := doctorClientConfig(&stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	got := stdout.String()
+	for _, want := range []string{
+		"binary:",
+		"recommended_config_paths:",
+		filepath.Join(dir, ".codex", "config.toml"),
+		filepath.Join(dir, ".claude", "claude_desktop_config.json"),
+		filepath.Join(".cursor", "mcp.json"),
+		"existing_config_checks:",
+		"- none found",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in doctor output:\n%s", want, got)
+		}
+	}
+}
+
+func TestDoctorClientConfigChecksExistingConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Chdir(dir)
+	binary := filepath.Join(dir, "testloop-mcp")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write binary: %v", err)
+	}
+	codexDir := filepath.Join(dir, ".codex")
+	if err := os.MkdirAll(codexDir, 0o755); err != nil {
+		t.Fatalf("mkdir codex: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(codexDir, "config.toml"), []byte("[mcp_servers.testloop]\ncommand = \""+binary+"\"\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var stdout, stderr bytes.Buffer
+
+	code := doctorClientConfig(&stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Codex: ok: testloop command "+binary) {
+		t.Fatalf("unexpected doctor output:\n%s", stdout.String())
 	}
 }
 

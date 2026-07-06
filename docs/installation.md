@@ -222,6 +222,12 @@ testloop-mcp --check-config .cursor/mcp.json
 testloop-mcp --print-config=codex | testloop-mcp --check-config -
 ```
 
+如果不确定应该写入哪个配置文件，先运行本机诊断：
+
+```bash
+testloop-mcp --doctor-config
+```
+
 `~/.codex/config.toml`:
 
 ```toml

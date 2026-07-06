@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,6 +28,7 @@ type serverConfig struct {
 	stateless     bool
 	printConfig   string
 	checkConfig   string
+	doctorConfig  bool
 	configCommand string
 	configHTTPURL string
 }
@@ -39,6 +41,7 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 	stateless := flags.Bool("stateless", false, "HTTP 无状态模式 (仅 --transport=http 时生效)")
 	printConfig := flags.String("print-config", "", "打印 MCP 客户端配置片段: all、codex、codex-http、claude 或 cursor")
 	checkConfig := flags.String("check-config", "", "检查 MCP 客户端配置文件路径；使用 - 从 stdin 读取")
+	doctorConfig := flags.Bool("doctor-config", false, "诊断本机 MCP 客户端配置路径和 testloop-mcp 可执行文件")
 	configCommand := flags.String("config-command", "", "配置片段中的 testloop-mcp 二进制路径，默认使用当前可执行文件路径")
 	configHTTPURL := flags.String("config-http-url", "http://localhost:8080/mcp", "Codex HTTP 配置片段中的 MCP endpoint")
 	if err := flags.Parse(args); err != nil {
@@ -51,11 +54,12 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 		stateless:     *stateless,
 		printConfig:   *printConfig,
 		checkConfig:   *checkConfig,
+		doctorConfig:  *doctorConfig,
 		configCommand: *configCommand,
 		configHTTPURL: *configHTTPURL,
 	}
-	if cfg.printConfig != "" && cfg.checkConfig != "" {
-		fmt.Fprintln(stderr, "--print-config 和 --check-config 不能同时使用")
+	if countConfigActions(cfg) > 1 {
+		fmt.Fprintln(stderr, "--print-config、--check-config 和 --doctor-config 不能同时使用")
 		return cfg, 1
 	}
 	switch cfg.transport {
@@ -65,6 +69,20 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 		fmt.Fprintf(stderr, "不支持的传输模式: %s\n可用值: stdio, http\n", cfg.transport)
 		return cfg, 1
 	}
+}
+
+func countConfigActions(cfg serverConfig) int {
+	count := 0
+	if cfg.printConfig != "" {
+		count++
+	}
+	if cfg.checkConfig != "" {
+		count++
+	}
+	if cfg.doctorConfig {
+		count++
+	}
+	return count
 }
 
 func printClientConfig(cfg serverConfig, stdout, stderr io.Writer) int {
@@ -118,6 +136,11 @@ func printClientConfig(cfg serverConfig, stdout, stderr io.Writer) int {
 	return 0
 }
 
+type configPathInfo struct {
+	Name string
+	Path string
+}
+
 type jsonClientConfig struct {
 	MCPServers map[string]json.RawMessage `json:"mcpServers"`
 }
@@ -163,6 +186,66 @@ func checkClientConfig(cfg serverConfig, stdin io.Reader, stdout, stderr io.Writ
 		return 1
 	}
 	return 0
+}
+
+func doctorClientConfig(stdout, stderr io.Writer) int {
+	exe, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(stderr, "获取当前可执行文件路径失败: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "binary: %s\n", exe)
+
+	if pathBinary, err := exec.LookPath("testloop-mcp"); err == nil {
+		fmt.Fprintf(stdout, "path: ok %s\n", pathBinary)
+	} else {
+		fmt.Fprintf(stdout, "path: missing testloop-mcp\n")
+	}
+
+	fmt.Fprintln(stdout, "recommended_config_paths:")
+	for _, info := range recommendedConfigPaths() {
+		fmt.Fprintf(stdout, "- %s: %s\n", info.Name, info.Path)
+	}
+
+	fmt.Fprintln(stdout, "existing_config_checks:")
+	found := false
+	allOK := true
+	for _, info := range recommendedConfigPaths() {
+		if _, err := os.Stat(info.Path); err != nil {
+			continue
+		}
+		found = true
+		fmt.Fprintf(stdout, "- %s: ", info.Name)
+		var checkOut, checkErr strings.Builder
+		code := checkClientConfig(serverConfig{checkConfig: info.Path}, strings.NewReader(""), &checkOut, &checkErr)
+		if code == 0 {
+			fmt.Fprint(stdout, strings.TrimSpace(checkOut.String()))
+			fmt.Fprintln(stdout)
+		} else {
+			allOK = false
+			fmt.Fprint(stdout, strings.TrimSpace(checkErr.String()))
+			fmt.Fprintln(stdout)
+		}
+	}
+	if !found {
+		fmt.Fprintln(stdout, "- none found")
+	}
+	if !allOK {
+		return 1
+	}
+	return 0
+}
+
+func recommendedConfigPaths() []configPathInfo {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "~"
+	}
+	return []configPathInfo{
+		{Name: "Codex", Path: filepath.Join(home, ".codex", "config.toml")},
+		{Name: "Claude", Path: filepath.Join(home, ".claude", "claude_desktop_config.json")},
+		{Name: "Cursor", Path: filepath.Join(".cursor", "mcp.json")},
+	}
 }
 
 func readConfigInput(path string, stdin io.Reader) ([]byte, error) {
@@ -328,6 +411,9 @@ func main() {
 	}
 	if cfg.checkConfig != "" {
 		os.Exit(checkClientConfig(cfg, os.Stdin, os.Stdout, os.Stderr))
+	}
+	if cfg.doctorConfig {
+		os.Exit(doctorClientConfig(os.Stdout, os.Stderr))
 	}
 
 	server := newTestloopServer()
