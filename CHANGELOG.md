@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-_暂无。_
+### Added
+
+- `fix_suggestions` 返回新增 `category`、`context_file` 和 `context_line`，便于 Agent 区分失败类型并定位源码或测试上下文。
+- `--check-config` 和 `--doctor-config` 在配置异常时会输出可执行的修复建议，降低 MCP 客户端接入排查成本。
+
+### Changed
+
+- `fix_suggestions` 的建议文本补充 actual/want、越界 index/length、panic 类型和源码/测试行上下文，并支持相对路径匹配测试文件。
+- Agent 闭环文档补充失败修复步骤，明确先用 `fix_suggestions` 收敛真实失败，再进入覆盖率任务生成。
 
 ## v0.4.8 - 2026-07-06
 
