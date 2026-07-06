@@ -83,3 +83,5 @@
 - [x] Windows Release Probe run `28763453059` 已通过，下载 artifact 校验 `.sha256` 成功，zip 内包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`。
 - [x] Release Artifacts workflow 已加入 `windows_amd64` matrix 项，后续 tag release 会上传 Windows zip 和 `.sha256`。
 - [x] Release Artifacts workflow 会把触发 ref 中的 `scripts/package-release-asset.sh` 复制到 `.release/` 后再 checkout 指定 tag，避免手动回填旧 tag 时目标 tag 缺少新脚本。
+- [x] Release Artifacts workflow 已修复 Windows matrix 下 bash 步骤误用 PowerShell，以及非 Windows 上传时缺少 zip glob 导致失败的问题。
+- [x] `v0.4.3` 已通过 Release Artifacts run `28763866528` 回填 Windows amd64 zip 和 `.sha256`。
