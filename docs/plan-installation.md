@@ -44,6 +44,12 @@
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 可从 `0.4.4` 升级到 `0.4.5`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 
+## 准备中版本
+
+- 目标版本：`v0.4.6`
+- 发布说明草案：`docs/plan-release-notes-v0.4.6.md`
+- 重点：把 `v0.4.5` 发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive，并同步 README、安装文档和维护记录。
+
 ## 版本摘要
 
 | Version | 重点 | 关键验证 |
@@ -52,7 +58,8 @@
 | `v0.4.2` | 增加 Linux arm64、macOS arm64 和安装脚本 | Release build run `28746080130`；macOS arm64 安装脚本验证通过 |
 | `v0.4.3` | 移除 publish job 队列瓶颈，接入 Homebrew tap | Release run `28761435820`；Homebrew tap 升级到 `0.4.3` 并通过 `brew test` |
 | `v0.4.4` | 正式覆盖 Windows amd64 zip，安装脚本支持 Windows zip，移除临时 probe | Release run `28764619084`；asset verification run `28765386761`；Homebrew tap 升级到 `0.4.4` 并通过 `brew test` |
-| `v0.4.5` | 补强内置静态测试生成器和 parser/helper 回归测试，修正 Homebrew formula help 测试 | Release run `28777039765`；Homebrew tap 升级到 `0.4.5` 并通过 `brew test` |
+| `v0.4.5` | 补强内置静态测试生成器和 parser/helper 回归测试 | Release run `28777039765`；Homebrew tap 升级到 `0.4.5` 并通过 `brew test` |
+| `v0.4.6` | 准备把发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive | 待推送 tag、生成资产并更新 Homebrew tap |
 
 ## 发布维护流程
 

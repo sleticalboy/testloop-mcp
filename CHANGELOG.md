@@ -4,6 +4,14 @@
 
 _暂无。_
 
+## v0.4.6 - 2026-07-06
+
+### Changed
+
+- MCP server implementation version 更新为 `0.4.6`。
+- 将 `v0.4.5` 发布后验证通过的 Homebrew formula `--help` 测试修复纳入正式 release source archive。
+- README、安装文档和发布维护记录同步到 `v0.4.6`。
+
 ## v0.4.5 - 2026-07-06
 
 ### Changed
@@ -12,7 +20,6 @@ _暂无。_
 - 内置静态测试生成器补充覆盖 Go、Python、Jest、Java 和 Rust 的 coverage-task、parser 和 helper 分支测试，降低 coverage task 草稿生成回归风险。
 - `internal/generator` 本地语句覆盖率提升到 `91.7%`，覆盖 release 前最容易回归的目标过滤、参数推断、边界输入和 parser 分支。
 - Release Artifacts workflow 会在上传前校验生成资产的 `.sha256`，并检查 tarball/zip 内包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
-- Homebrew formula 测试改为接受 Go `flag` 的 `--help` 退出码 2，避免 `brew test` 把正常 help 输出误判为失败。
 
 ## v0.4.4 - 2026-07-06
 
