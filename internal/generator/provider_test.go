@@ -63,6 +63,36 @@ func TestStaticProviderUsesProvidedStaticCode(t *testing.T) {
 	}
 }
 
+func TestStaticProviderGeneratesCoverageTaskWhenNoStaticCode(t *testing.T) {
+	srcPath := writeProviderSource(t)
+	task := testCoverageTask()
+
+	code, err := StaticProvider{}.GenerateTests(context.Background(), TestGenerationRequest{
+		SourceFile: srcPath,
+		Context: &types.TestGenerationContext{
+			CoverageTask: &task,
+		},
+	})
+	if err != nil {
+		t.Fatalf("StaticProvider.GenerateTests() error = %v", err)
+	}
+	if !strings.Contains(code, "def test_add_covers_gap():") || !strings.Contains(code, "coverage task: pytest-1") {
+		t.Fatalf("expected task-aware static output, got:\n%s", code)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsDefaultsToStaticProvider(t *testing.T) {
+	srcPath := writeProviderSource(t)
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, nil, GenerateTestsOptions{})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "def test_add():") {
+		t.Fatalf("expected default static provider output, got:\n%s", code)
+	}
+}
+
 func TestGenerateTestsWithProviderUsesExternalLLMCommand(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell script fake provider is unix-only")
@@ -219,6 +249,96 @@ func TestGenerateTestsWithProviderOptionsUsesJavaCoverageTask(t *testing.T) {
 	}
 	if !strings.Contains(code, "void shouldCoverCalculatorAddGap()") || strings.Contains(code, "instance.sub(") {
 		t.Fatalf("expected task-aware Java static output, got:\n%s", code)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsUsesJavaScriptCoverageTask(t *testing.T) {
+	src := `function add(a, b) {
+  return a + b;
+}
+
+function sub(a, b) {
+  return a - b;
+}
+
+module.exports = { add, sub };
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.cjs")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	coverageTask := types.CoverageTestTask{
+		ID:        "jest-1",
+		Framework: "jest",
+		Target:    "add",
+		LineRange: "2-2",
+		GapType:   "return_path",
+		TestName:  "covers add gap",
+	}
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{
+		CoverageTask: &coverageTask,
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "it('covers add gap'") || strings.Contains(code, "describe('sub'") {
+		t.Fatalf("expected task-aware JavaScript static output, got:\n%s", code)
+	}
+}
+
+func TestGenerateTestsWithProviderOptionsUsesRustCoverageTask(t *testing.T) {
+	src := `pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+pub fn sub(a: i32, b: i32) -> i32 {
+    a - b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.rs")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	coverageTask := types.CoverageTestTask{
+		ID:        "rust-1",
+		Framework: "cargo-test",
+		Target:    "add",
+		LineRange: "1-3",
+		GapType:   "branch",
+		TestName:  "test_add_gap",
+	}
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{
+		CoverageTask: &coverageTask,
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "fn test_add_gap()") || strings.Contains(code, "test_sub") {
+		t.Fatalf("expected task-aware Rust static output, got:\n%s", code)
+	}
+}
+
+func TestGenerateTestsForCoverageTaskReportsReadErrorsAndUnsupportedType(t *testing.T) {
+	task := testCoverageTask()
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "missing rust", path: filepath.Join(t.TempDir(), "missing.rs"), want: "读取 Rust 源文件失败"},
+		{name: "missing java", path: filepath.Join(t.TempDir(), "Missing.java"), want: "读取 Java 源文件失败"},
+		{name: "unsupported", path: filepath.Join(t.TempDir(), "notes.txt"), want: "不支持的文件类型"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := generateTestsForCoverageTask(tt.path, &task)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("generateTestsForCoverageTask() error = %v, want %q", err, tt.want)
+			}
+		})
 	}
 }
 
