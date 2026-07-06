@@ -1,8 +1,12 @@
 package generator
 
 import (
+	"go/ast"
+	"go/parser"
 	"strings"
 	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestGoGeneratorCompatHelpers(t *testing.T) {
@@ -60,6 +64,109 @@ func TestGoGeneratorCompatHelpers(t *testing.T) {
 		if !strings.Contains(test, want) {
 			t.Fatalf("expected %q in table-driven test:\n%s", want, test)
 		}
+	}
+}
+
+func TestGoGeneratorTypeAndValueHelpers(t *testing.T) {
+	if got := substituteType("map[K][]V", map[string]string{"K": "string", "V": "int"}); got != "map[string][]int" {
+		t.Fatalf("substituteType() = %q", got)
+	}
+
+	zeroValues := map[string]string{
+		"int":            "0",
+		"uint64":         "0",
+		"float64":        "0",
+		"string":         "\"\"",
+		"bool":           "false",
+		"error":          "nil",
+		"any":            "nil",
+		"interface{}":    "nil",
+		"chan int":       "nil",
+		"*User":          "nil",
+		"[]string":       "nil",
+		"map[string]int": "nil",
+		"func()":         "nil",
+		"<-chan string":  "nil",
+		"CustomResponse": "CustomResponse{}",
+	}
+	for typ, want := range zeroValues {
+		t.Run("zero_"+typ, func(t *testing.T) {
+			if got := zeroValue(typ); got != want {
+				t.Fatalf("zeroValue(%q) = %q, want %q", typ, got, want)
+			}
+		})
+	}
+
+	argValues := []struct {
+		param paramInfo
+		want  string
+	}{
+		{paramInfo{Name: "ok", Type: "bool"}, "true"},
+		{paramInfo{Name: "name", Type: "string"}, "\"test\""},
+		{paramInfo{Name: "y", Type: "float64"}, "2.0"},
+		{paramInfo{Name: "x", Type: "float64"}, "1.0"},
+		{paramInfo{Name: "b", Type: "int"}, "2"},
+		{paramInfo{Name: "a", Type: "uint"}, "1"},
+		{paramInfo{Name: "items", Type: "[]string"}, "nil"},
+	}
+	for _, tt := range argValues {
+		t.Run(tt.param.Name+"_"+tt.param.Type, func(t *testing.T) {
+			if got := goArgValue(tt.param, 0); got != tt.want {
+				t.Fatalf("goArgValue(%+v) = %q, want %q", tt.param, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGoGeneratorExpressionHelpers(t *testing.T) {
+	exprs := map[string]string{
+		"value":             "value",
+		"42":                "42",
+		"a + b":             "a + b",
+		"-count":            "-count",
+		"(a)":               "(a)",
+		"pkg.Value":         "pkg.Value",
+		"*User":             "*User",
+		"[]string":          "[]string",
+		"map[string]int":    "map[string]int",
+		"chan int":          "chan int",
+		"chan<- int":        "chan<- int",
+		"<-chan string":     "<-chan string",
+		"interface{}":       "any",
+		"func()":            "func()",
+		"Box[int]":          "Box[int]",
+		"Pair[int, string]": "Pair[int, string]",
+		"make([]int, 0)":    "any",
+	}
+	for src, want := range exprs {
+		t.Run(src, func(t *testing.T) {
+			expr, err := parser.ParseExpr(src)
+			if err != nil {
+				t.Fatalf("ParseExpr(%q): %v", src, err)
+			}
+			if got := exprToString(expr); got != want {
+				t.Fatalf("exprToString(%q) = %q, want %q", src, got, want)
+			}
+		})
+	}
+	if got := exprToString(&ast.Ellipsis{Elt: ast.NewIdent("string")}); got != "...string" {
+		t.Fatalf("exprToString(ellipsis) = %q", got)
+	}
+
+	cases := map[string]string{
+		"branch":      "coverage branch gap",
+		"error_path":  "coverage error path",
+		"return_path": "coverage return path",
+		"statement":   "coverage statement gap",
+		"other":       "coverage gap",
+	}
+	for gapType, want := range cases {
+		if got := goCoverageTaskCaseName(&types.CoverageTestTask{GapType: gapType}, "fallback"); got != want {
+			t.Fatalf("goCoverageTaskCaseName(%q) = %q, want %q", gapType, got, want)
+		}
+	}
+	if got := goCoverageTaskCaseName(nil, "fallback"); got != "fallback" {
+		t.Fatalf("goCoverageTaskCaseName(nil) = %q", got)
 	}
 }
 

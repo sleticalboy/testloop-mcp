@@ -713,6 +713,8 @@ func substituteType(typ string, substMap map[string]string) string {
 
 func zeroValue(typ string) string {
 	switch {
+	case typ == "any", typ == "interface{}":
+		return "nil"
 	case strings.HasPrefix(typ, "int"), strings.HasPrefix(typ, "uint"), strings.HasPrefix(typ, "float"):
 		return "0"
 	case typ == "string":
@@ -720,8 +722,6 @@ func zeroValue(typ string) string {
 	case typ == "bool":
 		return "false"
 	case typ == "error":
-		return "nil"
-	case typ == "any", typ == "interface{}":
 		return "nil"
 	case strings.HasPrefix(typ, "chan "):
 		return "nil"
