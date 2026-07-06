@@ -380,6 +380,97 @@ module.exports = { add, sub };
 	}
 }
 
+func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
+	tests := map[string]string{
+		"number":    "number",
+		"string":    "string",
+		"boolean":   "boolean",
+		"array":     "object",
+		"object":    "object",
+		"null":      "object",
+		"undefined": "",
+		"unknown":   "",
+	}
+	for typ, want := range tests {
+		t.Run(typ, func(t *testing.T) {
+			if got := (jsFuncAnalysis{ReturnType: typ}).returnTypeForAssert(); got != want {
+				t.Fatalf("returnTypeForAssert(%q) = %q, want %q", typ, got, want)
+			}
+		})
+	}
+}
+
+func TestJestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:              "jest-class-1",
+		Target:          "Widget.load",
+		LineRange:       "10-12",
+		GapType:         "branch",
+		TestName:        "covers widget load",
+		SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+		AssertionFocus:  []string{"断言 class 方法分支"},
+	}
+	cls := jsClassInfo{
+		Name: "Widget",
+		Methods: []jsFuncInfo{
+			{
+				Name:   "load",
+				Params: []jsParamInfo{{Name: "mode"}, {Name: "count"}},
+				Analysis: jsFuncAnalysis{
+					ReturnType: "number",
+					Returns:    []string{"count + 1"},
+					HasReturn:  true,
+					Boundaries: []jsBoundary{{Param: "mode", Value: "'short'", Type: "string", ReturnExpr: "count"}},
+				},
+			},
+			{
+				Name:    "save",
+				IsAsync: true,
+				Params:  []jsParamInfo{{Name: "payload"}},
+				Analysis: jsFuncAnalysis{
+					Throws: true,
+				},
+			},
+		},
+	}
+
+	code := genJestClassTestForCoverageTask(cls, &task)
+	for _, want := range []string{
+		"describe('Widget'",
+		"it('covers widget load'",
+		"coverage task: jest-class-1 | lines 10-12 | 断言 class 方法分支 | 构造满足条件 `mode === 'short'` 的输入",
+		"const instance = new Widget();",
+		"const result = instance.load('short', 1);",
+		"expect(result).toBe((1));",
+		"await expect(instance.save({})).rejects.toThrow();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in class task output:\n%s", want, code)
+		}
+	}
+}
+
+func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
+	if got := genJSResultAssertion(jsFuncAnalysis{}, "  "); got != "  // void function, verify no exception\n" {
+		t.Fatalf("genJSResultAssertion() = %q", got)
+	}
+	expr, ok := jsExpectedReturnExpr(jsFuncAnalysis{Returns: []string{"a + b"}}, []jsParamInfo{{Name: "a"}, {Name: "b"}}, nil)
+	if !ok || expr != "(1 + 2)" {
+		t.Fatalf("jsExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+
+	funcs := dedupJSFuncs([]jsFuncInfo{
+		{Name: "load"},
+		{Name: "load"},
+		{Name: "load", IsMethod: true, ClassName: "Widget"},
+		{Name: "load", IsMethod: true, ClassName: "Widget"},
+		{Name: "load", IsMethod: true, ClassName: "Other"},
+	})
+	if len(funcs) != 3 {
+		t.Fatalf("dedupJSFuncs() kept %d funcs: %+v", len(funcs), funcs)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {

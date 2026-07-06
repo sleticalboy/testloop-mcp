@@ -364,6 +364,75 @@ def sub(a, b):
 	}
 }
 
+func TestPytestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:              "pytest-class-1",
+		Target:          "Widget.load",
+		LineRange:       "10-12",
+		GapType:         "branch",
+		TestName:        "test_widget_load_gap",
+		SuggestedInputs: []string{"构造满足条件 `mode == 'short'` 的输入"},
+		AssertionFocus:  []string{"断言 class 方法分支"},
+	}
+	cls := pyClassInfo{
+		Name: "Widget",
+		Methods: []pyFuncInfo{
+			{Name: "__init__"},
+			{
+				Name:   "load",
+				Params: []pyParamInfo{{Name: "mode"}, {Name: "count"}},
+				Analysis: pyFuncAnalysis{
+					ReturnType: "int",
+					Returns:    []string{"count + 1"},
+					HasReturn:  true,
+					Boundaries: []pyBoundary{{Param: "mode", Value: "'short'", Type: "string", ReturnExpr: "count"}},
+				},
+			},
+			{
+				Name:     "save",
+				IsAsync:  true,
+				IsStatic: true,
+				Params:   []pyParamInfo{{Name: "payload"}},
+				Analysis: pyFuncAnalysis{
+					Raises: true,
+				},
+			},
+		},
+	}
+
+	code := genPytestClassTestForCoverageTask(cls, &task)
+	for _, want := range []string{
+		"class TestWidget:",
+		"def test_widget_load_gap(self):",
+		"coverage task: pytest-class-1 | lines 10-12 | 断言 class 方法分支 | 构造满足条件 `mode == 'short'` 的输入",
+		"instance = Widget()",
+		"result = instance.load('short', 1)",
+		"assert result == (1)",
+		"with pytest.raises(Exception):\n            asyncio.run(Widget.save({}))",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in class task output:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "__init__") {
+		t.Fatalf("__init__ should be skipped in class task output:\n%s", code)
+	}
+}
+
+func TestPytestAssertionAndArgCompatHelpers(t *testing.T) {
+	if got := genPyResultAssertion(pyFuncAnalysis{}, "  "); got != "  # void function, verify no exception\n" {
+		t.Fatalf("genPyResultAssertion() = %q", got)
+	}
+	expr, ok := pyExpectedReturnExpr(pyFuncAnalysis{Returns: []string{"a + b"}}, []pyParamInfo{{Name: "a"}, {Name: "b"}}, nil)
+	if !ok || expr != "(1 + 2)" {
+		t.Fatalf("pyExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+	args := pyDefaultArgs([]pyParamInfo{{Name: "items"}, {Name: "kwargs", IsKwargs: true}})
+	if args != "[], {}" {
+		t.Fatalf("pyDefaultArgs() = %q", args)
+	}
+}
+
 func TestIsPyDunder(t *testing.T) {
 	if !isPyDunder("__init__") {
 		t.Error("__init__ should be dunder")
@@ -376,5 +445,18 @@ func TestIsPyDunder(t *testing.T) {
 	}
 	if isPyDunder("_private") {
 		t.Error("_private should not be dunder")
+	}
+}
+
+func TestIsPyTestHelper(t *testing.T) {
+	for _, name := range []string{"setUp", "tearDown", "setUpClass", "tearDownClass"} {
+		if !isPyTestHelper(name) {
+			t.Fatalf("isPyTestHelper(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"helper", "test_case", "setup"} {
+		if isPyTestHelper(name) {
+			t.Fatalf("isPyTestHelper(%q) = true, want false", name)
+		}
 	}
 }
