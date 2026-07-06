@@ -142,6 +142,64 @@ func TestLanguageNameForPath(t *testing.T) {
 	}
 }
 
+func TestGenerationContextTargetHelpers(t *testing.T) {
+	js := jsTarget(jsFuncInfo{
+		Name:      "formatText",
+		ClassName: "Formatter",
+		IsAsync:   true,
+		Params: []jsParamInfo{
+			{Name: "text"},
+			{Name: "prefix", HasDefault: true},
+			{Name: "args", IsRest: true},
+		},
+		Analysis: jsFuncAnalysis{
+			Throws:     true,
+			Returns:    []string{"prefix + text"},
+			Boundaries: []jsBoundary{{Param: "prefix", Value: "'>'"}},
+		},
+	}, "method")
+	if js.Name != "formatText" || js.Kind != "method" || js.ClassName != "Formatter" || !js.Async || !js.HasErrorPath {
+		t.Fatalf("unexpected JS target metadata: %+v", js)
+	}
+	if js.ReturnType != "unknown" {
+		t.Fatalf("empty JS return type should become unknown: %+v", js)
+	}
+	assertContains(t, js.Params, "text")
+	assertContains(t, js.Params, "prefix?")
+	assertContains(t, js.Params, "...args")
+	assertContains(t, js.ReturnExpressions, "prefix + text")
+	assertContains(t, js.BoundaryCases, "prefix='>'")
+
+	py := pyTarget(pyFuncInfo{
+		Name:      "format_text",
+		ClassName: "Formatter",
+		IsAsync:   true,
+		Params: []pyParamInfo{
+			{Name: "text"},
+			{Name: "prefix", HasDefault: true},
+			{Name: "args", IsArgs: true},
+			{Name: "kwargs", IsKwargs: true},
+		},
+		Analysis: pyFuncAnalysis{
+			Raises:     true,
+			Returns:    []string{"prefix + text"},
+			Boundaries: []pyBoundary{{Param: "prefix", Value: "'>'"}},
+		},
+	}, "method")
+	if py.Name != "format_text" || py.Kind != "method" || py.ClassName != "Formatter" || !py.Async || !py.HasErrorPath {
+		t.Fatalf("unexpected Python target metadata: %+v", py)
+	}
+	if py.ReturnType != "unknown" {
+		t.Fatalf("empty Python return type should become unknown: %+v", py)
+	}
+	assertContains(t, py.Params, "text")
+	assertContains(t, py.Params, "prefix?")
+	assertContains(t, py.Params, "*args")
+	assertContains(t, py.Params, "**kwargs")
+	assertContains(t, py.ReturnExpressions, "prefix + text")
+	assertContains(t, py.BoundaryCases, "prefix='>'")
+}
+
 func assertContains(t *testing.T, values []string, want string) {
 	t.Helper()
 	for _, value := range values {
