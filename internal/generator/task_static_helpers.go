@@ -128,8 +128,8 @@ func sanitizePythonTestName(name, fallback string) string {
 	name = strings.TrimPrefix(name, "def ")
 	name = strings.TrimSuffix(name, "()")
 	var sb strings.Builder
-	for i, r := range name {
-		if r == '_' || unicode.IsLetter(r) || (unicode.IsDigit(r) && i > 0) {
+	for _, r := range name {
+		if r == '_' || unicode.IsLetter(r) || (unicode.IsDigit(r) && sb.Len() > 0) {
 			sb.WriteRune(r)
 			continue
 		}
