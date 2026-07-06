@@ -86,3 +86,4 @@
 - [x] Release Artifacts workflow 已修复 Windows matrix 下 bash 步骤误用 PowerShell，以及非 Windows 上传时缺少 zip glob 导致失败的问题。
 - [x] `v0.4.3` 已通过 Release Artifacts run `28763866528` 回填 Windows amd64 zip 和 `.sha256`。
 - [x] `scripts/install.sh` 已支持 Windows shell 下下载、校验、解压并安装 `windows_amd64` zip；已用 `TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.3` 在本机验证。
+- [x] 临时 Windows Release Probe workflow 已移除；后续以正式 Release Artifacts matrix 维护 Windows 打包链路。
