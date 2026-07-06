@@ -78,3 +78,4 @@
 - [x] 新增 `scripts/package-release-asset.sh`，将 release 资产构建、打包和 `.sha256` 生成从 workflow YAML 中抽出。
 - [x] Release Artifacts workflow 改为调用 `scripts/package-release-asset.sh`，为后续调试单平台和扩展 Windows zip 资产降低改动面。
 - [x] 新增 `.github/workflows/windows-release-probe.yml`，手动验证 `windows_amd64` zip 构建和 `.sha256`，不影响正式 release matrix。
+- [x] Windows Release Probe 首次运行已确认 MSYS2 安装成功，但 `go mod download` 在 MSYS2 shell 中找不到 `go`；workflow 已调整为 `path-type: inherit`。
