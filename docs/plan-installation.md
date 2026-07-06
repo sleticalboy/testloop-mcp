@@ -111,7 +111,7 @@ _暂无。_
 ## 暂缓项
 
 - Windows arm64 预构建二进制：项目使用 CGO 和 tree-sitter，当前先发布 Windows amd64；Windows arm64 暂缓到工具链需求明确后再评估。
-- Homebrew Tap workflow 自动开 PR：依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时不影响 Release Artifacts 上传资产，也不影响本地脚本同步 tap。
+- Homebrew Tap workflow 自动开 PR：依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时 workflow 会成功跳过 PR 步骤，不影响 Release Artifacts 上传资产，也不影响本地脚本同步 tap。
 
 ## Windows arm64 评估
 
