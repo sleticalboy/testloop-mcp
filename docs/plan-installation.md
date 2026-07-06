@@ -16,39 +16,40 @@
 
 ## 当前发布
 
-- 当前版本：`v0.4.6`
-- Tag：`v0.4.6` -> `343ba12496ed1a08147bd7efeea805333250e08e`
-- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.6
-- Release Artifacts run：`28782811885`
-- Homebrew tap commit：`f449d28 Update testloop-mcp to v0.4.6`
+- 当前版本：`v0.4.7`
+- Tag：`v0.4.7` -> `1df510e8d511215b5c5cc2339bd6a7a15731d0aa`
+- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.7
+- Release Artifacts run：`28784950785`
+- Homebrew tap commit：`d070f8a Update testloop-mcp to v0.4.7`
 
-`v0.4.6` Release 已包含：
+`v0.4.7` Release 已包含：
 
-- `testloop-mcp_v0.4.6_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.6_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.6_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.6_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.6_windows_amd64.zip`
-- `testloop-mcp_v0.4.6_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.7_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.7_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.7_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.7_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.7_windows_amd64.zip`
+- `testloop-mcp_v0.4.7_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.7_windows_arm64.zip`
+- `testloop-mcp_v0.4.7_windows_arm64.zip.sha256`
 
-`v0.4.6` 已验证：
+`v0.4.7` 已验证：
 
 - [x] 远端 CI passed
-- [x] Release Artifacts run `28782811885` passed
-- [x] `TESTLOOP_MCP_VERSION=v0.4.6 sh scripts/install.sh` 可直接下载 release 资产并安装
+- [x] Release Artifacts run `28784950785` passed
+- [x] `TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh` 可直接下载 release 资产并安装
 - [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
+- [x] Windows arm64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
 - [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
 - [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
-- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 可从 `0.4.5` 升级到 `0.4.6`
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 可从 `0.4.6` 升级到 `0.4.7`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 
 ## 准备中版本
 
-- 目标版本：`v0.4.7`
-- 发布说明草案：`docs/plan-release-notes-v0.4.7.md`
-- 重点：正式发布 Windows arm64 预构建 zip，并让 Windows release 资产上传前执行 `.exe --help` 运行验证。
+_暂无。_
 
 ## 版本摘要
 
@@ -60,7 +61,7 @@
 | `v0.4.4` | 正式覆盖 Windows amd64 zip，安装脚本支持 Windows zip，移除临时 probe | Release run `28764619084`；asset verification run `28765386761`；Homebrew tap 升级到 `0.4.4` 并通过 `brew test` |
 | `v0.4.5` | 补强内置静态测试生成器和 parser/helper 回归测试 | Release run `28777039765`；Homebrew tap 升级到 `0.4.5` 并通过 `brew test` |
 | `v0.4.6` | 将发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive | Release run `28782811885`；Homebrew tap 升级到 `0.4.6` 并通过 `brew test` |
-| `v0.4.7` | 准备正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | 待推送 tag、生成资产并更新 Homebrew tap |
+| `v0.4.7` | 正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | Release run `28784950785`；Homebrew tap 升级到 `0.4.7` 并通过 `brew test` |
 
 ## 发布维护流程
 

@@ -23,20 +23,22 @@ v0.4.7 是 Windows ARM64 release 资产补充版本。这个版本不改变 MCP 
 - [x] `sh -n scripts/package-release-asset.sh`
 - [x] `ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |f| YAML.load_file(f) }'`
 - [x] `go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml`
-- [ ] 远端 CI passed
-- [ ] Tag `v0.4.7` 已推送
-- [ ] Release Artifacts run 通过
-- [ ] `v0.4.7` Release 已包含 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 五类资产及各自 `.sha256`
-- [ ] `TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh` 已验证可直接下载 release 资产并安装
-- [ ] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
-- [ ] Windows arm64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
-- [ ] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.7`
-- [ ] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
-- [ ] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
-- [ ] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 已验证可从 `0.4.6` 升级到 `0.4.7`
-- [ ] `brew test sleticalboy/tap/testloop-mcp`
+- [x] 远端 CI passed
+- [x] Tag `v0.4.7` 已推送
+- [x] Release Artifacts run `28784950785` 通过
+- [x] `v0.4.7` Release 已包含 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 五类资产及各自 `.sha256`
+- [x] `TESTLOOP_MCP_VERSION=v0.4.7 sh scripts/install.sh` 已验证可直接下载 release 资产并安装
+- [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
+- [x] Windows arm64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
+- [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.7`
+- [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
+- [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 已验证可从 `0.4.6` 升级到 `0.4.7`
+- [x] `brew test sleticalboy/tap/testloop-mcp`
 
 ## 发布信息
 
-- Tag: `v0.4.7`（待推送）
-- Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.7（待创建）
+- Tag: `v0.4.7` -> `1df510e8d511215b5c5cc2339bd6a7a15731d0aa`
+- Release: https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.7
+- Release Artifacts run: `28784950785`
+- Homebrew tap commit: `d070f8a Update testloop-mcp to v0.4.7`
