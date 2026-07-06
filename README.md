@@ -61,6 +61,8 @@ brew install testloop-mcp
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
 ```
 
+Windows Git Bash/MSYS 用户需要确保安装目录在 `PATH` 中；详细说明见 [安装与接入](docs/installation.md)。
+
 当前 `v0.4.4` Release 已提供 Linux amd64、Linux arm64、macOS arm64 和 Windows amd64 二进制。手动下载示例：
 
 ```bash

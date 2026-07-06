@@ -33,6 +33,22 @@ TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
+在 Git Bash/MSYS/Cygwin 等 Windows shell 下，脚本会安装 `testloop-mcp.exe` 和 `testloop-testgen.exe`。默认安装目录仍是 `$HOME/.local/bin`，需要确保该目录在 `PATH` 中：
+
+```bash
+mkdir -p "$HOME/.local/bin"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh
+testloop-mcp.exe --help
+testloop-testgen.exe --help
+```
+
+也可以显式安装到已有的 Windows 用户 bin 目录：
+
+```bash
+TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh
+```
+
 维护者调试平台选择时也可以显式覆盖检测结果：
 
 ```bash
@@ -43,6 +59,8 @@ TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.4 sh s
 
 - `testloop-mcp`
 - `testloop-testgen`
+
+Windows shell 下对应文件名为 `testloop-mcp.exe` 和 `testloop-testgen.exe`。
 
 ## 手动下载 Release 二进制
 
