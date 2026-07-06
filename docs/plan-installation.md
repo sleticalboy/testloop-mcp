@@ -108,3 +108,20 @@
 
 - Windows arm64 预构建二进制：项目使用 CGO 和 tree-sitter，当前先发布 Windows amd64；Windows arm64 暂缓到工具链需求明确后再评估。
 - Homebrew Tap workflow 自动开 PR：依赖仓库 secret `HOMEBREW_TAP_TOKEN`。没有配置时不影响 Release Artifacts 上传资产，也不影响本地脚本同步 tap。
+
+## Windows arm64 评估
+
+当前不把 Windows arm64 加入 Release Artifacts matrix。
+
+原因：
+
+- 项目依赖 `github.com/smacker/go-tree-sitter`，`go list` 可确认 `go-tree-sitter` 及 Java/Rust/JS/Python/TypeScript grammar 包都包含 CGO 文件。
+- Windows amd64 已通过 `windows-latest` + MSYS2 UCRT64 + `mingw-w64-ucrt-x86_64-gcc` 验证。
+- Windows arm64 不是只新增 `GOARCH=arm64` 就能可靠产出的目标；它需要可验证的 Windows ARM64 CGO 编译器、链接器和运行/解包校验链路。
+- 当前 GitHub-hosted release workflow 没有现成的 Windows ARM64 runner 验证路径，盲目交叉编译会产生无法运行验证的资产。
+
+重新评估条件：
+
+- 有稳定的 Windows ARM64 runner，或能在 CI 中安装并验证 Windows ARM64 CGO toolchain。
+- 能在 workflow 中完成 `go build`、`.zip` 打包、`.sha256` 校验、zip 内容检查，以及至少 `--help` 级别的二进制运行验证。
+- 用户侧确实有 Windows ARM64 预构建二进制需求；否则继续使用源码构建或 `go install` 回退更稳。
