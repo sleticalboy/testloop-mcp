@@ -2,10 +2,14 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 func TestJavaTestCommandUsesCoverageArgs(t *testing.T) {
@@ -160,6 +164,59 @@ func TestHandleRunTestsValidatesInput(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsExecutesGoTest(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	if Add(1, 2) != 3 {
+		t.Fatal("bad add")
+	}
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      dir,
+		Framework: "go-test",
+		Coverage:  true,
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Framework != "go-test" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
+		t.Fatalf("unexpected result: %+v", parsed)
+	}
+	if parsed.CoveragePercent != 100 {
+		t.Fatalf("coverage = %.1f, want 100.0", parsed.CoveragePercent)
+	}
+}
+
+func TestHandleRunTestsParsesGoFailure(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	t.Fatalf("boom")
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      dir,
+		Framework: "go-test",
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Failed != 1 || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected failure result: %+v", parsed)
+	}
+	if parsed.Failures[0].TestName != "TestAdd" || !strings.Contains(parsed.Failures[0].Error, "boom") {
+		t.Fatalf("unexpected failure: %+v", parsed.Failures[0])
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -185,4 +242,35 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func writeTempGoTestPackage(t *testing.T, testBody string) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-")
+	if err != nil {
+		t.Fatalf("mkdir temp package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp package: %v", err)
+		}
+	})
+
+	source := `package runtest
+
+func Add(a, b int) int { return a + b }
+`
+	testSource := `package runtest
+
+import "testing"
+
+` + testBody + "\n"
+
+	if err := os.WriteFile(filepath.Join(dir, "calc.go"), []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "calc_test.go"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	return "./" + filepath.Base(dir)
 }
