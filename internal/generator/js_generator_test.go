@@ -532,6 +532,91 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if !ok || expr != "(1 + 2)" {
 		t.Fatalf("jsExpectedReturnExpr() = %q, %v", expr, ok)
 	}
+	expr, ok = jsExpectedReturnExprWithValues(
+		jsFuncAnalysis{Returns: []string{"url + suffix;"}},
+		[]jsParamInfo{{Name: "url"}, {Name: "suffix"}},
+		nil,
+		map[string]string{"url": "'https://example.com'", "suffix": "'/v1'"},
+	)
+	if !ok || expr != "('https://example.com' + '/v1')" {
+		t.Fatalf("jsExpectedReturnExprWithValues() = %q, %v", expr, ok)
+	}
+	if expr, ok = jsExpectedReturnExpr(jsFuncAnalysis{Returns: []string{"unknown + 1"}}, nil, nil); ok || expr != "" {
+		t.Fatalf("unsafe jsExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+	for input, want := range map[string]bool{
+		"":       false,
+		"1":      true,
+		"1.5":    true,
+		".5":     false,
+		"1.":     false,
+		"1.2.3":  false,
+		"123abc": false,
+	} {
+		if got := isNumericLiteral(input); got != want {
+			t.Fatalf("isNumericLiteral(%q) = %v, want %v", input, got, want)
+		}
+	}
+	for input, want := range map[string]bool{
+		"a + b":        true,
+		"new Widget()": false,
+		"value => 1":   false,
+		"items[0]":     false,
+		"":             false,
+	} {
+		if got := jsReturnExprIsSafe(input); got != want {
+			t.Fatalf("jsReturnExprIsSafe(%q) = %v, want %v", input, got, want)
+		}
+	}
+	for input, want := range map[string]string{
+		"null":             "null",
+		"undefined":        "undefined",
+		"true":             "boolean",
+		"'ok'":             "string",
+		"`ok`":             "string",
+		"12.5":             "number",
+		"[1]":              "array",
+		"{ ok: true }":     "object",
+		"JSON.parse(raw)":  "object",
+		"response.json()":  "object",
+		"a * b":            "number",
+		"enabled && ready": "boolean",
+		"name + 'suffix'":  "string",
+		"customValue":      "unknown",
+	} {
+		if got := inferJSReturnType([][]string{{"", input}}); got != want {
+			t.Fatalf("inferJSReturnType(%q) = %q, want %q", input, got, want)
+		}
+	}
+	if got := jsPlaceholderArgList([]jsParamInfo{{Name: "args", IsRest: true}, {Name: "value"}}); got != "[], undefined" {
+		t.Fatalf("jsPlaceholderArgList() = %q", got)
+	}
+	if got := jsArgListWithValues([]jsParamInfo{{Name: "enabled"}, {Name: "title"}}, map[string]string{"title": "'custom'"}); got != "true, 'custom'" {
+		t.Fatalf("jsArgListWithValues() = %q", got)
+	}
+	boundaries := []jsBoundary{{Param: "mode", Value: "'short'"}, {Param: "enabled", Value: "false"}}
+	task := &types.CoverageTestTask{SuggestedInputs: []string{"构造满足条件 `enabled == false` 的输入"}}
+	if got := jsBoundaryForCoverageTask(boundaries, task); got == nil || got.Param != "enabled" {
+		t.Fatalf("jsBoundaryForCoverageTask(exact) = %+v", got)
+	}
+	if got := jsBoundaryForCoverageTask([]jsBoundary{{Param: "mode", Value: "'short'"}}, &types.CoverageTestTask{GapType: "error_path"}); got == nil || got.Param != "mode" {
+		t.Fatalf("jsBoundaryForCoverageTask(fallback) = %+v", got)
+	}
+	if got := jsBoundaryForCoverageTask(boundaries, nil); got != nil {
+		t.Fatalf("jsBoundaryForCoverageTask(nil) = %+v", got)
+	}
+	if got := baseName(`C:\tmp\calc.test.js`); got != "calc.test.js" {
+		t.Fatalf("baseName() = %q", got)
+	}
+	if got := stripExt("calc.test.js"); got != "calc.test" {
+		t.Fatalf("stripExt(with ext) = %q", got)
+	}
+	if got := stripExt(".env"); got != ".env" {
+		t.Fatalf("stripExt(dotfile) = %q", got)
+	}
+	if !isJSKeyword("await") || isJSKeyword("businessValue") {
+		t.Fatalf("isJSKeyword returned unexpected result")
+	}
 
 	funcs := dedupJSFuncs([]jsFuncInfo{
 		{Name: "load"},

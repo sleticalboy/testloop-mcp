@@ -647,6 +647,64 @@ func TestPytestAssertionAndArgCompatHelpers(t *testing.T) {
 	if !ok || expr != "(1 + 2)" {
 		t.Fatalf("pyExpectedReturnExpr() = %q, %v", expr, ok)
 	}
+	expr, ok = pyExpectedReturnExprWithValues(
+		pyFuncAnalysis{Returns: []string{"url + suffix"}},
+		[]pyParamInfo{{Name: "url"}, {Name: "suffix"}},
+		nil,
+		map[string]string{"url": "'https://example.com'", "suffix": "'/v1'"},
+	)
+	if !ok || expr != "('https://example.com' + '/v1')" {
+		t.Fatalf("pyExpectedReturnExprWithValues() = %q, %v", expr, ok)
+	}
+	if expr, ok = pyExpectedReturnExpr(pyFuncAnalysis{Returns: []string{"unknown + 1"}}, nil, nil); ok || expr != "" {
+		t.Fatalf("unsafe pyExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+	for input, want := range map[string]bool{
+		"":       false,
+		"1":      true,
+		"1.5":    true,
+		".5":     false,
+		"1.":     false,
+		"1.2.3":  false,
+		"123abc": false,
+	} {
+		if got := isPyNumericLiteral(input); got != want {
+			t.Fatalf("isPyNumericLiteral(%q) = %v, want %v", input, got, want)
+		}
+	}
+	for input, want := range map[string]bool{
+		"a + b":       true,
+		"await value": false,
+		"lambda x: x": false,
+		"value if ok": false,
+		"items[0]":    false,
+		"":            false,
+	} {
+		if got := pyReturnExprIsSafe(input); got != want {
+			t.Fatalf("pyReturnExprIsSafe(%q) = %v, want %v", input, got, want)
+		}
+	}
+	for input, want := range map[string]string{
+		"None":             "None",
+		"True":             "bool",
+		"'ok'":             "str",
+		"f'ok'":            "str",
+		"12":               "int",
+		"12.5":             "float",
+		"[1]":              "list",
+		"{'ok': True}":     "dict",
+		"(1, 2)":           "tuple",
+		"response.json()":  "dict",
+		"a // b":           "float",
+		"a * b":            "int",
+		"name + '!'":       "str",
+		"', '.join(items)": "str",
+		"custom_value":     "unknown",
+	} {
+		if got := inferPyReturnType([][]string{{"", input}}); got != want {
+			t.Fatalf("inferPyReturnType(%q) = %q, want %q", input, got, want)
+		}
+	}
 	args := pyDefaultArgs([]pyParamInfo{{Name: "items"}, {Name: "kwargs", IsKwargs: true}})
 	if args != "[], {}" {
 		t.Fatalf("pyDefaultArgs() = %q", args)
