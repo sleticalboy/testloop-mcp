@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -121,6 +123,136 @@ func TestPrintClientConfigRejectsUnknownClient(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "不支持的客户端配置类型") {
 		t.Fatalf("stderr missing client error: %q", stderr.String())
+	}
+}
+
+func TestCheckClientConfigJSONCommand(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "testloop-mcp")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write binary: %v", err)
+	}
+	config := `{"mcpServers":{"testloop":{"command":"` + binary + `"}}}`
+	configPath := filepath.Join(dir, "claude.json")
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: configPath}, strings.NewReader(""), &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "ok: testloop command "+binary) {
+		t.Fatalf("unexpected stdout: %q", stdout.String())
+	}
+}
+
+func TestCheckClientConfigTOMLURLFromStdin(t *testing.T) {
+	config := `[mcp_servers.testloop]
+url = "http://localhost:8080/mcp"
+`
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: "-"}, strings.NewReader(config), &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "ok: testloop url http://localhost:8080/mcp") {
+		t.Fatalf("unexpected stdout: %q", stdout.String())
+	}
+}
+
+func TestCheckClientConfigRejectsMissingCommand(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "cursor.json")
+	if err := os.WriteFile(configPath, []byte(`{"mcpServers":{"testloop":{"command":"`+filepath.Join(dir, "missing")+`"}}}`), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: configPath}, strings.NewReader(""), &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "command 无效") {
+		t.Fatalf("stderr missing command error: %q", stderr.String())
+	}
+}
+
+func TestCheckClientConfigRejectsInvalidURL(t *testing.T) {
+	config := `[mcp_servers.testloop]
+url = "file:///tmp/testloop.sock"
+`
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: "-"}, strings.NewReader(config), &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "url 无效") {
+		t.Fatalf("stderr missing url error: %q", stderr.String())
+	}
+}
+
+func TestCheckClientConfigRejectsEmptyConfig(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: "-"}, strings.NewReader("{}"), &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "未找到 MCP server 配置") {
+		t.Fatalf("stderr missing empty config error: %q", stderr.String())
+	}
+}
+
+func TestCheckClientConfigParsesMixedPrintConfigOutput(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "testloop-mcp")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write binary: %v", err)
+	}
+	config := `[mcp_servers.testloop]
+command = "` + binary + `"
+
+---
+
+# ~/.claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "testloop": {
+      "command": "` + binary + `"
+    }
+  }
+}
+
+---
+
+# .cursor/mcp.json
+{
+  "mcpServers": {
+    "testloop": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+`
+	var stdout, stderr bytes.Buffer
+
+	code := checkClientConfig(serverConfig{checkConfig: "-"}, strings.NewReader(config), &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr=%q", code, stderr.String())
+	}
+	got := stdout.String()
+	if strings.Count(got, "ok: testloop") != 3 {
+		t.Fatalf("expected three validated entries, got:\n%s", got)
 	}
 }
 

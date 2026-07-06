@@ -119,6 +119,12 @@ testloop-mcp --print-config=all
 
 如果需要指定配置里的二进制路径，追加 `--config-command=/absolute/path/to/testloop-mcp`。
 
+配置写入后可以校验 `command` 是否存在且可执行，或 `url` 是否是合法 HTTP endpoint：
+
+```bash
+testloop-mcp --check-config ~/.codex/config.toml
+```
+
 ### Codex
 
 `~/.codex/config.toml`:

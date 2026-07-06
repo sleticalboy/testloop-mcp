@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -22,6 +26,7 @@ type serverConfig struct {
 	addr          string
 	stateless     bool
 	printConfig   string
+	checkConfig   string
 	configCommand string
 	configHTTPURL string
 }
@@ -33,6 +38,7 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 	addr := flags.String("addr", ":8080", "HTTP 模式监听地址 (仅 --transport=http 时生效)")
 	stateless := flags.Bool("stateless", false, "HTTP 无状态模式 (仅 --transport=http 时生效)")
 	printConfig := flags.String("print-config", "", "打印 MCP 客户端配置片段: all、codex、codex-http、claude 或 cursor")
+	checkConfig := flags.String("check-config", "", "检查 MCP 客户端配置文件路径；使用 - 从 stdin 读取")
 	configCommand := flags.String("config-command", "", "配置片段中的 testloop-mcp 二进制路径，默认使用当前可执行文件路径")
 	configHTTPURL := flags.String("config-http-url", "http://localhost:8080/mcp", "Codex HTTP 配置片段中的 MCP endpoint")
 	if err := flags.Parse(args); err != nil {
@@ -44,8 +50,13 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 		addr:          *addr,
 		stateless:     *stateless,
 		printConfig:   *printConfig,
+		checkConfig:   *checkConfig,
 		configCommand: *configCommand,
 		configHTTPURL: *configHTTPURL,
+	}
+	if cfg.printConfig != "" && cfg.checkConfig != "" {
+		fmt.Fprintln(stderr, "--print-config 和 --check-config 不能同时使用")
+		return cfg, 1
 	}
 	switch cfg.transport {
 	case "stdio", "http":
@@ -107,6 +118,183 @@ func printClientConfig(cfg serverConfig, stdout, stderr io.Writer) int {
 	return 0
 }
 
+type jsonClientConfig struct {
+	MCPServers map[string]json.RawMessage `json:"mcpServers"`
+}
+
+type clientConfigEntry struct {
+	Name    string
+	Command string
+	URL     string
+}
+
+func checkClientConfig(cfg serverConfig, stdin io.Reader, stdout, stderr io.Writer) int {
+	data, err := readConfigInput(cfg.checkConfig, stdin)
+	if err != nil {
+		fmt.Fprintf(stderr, "读取配置失败: %v\n", err)
+		return 1
+	}
+	entries := parseClientConfigEntries(data)
+	if len(entries) == 0 {
+		fmt.Fprintln(stderr, "未找到 MCP server 配置；需要 command 或 url")
+		return 1
+	}
+
+	ok := true
+	for _, entry := range entries {
+		switch {
+		case strings.TrimSpace(entry.Command) != "":
+			if err := validateConfigCommand(entry.Command); err != nil {
+				fmt.Fprintf(stderr, "error: %s command 无效: %v\n", entry.Name, err)
+				ok = false
+			} else {
+				fmt.Fprintf(stdout, "ok: %s command %s\n", entry.Name, entry.Command)
+			}
+		case strings.TrimSpace(entry.URL) != "":
+			if err := validateConfigURL(entry.URL); err != nil {
+				fmt.Fprintf(stderr, "error: %s url 无效: %v\n", entry.Name, err)
+				ok = false
+			} else {
+				fmt.Fprintf(stdout, "ok: %s url %s\n", entry.Name, entry.URL)
+			}
+		}
+	}
+	if !ok {
+		return 1
+	}
+	return 0
+}
+
+func readConfigInput(path string, stdin io.Reader) ([]byte, error) {
+	if path == "-" {
+		return io.ReadAll(stdin)
+	}
+	return os.ReadFile(path)
+}
+
+func parseClientConfigEntries(data []byte) []clientConfigEntry {
+	text := string(data)
+	if strings.Contains(text, "\n---\n") {
+		var entries []clientConfigEntry
+		for _, part := range strings.Split(text, "\n---\n") {
+			entries = append(entries, parseSingleClientConfigEntries([]byte(strings.TrimSpace(part)))...)
+		}
+		return entries
+	}
+	return parseSingleClientConfigEntries(data)
+}
+
+func parseSingleClientConfigEntries(data []byte) []clientConfigEntry {
+	trimmed := strings.TrimSpace(string(data))
+	if idx := strings.Index(trimmed, "{"); idx >= 0 {
+		if entries := parseJSONClientConfigEntries([]byte(trimmed[idx:])); len(entries) > 0 {
+			return entries
+		}
+	}
+	if entries := parseJSONClientConfigEntries([]byte(trimmed)); len(entries) > 0 {
+		return entries
+	}
+	return parseTOMLClientConfigEntries(trimmed)
+}
+
+func parseJSONClientConfigEntries(data []byte) []clientConfigEntry {
+	var cfg jsonClientConfig
+	if err := json.Unmarshal(data, &cfg); err != nil || len(cfg.MCPServers) == 0 {
+		return nil
+	}
+	entries := make([]clientConfigEntry, 0, len(cfg.MCPServers))
+	for name, raw := range cfg.MCPServers {
+		var server struct {
+			Command string `json:"command"`
+			URL     string `json:"url"`
+		}
+		if err := json.Unmarshal(raw, &server); err != nil {
+			continue
+		}
+		if strings.TrimSpace(server.Command) == "" && strings.TrimSpace(server.URL) == "" {
+			continue
+		}
+		entries = append(entries, clientConfigEntry{Name: name, Command: server.Command, URL: server.URL})
+	}
+	return entries
+}
+
+func parseTOMLClientConfigEntries(data string) []clientConfigEntry {
+	var entries []clientConfigEntry
+	current := ""
+	for _, line := range strings.Split(data, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section := strings.Trim(trimmed, "[]")
+			if strings.HasPrefix(section, "mcp_servers.") {
+				current = strings.TrimPrefix(section, "mcp_servers.")
+			} else {
+				current = ""
+			}
+			continue
+		}
+		if current == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(trimmed, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		unquoted, err := strconv.Unquote(value)
+		if err == nil {
+			value = unquoted
+		}
+		if key == "command" && value != "" {
+			entries = append(entries, clientConfigEntry{Name: current, Command: value})
+		}
+		if key == "url" && value != "" {
+			entries = append(entries, clientConfigEntry{Name: current, URL: value})
+		}
+	}
+	return entries
+}
+
+func validateConfigCommand(command string) error {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return fmt.Errorf("command 为空")
+	}
+	if strings.Contains(command, "/") {
+		info, err := os.Stat(command)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return fmt.Errorf("是目录，不是可执行文件")
+		}
+		if info.Mode()&0111 == 0 {
+			return fmt.Errorf("文件不可执行")
+		}
+		return nil
+	}
+	_, err := exec.LookPath(command)
+	return err
+}
+
+func validateConfigURL(rawURL string) error {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return err
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("scheme 必须是 http 或 https")
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("缺少 host")
+	}
+	return nil
+}
+
 func newTestloopServer() *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.7"},
@@ -137,6 +325,9 @@ func main() {
 	}
 	if cfg.printConfig != "" {
 		os.Exit(printClientConfig(cfg, os.Stdout, os.Stderr))
+	}
+	if cfg.checkConfig != "" {
+		os.Exit(checkClientConfig(cfg, os.Stdin, os.Stdout, os.Stderr))
 	}
 
 	server := newTestloopServer()
