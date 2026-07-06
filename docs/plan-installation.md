@@ -94,8 +94,9 @@
 - [x] 新增 `docs/plan-release-notes-v0.4.4.md`。
 - [x] MCP server implementation version 更新为 `0.4.4`。
 - [x] README 和安装文档已更新到 `v0.4.4` release 资产命名。
-- [ ] Tag `v0.4.4` 已推送。
-- [ ] Release Artifacts run 已通过，并上传四平台资产与 `.sha256`。
-- [ ] `TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh` 已验证可直接下载 release 资产并安装。
-- [ ] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.4`。
-- [ ] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.4` 可用。
+- [x] Tag `v0.4.4` 已推送并指向 `c91ae92a7e95eed2c7c674225699125143671066`。
+- [x] Release Artifacts run `28764619084` 已通过，并上传四平台资产与 `.sha256`。
+- [x] `TESTLOOP_MCP_VERSION=v0.4.4 sh scripts/install.sh` 已验证可直接下载 release 资产并安装。
+- [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`。
+- [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.4`，commit `39e2ce3`。
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.4` 可用。
