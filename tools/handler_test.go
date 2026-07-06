@@ -76,6 +76,15 @@ func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	}
 }
 
+func TestHandleParseCoverageValidatesInput(t *testing.T) {
+	if _, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{}); err == nil {
+		t.Fatal("expected missing data error")
+	}
+	if _, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{Data: "not coverage data"}); err == nil {
+		t.Fatal("expected invalid coverage data error")
+	}
+}
+
 func TestHandleGenerateTestsValidatesInput(t *testing.T) {
 	if _, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{}); err == nil {
 		t.Fatal("expected missing file_path error")
@@ -193,6 +202,36 @@ func TestHandleFixSuggestionsReturnsEmptyForNoFailures(t *testing.T) {
 	}
 }
 
+func TestHandleFixSuggestionsValidatesInput(t *testing.T) {
+	if _, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{}); err == nil {
+		t.Fatal("expected missing failures/source error")
+	}
+
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if _, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{
+		Failures:   "{",
+		SourceCode: source,
+	}); err == nil {
+		t.Fatal("expected invalid failures json error")
+	}
+
+	missing := filepath.Join(dir, "missing.go")
+	failuresJSON, err := json.Marshal([]types.TestFailure{{TestName: "Test", Error: "panic: runtime error"}})
+	if err != nil {
+		t.Fatalf("marshal failures: %v", err)
+	}
+	if _, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{
+		Failures:   string(failuresJSON),
+		SourceCode: missing,
+	}); err == nil {
+		t.Fatal("expected missing source error")
+	}
+}
+
 func TestHandleFixSuggestionsGotWant(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")
@@ -226,5 +265,55 @@ func TestHandleFixSuggestionsGotWant(t *testing.T) {
 	}
 	if suggestions[0].Confidence != 0.8 || !strings.Contains(suggestions[0].SuggestedFix, "实际值: 2") {
 		t.Fatalf("unexpected suggestion: %+v", suggestions[0])
+	}
+}
+
+func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	failures := []types.TestFailure{
+		{TestName: "TestNil", File: source, Line: 2, Error: "panic: runtime error: invalid memory address or nil pointer dereference"},
+		{TestName: "TestIndex", File: source, Line: 3, Error: "panic: runtime error: index out of range [2] with length 1"},
+		{TestName: "TestDivision", File: source, Line: 4, Error: "panic: runtime error: integer divide by zero"},
+		{TestName: "TestUndefined", File: source, Line: 5, Error: "undefined: missingSymbol"},
+		{TestName: "TestType", File: source, Line: 6, Error: "cannot use value as string value"},
+	}
+	failuresJSON, err := json.Marshal(failures)
+	if err != nil {
+		t.Fatalf("marshal failures: %v", err)
+	}
+
+	result, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{
+		Failures:   string(failuresJSON),
+		SourceCode: source,
+	})
+	if err != nil {
+		t.Fatalf("HandleFixSuggestions returned error: %v", err)
+	}
+
+	var suggestions []types.FixSuggestion
+	if err := json.Unmarshal([]byte(resultText(t, result)), &suggestions); err != nil {
+		t.Fatalf("unmarshal suggestions: %v", err)
+	}
+	if len(suggestions) != len(failures) {
+		t.Fatalf("suggestions len = %d, want %d", len(suggestions), len(failures))
+	}
+	checks := []struct {
+		wantConfidence float64
+		wantText       string
+	}{
+		{0.9, "nil"},
+		{0.9, "边界检查"},
+		{0.95, "除零检查"},
+		{0.7, "拼写正确"},
+		{0.7, "类型转换"},
+	}
+	for i, check := range checks {
+		if suggestions[i].Confidence != check.wantConfidence || !strings.Contains(suggestions[i].SuggestedFix, check.wantText) {
+			t.Fatalf("suggestion %d = %+v, want confidence %.1f and text %q", i, suggestions[i], check.wantConfidence, check.wantText)
+		}
 	}
 }

@@ -75,18 +75,20 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 		if strings.Contains(errorMsg, "got") && strings.Contains(errorMsg, "want") {
 			suggestion.SuggestedFix = analyzeGotWant(errorMsg, sourceCode, testCode, failure.Line)
 			suggestion.Confidence = 0.8
-		} else if strings.Contains(errorMsg, "nil pointer") || strings.Contains(errorMsg, "panic: runtime error") {
-			// 情况2: 空指针错误
-			suggestion.SuggestedFix = "检查是否为 nil 再访问，添加 nil 检查：\nif ptr != nil {\n    // 访问 ptr\n}"
-			suggestion.Confidence = 0.9
 		} else if strings.Contains(errorMsg, "index out of range") {
-			// 情况3: 数组越界
+			// 情况2: 数组越界
 			suggestion.SuggestedFix = "检查数组索引是否在有效范围内，添加边界检查：\nif idx >= 0 && idx < len(arr) {\n    // 访问 arr[idx]\n}"
 			suggestion.Confidence = 0.9
-		} else if strings.Contains(errorMsg, "division by zero") {
-			// 情况4: 除零错误
+		} else if strings.Contains(errorMsg, "division by zero") || strings.Contains(errorMsg, "divide by zero") {
+			// 情况3: 除零错误
 			suggestion.SuggestedFix = "添加除零检查：\nif b != 0 {\n    result = a / b\n}"
 			suggestion.Confidence = 0.95
+		} else if strings.Contains(errorMsg, "nil pointer") ||
+			strings.Contains(errorMsg, "invalid memory address") ||
+			strings.Contains(errorMsg, "panic: runtime error") {
+			// 情况4: 空指针或其他运行时 panic
+			suggestion.SuggestedFix = "检查是否为 nil 再访问，添加 nil 检查：\nif ptr != nil {\n    // 访问 ptr\n}"
+			suggestion.Confidence = 0.9
 		} else if strings.Contains(errorMsg, "undefined:") {
 			// 情况5: 未定义的变量或函数
 			suggestion.SuggestedFix = "检查变量或函数名是否拼写正确，或者是否忘记了 import"
