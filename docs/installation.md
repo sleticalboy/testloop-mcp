@@ -200,6 +200,14 @@ http://localhost:8080/mcp
 
 ## Codex 配置示例
 
+可以先生成本机路径对应的配置片段：
+
+```bash
+testloop-mcp --print-config=codex
+```
+
+如果需要指定配置里的二进制路径，追加 `--config-command=/absolute/path/to/testloop-mcp`。
+
 `~/.codex/config.toml`:
 
 ```toml
@@ -209,12 +217,22 @@ command = "/absolute/path/to/testloop-mcp"
 
 如果使用 HTTP 模式，并且当前 Codex 版本支持 URL 型 MCP server，可以配置：
 
+```bash
+testloop-mcp --print-config=codex-http
+```
+
 ```toml
 [mcp_servers.testloop]
 url = "http://localhost:8080/mcp"
 ```
 
 ## Claude Code / Claude Desktop 配置示例
+
+可以先生成本机路径对应的配置片段：
+
+```bash
+testloop-mcp --print-config=claude
+```
 
 `~/.claude/claude_desktop_config.json`:
 
@@ -229,6 +247,12 @@ url = "http://localhost:8080/mcp"
 ```
 
 ## Cursor 配置示例
+
+可以先生成本机路径对应的配置片段：
+
+```bash
+testloop-mcp --print-config=cursor
+```
 
 `.cursor/mcp.json`:
 

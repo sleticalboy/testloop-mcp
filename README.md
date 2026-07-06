@@ -111,6 +111,14 @@ go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 
 ## 配置接入
 
+可以先用命令生成当前机器上的配置片段：
+
+```bash
+testloop-mcp --print-config=all
+```
+
+如果需要指定配置里的二进制路径，追加 `--config-command=/absolute/path/to/testloop-mcp`。
+
 ### Codex
 
 `~/.codex/config.toml`:
