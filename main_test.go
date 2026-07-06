@@ -194,6 +194,9 @@ func TestCheckClientConfigRejectsMissingCommand(t *testing.T) {
 	if !strings.Contains(stderr.String(), "command 无效") {
 		t.Fatalf("stderr missing command error: %q", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), "suggestion: update testloop with `testloop-mcp --print-config=cursor --config-command") {
+		t.Fatalf("stderr missing command suggestion: %q", stderr.String())
+	}
 }
 
 func TestCheckClientConfigRejectsInvalidURL(t *testing.T) {
@@ -210,6 +213,9 @@ url = "file:///tmp/testloop.sock"
 	if !strings.Contains(stderr.String(), "url 无效") {
 		t.Fatalf("stderr missing url error: %q", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), "suggestion: use an http(s) Streamable HTTP endpoint") {
+		t.Fatalf("stderr missing url suggestion: %q", stderr.String())
+	}
 }
 
 func TestCheckClientConfigRejectsEmptyConfig(t *testing.T) {
@@ -222,6 +228,9 @@ func TestCheckClientConfigRejectsEmptyConfig(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "未找到 MCP server 配置") {
 		t.Fatalf("stderr missing empty config error: %q", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "suggestion: run `testloop-mcp --doctor-config`") {
+		t.Fatalf("stderr missing empty config suggestion: %q", stderr.String())
 	}
 }
 

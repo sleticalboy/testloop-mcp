@@ -125,6 +125,8 @@ testloop-mcp --print-config=all
 testloop-mcp --check-config ~/.codex/config.toml
 ```
 
+校验失败时会输出对应的 `--print-config` 或 `--doctor-config` 建议，便于直接修复缺失或不可执行的配置。
+
 也可以查看推荐配置路径和本机诊断：
 
 ```bash

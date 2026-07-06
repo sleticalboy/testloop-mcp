@@ -160,15 +160,18 @@ func checkClientConfig(cfg serverConfig, stdin io.Reader, stdout, stderr io.Writ
 	entries := parseClientConfigEntries(data)
 	if len(entries) == 0 {
 		fmt.Fprintln(stderr, "未找到 MCP server 配置；需要 command 或 url")
+		fmt.Fprintln(stderr, "suggestion: run `testloop-mcp --doctor-config` to locate client config files, then generate a testloop snippet with `testloop-mcp --print-config=codex`")
 		return 1
 	}
 
 	ok := true
+	clientName := inferClientConfigName(cfg.checkConfig)
 	for _, entry := range entries {
 		switch {
 		case strings.TrimSpace(entry.Command) != "":
 			if err := validateConfigCommand(entry.Command); err != nil {
 				fmt.Fprintf(stderr, "error: %s command 无效: %v\n", entry.Name, err)
+				fmt.Fprintf(stderr, "suggestion: update %s with `testloop-mcp --print-config=%s --config-command %s`, or run `testloop-mcp --doctor-config`\n", entry.Name, clientName, strconv.Quote(suggestedConfigCommand()))
 				ok = false
 			} else {
 				fmt.Fprintf(stdout, "ok: %s command %s\n", entry.Name, entry.Command)
@@ -176,6 +179,7 @@ func checkClientConfig(cfg serverConfig, stdin io.Reader, stdout, stderr io.Writ
 		case strings.TrimSpace(entry.URL) != "":
 			if err := validateConfigURL(entry.URL); err != nil {
 				fmt.Fprintf(stderr, "error: %s url 无效: %v\n", entry.Name, err)
+				fmt.Fprintf(stderr, "suggestion: use an http(s) Streamable HTTP endpoint, for example `testloop-mcp --print-config=codex-http --config-http-url http://localhost:8080/mcp`\n")
 				ok = false
 			} else {
 				fmt.Fprintf(stdout, "ok: %s url %s\n", entry.Name, entry.URL)
@@ -186,6 +190,30 @@ func checkClientConfig(cfg serverConfig, stdin io.Reader, stdout, stderr io.Writ
 		return 1
 	}
 	return 0
+}
+
+func inferClientConfigName(path string) string {
+	normalized := filepath.ToSlash(strings.ToLower(path))
+	switch {
+	case strings.Contains(normalized, "claude"):
+		return "claude"
+	case strings.Contains(normalized, "cursor") || strings.HasSuffix(normalized, ".cursor/mcp.json"):
+		return "cursor"
+	case strings.Contains(normalized, ".codex") || strings.HasSuffix(normalized, "config.toml"):
+		return "codex"
+	default:
+		return "codex"
+	}
+}
+
+func suggestedConfigCommand() string {
+	if pathBinary, err := exec.LookPath("testloop-mcp"); err == nil {
+		return pathBinary
+	}
+	if exe, err := os.Executable(); err == nil {
+		return exe
+	}
+	return "testloop-mcp"
 }
 
 func doctorClientConfig(stdout, stderr io.Writer) int {

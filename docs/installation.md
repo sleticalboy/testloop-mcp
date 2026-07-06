@@ -216,6 +216,8 @@ testloop-mcp --check-config ~/.claude/claude_desktop_config.json
 testloop-mcp --check-config .cursor/mcp.json
 ```
 
+校验失败时会输出对应的 `--print-config` 或 `--doctor-config` 建议，便于直接修复缺失、不可执行或 URL 不合法的配置。
+
 也可以从 stdin 校验：
 
 ```bash
