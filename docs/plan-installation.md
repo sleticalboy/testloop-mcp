@@ -72,3 +72,8 @@
 - [x] `TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh` 已验证可直接下载 release 资产并安装。
 - [x] `sleticalboy/homebrew-tap` 已更新 `testloop-mcp` formula 到 `0.4.3`。
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 和 `brew test sleticalboy/tap/testloop-mcp` 已验证 `0.4.3` 可用。
+
+## 下一版发布维护
+
+- [x] 新增 `scripts/package-release-asset.sh`，将 release 资产构建、打包和 `.sha256` 生成从 workflow YAML 中抽出。
+- [x] Release Artifacts workflow 改为调用 `scripts/package-release-asset.sh`，为后续调试单平台和扩展 Windows zip 资产降低改动面。

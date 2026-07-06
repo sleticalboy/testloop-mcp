@@ -69,19 +69,7 @@ jobs:
       - name: Build binaries
         run: |
           set -euo pipefail
-          archive="testloop-mcp_${TAG_NAME}_${{ matrix.asset }}.tar.gz"
-          mkdir -p dist/package
-          CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-s -w" -o dist/package/testloop-mcp .
-          CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-s -w" -o dist/package/testloop-testgen ./cmd/testgen
-          cp README.md LICENSE dist/package/
-          tar -czf "dist/${archive}" -C dist/package .
-          rm -rf dist/package
-          cd dist
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "$archive" > "${archive}.sha256"
-          else
-            shasum -a 256 "$archive" > "${archive}.sha256"
-          fi
+          scripts/package-release-asset.sh "$TAG_NAME" "${{ matrix.asset }}" "${{ matrix.goos }}" "${{ matrix.goarch }}"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -89,6 +77,7 @@ jobs:
           name: release-${{ matrix.asset }}
           path: |
             dist/*.tar.gz
+            dist/*.zip
             dist/*.sha256
           if-no-files-found: error
 
@@ -104,4 +93,4 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG_NAME" dist/*.tar.gz dist/*.sha256 --clobber
+        run: gh release upload "$TAG_NAME" dist/*.tar.gz dist/*.zip dist/*.sha256 --clobber

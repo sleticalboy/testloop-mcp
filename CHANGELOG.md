@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Release 资产打包逻辑抽到 `scripts/package-release-asset.sh`，workflow 复用同一脚本生成 tarball/zip 和 `.sha256`。
+
 ## v0.4.3 - 2026-07-06
 
 ### Changed
