@@ -7,6 +7,7 @@
 - Release 资产打包逻辑抽到 `scripts/package-release-asset.sh`，workflow 复用同一脚本生成 tarball/zip 和 `.sha256`。
 - 新增手动触发的 Windows Release Probe workflow，用于隔离验证 `windows_amd64` CGO 打包链路。
 - Release Artifacts workflow 新增 `windows_amd64` matrix 项，后续 tag release 会上传 Windows zip 和 `.sha256`。
+- 安装脚本支持在 Git Bash/MSYS/Cygwin 等 Windows shell 下下载、校验并安装 `windows_amd64` zip 资产，缺少匹配资产或解压工具时仍回退到 `go install`。
 
 ## v0.4.3 - 2026-07-06
 

@@ -55,7 +55,7 @@ brew tap sleticalboy/tap
 brew install testloop-mcp
 ```
 
-也可以使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产；当前 release 没有匹配资产时，会自动回退到 `go install`：
+也可以使用安装脚本。脚本会优先下载当前平台匹配的 GitHub Release 资产，支持 Linux/macOS tarball 和 Windows amd64 zip；当前 release 没有匹配资产时，会自动回退到 `go install`：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh

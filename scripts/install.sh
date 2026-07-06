@@ -4,6 +4,7 @@ set -eu
 repo="sleticalboy/testloop-mcp"
 version="${TESTLOOP_MCP_VERSION:-latest}"
 install_dir="${TESTLOOP_MCP_INSTALL_DIR:-$HOME/.local/bin}"
+binary_suffix=""
 
 log() {
   printf '%s\n' "$*"
@@ -40,33 +41,73 @@ checksum_cmd() {
   fi
 }
 
+extract_archive() {
+  archive="$1"
+  dest="$2"
+  case "$archive" in
+    *.zip)
+      if command -v unzip >/dev/null 2>&1; then
+        unzip -q "$archive" -d "$dest"
+      elif command -v bsdtar >/dev/null 2>&1; then
+        bsdtar -xf "$archive" -C "$dest"
+      else
+        return 1
+      fi
+      ;;
+    *.tar.gz)
+      tar -xzf "$archive" -C "$dest"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 go_install_fallback() {
   need_cmd go
   mkdir -p "$install_dir"
   log "No matching release asset was found; falling back to go install."
   GOBIN="$install_dir" go install "github.com/${repo}@${version}"
   GOBIN="$install_dir" go install "github.com/${repo}/cmd/testgen@${version}"
-  if [ -x "${install_dir}/testgen" ] && [ ! -e "${install_dir}/testloop-testgen" ]; then
-    mv "${install_dir}/testgen" "${install_dir}/testloop-testgen"
+  if [ -x "${install_dir}/testgen${binary_suffix}" ] && [ ! -e "${install_dir}/testloop-testgen${binary_suffix}" ]; then
+    mv "${install_dir}/testgen${binary_suffix}" "${install_dir}/testloop-testgen${binary_suffix}"
   fi
-  log "Installed testloop-mcp to ${install_dir}/testloop-mcp"
-  log "Installed testloop-testgen to ${install_dir}/testloop-testgen"
+  log "Installed testloop-mcp to ${install_dir}/testloop-mcp${binary_suffix}"
+  log "Installed testloop-testgen to ${install_dir}/testloop-testgen${binary_suffix}"
 }
 
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-arch="$(uname -m)"
+os="${TESTLOOP_MCP_OS:-}"
+arch="${TESTLOOP_MCP_ARCH:-}"
+if [ -z "$os" ]; then
+  os="$(uname -s)"
+fi
+if [ -z "$arch" ]; then
+  arch="$(uname -m)"
+fi
+os="$(printf '%s' "$os" | tr '[:upper:]' '[:lower:]')"
 
 case "$os" in
   linux) os="linux" ;;
   darwin) os="darwin" ;;
+  windows) os="windows" ;;
+  mingw*|msys*|cygwin*) os="windows" ;;
   *) go_install_fallback; exit 0 ;;
 esac
+
+if [ "$os" = "windows" ]; then
+  binary_suffix=".exe"
+fi
 
 case "$arch" in
   x86_64|amd64) arch="amd64" ;;
   arm64|aarch64) arch="arm64" ;;
   *) go_install_fallback; exit 0 ;;
 esac
+
+archive_ext="tar.gz"
+if [ "$os" = "windows" ]; then
+  archive_ext="zip"
+fi
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT INT TERM
@@ -81,7 +122,7 @@ if [ "$version" = "latest" ]; then
   fi
 fi
 
-asset="testloop-mcp_${version}_${os}_${arch}.tar.gz"
+asset="testloop-mcp_${version}_${os}_${arch}.${archive_ext}"
 base_url="https://github.com/${repo}/releases/download/${version}"
 
 if ! download "${base_url}/${asset}" "${tmp_dir}/${asset}" 2>/dev/null; then
@@ -103,9 +144,13 @@ fi
 )
 
 mkdir -p "$install_dir"
-tar -xzf "${tmp_dir}/${asset}" -C "$tmp_dir"
-install -m 755 "${tmp_dir}/testloop-mcp" "${install_dir}/testloop-mcp"
-install -m 755 "${tmp_dir}/testloop-testgen" "${install_dir}/testloop-testgen"
+if ! extract_archive "${tmp_dir}/${asset}" "$tmp_dir"; then
+  log "No supported extractor was found for ${asset}; falling back to go install."
+  go_install_fallback
+  exit 0
+fi
+install -m 755 "${tmp_dir}/testloop-mcp${binary_suffix}" "${install_dir}/testloop-mcp${binary_suffix}"
+install -m 755 "${tmp_dir}/testloop-testgen${binary_suffix}" "${install_dir}/testloop-testgen${binary_suffix}"
 
-log "Installed testloop-mcp to ${install_dir}/testloop-mcp"
-log "Installed testloop-testgen to ${install_dir}/testloop-testgen"
+log "Installed testloop-mcp to ${install_dir}/testloop-mcp${binary_suffix}"
+log "Installed testloop-testgen to ${install_dir}/testloop-testgen${binary_suffix}"

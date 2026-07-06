@@ -20,7 +20,7 @@ testloop-testgen --help
 
 ## 安装脚本
 
-安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt`。当前 release 没有对应资产时，会自动回退到 `go install`。
+安装脚本会检测当前系统和 CPU 架构，优先下载匹配的 GitHub Release 资产并校验 `checksums.txt` 或单资产 `.sha256`。Linux/macOS 会安装 tarball，Git Bash/MSYS/Cygwin 等 Windows shell 会安装 `windows_amd64` zip；当前 release 没有对应资产时，会自动回退到 `go install`。
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
@@ -31,6 +31,12 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 ```bash
 TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
+```
+
+维护者调试平台选择时也可以显式覆盖检测结果：
+
+```bash
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.4.3 sh scripts/install.sh
 ```
 
 脚本会安装两个命令：
@@ -61,7 +67,7 @@ chmod +x testloop-mcp testloop-testgen
 ./testloop-testgen --help
 ```
 
-后续自动发布产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应 tarball 的 `.sha256`。
+后续自动发布产物会同时提供单资产 `.sha256` 文件。安装脚本会优先使用聚合 `checksums.txt`，不存在时自动使用对应资产的 `.sha256`。
 
 Windows amd64 可直接下载 zip：
 
