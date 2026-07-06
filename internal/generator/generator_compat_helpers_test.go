@@ -3,6 +3,7 @@ package generator
 import (
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"strings"
 	"testing"
 
@@ -167,6 +168,86 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	}
 	if got := goCoverageTaskCaseName(nil, "fallback"); got != "fallback" {
 		t.Fatalf("goCoverageTaskCaseName(nil) = %q", got)
+	}
+}
+
+func TestGoSeedAndReturnSafetyBranches(t *testing.T) {
+	for input, want := range map[string]bool{
+		"":          false,
+		"a + b":     true,
+		"items[0]":  false,
+		"fn(a)":     false,
+		"obj.Value": false,
+		"ch <- v":   false,
+		"chan int":  false,
+	} {
+		if got := goReturnExprIsSafe(input); got != want {
+			t.Fatalf("goReturnExprIsSafe(%q) = %v, want %v", input, got, want)
+		}
+	}
+
+	file, err := parser.ParseFile(token.NewFileSet(), "sample.go", `package sample
+
+func Add(a, b int) int {
+	return a + b
+}
+
+func Empty() {
+}
+
+func Multi(a int) int {
+	a++
+	return a
+}
+
+func Pair() (int, int) {
+	return 1, 2
+}
+`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	funcs := map[string]*ast.BlockStmt{}
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok {
+			funcs[fn.Name.Name] = fn.Body
+		}
+	}
+	if got := singleReturnExpr(funcs["Add"]); got != "a + b" {
+		t.Fatalf("singleReturnExpr(Add) = %q", got)
+	}
+	for _, name := range []string{"Empty", "Multi", "Pair"} {
+		if got := singleReturnExpr(funcs[name]); got != "" {
+			t.Fatalf("singleReturnExpr(%s) = %q", name, got)
+		}
+	}
+	if got := singleReturnExpr(nil); got != "" {
+		t.Fatalf("singleReturnExpr(nil) = %q", got)
+	}
+
+	if _, ok := goSeedTestCase(funcInfo{Name: "Method", IsMethod: true}); ok {
+		t.Fatal("method should not get exact seed case")
+	}
+	if _, ok := goSeedTestCase(funcInfo{Name: "Variadic", IsVariadic: true}); ok {
+		t.Fatal("variadic function should not get exact seed case")
+	}
+	if _, ok := goSeedTestCase(funcInfo{Name: "Err", Returns: []paramInfo{{Name: "err", Type: "error"}}}); ok {
+		t.Fatal("error return should not get exact seed case")
+	}
+	if _, ok := goSeedTestCase(funcInfo{
+		Name:       "Unsafe",
+		Params:     []paramInfo{{Name: "items", Type: "[]int"}},
+		Returns:    []paramInfo{{Name: "ret0", Type: "[]int"}},
+		ReturnExpr: "items",
+	}); ok {
+		t.Fatal("unsupported exact seed type should not get seed case")
+	}
+	if _, ok := goSeedTestCase(funcInfo{
+		Name:       "Unknown",
+		Returns:    []paramInfo{{Name: "ret0", Type: "int"}},
+		ReturnExpr: "missing + 1",
+	}); ok {
+		t.Fatal("unknown identifiers should not get seed case")
 	}
 }
 
