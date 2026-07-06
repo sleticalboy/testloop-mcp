@@ -76,6 +76,99 @@ func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsValidatesInput(t *testing.T) {
+	if _, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{}); err == nil {
+		t.Fatal("expected missing file_path error")
+	}
+	if _, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: "missing.go"}); err == nil {
+		t.Fatal("expected missing file error")
+	}
+
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if _, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source, Provider: "unknown"}); err == nil {
+		t.Fatal("expected unsupported provider error")
+	}
+}
+
+func TestHandleGenerateTestsStaticGo(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Status != "ok" || generated.Provider != "static" || generated.GeneratedCases == 0 {
+		t.Fatalf("unexpected generated output: %+v", generated)
+	}
+	if generated.TestFile != filepath.Join(dir, "calc_test.go") {
+		t.Fatalf("test file = %q, want %q", generated.TestFile, filepath.Join(dir, "calc_test.go"))
+	}
+	if _, err := os.Stat(generated.TestFile); err != nil {
+		t.Fatalf("expected generated test file: %v", err)
+	}
+}
+
+func TestHandleGenerateTestsUsesCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	testFile := filepath.Join(dir, "generated", "calc_task_test.go")
+	task := &types.CoverageTestTask{
+		ID:             "go-calc-add",
+		Framework:      "go-test",
+		File:           source,
+		Target:         "Add",
+		Kind:           "function",
+		LineRange:      "2-2",
+		Goal:           "cover Add",
+		TestFile:       testFile,
+		TestName:       "TestAddCoverageTask",
+		AssertionFocus: []string{"assert Add result"},
+		Confidence:     0.9,
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.TestFile != testFile {
+		t.Fatalf("test file = %q, want %q", generated.TestFile, testFile)
+	}
+	if generated.CoverageTask == nil || generated.Context == nil || generated.Context.CoverageTask == nil {
+		t.Fatalf("expected coverage task in output and context: %+v", generated)
+	}
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("expected generated coverage task test file: %v", err)
+	}
+	if !strings.Contains(string(content), "TestAddCoverageTask") {
+		t.Fatalf("generated test file missing task test name:\n%s", content)
+	}
+}
+
 func TestHandleFixSuggestionsReturnsEmptyForNoFailures(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")
