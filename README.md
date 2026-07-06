@@ -375,18 +375,9 @@ docker compose down                    # 停止
 
 ## Roadmap
 
-- [x] MCP 服务器骨架（stdio + Streamable HTTP 传输）
-- [x] Go 测试生成器（优先 gotests，回退 AST → 表驱动测试）
-- [x] 泛型 / 通道 / 接口 / 变参 / `reflect.DeepEqual` 支持
-- [x] JavaScript/TypeScript 测试生成器（函数/箭头/类/async → Jest）
-- [x] Python 测试生成器（def/class/async → pytest）
-- [x] `go test` / Jest / Vitest / Mocha / pytest 执行器
-- [x] 测试输出解析器（5 框架）
-- [x] `fix_suggestions` 修复建议（6 种失败类型）
-- [x] 覆盖率解析（Go / Jest / Vitest / Mocha / pytest / Rust tarpaulin LCOV / Java JaCoCo XML）
-- [x] 框架自动检测（package.json scripts/dependencies + pyproject.toml + go.mod，向上递归查找）
-- [x] Docker 部署（多阶段构建 + docker-compose）
-- [ ] VS Code Extension 配套
+当前版本已经覆盖 stdio / Streamable HTTP MCP 服务、多语言测试生成、测试执行、失败解析、修复建议、覆盖率解析、Docker 部署和 GitHub Release / Homebrew 分发。
+
+后续路线图和已完成阶段见 [docs/plan-roadmap.md](./docs/plan-roadmap.md)。
 
 ## License
 
