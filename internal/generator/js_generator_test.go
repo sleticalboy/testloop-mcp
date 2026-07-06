@@ -380,6 +380,45 @@ module.exports = { add, sub };
 	}
 }
 
+func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
+	funcs := []jsFuncInfo{{Name: "add"}, {Name: "sub"}}
+	classes := []jsClassInfo{
+		{
+			Name: "Calculator",
+			Methods: []jsFuncInfo{
+				{Name: "add", ClassName: "Calculator", IsMethod: true},
+				{Name: "divide", ClassName: "Calculator", IsMethod: true},
+			},
+		},
+	}
+
+	gotFuncs, gotClasses := filterJSTargetsForCoverageTask(funcs, classes, &types.CoverageTestTask{})
+	if len(gotFuncs) != 2 || len(gotClasses) != 1 {
+		t.Fatalf("empty target should keep all targets: funcs=%+v classes=%+v", gotFuncs, gotClasses)
+	}
+
+	gotFuncs, gotClasses = filterJSTargetsForCoverageTask(funcs, classes, &types.CoverageTestTask{Target: "add"})
+	if len(gotFuncs) != 1 || gotFuncs[0].Name != "add" || len(gotClasses) != 1 ||
+		len(gotClasses[0].Methods) != 1 || gotClasses[0].Methods[0].Name != "add" {
+		t.Fatalf("function target filtered incorrectly: funcs=%+v classes=%+v", gotFuncs, gotClasses)
+	}
+
+	gotFuncs, gotClasses = filterJSTargetsForCoverageTask(funcs, classes, &types.CoverageTestTask{Target: "Calculator"})
+	if len(gotFuncs) != 0 || len(gotClasses) != 1 || len(gotClasses[0].Methods) != 2 {
+		t.Fatalf("class target should keep whole class: funcs=%+v classes=%+v", gotFuncs, gotClasses)
+	}
+
+	gotFuncs, gotClasses = filterJSTargetsForCoverageTask(funcs, classes, &types.CoverageTestTask{Target: "Calculator.divide"})
+	if len(gotFuncs) != 0 || len(gotClasses) != 1 || len(gotClasses[0].Methods) != 1 || gotClasses[0].Methods[0].Name != "divide" {
+		t.Fatalf("method target filtered incorrectly: funcs=%+v classes=%+v", gotFuncs, gotClasses)
+	}
+
+	gotFuncs, gotClasses = filterJSTargetsForCoverageTask(funcs, classes, &types.CoverageTestTask{Target: "missing"})
+	if len(gotFuncs) != 2 || len(gotClasses) != 1 {
+		t.Fatalf("missing target should fall back to all targets: funcs=%+v classes=%+v", gotFuncs, gotClasses)
+	}
+}
+
 func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
 	tests := map[string]string{
 		"number":    "number",
