@@ -54,6 +54,90 @@ func TestJavaParserExtractsConstructorsThrowsVarargsAndGenerics(t *testing.T) {
 	}
 }
 
+func TestJavaParserExtractsInterfaceEnumInnerClassAndSkipsHelpers(t *testing.T) {
+	source := []byte(`interface Worker {
+    void run(String job);
+}
+
+enum Mode {
+    FAST;
+
+    public String label() {
+        return "fast";
+    }
+}
+
+class Outer {
+    public String getName() {
+        return "outer";
+    }
+
+    public void setName(String name) {
+    }
+
+    public boolean equals(Object other) {
+        return false;
+    }
+
+    public int value() {
+        return 1;
+    }
+
+    class Inner {
+        int nested() {
+            return 2;
+        }
+    }
+}
+`)
+
+	funcs, classes := parseJavaWithTreeSitter(source)
+
+	for _, want := range []string{"Worker", "Mode", "Outer"} {
+		found := false
+		for _, cls := range classes {
+			if cls.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("class-like declaration %q not found in %+v", want, classes)
+		}
+	}
+
+	run := findJavaFunc(funcs, "run")
+	if run == nil || run.ClassName != "Worker" || !run.IsVoid || len(run.Params) != 1 || run.Params[0].Name != "job" {
+		t.Fatalf("unexpected interface method: %+v", run)
+	}
+	value := findJavaFunc(funcs, "value")
+	if value == nil || value.ClassName != "Outer" || value.ReturnType != "int" {
+		t.Fatalf("unexpected outer method: %+v", value)
+	}
+	nested := findJavaFunc(funcs, "nested")
+	if nested == nil || nested.ClassName != "Inner" || nested.ReturnType != "int" {
+		t.Fatalf("unexpected inner class method: %+v", nested)
+	}
+	for _, helper := range []string{"getName", "setName", "equals"} {
+		if got := findJavaFunc(funcs, helper); got != nil {
+			t.Fatalf("helper %s should be skipped, got %+v in funcs %+v", helper, got, funcs)
+		}
+	}
+}
+
+func TestJavaIsTestHelperBranches(t *testing.T) {
+	for _, name := range []string{"testValue", "TestValue", "main", "equals", "hashCode", "toString", "getName", "setName"} {
+		if !javaIsTestHelper(name) {
+			t.Fatalf("javaIsTestHelper(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"value", "getter", "set", "get", "getname", "compute"} {
+		if javaIsTestHelper(name) {
+			t.Fatalf("javaIsTestHelper(%q) = true, want false", name)
+		}
+	}
+}
+
 func TestJavaInferDefaultValueAndAssert(t *testing.T) {
 	defaults := map[string]string{
 		"":                    "null",
