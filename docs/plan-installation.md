@@ -46,6 +46,14 @@
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp` 可从 `0.4.3` 升级到 `0.4.4`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 
+## 准备中版本
+
+- 目标版本：`v0.4.5`
+- 发布说明草案：`docs/plan-release-notes-v0.4.5.md`
+- 重点：补强内置静态测试生成器的回归测试，覆盖 Go、Python、Jest、Java 和 Rust 的 coverage-task、parser、参数推断和 helper 分支。
+- 本地验证：`go test ./...`、`git diff --check`、release 脚本语法检查、workflow lint 和本机 `darwin_arm64` 打包模拟已通过。
+- 当前远端 CI 多个 push run 仍在排队；按维护流程，排队状态不阻塞本地验证和后续 release prep。
+
 ## 版本摘要
 
 | Version | 重点 | 关键验证 |
@@ -54,6 +62,7 @@
 | `v0.4.2` | 增加 Linux arm64、macOS arm64 和安装脚本 | Release build run `28746080130`；macOS arm64 安装脚本验证通过 |
 | `v0.4.3` | 移除 publish job 队列瓶颈，接入 Homebrew tap | Release run `28761435820`；Homebrew tap 升级到 `0.4.3` 并通过 `brew test` |
 | `v0.4.4` | 正式覆盖 Windows amd64 zip，安装脚本支持 Windows zip，移除临时 probe | Release run `28764619084`；asset verification run `28765386761`；Homebrew tap 升级到 `0.4.4` 并通过 `brew test` |
+| `v0.4.5` | 准备中：补强内置静态测试生成器和 parser/helper 回归测试 | 本地 generator coverage `91.7%`；release checklist 本地验证通过，远端 CI 排队中 |
 
 ## 发布维护流程
 

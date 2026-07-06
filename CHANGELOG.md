@@ -4,6 +4,9 @@
 
 ### Changed
 
+- MCP server implementation version 更新为 `0.4.5`。
+- 内置静态测试生成器补充覆盖 Go、Python、Jest、Java 和 Rust 的 coverage-task、parser 和 helper 分支测试，降低 coverage task 草稿生成回归风险。
+- `internal/generator` 本地语句覆盖率提升到 `91.7%`，覆盖 release 前最容易回归的目标过滤、参数推断、边界输入和 parser 分支。
 - Release Artifacts workflow 会在上传前校验生成资产的 `.sha256`，并检查 tarball/zip 内包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
 
 ## v0.4.4 - 2026-07-06
