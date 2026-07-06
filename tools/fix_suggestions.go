@@ -21,7 +21,7 @@ type fixSuggestionsInput struct {
 func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input fixSuggestionsInput) (*mcp.CallToolResult, any, error) {
 	failuresStr := input.Failures
 	sourceFile := input.SourceCode
-	
+
 	if failuresStr == "" || sourceFile == "" {
 		return nil, nil, fmt.Errorf("failures 和 source_code 参数必填")
 	}
@@ -70,7 +70,7 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 
 		// 分析错误信息，生成修复建议
 		errorMsg := failure.Error
-		
+
 		// 情况1: got X, want Y (期望值不匹配)
 		if strings.Contains(errorMsg, "got") && strings.Contains(errorMsg, "want") {
 			suggestion.SuggestedFix = analyzeGotWant(errorMsg, sourceCode, testCode, failure.Line)
@@ -110,9 +110,9 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 func analyzeGotWant(errorMsg, sourceCode, testCode string, errorLine int) string {
 	// 提取 got 和 want 的值
 	// 常见格式: "got X, want Y" 或 "ret0 got X, want Y"
-	
+
 	var got, want string
-	
+
 	// 尝试提取 got 和 want 的值
 	if idx := strings.Index(errorMsg, "got"); idx > 0 {
 		rest := errorMsg[idx+3:]
@@ -120,14 +120,14 @@ func analyzeGotWant(errorMsg, sourceCode, testCode string, errorLine int) string
 			got = strings.TrimSpace(rest[:endIdx])
 		}
 	}
-	
+
 	if idx := strings.Index(errorMsg, "want"); idx > 0 {
 		rest := errorMsg[idx+4:]
 		want = strings.TrimSpace(rest)
 		// 去掉可能的标点符号
 		want = strings.TrimRight(want, ".!;")
 	}
-	
+
 	// 生成修复建议
 	var sb strings.Builder
 	sb.WriteString("期望值不匹配\n")
@@ -137,6 +137,6 @@ func analyzeGotWant(errorMsg, sourceCode, testCode string, errorLine int) string
 	sb.WriteString("1. 测试用例的期望值填写错误 → 修改测试代码中的期望值\n")
 	sb.WriteString("2. 函数实现逻辑错误 → 检查并修复函数实现\n")
 	sb.WriteString("3. 边界条件处理错误 → 检查边界情况（如空值、零值、负值等）\n")
-	
+
 	return sb.String()
 }
