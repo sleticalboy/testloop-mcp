@@ -302,7 +302,10 @@ func TestHandleFixSuggestionsGotWant(t *testing.T) {
 	if len(suggestions) != 1 {
 		t.Fatalf("suggestions len = %d, want 1", len(suggestions))
 	}
-	if suggestions[0].Confidence != 0.8 || !strings.Contains(suggestions[0].SuggestedFix, "实际值: 2") {
+	if suggestions[0].Confidence != 0.8 ||
+		!strings.Contains(suggestions[0].SuggestedFix, "实际值: 2") ||
+		!strings.Contains(suggestions[0].SuggestedFix, "源码附近行") ||
+		!strings.Contains(suggestions[0].SuggestedFix, "func Add") {
 		t.Fatalf("unexpected suggestion: %+v", suggestions[0])
 	}
 }
@@ -342,17 +345,22 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 	}
 	checks := []struct {
 		wantConfidence float64
-		wantText       string
+		wantTexts      []string
 	}{
-		{0.9, "nil"},
-		{0.9, "边界检查"},
-		{0.95, "除零检查"},
-		{0.7, "拼写正确"},
-		{0.7, "类型转换"},
+		{0.9, []string{"nil"}},
+		{0.9, []string{"边界检查", "失败索引: 2", "当前长度: 1"}},
+		{0.95, []string{"除零检查", "除数是否为 0"}},
+		{0.7, []string{"拼写正确", "符号: missingSymbol"}},
+		{0.7, []string{"类型转换", "函数签名"}},
 	}
 	for i, check := range checks {
-		if suggestions[i].Confidence != check.wantConfidence || !strings.Contains(suggestions[i].SuggestedFix, check.wantText) {
-			t.Fatalf("suggestion %d = %+v, want confidence %.1f and text %q", i, suggestions[i], check.wantConfidence, check.wantText)
+		if suggestions[i].Confidence != check.wantConfidence {
+			t.Fatalf("suggestion %d = %+v, want confidence %.1f", i, suggestions[i], check.wantConfidence)
+		}
+		for _, wantText := range check.wantTexts {
+			if !strings.Contains(suggestions[i].SuggestedFix, wantText) {
+				t.Fatalf("suggestion %d = %+v, want text %q", i, suggestions[i], wantText)
+			}
 		}
 	}
 }

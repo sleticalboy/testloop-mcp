@@ -252,7 +252,7 @@ Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md
 
 **返回：** `[{ file, line, issue, suggested_fix, confidence }]`
 
-识别的失败类型：期望值不匹配（`got X, want Y`）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。
+识别的失败类型：期望值不匹配（`got X, want Y`）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。建议会尽量带上实际/期望值、越界索引和长度、相关源码行等上下文，便于 Agent 判断是修测试还是修实现。
 
 ---
 
