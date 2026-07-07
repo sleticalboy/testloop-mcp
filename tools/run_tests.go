@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -85,34 +86,11 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		output, err = exec.CommandContext(ctx, "go", args...).CombinedOutput()
 
 	case "jest", "vitest":
-		args := []string{"jest"}
-		if framework == "vitest" {
-			args = []string{"vitest", "run"}
-		}
-		if verbose {
-			args = append(args, "--verbose")
-		}
-		if coverage {
-			args = append(args, "--coverage")
-		}
-		if path != "." {
-			args = append(args, path)
-		}
-		cmd := exec.CommandContext(ctx, "npx", args...)
-		cmd.Dir = getProjectRoot(path)
+		cmd := jsTestCommand(ctx, framework, path, verbose, coverage)
 		output, err = cmd.CombinedOutput()
 
 	case "mocha":
-		args := []string{"mocha"}
-		if verbose {
-			args = append(args, "--reporter", "spec")
-		}
-		if coverage {
-			args = append(args, "--coverage")
-		}
-		args = append(args, path)
-		cmd := exec.CommandContext(ctx, "npx", args...)
-		cmd.Dir = getProjectRoot(path)
+		cmd := jsTestCommand(ctx, framework, path, verbose, coverage)
 		output, err = cmd.CombinedOutput()
 
 	case "pytest":
@@ -199,6 +177,52 @@ func runTestRepairCommands(framework, sourceFile, testFile string) []string {
 	default:
 		return nil
 	}
+}
+
+func jsTestCommand(ctx context.Context, framework, path string, verbose, coverage bool) *exec.Cmd {
+	root := findProjectRoot(path, "package.json")
+	args := jsTestArgs(framework, path, root, verbose, coverage)
+	cmd := exec.CommandContext(ctx, "npx", args...)
+	cmd.Dir = root
+	return cmd
+}
+
+func jsTestArgs(framework, path, root string, verbose, coverage bool) []string {
+	var args []string
+	switch framework {
+	case "vitest":
+		args = []string{"vitest", "run"}
+	case "mocha":
+		args = []string{"mocha"}
+	default:
+		args = []string{"jest"}
+	}
+
+	if verbose {
+		if framework == "mocha" {
+			args = append(args, "--reporter", "spec")
+		} else {
+			args = append(args, "--verbose")
+		}
+	}
+	if coverage {
+		args = append(args, "--coverage")
+	}
+	if path != "." {
+		args = append(args, commandPathArg(path, root))
+	}
+	return args
+}
+
+func commandPathArg(path, dir string) string {
+	absPath, pathErr := filepath.Abs(path)
+	absDir, dirErr := filepath.Abs(dir)
+	if pathErr == nil && dirErr == nil {
+		if rel, err := filepath.Rel(absDir, absPath); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return filepath.ToSlash(rel)
+		}
+	}
+	return filepath.ToSlash(path)
 }
 
 func sourceCandidateFromRunPath(path string) string {

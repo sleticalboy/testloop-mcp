@@ -582,6 +582,70 @@ func TestHandleRunTestsAutoDetectedJSRepairCommands(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsJSUsesPackageRootAndRelativePath(t *testing.T) {
+	tests := []struct {
+		name      string
+		dir       string
+		path      string
+		framework string
+		output    string
+		wantArgs  string
+	}{
+		{
+			name:      "jest",
+			dir:       writeTempJestPackage(t),
+			framework: "jest",
+			output:    jestFailureOutput(),
+			wantArgs:  "jest --verbose sum.test.js",
+		},
+		{
+			name:      "vitest",
+			dir:       writeTempVitestPackage(t),
+			framework: "vitest",
+			output:    vitestFailureOutput(),
+			wantArgs:  "vitest run --verbose src/sum.test.ts",
+		},
+		{
+			name:      "mocha",
+			dir:       writeTempMochaPackage(t),
+			framework: "mocha",
+			output:    mochaFailureOutput(),
+			wantArgs:  "mocha --reporter spec test/calc.test.js",
+		},
+	}
+	tests[0].path = filepath.Join(tests[0].dir, "sum.test.js")
+	tests[1].path = filepath.Join(tests[1].dir, "src", "sum.test.ts")
+	tests[2].path = filepath.Join(tests[2].dir, "test", "calc.test.js")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logPath := installFakeNpxRecorder(t, tt.output)
+			if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+				Path:      tt.path,
+				Framework: tt.framework,
+			}); err != nil {
+				t.Fatalf("HandleRunTests returned error: %v", err)
+			}
+
+			logData, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatalf("read fake npx log: %v", err)
+			}
+			logText := string(logData)
+			wantDir, err := filepath.Abs(filepath.Clean(tt.dir))
+			if err != nil {
+				t.Fatalf("abs dir: %v", err)
+			}
+			if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+				t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+			}
+			if !strings.Contains(logText, "ARGS="+tt.wantArgs+"\n") {
+				t.Fatalf("fake npx args log = %q, want ARGS=%s", logText, tt.wantArgs)
+			}
+		})
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -922,6 +986,25 @@ func installFakeNpx(t *testing.T, output string) {
 		t.Fatalf("write fake npx: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakeNpxRecorder(t *testing.T, output string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "npx.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"cat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\n" +
+		"exit 1\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
 }
 
 func pytestFailureOutput() string {
