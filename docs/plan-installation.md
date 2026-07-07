@@ -14,6 +14,7 @@
 - [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
 - [x] `test/install_script_test.sh` 离线覆盖安装脚本的 Windows zip、单资产 `.sha256` fallback、下载重试/超时参数和 `go install` fallback。
+- [x] `scripts/verify-release-assets.sh` 可校验指定 tag 的五平台 release 资产和对应 `.sha256` 是否齐全，并有离线回归测试。
 
 ## 当前发布
 
@@ -49,6 +50,7 @@
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 - [x] `scripts/install.sh` 增加 curl/wget 重试和超时控制，避免 release 下载偶发卡住时无限等待
+- [x] `scripts/verify-release-assets.sh v0.4.10` 验证 release 页面包含 10 个必需资产
 
 ## 版本摘要
 
@@ -75,6 +77,7 @@
    sh -n scripts/install.sh
    sh -n scripts/package-release-asset.sh
    sh test/install_script_test.sh
+   sh test/release_assets_test.sh
    ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |f| YAML.load_file(f) }'
    go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml
    go test ./...
@@ -90,6 +93,10 @@
    ```
 
 6. 等 Release Artifacts 完成，确认五平台资产和 `.sha256` 都存在。
+
+   ```bash
+   scripts/verify-release-assets.sh vX.Y.Z
+   ```
 7. 验证安装脚本和 Windows zip：
 
    ```bash
