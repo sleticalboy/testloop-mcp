@@ -1,0 +1,46 @@
+{
+  "status": "fail",
+  "framework": "jest",
+  "failures": [
+    {
+      "test_name": "adds 1 + 2 to equal 3",
+      "file": "fixture/sum.test.js",
+      "line": 5,
+      "column": 15,
+      "error": "expect(received).toBe(expected)",
+      "expected": "3",
+      "received": "4"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "fixture/sum.test.js",
+      "line": 5,
+      "issue": "expect(received).toBe(expected)",
+      "category": "expectation_mismatch",
+      "context_file": "fixture/sum.test.js",
+      "context_line": 5,
+      "suggested_fix": "期望值不匹配\n  实际值: 4\n  期望值: 3\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\nexpect(result).toBe(3)\n",
+      "confidence": 0.8,
+      "repair_task": {
+        "id": "repair-expectation_mismatch-adds-1-2-to-equal-3",
+        "test_name": "adds 1 + 2 to equal 3",
+        "category": "expectation_mismatch",
+        "issue": "expect(received).toBe(expected)",
+        "target_file": "fixture/sum.test.js",
+        "target_line": 5,
+        "context_file": "fixture/sum.test.js",
+        "context_line": 5,
+        "context_snippet": "  expect(result).toBe(3)",
+        "editable_files": [
+          "fixture/sum.js",
+          "fixture/sum.test.js"
+        ],
+        "suggested_commands": [
+          "npm test -- fixture/sum.test.js"
+        ],
+        "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+      }
+    }
+  ]
+}

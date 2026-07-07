@@ -337,6 +337,41 @@ func TestHandleRunTestsPytestRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsJestRepairTaskGolden(t *testing.T) {
+	dir := writeTempJestPackage(t)
+	installFakeNpx(t, jestFailureOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "sum.test.js"),
+		Framework:             "jest",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "sum.js"),
+		TestCode:              filepath.Join(dir, "sum.test.js"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	contract := canonicalRunTestsRepairContract(parsed, dir)
+	gotBytes, err := json.MarshalIndent(contract, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal contract: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "run_tests_jest_repair_task.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -521,6 +556,46 @@ func writeTempPytestPackage(t *testing.T) string {
 	return "./" + filepath.Base(dir)
 }
 
+func writeTempJestPackage(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-jest-")
+	if err != nil {
+		t.Fatalf("mkdir temp jest package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp jest package: %v", err)
+		}
+	})
+
+	source := strings.Join([]string{
+		"function add(a, b) {",
+		"  return a + b",
+		"}",
+		"",
+		"module.exports = { add }",
+	}, "\n") + "\n"
+	testSource := strings.Join([]string{
+		"const { add } = require('./sum')",
+		"",
+		"test('adds 1 + 2 to equal 3', () => {",
+		"  const result = add(1, 2)",
+		"  expect(result).toBe(3)",
+		"})",
+	}, "\n") + "\n"
+
+	if err := os.WriteFile(filepath.Join(dir, "sum.js"), []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sum.test.js"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"jest"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	return "./" + filepath.Base(dir)
+}
+
 func installFakePython3(t *testing.T, output string) {
 	t.Helper()
 	fakeBin := t.TempDir()
@@ -528,6 +603,17 @@ func installFakePython3(t *testing.T, output string) {
 	path := filepath.Join(fakeBin, "python3")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake python3: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakeNpx(t *testing.T, output string) {
+	t.Helper()
+	fakeBin := t.TempDir()
+	script := "#!/usr/bin/env sh\ncat <<'JEST_OUTPUT'\n" + output + "\nJEST_OUTPUT\nexit 1\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
@@ -554,5 +640,21 @@ func pytestFailureOutput() string {
 		"",
 		"calc.py:7: ValueError",
 		"============================== 1 failed in 0.01s ===============================",
+	}, "\n")
+}
+
+func jestFailureOutput() string {
+	return strings.Join([]string{
+		"FAIL  ./sum.test.js",
+		"  ✕ adds 1 + 2 to equal 3 (1 ms)",
+		"",
+		"  ● sum › adds 1 + 2 to equal 3",
+		"    expect(received).toBe(expected)",
+		"    Expected: 3",
+		"    Received: 4",
+		"      at Object.<anonymous> (sum.test.js:5:15)",
+		"",
+		"Test Suites: 1 failed, 0 passed, 1 total",
+		"Tests:       1 failed, 0 passed, 1 total",
 	}, "\n")
 }
