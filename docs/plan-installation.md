@@ -24,6 +24,7 @@
 - Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.10
 - CI run：`28845217140`
 - Release Artifacts run：`28845299697`
+- Post-Release Verify run：`28851402908`
 - Homebrew tap commit：`0003c0c071c247c610cf8ed8f677f8f714610b17`
 
 `v0.4.10` Release 已包含：
@@ -52,6 +53,7 @@
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 - [x] `scripts/install.sh` 增加 curl/wget 重试和超时控制，避免 release 下载偶发卡住时无限等待
 - [x] `scripts/verify-release-assets.sh v0.4.10` 验证 release 页面包含 10 个必需资产
+- [x] 手动触发 `Post-Release Verify` workflow `28851402908`，五平台安装脚本 dry run 全部通过
 
 ## 版本摘要
 
