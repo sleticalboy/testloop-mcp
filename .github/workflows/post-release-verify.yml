@@ -1,0 +1,105 @@
+name: Post-Release Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify, for example v0.4.10"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  assets:
+    name: Verify release asset manifest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Verify release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTLOOP_MCP_REPO: ${{ github.repository }}
+        run: scripts/verify-release-assets.sh "${{ inputs.tag }}"
+
+  install:
+    name: Install ${{ matrix.asset }}
+    runs-on: ${{ matrix.runner }}
+    needs: assets
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - asset: linux_amd64
+            runner: ubuntu-latest
+            os: linux
+            arch: amd64
+            run_help: true
+          - asset: linux_arm64
+            runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
+            run_help: true
+          - asset: darwin_arm64
+            runner: macos-26
+            os: darwin
+            arch: arm64
+            run_help: true
+          - asset: windows_amd64
+            runner: ubuntu-latest
+            os: windows
+            arch: amd64
+            run_help: false
+          - asset: windows_arm64
+            runner: ubuntu-latest
+            os: windows
+            arch: arm64
+            run_help: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install from release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="$(mktemp -d)"
+          log_file="$(mktemp)"
+          TESTLOOP_MCP_VERSION="${{ inputs.tag }}" \
+            TESTLOOP_MCP_OS="${{ matrix.os }}" \
+            TESTLOOP_MCP_ARCH="${{ matrix.arch }}" \
+            TESTLOOP_MCP_INSTALL_DIR="$install_dir" \
+            TESTLOOP_MCP_DOWNLOAD_MAX_TIME=120 \
+            sh scripts/install.sh | tee "$log_file"
+          if grep -F "falling back to go install" "$log_file"; then
+            echo "install script unexpectedly used go install fallback" >&2
+            exit 1
+          fi
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            test -x "$install_dir/testloop-mcp.exe"
+            test -x "$install_dir/testloop-testgen.exe"
+          else
+            test -x "$install_dir/testloop-mcp"
+            test -x "$install_dir/testloop-testgen"
+          fi
+          echo "TESTLOOP_INSTALL_DIR=$install_dir" >> "$GITHUB_ENV"
+
+      - name: Run installed help
+        if: matrix.run_help
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          "$TESTLOOP_INSTALL_DIR/testloop-mcp" --help > mcp-help.txt 2>&1
+          mcp_status=$?
+          "$TESTLOOP_INSTALL_DIR/testloop-testgen" --help > testgen-help.txt 2>&1
+          testgen_status=$?
+          set -e
+          test "$mcp_status" -eq 2
+          test "$testgen_status" -eq 2
+          grep -F "Usage of testloop-mcp" mcp-help.txt
+          grep -F "Usage: testgen" testgen-help.txt

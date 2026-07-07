@@ -12,6 +12,7 @@
 - [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`，并对 release 下载设置重试和超时。
 - [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64。
 - [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
+- [x] Post-Release Verify workflow 可手动输入 tag，校验 release 资产清单，并对 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 执行安装脚本 dry run。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
 - [x] `test/install_script_test.sh` 离线覆盖安装脚本的 Windows zip、单资产 `.sha256` fallback、下载重试/超时参数和 `go install` fallback。
 - [x] `scripts/verify-release-assets.sh` 可校验指定 tag 的五平台 release 资产和对应 `.sha256` 是否齐全，并有离线回归测试。
@@ -97,6 +98,8 @@
    ```bash
    scripts/verify-release-assets.sh vX.Y.Z
    ```
+
+   也可以手动触发 `Post-Release Verify` workflow，输入 `vX.Y.Z`，让 GitHub runner 验证资产清单和五平台安装脚本 dry run。
 7. 验证安装脚本和 Windows zip：
 
    ```bash
