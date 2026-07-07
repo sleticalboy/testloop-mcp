@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.9 - 2026-07-07
+
 ### Added
 
 - `fix_suggestions` 返回新增 `category`、`context_file` 和 `context_line`，便于 Agent 区分失败类型并定位源码或测试上下文。
