@@ -163,20 +163,26 @@ func repairTaskID(category, testName, targetFile string, targetLine int) string 
 
 func editableRepairFiles(files ...string) []string {
 	var result []string
-	seen := map[string]bool{}
 	for _, file := range files {
 		file = strings.TrimSpace(file)
 		if file == "" {
 			continue
 		}
-		key := filepath.ToSlash(filepath.Clean(file))
-		if seen[key] {
+		if hasEquivalentPath(result, file) {
 			continue
 		}
-		seen[key] = true
 		result = append(result, file)
 	}
 	return result
+}
+
+func hasEquivalentPath(paths []string, candidate string) bool {
+	for _, path := range paths {
+		if samePath(path, candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 func suggestedRepairCommands(sourceFile, testFile string) []string {

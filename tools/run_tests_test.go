@@ -215,6 +215,53 @@ func TestHandleRunTestsParsesGoFailure(t *testing.T) {
 	if parsed.Failures[0].TestName != "TestAdd" || !strings.Contains(parsed.Failures[0].Error, "boom") {
 		t.Fatalf("unexpected failure: %+v", parsed.Failures[0])
 	}
+	if len(parsed.FixSuggestions) != 0 {
+		t.Fatalf("fix_suggestions should be omitted by default: %+v", parsed.FixSuggestions)
+	}
+}
+
+func TestHandleRunTestsCanIncludeFixSuggestions(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	if got := Add(1, 2); got != 4 {
+		t.Fatalf("got %d, want 4", got)
+	}
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  dir,
+		Framework:             "go-test",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "calc.go"),
+		TestCode:              filepath.Join(dir, "calc_test.go"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected failure result: %+v", parsed)
+	}
+	if len(parsed.FixSuggestions) != 1 {
+		t.Fatalf("fix_suggestions len = %d, want 1: %+v", len(parsed.FixSuggestions), parsed.FixSuggestions)
+	}
+	suggestion := parsed.FixSuggestions[0]
+	if suggestion.Category != "expectation_mismatch" ||
+		suggestion.ContextFile != filepath.Join(dir, "calc_test.go") ||
+		suggestion.RepairTask == nil ||
+		suggestion.RepairTask.Category != "expectation_mismatch" ||
+		!strings.Contains(suggestion.SuggestedFix, "实际值: 3") ||
+		!strings.Contains(suggestion.SuggestedFix, "期望值: 4") {
+		t.Fatalf("unexpected fix suggestion: %+v", suggestion)
+	}
+	if suggestion.RepairTask.TargetFile != filepath.Join(dir, "calc_test.go") ||
+		len(suggestion.RepairTask.EditableFiles) != 2 ||
+		suggestion.RepairTask.SuggestedCommands[0] != "go test ./..." {
+		t.Fatalf("unexpected repair task: %+v", suggestion.RepairTask)
+	}
 }
 
 func TestCoverageArgs(t *testing.T) {

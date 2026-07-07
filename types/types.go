@@ -2,15 +2,16 @@ package types
 
 // TestResult 单次测试执行结果
 type TestResult struct {
-	Status          string        `json:"status"`
-	Framework       string        `json:"framework,omitempty"`
-	Total           int           `json:"total,omitempty"`
-	Passed          int           `json:"passed"`
-	Failed          int           `json:"failed"`
-	Skipped         int           `json:"skipped"`
-	CoveragePercent float64       `json:"coverage_percent"`
-	Failures        []TestFailure `json:"failures"`
-	RawOutput       string        `json:"raw_output"`
+	Status          string          `json:"status"`
+	Framework       string          `json:"framework,omitempty"`
+	Total           int             `json:"total,omitempty"`
+	Passed          int             `json:"passed"`
+	Failed          int             `json:"failed"`
+	Skipped         int             `json:"skipped"`
+	CoveragePercent float64         `json:"coverage_percent"`
+	Failures        []TestFailure   `json:"failures"`
+	FixSuggestions  []FixSuggestion `json:"fix_suggestions,omitempty"`
+	RawOutput       string          `json:"raw_output"`
 }
 
 // TestFailure 单个测试失败详情

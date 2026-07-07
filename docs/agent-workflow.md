@@ -12,7 +12,10 @@
   "arguments": {
     "path": "./demo",
     "framework": "go-test",
-    "coverage": false
+    "coverage": false,
+    "include_fix_suggestions": true,
+    "source_code": "./demo/calc.go",
+    "test_code": "./demo/calc_test.go"
   }
 }
 ```
@@ -30,7 +33,7 @@
 }
 ```
 
-如果测试失败，Agent 应优先读取 `failures[]`。如果失败输出来自 CI、终端或其他非 MCP 来源，可以把原始日志交给 `parse_results`：
+如果测试失败且调用时传入了 `include_fix_suggestions=true`，Agent 应优先读取 `fix_suggestions[].repair_task`，减少一次额外的 `fix_suggestions` 调用。未开启该选项，或失败输出来自 CI、终端等非 MCP 来源时，可以把原始日志交给 `parse_results`：
 
 ```json
 {
@@ -44,7 +47,7 @@
 
 ## 2. 修复真实失败
 
-当 `run_tests` 或 `parse_results` 返回 `status: "fail"` 时，不要先补覆盖率。先把 `failures[]` 序列化成 JSON 字符串，连同源码路径交给 `fix_suggestions`：
+当 `run_tests` 或 `parse_results` 返回 `status: "fail"` 时，不要先补覆盖率。如果 `run_tests` 已返回 `fix_suggestions[]`，直接使用其中的 `repair_task`；否则把 `failures[]` 序列化成 JSON 字符串，连同源码路径交给 `fix_suggestions`：
 
 ```json
 {

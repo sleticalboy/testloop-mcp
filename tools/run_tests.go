@@ -13,13 +13,17 @@ import (
 	"github.com/sleticalboy/testloop-mcp/internal/coverage"
 	"github.com/sleticalboy/testloop-mcp/internal/detector"
 	"github.com/sleticalboy/testloop-mcp/internal/parser"
+	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 type runTestsInput struct {
-	Path      string `json:"path" jsonschema:"测试文件或目录路径，必填"`
-	Framework string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认自动检测"`
-	Coverage  bool   `json:"coverage,omitempty" jsonschema:"是否收集覆盖率，默认 false"`
-	Verbose   bool   `json:"verbose,omitempty" jsonschema:"是否输出详细日志，默认 true"`
+	Path                  string `json:"path" jsonschema:"测试文件或目录路径，必填"`
+	Framework             string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认自动检测"`
+	Coverage              bool   `json:"coverage,omitempty" jsonschema:"是否收集覆盖率，默认 false"`
+	Verbose               bool   `json:"verbose,omitempty" jsonschema:"是否输出详细日志，默认 true"`
+	IncludeFixSuggestions bool   `json:"include_fix_suggestions,omitempty" jsonschema:"测试失败时是否附带 fix_suggestions 摘要，默认 false"`
+	SourceCode            string `json:"source_code,omitempty" jsonschema:"源代码文件路径，用于 include_fix_suggestions 上下文"`
+	TestCode              string `json:"test_code,omitempty" jsonschema:"测试代码文件路径，用于 include_fix_suggestions 上下文"`
 }
 
 // Register 把所有 Tools 注册到 server
@@ -146,10 +150,48 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	if coverage {
 		result.CoveragePercent = collectCoveragePercent(ctx, framework, path, result.CoveragePercent)
 	}
+	if input.IncludeFixSuggestions && result.Status == "fail" && len(result.Failures) > 0 {
+		result.FixSuggestions = generateRunTestFixSuggestions(input, result.Failures)
+	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+func generateRunTestFixSuggestions(input runTestsInput, failures []types.TestFailure) []types.FixSuggestion {
+	sourceFile := firstNonEmpty(input.SourceCode, sourceCandidateFromRunPath(input.Path))
+	testFile := firstNonEmpty(input.TestCode, testCandidateFromRunPath(input.Path))
+	sourceCode := readOptionalText(sourceFile)
+	testCode := readOptionalText(testFile)
+	return generateFixSuggestions(failures, sourceCode, testCode, sourceFile, testFile)
+}
+
+func sourceCandidateFromRunPath(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() || looksLikeTestFile(path) {
+		return ""
+	}
+	return path
+}
+
+func testCandidateFromRunPath(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() || !looksLikeTestFile(path) {
+		return ""
+	}
+	return path
+}
+
+func readOptionalText(path string) string {
+	if path == "" {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func normalizeGoTestPath(path string) string {

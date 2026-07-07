@@ -70,7 +70,10 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
   "path": "internal/calc/",
   "framework": "go test",
   "coverage": true,
-  "verbose": true
+  "verbose": true,
+  "include_fix_suggestions": true,
+  "source_code": "internal/calc/calc.go",
+  "test_code": "internal/calc/calc_test.go"
 }
 ```
 
@@ -79,7 +82,8 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
 2. 自动检测项目类型（存在 `go.mod` → go-test，`Cargo.toml` → cargo-test，`package.json` → Jest，等等）
 3. 执行命令，捕获 stdout/stderr
 4. 调用 `parser` 解析输出
-5. 返回结构化 JSON
+5. 如果开启 `include_fix_suggestions` 且测试失败，内联生成 `fix_suggestions[]`
+6. 返回结构化 JSON
 
 **输出：**
 ```json
@@ -99,9 +103,21 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
       "error": "got -1, want 0"
     }
   ],
+  "fix_suggestions": [
+    {
+      "category": "expectation_mismatch",
+      "repair_task": {
+        "id": "repair-expectation_mismatch-testadd-negative-inputs",
+        "target_file": "calc_test.go",
+        "suggested_commands": ["go test ./..."]
+      }
+    }
+  ],
   "raw_output": "..."
 }
 ```
+
+`include_fix_suggestions` 默认为 `false`。开启后，失败结果会内联 `fix_suggestions[]` 和 `repair_task` 摘要，减少 Agent 在失败修复阶段的工具往返。
 
 ---
 

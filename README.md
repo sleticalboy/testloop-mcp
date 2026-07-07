@@ -220,10 +220,15 @@ Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md
 | `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`，默认自动检测 |
 | `coverage` | bool | — | 是否收集覆盖率，默认 `false` |
 | `verbose` | bool | — | 详细输出，默认 `true` |
+| `include_fix_suggestions` | bool | — | 测试失败时附带 `fix_suggestions[]` 摘要，默认 `false` |
+| `source_code` | string | — | 源码文件路径，用于生成修复上下文 |
+| `test_code` | string | — | 测试文件路径，用于生成修复上下文 |
 
-**返回：** `{ status, framework, total, passed, failed, skipped, coverage_percent, failures[], raw_output }`
+**返回：** `{ status, framework, total, passed, failed, skipped, coverage_percent, failures[], fix_suggestions[], raw_output }`
 
 `coverage=true` 时，Rust 会额外调用 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin` 并回填 `coverage_percent`；Java Maven/Gradle 项目会执行 JaCoCo report 任务并从 XML 报告回填 `coverage_percent`。也可以通过 `parse_coverage` 直接解析已有 LCOV/JaCoCo XML 文件。
+
+`include_fix_suggestions=true` 且测试失败时，`run_tests` 会把失败结果同步转换为 `fix_suggestions[]`，其中包含 `repair_task`。未传 `source_code` / `test_code` 时仍会返回基础分类和任务信息，但源码/测试行上下文可能不完整。
 
 ---
 
