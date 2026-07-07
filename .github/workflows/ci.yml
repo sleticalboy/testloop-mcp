@@ -32,7 +32,9 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test ./...
+        run: |
+          go test ./...
+          sh test/install_script_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .

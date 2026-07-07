@@ -13,6 +13,7 @@
 - [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64。
 - [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
+- [x] `test/install_script_test.sh` 离线覆盖安装脚本的 Windows zip、单资产 `.sha256` fallback、下载重试/超时参数和 `go install` fallback。
 
 ## 当前发布
 
@@ -73,6 +74,7 @@
    ```bash
    sh -n scripts/install.sh
    sh -n scripts/package-release-asset.sh
+   sh test/install_script_test.sh
    ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |f| YAML.load_file(f) }'
    go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml
    go test ./...
