@@ -233,6 +233,66 @@ func TestCoverageTaskCommandMatchesRunTestsFrameworkCommands(t *testing.T) {
 	}
 }
 
+func TestCoverageTaskTestFileRecommendations(t *testing.T) {
+	tests := []struct {
+		name      string
+		framework string
+		file      string
+		want      string
+	}{
+		{
+			name:      "jest source",
+			framework: "jest",
+			file:      filepath.Join("src", "sum.js"),
+			want:      filepath.Join("src", "sum.test.js"),
+		},
+		{
+			name:      "vitest existing test",
+			framework: "vitest",
+			file:      filepath.Join("src", "sum.spec.ts"),
+			want:      filepath.Join("src", "sum.spec.ts"),
+		},
+		{
+			name:      "mocha source",
+			framework: "mocha",
+			file:      filepath.Join("lib", "calc.js"),
+			want:      filepath.Join("lib", "calc.spec.js"),
+		},
+		{
+			name:      "pytest root source",
+			framework: "pytest",
+			file:      "service.py",
+			want:      filepath.Join("tests", "test_service.py"),
+		},
+		{
+			name:      "pytest src source",
+			framework: "pytest",
+			file:      filepath.Join("src", "service.py"),
+			want:      filepath.Join("tests", "test_service.py"),
+		},
+		{
+			name:      "pytest package source",
+			framework: "pytest",
+			file:      filepath.Join("src", "billing", "invoice.py"),
+			want:      filepath.Join("tests", "billing", "test_invoice.py"),
+		},
+		{
+			name:      "pytest existing test",
+			framework: "pytest",
+			file:      filepath.Join("tests", "test_service.py"),
+			want:      filepath.Join("tests", "test_service.py"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := coverageTaskTestFile(tt.framework, tt.file); got != tt.want {
+				t.Fatalf("coverageTaskTestFile() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseGoCoverageMapsUncoveredBlocksToFunctions(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "calc.go")

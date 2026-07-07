@@ -235,17 +235,29 @@ func coverageTaskTestFile(framework string, file string) string {
 		}
 		return base + ".spec" + ext
 	case "pytest":
-		dir := filepath.Dir(file)
-		name := filepath.Base(file)
-		if strings.HasPrefix(name, "test_") {
-			return file
-		}
-		if dir == "." || dir == "" {
-			return filepath.Join("tests", "test_"+name)
-		}
-		return filepath.Join(dir, "tests", "test_"+name)
+		return pytestCoverageTestFile(file)
 	}
 	return ""
+}
+
+func pytestCoverageTestFile(file string) string {
+	name := filepath.Base(file)
+	if strings.HasPrefix(name, "test_") {
+		return file
+	}
+
+	slash := filepath.ToSlash(file)
+	for _, prefix := range []string{"src/", "lib/"} {
+		if strings.HasPrefix(slash, prefix) {
+			slash = strings.TrimPrefix(slash, prefix)
+			break
+		}
+	}
+	dir := filepath.ToSlash(filepath.Dir(slash))
+	if dir == "." || dir == "" {
+		return filepath.Join("tests", "test_"+name)
+	}
+	return filepath.FromSlash("tests/" + dir + "/test_" + name)
 }
 
 func javaCoverageTestFile(file string) string {
