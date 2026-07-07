@@ -5,6 +5,9 @@ repo="sleticalboy/testloop-mcp"
 version="${TESTLOOP_MCP_VERSION:-latest}"
 install_dir="${TESTLOOP_MCP_INSTALL_DIR:-$HOME/.local/bin}"
 binary_suffix=""
+download_retries="${TESTLOOP_MCP_DOWNLOAD_RETRIES:-3}"
+download_connect_timeout="${TESTLOOP_MCP_CONNECT_TIMEOUT:-15}"
+download_max_time="${TESTLOOP_MCP_DOWNLOAD_MAX_TIME:-300}"
 
 log() {
   printf '%s\n' "$*"
@@ -23,9 +26,12 @@ download() {
   url="$1"
   out="$2"
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$url" -o "$out"
+    curl -fL --retry "$download_retries" --retry-delay 2 \
+      --connect-timeout "$download_connect_timeout" \
+      --max-time "$download_max_time" \
+      -sS "$url" -o "$out"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q "$url" -O "$out"
+    wget -q --tries="$download_retries" --timeout="$download_connect_timeout" "$url" -O "$out"
   else
     fail "missing curl or wget"
   fi

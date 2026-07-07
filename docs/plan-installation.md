@@ -9,43 +9,45 @@
 - [x] Go module path 和文档仓库地址已统一为 `github.com/sleticalboy/testloop-mcp`。
 - [x] `LICENSE` 已补齐，README License badge 指向有效文件。
 - [x] `docs/installation.md` 覆盖 Homebrew、Release 下载、checksum 校验、源码构建、Docker、stdio、Streamable HTTP 和常见客户端配置。
-- [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`。
+- [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`，并对 release 下载设置重试和超时。
 - [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64。
 - [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
 
 ## 当前发布
 
-- 当前版本：`v0.4.9`
-- Tag：`v0.4.9` -> `be0e18028b3994693f82b8b4cc5547c965588d5c`
-- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.9
-- Release Artifacts run：`28833047972`
-- Homebrew tap commit：`5e3083b58f521931f103fec73ea45de23cf8b19f`
+- 当前版本：`v0.4.10`
+- Tag：`v0.4.10` -> `4816c291bdadf320f356218eac7f35b48ebec094`
+- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.10
+- CI run：`28845217140`
+- Release Artifacts run：`28845299697`
+- Homebrew tap commit：`0003c0c071c247c610cf8ed8f677f8f714610b17`
 
-`v0.4.9` Release 已包含：
+`v0.4.10` Release 已包含：
 
-- `testloop-mcp_v0.4.9_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.9_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.9_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.9_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.9_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.9_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.9_windows_amd64.zip`
-- `testloop-mcp_v0.4.9_windows_amd64.zip.sha256`
-- `testloop-mcp_v0.4.9_windows_arm64.zip`
-- `testloop-mcp_v0.4.9_windows_arm64.zip.sha256`
+- `testloop-mcp_v0.4.10_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.10_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.10_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.10_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.10_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.10_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.10_windows_amd64.zip`
+- `testloop-mcp_v0.4.10_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.10_windows_arm64.zip`
+- `testloop-mcp_v0.4.10_windows_arm64.zip.sha256`
 
-`v0.4.9` 已验证：
+`v0.4.10` 已验证：
 
 - [x] 远端 CI passed
-- [x] Release Artifacts run `28833047972` passed
-- [x] `TESTLOOP_MCP_VERSION=v0.4.9 TESTLOOP_MCP_INSTALL_DIR=... sh scripts/install.sh` 可直接下载 release 资产、校验 `.sha256` 并安装
+- [x] Release Artifacts run `28845299697` passed
+- [x] `TESTLOOP_MCP_VERSION=v0.4.10 TESTLOOP_MCP_INSTALL_DIR=... sh scripts/install.sh` 可直接下载 macOS arm64 release 资产、校验 `.sha256` 并安装
 - [x] Windows amd64 zip 已下载、通过 `.sha256` 校验，并安装 `testloop-mcp.exe` / `testloop-testgen.exe`
-- [x] Windows arm64 zip 已下载、通过 `.sha256` 校验，并安装 `testloop-mcp.exe` / `testloop-testgen.exe`
+- [x] Windows arm64 zip 已通过一次下载、`.sha256` 校验和安装；后续复跑受 GitHub 下载链路影响触发 fallback，未发现 release 资产缺失
 - [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
 - [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
 - [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
+- [x] `scripts/install.sh` 增加 curl/wget 重试和超时控制，避免 release 下载偶发卡住时无限等待
 
 ## 版本摘要
 
@@ -60,6 +62,7 @@
 | `v0.4.7` | 正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | Release run `28784950785`；Homebrew tap 升级到 `0.4.7` 并通过 `brew test` |
 | `v0.4.8` | 编辑器接入体验增强，补齐 MCP 客户端配置生成、校验、诊断和 Agent 闭环示例 | Release run `28793678783`；Homebrew tap 升级到 `0.4.8` 并通过 `brew test` |
 | `v0.4.9` | Agent 修复闭环和配置诊断细化，补充 `fix_suggestions` 分类与源码上下文 | Release run `28833047972`；Homebrew tap 升级到 `0.4.9` 并通过 `brew test` |
+| `v0.4.10` | 将 `repair_task` 和 `run_tests.include_fix_suggestions` 纳入正式发布，并补强安装脚本下载重试 | Release run `28845299697`；Homebrew tap 升级到 `0.4.10` 并通过 `brew test` |
 
 ## 发布维护流程
 
