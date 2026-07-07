@@ -7,7 +7,9 @@
       "file": "fixture/test/calc.test.js",
       "line": 12,
       "column": 18,
-      "error": "AssertionError: expected 4 to equal 3"
+      "error": "AssertionError: expected 4 to equal 3",
+      "expected": "3",
+      "received": "4"
     }
   ],
   "fix_suggestions": [

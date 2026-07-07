@@ -54,6 +54,8 @@ func TestParseFrameworkFailureFixtures(t *testing.T) {
 			testName:  "calc divide() should handle division by zero",
 			error:     "AssertionError: expected 4 to equal 3",
 			location:  "test/calc.test.js:12:18",
+			expected:  "3",
+			received:  "4",
 		},
 	}
 

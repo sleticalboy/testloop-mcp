@@ -57,6 +57,9 @@ func TestParseMochaTestFailureDetails(t *testing.T) {
 	if failure.Error != "AssertionError: expected 4 to equal 3" {
 		t.Errorf("Expected assertion detail, got %q", failure.Error)
 	}
+	if failure.Expected != "3" || failure.Received != "4" {
+		t.Errorf("Expected assertion values expected=3 received=4, got expected=%q received=%q", failure.Expected, failure.Received)
+	}
 	if failure.File != "test/calc.test.js" || failure.Line != 12 || failure.Column != 18 {
 		t.Errorf("Expected location test/calc.test.js:12:18, got %s:%d:%d", failure.File, failure.Line, failure.Column)
 	}
@@ -123,5 +126,37 @@ func TestConsumeMochaFailureLineSetsEmptyTestName(t *testing.T) {
 
 	if failure.TestName != "calc" {
 		t.Fatalf("Expected calc test name, got %q", failure.TestName)
+	}
+}
+
+func TestParseMochaExpectedReceived(t *testing.T) {
+	tests := []struct {
+		line     string
+		received string
+		expected string
+	}{
+		{
+			line:     "AssertionError: expected 4 to equal 3",
+			received: "4",
+			expected: "3",
+		},
+		{
+			line:     "AssertionError: expected { total: 4 } to deep equal { total: 3 }",
+			received: "{ total: 4 }",
+			expected: "{ total: 3 }",
+		},
+		{
+			line:     "AssertionError: expected false to be true",
+			received: "false",
+			expected: "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			received, expected := parseMochaExpectedReceived(tt.line)
+			if received != tt.received || expected != tt.expected {
+				t.Fatalf("parseMochaExpectedReceived() = received=%q expected=%q, want received=%q expected=%q", received, expected, tt.received, tt.expected)
+			}
+		})
 	}
 }

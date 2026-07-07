@@ -61,6 +61,7 @@ var (
 	mochaFailureHeadRe = regexp.MustCompile(`^(\d+)\)\s+(.+)$`)
 	mochaLocationRe    = regexp.MustCompile(`\(([^():]+(?:/[^():]+)*):(\d+):(\d+)\)`)
 	mochaAtLocationRe  = regexp.MustCompile(`^\s*at\s+([^():]+(?:/[^():]+)*):(\d+):(\d+)`)
+	mochaExpectedRe    = regexp.MustCompile(`(?i)^AssertionError:\s+expected\s+(.+?)\s+to\s+(?:be|equal|deep\s+equal)\s+(.+?)(?:\s*//.*)?$`)
 )
 
 func parseMochaSummary(lines []string, result *types.TestResult) {
@@ -171,6 +172,10 @@ func consumeMochaFailureLine(line string, failure *types.TestFailure) {
 	}
 	if strings.HasPrefix(trimmed, "AssertionError") || strings.HasPrefix(trimmed, "Error:") || strings.Contains(trimmed, " expected ") {
 		failure.Error = trimmed
+		if received, expected := parseMochaExpectedReceived(trimmed); received != "" || expected != "" {
+			failure.Received = received
+			failure.Expected = expected
+		}
 	}
 	if file, lineNo, column := parseMochaLocation(trimmed); file != "" {
 		failure.File = file
@@ -188,4 +193,12 @@ func parseMochaLocation(line string) (string, int, int) {
 		}
 	}
 	return "", 0, 0
+}
+
+func parseMochaExpectedReceived(line string) (string, string) {
+	matches := mochaExpectedRe.FindStringSubmatch(strings.TrimSpace(line))
+	if len(matches) != 3 {
+		return "", ""
+	}
+	return strings.TrimSpace(matches[1]), strings.TrimSpace(matches[2])
 }
