@@ -6,6 +6,7 @@
 
 - `fix_suggestions` 每条建议新增 `repair_task`，聚合失败分类、目标位置、上下文片段、可编辑文件、建议复跑命令和断言关注点，便于 Agent 直接执行单个修复任务。
 - `run_tests` 新增 `include_fix_suggestions`、`source_code` 和 `test_code` 输入，测试失败时可内联 `fix_suggestions[]` 和 `repair_task` 摘要。
+- 新增 repair task golden test，固定面向 Agent 的修复任务 JSON 契约。
 
 ## v0.4.9 - 2026-07-07
 

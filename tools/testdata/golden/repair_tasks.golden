@@ -1,0 +1,39 @@
+[
+  {
+    "id": "repair-expectation_mismatch-testadd",
+    "test_name": "TestAdd",
+    "category": "expectation_mismatch",
+    "issue": "got 3, want 4",
+    "target_file": "pkg/calc_test.go",
+    "target_line": 5,
+    "context_file": "pkg/calc_test.go",
+    "context_line": 5,
+    "context_snippet": "\tt.Fatalf(\"got %d, want 4\", got)",
+    "editable_files": [
+      "calc.go",
+      "pkg/calc_test.go"
+    ],
+    "suggested_commands": [
+      "go test ./..."
+    ],
+    "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+  },
+  {
+    "id": "repair-index_out_of_range-calc-go-3",
+    "category": "index_out_of_range",
+    "issue": "panic: runtime error: index out of range [2] with length 1",
+    "target_file": "calc.go",
+    "target_line": 3,
+    "context_file": "calc.go",
+    "context_line": 3,
+    "context_snippet": "func At(values []int, idx int) int { return values[idx] }",
+    "editable_files": [
+      "calc.go",
+      "pkg/calc_test.go"
+    ],
+    "suggested_commands": [
+      "go test ./..."
+    ],
+    "assertion_focus": "补充边界检查，并用空集合、单元素集合和最大索引验证。"
+  }
+]

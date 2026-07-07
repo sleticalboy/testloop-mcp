@@ -680,6 +680,60 @@ func TestHandleFixSuggestionsUsesParsedFrameworkFixtures(t *testing.T) {
 	}
 }
 
+func TestFixSuggestionsRepairTaskGolden(t *testing.T) {
+	failures := []types.TestFailure{
+		{
+			TestName: "TestAdd",
+			File:     "calc_test.go",
+			Line:     5,
+			Error:    "got 3, want 4",
+		},
+		{
+			File:  "calc.go",
+			Line:  3,
+			Error: "panic: runtime error: index out of range [2] with length 1",
+		},
+	}
+	sourceCode := strings.Join([]string{
+		"package calc",
+		"",
+		"func At(values []int, idx int) int { return values[idx] }",
+		"",
+		"func Add(a, b int) int { return a + b }",
+	}, "\n")
+	testCode := strings.Join([]string{
+		"package calc",
+		"",
+		"func TestAdd(t *testing.T) {",
+		"	got := Add(1, 2)",
+		"	t.Fatalf(\"got %d, want 4\", got)",
+		"}",
+	}, "\n")
+
+	suggestions := generateFixSuggestions(failures, sourceCode, testCode, "calc.go", filepath.Join("pkg", "calc_test.go"))
+	tasks := make([]types.RepairTask, 0, len(suggestions))
+	for _, suggestion := range suggestions {
+		if suggestion.RepairTask == nil {
+			t.Fatalf("missing repair task for suggestion: %+v", suggestion)
+		}
+		tasks = append(tasks, *suggestion.RepairTask)
+	}
+
+	gotBytes, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal repair tasks: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "repair_tasks.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func readToolParserFixture(t *testing.T, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("..", "internal", "parser", "testdata", name))
