@@ -510,6 +510,78 @@ func TestRunTestRepairCommands(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsAutoDetectedJSRepairCommands(t *testing.T) {
+	tests := []struct {
+		name        string
+		dir         string
+		path        string
+		source      string
+		testFile    string
+		output      string
+		wantCommand string
+	}{
+		{
+			name:        "jest",
+			dir:         writeTempJestPackage(t),
+			output:      jestFailureOutput(),
+			wantCommand: "npx jest fixture/sum.test.js",
+		},
+		{
+			name:        "vitest",
+			dir:         writeTempVitestPackage(t),
+			output:      vitestFailureOutput(),
+			wantCommand: "npx vitest run fixture/src/sum.test.ts",
+		},
+		{
+			name:        "mocha",
+			dir:         writeTempMochaPackage(t),
+			output:      mochaFailureOutput(),
+			wantCommand: "npx mocha fixture/test/calc.test.js",
+		},
+	}
+	tests[0].path = filepath.Join(tests[0].dir, "sum.test.js")
+	tests[0].source = filepath.Join(tests[0].dir, "sum.js")
+	tests[0].testFile = filepath.Join(tests[0].dir, "sum.test.js")
+	tests[1].path = filepath.Join(tests[1].dir, "src", "sum.test.ts")
+	tests[1].source = filepath.Join(tests[1].dir, "src", "sum.ts")
+	tests[1].testFile = filepath.Join(tests[1].dir, "src", "sum.test.ts")
+	tests[2].path = filepath.Join(tests[2].dir, "test", "calc.test.js")
+	tests[2].source = filepath.Join(tests[2].dir, "lib", "calc.js")
+	tests[2].testFile = filepath.Join(tests[2].dir, "test", "calc.test.js")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			installFakeNpx(t, tt.output)
+			result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+				Path:                  tt.path,
+				IncludeFixSuggestions: true,
+				SourceCode:            tt.source,
+				TestCode:              tt.testFile,
+			})
+			if err != nil {
+				t.Fatalf("HandleRunTests returned error: %v", err)
+			}
+			var parsed types.TestResult
+			if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+				t.Fatalf("unmarshal result: %v", err)
+			}
+			if parsed.Framework != tt.name {
+				t.Fatalf("framework = %q, want %q", parsed.Framework, tt.name)
+			}
+			contract := canonicalRunTestsRepairContract(parsed, tt.dir)
+			if len(contract.FixSuggestions) != 1 ||
+				contract.FixSuggestions[0].RepairTask == nil ||
+				len(contract.FixSuggestions[0].RepairTask.SuggestedCommands) != 1 {
+				t.Fatalf("unexpected fix suggestions: %+v", contract.FixSuggestions)
+			}
+			gotCommand := contract.FixSuggestions[0].RepairTask.SuggestedCommands[0]
+			if gotCommand != tt.wantCommand {
+				t.Fatalf("suggested command = %q, want %q", gotCommand, tt.wantCommand)
+			}
+		})
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

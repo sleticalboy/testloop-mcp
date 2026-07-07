@@ -67,6 +67,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	if framework == "" {
 		framework = detector.DetectFramework(path)
 	}
+	input.Framework = framework
 
 	var output []byte
 	var err error
