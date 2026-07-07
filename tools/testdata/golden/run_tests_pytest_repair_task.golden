@@ -1,0 +1,44 @@
+{
+  "status": "fail",
+  "framework": "pytest",
+  "failures": [
+    {
+      "test_name": "test_divide",
+      "file": "fixture/calc.py",
+      "line": 7,
+      "error": "ValueError: division by zero",
+      "expected": "divide(1, 0)"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "fixture/calc.py",
+      "line": 7,
+      "issue": "ValueError: division by zero",
+      "category": "divide_by_zero",
+      "context_file": "fixture/calc.py",
+      "context_line": 7,
+      "suggested_fix": "除零错误\n建议：\n1. 在执行除法或取模前添加除零检查，确认除数是否为 0。\n2. 根据业务语义返回错误、默认值或跳过该计算，不要静默吞掉异常输入。\n3. 补充除数为 0 的测试，断言错误返回或约定的 fallback 行为。\n\n源码附近行：\nraise ValueError(\"division by zero\")\n",
+      "confidence": 0.95,
+      "repair_task": {
+        "id": "repair-divide_by_zero-test-divide",
+        "test_name": "test_divide",
+        "category": "divide_by_zero",
+        "issue": "ValueError: division by zero",
+        "target_file": "fixture/calc.py",
+        "target_line": 7,
+        "context_file": "fixture/calc.py",
+        "context_line": 7,
+        "context_snippet": "        raise ValueError(\"division by zero\")",
+        "editable_files": [
+          "fixture/calc.py",
+          "fixture/test_calc.py"
+        ],
+        "suggested_commands": [
+          "pytest fixture/test_calc.py"
+        ],
+        "assertion_focus": "明确除数为 0 时的业务语义，并断言错误返回或 fallback 行为。"
+      }
+    }
+  ]
+}

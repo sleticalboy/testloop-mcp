@@ -302,6 +302,41 @@ func TestHandleRunTestsRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsPytestRepairTaskGolden(t *testing.T) {
+	dir := writeTempPytestPackage(t)
+	installFakePython3(t, pytestFailureOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "test_calc.py"),
+		Framework:             "pytest",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "calc.py"),
+		TestCode:              filepath.Join(dir, "test_calc.py"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	contract := canonicalRunTestsRepairContract(parsed, dir)
+	gotBytes, err := json.MarshalIndent(contract, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal contract: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "run_tests_pytest_repair_task.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -351,6 +386,7 @@ func canonicalRunTestsRepairContract(result types.TestResult, fixtureDir string)
 			task.TargetFile = canonicalFixturePath(task.TargetFile, fixtureDir)
 			task.ContextFile = canonicalFixturePath(task.ContextFile, fixtureDir)
 			task.EditableFiles = canonicalFixturePaths(task.EditableFiles, fixtureDir)
+			task.SuggestedCommands = canonicalFixtureCommands(task.SuggestedCommands, fixtureDir)
 			suggestions[i].RepairTask = &task
 		}
 	}
@@ -369,6 +405,33 @@ func canonicalFixturePaths(paths []string, fixtureDir string) []string {
 		result[i] = canonicalFixturePath(path, fixtureDir)
 	}
 	return result
+}
+
+func canonicalFixtureCommands(commands []string, fixtureDir string) []string {
+	result := make([]string, len(commands))
+	for i, command := range commands {
+		parts := strings.Fields(command)
+		for j, part := range parts {
+			if j == 0 {
+				continue
+			}
+			parts[j] = canonicalFixtureCommandArg(part, fixtureDir)
+		}
+		result[i] = strings.Join(parts, " ")
+	}
+	return result
+}
+
+func canonicalFixtureCommandArg(arg string, fixtureDir string) string {
+	cleanArg := filepath.ToSlash(filepath.Clean(arg))
+	cleanFixture := filepath.ToSlash(filepath.Clean(fixtureDir))
+	cleanBase := filepath.ToSlash(filepath.Base(fixtureDir))
+	if strings.HasPrefix(cleanArg, cleanFixture+"/") ||
+		strings.HasPrefix(cleanArg, "./"+cleanBase+"/") ||
+		strings.HasPrefix(cleanArg, cleanBase+"/") {
+		return canonicalFixturePath(arg, fixtureDir)
+	}
+	return arg
 }
 
 func canonicalFixturePath(path string, fixtureDir string) string {
@@ -418,4 +481,78 @@ import "testing"
 		t.Fatalf("write test source: %v", err)
 	}
 	return "./" + filepath.Base(dir)
+}
+
+func writeTempPytestPackage(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-pytest-")
+	if err != nil {
+		t.Fatalf("mkdir temp pytest package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp pytest package: %v", err)
+		}
+	})
+
+	source := strings.Join([]string{
+		"def add(a, b):",
+		"    return a + b",
+		"",
+		"def divide(a, b):",
+		"    if b == 0:",
+		"        # keep line numbers aligned with pytest fixture",
+		"        raise ValueError(\"division by zero\")",
+		"    return a / b",
+	}, "\n") + "\n"
+	testSource := strings.Join([]string{
+		"from calc import divide",
+		"",
+		"def test_divide():",
+		"    divide(1, 0)",
+	}, "\n") + "\n"
+
+	if err := os.WriteFile(filepath.Join(dir, "calc.py"), []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "test_calc.py"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	return "./" + filepath.Base(dir)
+}
+
+func installFakePython3(t *testing.T, output string) {
+	t.Helper()
+	fakeBin := t.TempDir()
+	script := "#!/usr/bin/env sh\ncat <<'PYTEST_OUTPUT'\n" + output + "\nPYTEST_OUTPUT\nexit 1\n"
+	path := filepath.Join(fakeBin, "python3")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake python3: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func pytestFailureOutput() string {
+	return strings.Join([]string{
+		"test_calc.py::test_divide FAILED                                           [100%]",
+		"",
+		"=================================== FAILURES ===================================",
+		"________________________________ test_divide _________________________________",
+		"",
+		"    def test_divide():",
+		">       divide(1, 0)",
+		"",
+		"test_calc.py:4:",
+		"_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _",
+		"",
+		"a = 1, b = 0",
+		"",
+		"    def divide(a, b):",
+		"        if b == 0:",
+		">           raise ValueError(\"division by zero\")",
+		"E           ValueError: division by zero",
+		"",
+		"calc.py:7: ValueError",
+		"============================== 1 failed in 0.01s ===============================",
+	}, "\n")
 }
