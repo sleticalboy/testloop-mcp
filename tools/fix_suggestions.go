@@ -81,9 +81,9 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 		suggestion.ContextFile = context.File
 		suggestion.ContextLine = context.Line
 
-		if strings.Contains(lowerError, "got") && strings.Contains(lowerError, "want") {
+		if isExpectationMismatch(failure, lowerError) {
 			suggestion.Category = "expectation_mismatch"
-			suggestion.SuggestedFix = analyzeGotWant(errorMsg, context.SourceLine, context.TestLine)
+			suggestion.SuggestedFix = analyzeExpectationMismatch(failure, context.SourceLine, context.TestLine)
 			suggestion.Confidence = 0.8
 		} else if strings.Contains(lowerError, "index out of range") {
 			suggestion.Category = "index_out_of_range"
@@ -119,34 +119,70 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 	return suggestions
 }
 
-func analyzeGotWant(errorMsg, sourceLine, testLine string) string {
-	var got, want string
-
-	lowerError := strings.ToLower(errorMsg)
-	if idx := strings.Index(lowerError, "got"); idx >= 0 {
-		rest := errorMsg[idx+3:]
-		if endIdx := strings.Index(rest, ","); endIdx > 0 {
-			got = strings.TrimSpace(rest[:endIdx])
-		}
+func isExpectationMismatch(failure types.TestFailure, lowerError string) bool {
+	if strings.TrimSpace(failure.Expected) != "" && strings.TrimSpace(failure.Received) != "" {
+		return true
 	}
+	return (strings.Contains(lowerError, "got") && strings.Contains(lowerError, "want")) ||
+		(strings.Contains(lowerError, "expected") && (strings.Contains(lowerError, "received") ||
+			strings.Contains(lowerError, " to be ") ||
+			strings.Contains(lowerError, " to equal "))) ||
+		strings.Contains(lowerError, "expect(received)")
+}
 
-	if idx := strings.Index(lowerError, "want"); idx >= 0 {
-		rest := errorMsg[idx+4:]
-		want = strings.TrimSpace(rest)
-		want = strings.TrimRight(want, ".!;")
+func analyzeExpectationMismatch(failure types.TestFailure, sourceLine, testLine string) string {
+	got, want := failure.Received, failure.Expected
+
+	errorMsg := failure.Error
+	lowerError := strings.ToLower(errorMsg)
+	if got == "" && want == "" {
+		got, want = extractExpectedActualFromAssertion(errorMsg)
+	}
+	if got == "" {
+		got = valueAfterToken(errorMsg, lowerError, "got", ",")
+	}
+	if want == "" {
+		want = valueAfterToken(errorMsg, lowerError, "want", "")
 	}
 
 	var sb strings.Builder
 	sb.WriteString("期望值不匹配\n")
-	sb.WriteString(fmt.Sprintf("  实际值: %s\n", got))
-	sb.WriteString(fmt.Sprintf("  期望值: %s\n\n", want))
+	sb.WriteString(fmt.Sprintf("  实际值: %s\n", valueOrUnknown(got)))
+	sb.WriteString(fmt.Sprintf("  期望值: %s\n\n", valueOrUnknown(want)))
 	sb.WriteString("可能的原因和修复建议：\n")
-	sb.WriteString("1. 如果期望值错误，修正测试断言中的 want 值。\n")
+	sb.WriteString("1. 如果期望值错误，修正测试断言中的 want/expected 值。\n")
 	sb.WriteString("2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n")
 	sb.WriteString("3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n")
 	appendContextLines(&sb, sourceLine, testLine)
 
 	return sb.String()
+}
+
+func valueAfterToken(errorMsg, lowerError, token, endToken string) string {
+	if idx := strings.Index(lowerError, token); idx >= 0 {
+		rest := errorMsg[idx+len(token):]
+		if endToken != "" {
+			if endIdx := strings.Index(rest, endToken); endIdx > 0 {
+				return strings.TrimRight(strings.TrimSpace(rest[:endIdx]), ".!;")
+			}
+		}
+		return strings.TrimRight(strings.TrimSpace(rest), ".!;")
+	}
+	return ""
+}
+
+func extractExpectedActualFromAssertion(errorMsg string) (string, string) {
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)expected\s+(.+?)\s+to\s+(?:be|equal)\s+(.+?)(?:\s*//.*)?$`),
+		regexp.MustCompile(`(?i)expected\s+(.+?)\s+to\s+(?:deep\s+)?equal\s+(.+)$`),
+	}
+	for _, pattern := range patterns {
+		matches := pattern.FindStringSubmatch(strings.TrimSpace(errorMsg))
+		if len(matches) == 3 {
+			return strings.TrimSpace(matches[1]), strings.TrimSpace(matches[2])
+		}
+	}
+	return "", ""
 }
 
 func analyzeIndexOutOfRange(errorMsg, sourceLine string) string {

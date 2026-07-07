@@ -469,3 +469,198 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleFixSuggestionsUsesParsedFrameworkFixtures(t *testing.T) {
+	tests := []struct {
+		name            string
+		framework       string
+		fixture         string
+		sourceRel       string
+		sourceLines     []string
+		testRel         string
+		testLines       []string
+		wantCategory    string
+		wantContextFile string
+		wantContextLine int
+		wantTexts       []string
+	}{
+		{
+			name:      "jest expected received",
+			framework: "jest",
+			fixture:   "jest_failure.txt",
+			sourceRel: "sum.js",
+			sourceLines: []string{
+				"export function add(a, b) {",
+				"  return a + b + 1",
+				"}",
+			},
+			testRel: "sum.test.js",
+			testLines: []string{
+				"import { add } from './sum'",
+				"",
+				"test('adds 1 + 2 to equal 3', () => {",
+				"  const result = add(1, 2)",
+				"  expect(result).toBe(3)",
+				"})",
+			},
+			wantCategory:    "expectation_mismatch",
+			wantContextFile: "sum.test.js",
+			wantContextLine: 5,
+			wantTexts:       []string{"实际值: 4", "期望值: 3", "测试附近行", "expect(result).toBe(3)"},
+		},
+		{
+			name:      "vitest assertion error",
+			framework: "vitest",
+			fixture:   "vitest_failure.txt",
+			sourceRel: filepath.Join("src", "sum.ts"),
+			sourceLines: []string{
+				"export function add(a: number, b: number): number {",
+				"  return a + b + 1",
+				"}",
+			},
+			testRel: filepath.Join("src", "sum.test.ts"),
+			testLines: []string{
+				"import { add } from './sum'",
+				"",
+				"describe('sum', () => {",
+				"  test('adds values', () => {",
+				"    const result = add(1, 2)",
+				"    expect(result).toBe(3)",
+				"  })",
+				"  expect(add(1, 2)).toBe(3)",
+			},
+			wantCategory:    "expectation_mismatch",
+			wantContextFile: filepath.Join("src", "sum.test.ts"),
+			wantContextLine: 8,
+			wantTexts:       []string{"实际值: 4", "期望值: 3", "测试附近行", "expect(add(1, 2)).toBe(3)"},
+		},
+		{
+			name:      "mocha assertion error",
+			framework: "mocha",
+			fixture:   "mocha_failure.txt",
+			sourceRel: "calc.js",
+			sourceLines: []string{
+				"exports.divide = function divide(a, b) {",
+				"  return a + b",
+				"}",
+			},
+			testRel: filepath.Join("test", "calc.test.js"),
+			testLines: []string{
+				"const { expect } = require('chai')",
+				"const calc = require('../calc')",
+				"",
+				"describe('calc', () => {",
+				"  it('add() should add numbers', () => {})",
+				"  it('divide() should handle division by zero', () => {",
+				"    const result = calc.divide(8, 2)",
+				"    expect(result).to.equal(3)",
+				"  })",
+				"})",
+				"",
+				"expect(calc.divide(8, 2)).to.equal(3)",
+			},
+			wantCategory:    "expectation_mismatch",
+			wantContextFile: filepath.Join("test", "calc.test.js"),
+			wantContextLine: 12,
+			wantTexts:       []string{"实际值: 4", "期望值: 3", "测试附近行", "expect(calc.divide(8, 2)).to.equal(3)"},
+		},
+		{
+			name:      "pytest exception",
+			framework: "pytest",
+			fixture:   "pytest_failure.txt",
+			sourceRel: "calc.py",
+			sourceLines: []string{
+				"def add(a, b):",
+				"    return a + b",
+				"",
+				"def divide(a, b):",
+				"    if b == 0:",
+				"        # keep line numbers aligned with pytest fixture",
+				"        raise ValueError(\"division by zero\")",
+			},
+			testRel: "test_calc.py",
+			testLines: []string{
+				"from calc import divide",
+				"",
+				"def test_divide():",
+				"    divide(1, 0)",
+			},
+			wantCategory:    "divide_by_zero",
+			wantContextFile: "calc.py",
+			wantContextLine: 7,
+			wantTexts:       []string{"除零检查", "源码附近行", "raise ValueError"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			source := writeTestFile(t, dir, tt.sourceRel, strings.Join(tt.sourceLines, "\n")+"\n")
+			testFile := writeTestFile(t, dir, tt.testRel, strings.Join(tt.testLines, "\n")+"\n")
+			parsed, err := parseResults(parseResultsInput{
+				Output:    readToolParserFixture(t, tt.fixture),
+				Framework: tt.framework,
+			})
+			if err != nil {
+				t.Fatalf("parseResults returned error: %v", err)
+			}
+			if len(parsed.Failures) != 1 {
+				t.Fatalf("parsed failures len = %d, want 1: %+v", len(parsed.Failures), parsed.Failures)
+			}
+			failuresJSON, err := json.Marshal(parsed.Failures)
+			if err != nil {
+				t.Fatalf("marshal failures: %v", err)
+			}
+
+			result, _, err := HandleFixSuggestions(context.Background(), nil, fixSuggestionsInput{
+				Failures:   string(failuresJSON),
+				SourceCode: source,
+				TestCode:   testFile,
+			})
+			if err != nil {
+				t.Fatalf("HandleFixSuggestions returned error: %v", err)
+			}
+
+			var suggestions []types.FixSuggestion
+			if err := json.Unmarshal([]byte(resultText(t, result)), &suggestions); err != nil {
+				t.Fatalf("unmarshal suggestions: %v", err)
+			}
+			if len(suggestions) != 1 {
+				t.Fatalf("suggestions len = %d, want 1", len(suggestions))
+			}
+			got := suggestions[0]
+			if got.Category != tt.wantCategory {
+				t.Fatalf("category = %q, want %q: %+v", got.Category, tt.wantCategory, got)
+			}
+			if !strings.HasSuffix(filepath.ToSlash(got.ContextFile), filepath.ToSlash(tt.wantContextFile)) || got.ContextLine != tt.wantContextLine {
+				t.Fatalf("context = %s:%d, want suffix %s:%d", got.ContextFile, got.ContextLine, tt.wantContextFile, tt.wantContextLine)
+			}
+			for _, wantText := range tt.wantTexts {
+				if !strings.Contains(got.SuggestedFix, wantText) {
+					t.Fatalf("suggestion missing %q: %+v", wantText, got)
+				}
+			}
+		})
+	}
+}
+
+func readToolParserFixture(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "internal", "parser", "testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func writeTestFile(t *testing.T, dir, rel, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, rel)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	return path
+}
