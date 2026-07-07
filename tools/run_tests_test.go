@@ -646,6 +646,64 @@ func TestHandleRunTestsJSUsesPackageRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsJSCoverageUsesPackageRootAndRelativePath(t *testing.T) {
+	tests := []struct {
+		name      string
+		dir       string
+		path      string
+		framework string
+		output    string
+		wantArgs  string
+	}{
+		{
+			name:      "jest",
+			dir:       writeTempJestPackage(t),
+			framework: "jest",
+			output:    jestFailureOutput(),
+			wantArgs:  "jest --verbose --coverage sum.test.js",
+		},
+		{
+			name:      "vitest",
+			dir:       writeTempVitestPackage(t),
+			framework: "vitest",
+			output:    vitestFailureOutput(),
+			wantArgs:  "vitest run --verbose --coverage src/sum.test.ts",
+		},
+		{
+			name:      "mocha",
+			dir:       writeTempMochaPackage(t),
+			framework: "mocha",
+			output:    mochaFailureOutput(),
+			wantArgs:  "mocha --reporter spec --coverage test/calc.test.js",
+		},
+	}
+	tests[0].path = filepath.Join(tests[0].dir, "sum.test.js")
+	tests[1].path = filepath.Join(tests[1].dir, "src", "sum.test.ts")
+	tests[2].path = filepath.Join(tests[2].dir, "test", "calc.test.js")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logPath := installFakeNpxRecorder(t, tt.output)
+			if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+				Path:      tt.path,
+				Framework: tt.framework,
+				Coverage:  true,
+			}); err != nil {
+				t.Fatalf("HandleRunTests returned error: %v", err)
+			}
+
+			logText := readTextFile(t, logPath)
+			wantDir := absCleanPath(t, tt.dir)
+			if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+				t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+			}
+			if !strings.Contains(logText, "ARGS="+tt.wantArgs+"\n") {
+				t.Fatalf("fake npx args log = %q, want ARGS=%s", logText, tt.wantArgs)
+			}
+		})
+	}
+}
+
 func TestPytestArgsUsesRelativePath(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "tests", "test_calc.py")
@@ -685,6 +743,29 @@ func TestHandleRunTestsPytestUsesProjectRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsPytestCoverageUsesProjectRootAndRelativePath(t *testing.T) {
+	dir := writeTempNestedPytestPackage(t)
+	testFile := filepath.Join(dir, "tests", "test_calc.py")
+	logPath := installFakePython3Recorder(t, pytestFailureOutput())
+
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "pytest",
+		Coverage:  true,
+	}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake python3 cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=-m pytest -v --cov tests/test_calc.py\n") {
+		t.Fatalf("fake python3 args log = %q, want coverage pytest args", logText)
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -695,6 +776,24 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func readTextFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read file %s: %v", path, err)
+	}
+	return string(data)
+}
+
+func absCleanPath(t *testing.T, path string) string {
+	t.Helper()
+	result, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		t.Fatalf("abs path %s: %v", path, err)
+	}
+	return result
 }
 
 type runTestsRepairContract struct {
