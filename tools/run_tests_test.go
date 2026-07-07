@@ -372,6 +372,41 @@ func TestHandleRunTestsJestRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsVitestRepairTaskGolden(t *testing.T) {
+	dir := writeTempVitestPackage(t)
+	installFakeNpx(t, vitestFailureOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "src", "sum.test.ts"),
+		Framework:             "vitest",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "src", "sum.ts"),
+		TestCode:              filepath.Join(dir, "src", "sum.test.ts"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	contract := canonicalRunTestsRepairContract(parsed, dir)
+	gotBytes, err := json.MarshalIndent(contract, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal contract: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "run_tests_vitest_repair_task.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -480,6 +515,9 @@ func canonicalFixturePath(path string, fixtureDir string) string {
 		if strings.HasPrefix(cleanPath, prefix) {
 			return "fixture/" + strings.TrimPrefix(cleanPath, prefix)
 		}
+	}
+	if !filepath.IsAbs(path) && !strings.HasPrefix(cleanPath, "../") {
+		return "fixture/" + cleanPath
 	}
 	if !strings.Contains(cleanPath, "/") {
 		return "fixture/" + cleanPath
@@ -596,6 +634,53 @@ func writeTempJestPackage(t *testing.T) string {
 	return "./" + filepath.Base(dir)
 }
 
+func writeTempVitestPackage(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-vitest-")
+	if err != nil {
+		t.Fatalf("mkdir temp vitest package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp vitest package: %v", err)
+		}
+	})
+
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+
+	source := strings.Join([]string{
+		"export function add(a: number, b: number): number {",
+		"  return a + b + 1",
+		"}",
+	}, "\n") + "\n"
+	testSource := strings.Join([]string{
+		"import { describe, expect, test } from 'vitest'",
+		"import { add } from './sum'",
+		"",
+		"describe('sum', () => {",
+		"  test('adds values', () => {",
+		"    const result = add(1, 2)",
+		"    // keep line numbers aligned with vitest fixture",
+		"    expect(result).toBe(3)",
+		"  })",
+		"})",
+	}, "\n") + "\n"
+
+	if err := os.WriteFile(filepath.Join(srcDir, "sum.ts"), []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "sum.test.ts"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	return "./" + filepath.Base(dir)
+}
+
 func installFakePython3(t *testing.T, output string) {
 	t.Helper()
 	fakeBin := t.TempDir()
@@ -656,5 +741,24 @@ func jestFailureOutput() string {
 		"",
 		"Test Suites: 1 failed, 0 passed, 1 total",
 		"Tests:       1 failed, 0 passed, 1 total",
+	}, "\n")
+}
+
+func vitestFailureOutput() string {
+	return strings.Join([]string{
+		" FAIL  src/sum.test.ts > sum > adds values",
+		"AssertionError: expected 4 to be 3 // Object.is equality",
+		"",
+		"Expected: 3",
+		"Received: 4",
+		"",
+		" ❯ src/sum.test.ts:8:18",
+		"      6| test('adds values', () => {",
+		"      7|   const result = add(1, 2)",
+		"      8|   expect(result).toBe(3)",
+		"       |                  ^",
+		"",
+		" Test Files  1 failed (1)",
+		"      Tests  1 failed (1)",
 	}, "\n")
 }

@@ -1,0 +1,46 @@
+{
+  "status": "fail",
+  "framework": "vitest",
+  "failures": [
+    {
+      "test_name": "sum \u003e adds values",
+      "file": "fixture/src/sum.test.ts",
+      "line": 8,
+      "column": 18,
+      "error": "AssertionError: expected 4 to be 3 // Object.is equality",
+      "expected": "3",
+      "received": "4"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "fixture/src/sum.test.ts",
+      "line": 8,
+      "issue": "AssertionError: expected 4 to be 3 // Object.is equality",
+      "category": "expectation_mismatch",
+      "context_file": "fixture/src/sum.test.ts",
+      "context_line": 8,
+      "suggested_fix": "期望值不匹配\n  实际值: 4\n  期望值: 3\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\nexpect(result).toBe(3)\n",
+      "confidence": 0.8,
+      "repair_task": {
+        "id": "repair-expectation_mismatch-sum-adds-values",
+        "test_name": "sum \u003e adds values",
+        "category": "expectation_mismatch",
+        "issue": "AssertionError: expected 4 to be 3 // Object.is equality",
+        "target_file": "fixture/src/sum.test.ts",
+        "target_line": 8,
+        "context_file": "fixture/src/sum.test.ts",
+        "context_line": 8,
+        "context_snippet": "    expect(result).toBe(3)",
+        "editable_files": [
+          "fixture/src/sum.ts",
+          "fixture/src/sum.test.ts"
+        ],
+        "suggested_commands": [
+          "npm test -- fixture/src/sum.test.ts"
+        ],
+        "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+      }
+    }
+  ]
+}
