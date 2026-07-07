@@ -26,14 +26,31 @@ type TestFailure struct {
 
 // FixSuggestion 修复建议
 type FixSuggestion struct {
-	File         string  `json:"file"`
-	Line         int     `json:"line"`
-	Issue        string  `json:"issue"`
-	Category     string  `json:"category,omitempty"`
-	ContextFile  string  `json:"context_file,omitempty"`
-	ContextLine  int     `json:"context_line,omitempty"`
-	SuggestedFix string  `json:"suggested_fix"`
-	Confidence   float64 `json:"confidence"`
+	File         string      `json:"file"`
+	Line         int         `json:"line"`
+	Issue        string      `json:"issue"`
+	Category     string      `json:"category,omitempty"`
+	ContextFile  string      `json:"context_file,omitempty"`
+	ContextLine  int         `json:"context_line,omitempty"`
+	SuggestedFix string      `json:"suggested_fix"`
+	Confidence   float64     `json:"confidence"`
+	RepairTask   *RepairTask `json:"repair_task,omitempty"`
+}
+
+// RepairTask 面向 Agent 的可执行修复任务
+type RepairTask struct {
+	ID                string   `json:"id"`
+	TestName          string   `json:"test_name,omitempty"`
+	Category          string   `json:"category"`
+	Issue             string   `json:"issue"`
+	TargetFile        string   `json:"target_file"`
+	TargetLine        int      `json:"target_line,omitempty"`
+	ContextFile       string   `json:"context_file,omitempty"`
+	ContextLine       int      `json:"context_line,omitempty"`
+	ContextSnippet    string   `json:"context_snippet,omitempty"`
+	EditableFiles     []string `json:"editable_files"`
+	SuggestedCommands []string `json:"suggested_commands,omitempty"`
+	AssertionFocus    string   `json:"assertion_focus,omitempty"`
 }
 
 // GenerateTestsInput generate_tests 工具输入

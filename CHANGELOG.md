@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- `fix_suggestions` 每条建议新增 `repair_task`，聚合失败分类、目标位置、上下文片段、可编辑文件、建议复跑命令和断言关注点，便于 Agent 直接执行单个修复任务。
+
 ## v0.4.9 - 2026-07-07
 
 ### Added

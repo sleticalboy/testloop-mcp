@@ -143,12 +143,26 @@ testloop-mcp 是 AI Coding 工作流中「**写代码 → 验证 → 修复**」
     "context_file": "calc_test.go",
     "context_line": 22,
     "suggested_fix": "添加溢出检查：if a > math.MaxInt64 - b { return 0, ErrOverflow }",
-    "confidence": 0.92
+    "confidence": 0.92,
+    "repair_task": {
+      "id": "repair-expectation_mismatch-testadd",
+      "test_name": "TestAdd",
+      "category": "expectation_mismatch",
+      "issue": "Add 函数未处理负数溢出",
+      "target_file": "calc_test.go",
+      "target_line": 22,
+      "context_file": "calc_test.go",
+      "context_line": 22,
+      "context_snippet": "if got := Add(-1, 1); got != 0 { ... }",
+      "editable_files": ["calc.go", "calc_test.go"],
+      "suggested_commands": ["go test ./..."],
+      "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+    }
   }
 ]
 ```
 
-识别的失败类型：期望值不匹配（`got X, want Y`）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。返回会用 `category` 标识失败类型，并在能匹配到源码或测试文件时填充 `context_file` / `context_line`。
+识别的失败类型：期望值不匹配（`got X, want Y`、Jest/Vitest/Mocha 的 expected/received）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。返回会用 `category` 标识失败类型，并在能匹配到源码或测试文件时填充 `context_file` / `context_line`；`repair_task` 聚合失败分类、上下文、可编辑文件和建议复跑命令，供 Agent 直接规划单个修复任务。
 
 ---
 

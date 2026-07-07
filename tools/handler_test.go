@@ -311,6 +311,24 @@ func TestHandleFixSuggestionsGotWant(t *testing.T) {
 		!strings.Contains(suggestions[0].SuggestedFix, "func Add") {
 		t.Fatalf("unexpected suggestion: %+v", suggestions[0])
 	}
+	task := suggestions[0].RepairTask
+	if task == nil {
+		t.Fatal("expected repair_task")
+	}
+	if task.ID != "repair-expectation_mismatch-testadd" ||
+		task.Category != "expectation_mismatch" ||
+		task.TargetFile != source ||
+		task.TargetLine != 2 ||
+		task.ContextFile != source ||
+		task.ContextLine != 2 ||
+		task.ContextSnippet != "func Add(a, b int) int { return a + b }" ||
+		len(task.EditableFiles) != 1 ||
+		task.EditableFiles[0] != source ||
+		len(task.SuggestedCommands) != 1 ||
+		task.SuggestedCommands[0] != "go test ./..." ||
+		!strings.Contains(task.AssertionFocus, "实际值和期望值") {
+		t.Fatalf("unexpected repair task: %+v", task)
+	}
 }
 
 func TestHandleFixSuggestionsUsesTestLineForTestFailure(t *testing.T) {
@@ -639,6 +657,24 @@ func TestHandleFixSuggestionsUsesParsedFrameworkFixtures(t *testing.T) {
 				if !strings.Contains(got.SuggestedFix, wantText) {
 					t.Fatalf("suggestion missing %q: %+v", wantText, got)
 				}
+			}
+			if got.RepairTask == nil {
+				t.Fatal("expected repair_task")
+			}
+			task := got.RepairTask
+			if task.Category != tt.wantCategory ||
+				task.ContextFile != got.ContextFile ||
+				task.ContextLine != got.ContextLine ||
+				task.TargetFile != got.ContextFile ||
+				task.TargetLine != got.ContextLine ||
+				strings.TrimSpace(task.ContextSnippet) == "" ||
+				len(task.EditableFiles) < 2 ||
+				len(task.SuggestedCommands) == 0 ||
+				strings.TrimSpace(task.AssertionFocus) == "" {
+				t.Fatalf("unexpected repair task: %+v", task)
+			}
+			if !strings.HasPrefix(task.ID, "repair-"+tt.wantCategory+"-") {
+				t.Fatalf("repair task id = %q, want category prefix %q", task.ID, "repair-"+tt.wantCategory+"-")
 			}
 		})
 	}

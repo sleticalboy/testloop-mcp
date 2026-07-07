@@ -69,12 +69,25 @@
     "context_file": "./demo/calc_test.go",
     "context_line": 12,
     "suggested_fix": "期望值不匹配...",
-    "confidence": 0.8
+    "confidence": 0.8,
+    "repair_task": {
+      "id": "repair-expectation_mismatch-testdivide",
+      "test_name": "TestDivide",
+      "category": "expectation_mismatch",
+      "target_file": "./demo/calc_test.go",
+      "target_line": 12,
+      "context_file": "./demo/calc_test.go",
+      "context_line": 12,
+      "context_snippet": "if got := Divide(1, 0); got == nil { ... }",
+      "editable_files": ["./demo/calc.go", "./demo/calc_test.go"],
+      "suggested_commands": ["go test ./..."],
+      "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+    }
   }
 ]
 ```
 
-Agent 应优先读取 `category`、`context_file` 和 `context_line` 定位问题，再把 `suggested_fix` 当作修复线索，而不是直接盲改。修改源码或测试后，重新调用 `run_tests`。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
+Agent 应优先读取 `repair_task`，用 `target_file` / `target_line` 跳转，用 `editable_files` 限定改动范围，用 `suggested_commands` 复跑验证；`suggested_fix` 是修复线索，不应被直接当作补丁应用。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
 
 ## 3. 生成覆盖率报告
 

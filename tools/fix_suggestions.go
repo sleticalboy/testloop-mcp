@@ -21,6 +21,7 @@ type fixSuggestionsInput struct {
 }
 
 var indexOutOfRangeRe = regexp.MustCompile(`index out of range \[?(-?\d+)\]?.*length (\d+)`)
+var repairIDInvalidRe = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
 func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input fixSuggestionsInput) (*mcp.CallToolResult, any, error) {
 	failuresStr := input.Failures
@@ -112,11 +113,123 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 			suggestion.SuggestedFix = analyzeGenericFailure(errorMsg, context.SourceLine, context.TestLine)
 			suggestion.Confidence = 0.5
 		}
+		suggestion.RepairTask = buildRepairTask(failure, suggestion, context, sourceFile, testFile)
 
 		suggestions = append(suggestions, suggestion)
 	}
 
 	return suggestions
+}
+
+func buildRepairTask(failure types.TestFailure, suggestion types.FixSuggestion, context failureContext, sourceFile, testFile string) *types.RepairTask {
+	targetFile := firstNonEmpty(context.File, suggestion.File, sourceFile)
+	targetLine := context.Line
+	if targetLine == 0 {
+		targetLine = suggestion.Line
+	}
+	return &types.RepairTask{
+		ID:                repairTaskID(suggestion.Category, failure.TestName, targetFile, targetLine),
+		TestName:          failure.TestName,
+		Category:          suggestion.Category,
+		Issue:             suggestion.Issue,
+		TargetFile:        targetFile,
+		TargetLine:        targetLine,
+		ContextFile:       context.File,
+		ContextLine:       context.Line,
+		ContextSnippet:    firstNonEmpty(context.TestLine, context.SourceLine),
+		EditableFiles:     editableRepairFiles(sourceFile, testFile, suggestion.File, context.File),
+		SuggestedCommands: suggestedRepairCommands(sourceFile, testFile),
+		AssertionFocus:    repairAssertionFocus(suggestion.Category),
+	}
+}
+
+func repairTaskID(category, testName, targetFile string, targetLine int) string {
+	seed := strings.TrimSpace(testName)
+	if seed == "" {
+		seed = filepath.Base(targetFile)
+		if targetLine > 0 {
+			seed = fmt.Sprintf("%s-%d", seed, targetLine)
+		}
+	}
+	slug := strings.Trim(repairIDInvalidRe.ReplaceAllString(strings.ToLower(seed), "-"), "-")
+	if slug == "" {
+		slug = "failure"
+	}
+	if category == "" {
+		category = "generic_failure"
+	}
+	return "repair-" + category + "-" + slug
+}
+
+func editableRepairFiles(files ...string) []string {
+	var result []string
+	seen := map[string]bool{}
+	for _, file := range files {
+		file = strings.TrimSpace(file)
+		if file == "" {
+			continue
+		}
+		key := filepath.ToSlash(filepath.Clean(file))
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		result = append(result, file)
+	}
+	return result
+}
+
+func suggestedRepairCommands(sourceFile, testFile string) []string {
+	target := firstNonEmpty(testFile, sourceFile)
+	ext := strings.ToLower(filepath.Ext(target))
+	switch ext {
+	case ".go":
+		return []string{"go test ./..."}
+	case ".py":
+		if testFile != "" {
+			return []string{"pytest " + filepath.ToSlash(testFile)}
+		}
+		return []string{"pytest"}
+	case ".js", ".jsx", ".ts", ".tsx":
+		if testFile != "" {
+			return []string{"npm test -- " + filepath.ToSlash(testFile)}
+		}
+		return []string{"npm test"}
+	case ".rs":
+		return []string{"cargo test"}
+	case ".java":
+		return []string{"mvn test"}
+	default:
+		return nil
+	}
+}
+
+func repairAssertionFocus(category string) string {
+	switch category {
+	case "expectation_mismatch":
+		return "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+	case "index_out_of_range":
+		return "补充边界检查，并用空集合、单元素集合和最大索引验证。"
+	case "divide_by_zero":
+		return "明确除数为 0 时的业务语义，并断言错误返回或 fallback 行为。"
+	case "runtime_panic":
+		return "定位 panic 行的 nil、slice、map、接口或类型断言访问，并补充异常输入测试。"
+	case "undefined_symbol":
+		return "确认符号拼写、作用域和 import/package 前缀。"
+	case "type_mismatch":
+		return "对齐函数签名、变量声明和调用参数类型。"
+	default:
+		return "先复现失败，再判断问题属于测试期望、实现逻辑还是环境依赖。"
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func isExpectationMismatch(failure types.TestFailure, lowerError string) bool {
