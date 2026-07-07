@@ -407,6 +407,41 @@ func TestHandleRunTestsVitestRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsMochaRepairTaskGolden(t *testing.T) {
+	dir := writeTempMochaPackage(t)
+	installFakeNpx(t, mochaFailureOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "test", "calc.test.js"),
+		Framework:             "mocha",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "lib", "calc.js"),
+		TestCode:              filepath.Join(dir, "test", "calc.test.js"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	contract := canonicalRunTestsRepairContract(parsed, dir)
+	gotBytes, err := json.MarshalIndent(contract, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal contract: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "run_tests_mocha_repair_task.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -681,6 +716,67 @@ func writeTempVitestPackage(t *testing.T) string {
 	return "./" + filepath.Base(dir)
 }
 
+func writeTempMochaPackage(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-mocha-")
+	if err != nil {
+		t.Fatalf("mkdir temp mocha package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp mocha package: %v", err)
+		}
+	})
+
+	libDir := filepath.Join(dir, "lib")
+	testDir := filepath.Join(dir, "test")
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatalf("mkdir lib: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
+		t.Fatalf("mkdir test: %v", err)
+	}
+
+	source := strings.Join([]string{
+		"function add(a, b) {",
+		"  return a + b",
+		"}",
+		"",
+		"function divide(a, b) {",
+		"  return a / b",
+		"}",
+		"",
+		"module.exports = { add, divide }",
+	}, "\n") + "\n"
+	testSource := strings.Join([]string{
+		"const { expect } = require('chai')",
+		"const { add, divide } = require('../lib/calc')",
+		"",
+		"describe('calc', () => {",
+		"  it('add() should add numbers', () => {",
+		"    expect(add(1, 2)).to.equal(3)",
+		"  })",
+		"",
+		"  it('divide() should handle division by zero', () => {",
+		"    const result = divide(4, 1)",
+		"    // keep line numbers aligned with mocha fixture",
+		"    expect(result).to.equal(3)",
+		"  })",
+		"})",
+	}, "\n") + "\n"
+
+	if err := os.WriteFile(filepath.Join(libDir, "calc.js"), []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(testDir, "calc.test.js"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"mocha"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	return "./" + filepath.Base(dir)
+}
+
 func installFakePython3(t *testing.T, output string) {
 	t.Helper()
 	fakeBin := t.TempDir()
@@ -760,5 +856,21 @@ func vitestFailureOutput() string {
 		"",
 		" Test Files  1 failed (1)",
 		"      Tests  1 failed (1)",
+	}, "\n")
+}
+
+func mochaFailureOutput() string {
+	return strings.Join([]string{
+		"  calc",
+		"    ✓ add() should add numbers",
+		"    1) divide() should handle division by zero",
+		"",
+		"  1 passing (12ms)",
+		"  1 failing",
+		"",
+		"  1) calc",
+		"       divide() should handle division by zero:",
+		"     AssertionError: expected 4 to equal 3",
+		"      at Context.<anonymous> (test/calc.test.js:12:18)",
 	}, "\n")
 }

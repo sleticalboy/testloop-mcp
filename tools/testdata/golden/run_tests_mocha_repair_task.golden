@@ -1,0 +1,44 @@
+{
+  "status": "fail",
+  "framework": "mocha",
+  "failures": [
+    {
+      "test_name": "calc divide() should handle division by zero",
+      "file": "fixture/test/calc.test.js",
+      "line": 12,
+      "column": 18,
+      "error": "AssertionError: expected 4 to equal 3"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "fixture/test/calc.test.js",
+      "line": 12,
+      "issue": "AssertionError: expected 4 to equal 3",
+      "category": "expectation_mismatch",
+      "context_file": "fixture/test/calc.test.js",
+      "context_line": 12,
+      "suggested_fix": "期望值不匹配\n  实际值: 4\n  期望值: 3\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\nexpect(result).to.equal(3)\n",
+      "confidence": 0.8,
+      "repair_task": {
+        "id": "repair-expectation_mismatch-calc-divide-should-handle-division-by-zero",
+        "test_name": "calc divide() should handle division by zero",
+        "category": "expectation_mismatch",
+        "issue": "AssertionError: expected 4 to equal 3",
+        "target_file": "fixture/test/calc.test.js",
+        "target_line": 12,
+        "context_file": "fixture/test/calc.test.js",
+        "context_line": 12,
+        "context_snippet": "    expect(result).to.equal(3)",
+        "editable_files": [
+          "fixture/lib/calc.js",
+          "fixture/test/calc.test.js"
+        ],
+        "suggested_commands": [
+          "npm test -- fixture/test/calc.test.js"
+        ],
+        "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+      }
+    }
+  ]
+}
