@@ -264,6 +264,44 @@ func TestHandleRunTestsCanIncludeFixSuggestions(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsRepairTaskGolden(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	if got := Add(1, 2); got != 4 {
+		t.Fatalf("got %d, want 4", got)
+	}
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  dir,
+		Framework:             "go-test",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "calc.go"),
+		TestCode:              filepath.Join(dir, "calc_test.go"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	contract := canonicalRunTestsRepairContract(parsed, dir)
+	gotBytes, err := json.MarshalIndent(contract, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal contract: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("testdata", "golden", "run_tests_repair_task.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestCoverageArgs(t *testing.T) {
 	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
@@ -289,6 +327,66 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+type runTestsRepairContract struct {
+	Status         string                `json:"status"`
+	Framework      string                `json:"framework"`
+	Failures       []types.TestFailure   `json:"failures"`
+	FixSuggestions []types.FixSuggestion `json:"fix_suggestions"`
+}
+
+func canonicalRunTestsRepairContract(result types.TestResult, fixtureDir string) runTestsRepairContract {
+	failures := append([]types.TestFailure(nil), result.Failures...)
+	for i := range failures {
+		failures[i].File = canonicalFixturePath(failures[i].File, fixtureDir)
+	}
+
+	suggestions := append([]types.FixSuggestion(nil), result.FixSuggestions...)
+	for i := range suggestions {
+		suggestions[i].File = canonicalFixturePath(suggestions[i].File, fixtureDir)
+		suggestions[i].ContextFile = canonicalFixturePath(suggestions[i].ContextFile, fixtureDir)
+		if suggestions[i].RepairTask != nil {
+			task := *suggestions[i].RepairTask
+			task.TargetFile = canonicalFixturePath(task.TargetFile, fixtureDir)
+			task.ContextFile = canonicalFixturePath(task.ContextFile, fixtureDir)
+			task.EditableFiles = canonicalFixturePaths(task.EditableFiles, fixtureDir)
+			suggestions[i].RepairTask = &task
+		}
+	}
+
+	return runTestsRepairContract{
+		Status:         result.Status,
+		Framework:      result.Framework,
+		Failures:       failures,
+		FixSuggestions: suggestions,
+	}
+}
+
+func canonicalFixturePaths(paths []string, fixtureDir string) []string {
+	result := make([]string, len(paths))
+	for i, path := range paths {
+		result[i] = canonicalFixturePath(path, fixtureDir)
+	}
+	return result
+}
+
+func canonicalFixturePath(path string, fixtureDir string) string {
+	if path == "" {
+		return ""
+	}
+	cleanPath := filepath.ToSlash(filepath.Clean(path))
+	cleanFixture := filepath.ToSlash(filepath.Clean(fixtureDir))
+	cleanBase := filepath.ToSlash(filepath.Base(fixtureDir))
+	for _, prefix := range []string{cleanFixture + "/", "./" + cleanBase + "/", cleanBase + "/"} {
+		if strings.HasPrefix(cleanPath, prefix) {
+			return "fixture/" + strings.TrimPrefix(cleanPath, prefix)
+		}
+	}
+	if !strings.Contains(cleanPath, "/") {
+		return "fixture/" + cleanPath
+	}
+	return cleanPath
 }
 
 func writeTempGoTestPackage(t *testing.T, testBody string) string {

@@ -92,6 +92,8 @@
 
 Agent 应优先读取 `repair_task`，用 `target_file` / `target_line` 跳转，用 `editable_files` 限定改动范围，用 `suggested_commands` 复跑验证；`suggested_fix` 是修复线索，不应被直接当作补丁应用。只有当前失败闭环收敛后，才进入覆盖率缺口分析。
 
+这个内联修复任务契约已经用 `tools/testdata/golden/run_tests_repair_task.golden` 固定：测试会运行真实 Go 失败用例，调用 `run_tests` 并开启 `include_fix_suggestions`，然后比对 `failures[]`、`fix_suggestions[]` 和 `repair_task` 的稳定 JSON 字段。后续修改字段名、路径选择、上下文行或建议命令时，需要同步更新该 golden。
+
 ## 3. 生成覆盖率报告
 
 `parse_coverage` 解析已有报告文件，不负责替代生态工具生成报告。Go 项目可先让 Agent 执行：

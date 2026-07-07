@@ -1,0 +1,43 @@
+{
+  "status": "fail",
+  "framework": "go-test",
+  "failures": [
+    {
+      "test_name": "TestAdd",
+      "file": "fixture/calc_test.go",
+      "line": 7,
+      "error": "got 3, want 4"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "fixture/calc_test.go",
+      "line": 7,
+      "issue": "got 3, want 4",
+      "category": "expectation_mismatch",
+      "context_file": "fixture/calc_test.go",
+      "context_line": 7,
+      "suggested_fix": "期望值不匹配\n  实际值: 3\n  期望值: 4\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\nt.Fatalf(\"got %d, want 4\", got)\n",
+      "confidence": 0.8,
+      "repair_task": {
+        "id": "repair-expectation_mismatch-testadd",
+        "test_name": "TestAdd",
+        "category": "expectation_mismatch",
+        "issue": "got 3, want 4",
+        "target_file": "fixture/calc_test.go",
+        "target_line": 7,
+        "context_file": "fixture/calc_test.go",
+        "context_line": 7,
+        "context_snippet": "\t\tt.Fatalf(\"got %d, want 4\", got)",
+        "editable_files": [
+          "fixture/calc.go",
+          "fixture/calc_test.go"
+        ],
+        "suggested_commands": [
+          "go test ./..."
+        ],
+        "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+      }
+    }
+  ]
+}
