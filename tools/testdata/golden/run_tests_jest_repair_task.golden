@@ -37,7 +37,7 @@
           "fixture/sum.test.js"
         ],
         "suggested_commands": [
-          "npm test -- fixture/sum.test.js"
+          "npx jest fixture/sum.test.js"
         ],
         "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
       }

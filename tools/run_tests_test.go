@@ -457,6 +457,59 @@ func TestCoverageArgs(t *testing.T) {
 	}
 }
 
+func TestRunTestRepairCommands(t *testing.T) {
+	tests := []struct {
+		name      string
+		framework string
+		source    string
+		testFile  string
+		want      []string
+	}{
+		{
+			name:      "jest test file",
+			framework: "jest",
+			source:    "sum.js",
+			testFile:  "sum.test.js",
+			want:      []string{"npx jest sum.test.js"},
+		},
+		{
+			name:      "vitest test file",
+			framework: "vitest",
+			source:    "src/sum.ts",
+			testFile:  "src/sum.test.ts",
+			want:      []string{"npx vitest run src/sum.test.ts"},
+		},
+		{
+			name:      "mocha test file",
+			framework: "mocha",
+			source:    "lib/calc.js",
+			testFile:  "test/calc.test.js",
+			want:      []string{"npx mocha test/calc.test.js"},
+		},
+		{
+			name:      "jest source fallback",
+			framework: "jest",
+			source:    "sum.js",
+			want:      []string{"npx jest sum.js"},
+		},
+		{
+			name:      "unsupported framework keeps generic commands",
+			framework: "go-test",
+			source:    "calc.go",
+			testFile:  "calc_test.go",
+			want:      nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := runTestRepairCommands(tt.framework, tt.source, tt.testFile)
+			if !equalStrings(got, tt.want) {
+				t.Fatalf("runTestRepairCommands() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

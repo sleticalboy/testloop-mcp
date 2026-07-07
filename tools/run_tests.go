@@ -164,7 +164,40 @@ func generateRunTestFixSuggestions(input runTestsInput, failures []types.TestFai
 	testFile := firstNonEmpty(input.TestCode, testCandidateFromRunPath(input.Path))
 	sourceCode := readOptionalText(sourceFile)
 	testCode := readOptionalText(testFile)
-	return generateFixSuggestions(failures, sourceCode, testCode, sourceFile, testFile)
+	suggestions := generateFixSuggestions(failures, sourceCode, testCode, sourceFile, testFile)
+	commands := runTestRepairCommands(input.Framework, sourceFile, testFile)
+	if len(commands) == 0 {
+		return suggestions
+	}
+	for i := range suggestions {
+		if suggestions[i].RepairTask != nil {
+			suggestions[i].RepairTask.SuggestedCommands = commands
+		}
+	}
+	return suggestions
+}
+
+func runTestRepairCommands(framework, sourceFile, testFile string) []string {
+	target := firstNonEmpty(testFile, sourceFile)
+	switch framework {
+	case "jest":
+		if target != "" {
+			return []string{"npx jest " + filepath.ToSlash(target)}
+		}
+		return []string{"npx jest"}
+	case "vitest":
+		if target != "" {
+			return []string{"npx vitest run " + filepath.ToSlash(target)}
+		}
+		return []string{"npx vitest run"}
+	case "mocha":
+		if target != "" {
+			return []string{"npx mocha " + filepath.ToSlash(target)}
+		}
+		return []string{"npx mocha"}
+	default:
+		return nil
+	}
 }
 
 func sourceCandidateFromRunPath(path string) string {
