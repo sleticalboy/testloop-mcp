@@ -481,7 +481,7 @@ func validateConfigURL(rawURL string) error {
 
 func newTestloopServer() *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.9"},
+		&mcp.Implementation{Name: "testloop-mcp", Version: "0.4.10"},
 		nil,
 	)
 	tools.Register(server)
