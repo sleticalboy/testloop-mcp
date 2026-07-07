@@ -146,6 +146,35 @@ func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	}
 }
 
+func assertGeneratedCoverageTaskOutput(t *testing.T, result *mcp.CallToolResult, task *types.CoverageTestTask, wantSnippet string) types.GenerateTestsOutput {
+	t.Helper()
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.TestFile != task.TestFile {
+		t.Fatalf("test file = %q, want %q", generated.TestFile, task.TestFile)
+	}
+	if generated.CoverageTask == nil || generated.Context == nil || generated.Context.CoverageTask == nil {
+		t.Fatalf("expected coverage task in output and context: %+v", generated)
+	}
+	if generated.CoverageTask.TestFile != task.TestFile || generated.Context.CoverageTask.TestFile != task.TestFile {
+		t.Fatalf("coverage task test file was not preserved: %+v", generated)
+	}
+	content, err := os.ReadFile(task.TestFile)
+	if err != nil {
+		t.Fatalf("expected generated coverage task test file: %v", err)
+	}
+	if !strings.Contains(string(content), wantSnippet) {
+		t.Fatalf("generated test file missing %q:\n%s", wantSnippet, content)
+	}
+	if !strings.Contains(generated.Preview, wantSnippet) {
+		t.Fatalf("generated preview missing %q:\n%s", wantSnippet, generated.Preview)
+	}
+	return generated
+}
+
 func TestHandleGenerateTestsUsesCoverageTaskTestFile(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")
@@ -175,23 +204,79 @@ func TestHandleGenerateTestsUsesCoverageTaskTestFile(t *testing.T) {
 		t.Fatalf("HandleGenerateTests returned error: %v", err)
 	}
 
-	var generated types.GenerateTestsOutput
-	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
-		t.Fatalf("unmarshal generated output: %v", err)
+	assertGeneratedCoverageTaskOutput(t, result, task, "TestAddCoverageTask")
+}
+
+func TestHandleGenerateTestsUsesPythonCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "service.py")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
 	}
-	if generated.TestFile != testFile {
-		t.Fatalf("test file = %q, want %q", generated.TestFile, testFile)
+	if err := os.WriteFile(source, []byte("def status(value):\n    if value == \"active\":\n        return \"ok\"\n    return \"idle\"\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
 	}
-	if generated.CoverageTask == nil || generated.Context == nil || generated.Context.CoverageTask == nil {
-		t.Fatalf("expected coverage task in output and context: %+v", generated)
+	task := &types.CoverageTestTask{
+		ID:              "pytest-service-status",
+		Framework:       "pytest",
+		File:            source,
+		Target:          "status",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		Goal:            "cover status active branch",
+		TestFile:        filepath.Join(dir, "tests", "test_service.py"),
+		TestName:        "test_status_active_branch",
+		SuggestedInputs: []string{"构造满足条件 `value == \"active\"` 的输入"},
+		AssertionFocus:  []string{"assert active branch"},
+		Confidence:      0.9,
 	}
-	content, err := os.ReadFile(testFile)
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
 	if err != nil {
-		t.Fatalf("expected generated coverage task test file: %v", err)
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
 	}
-	if !strings.Contains(string(content), "TestAddCoverageTask") {
-		t.Fatalf("generated test file missing task test name:\n%s", content)
+
+	assertGeneratedCoverageTaskOutput(t, result, task, "def test_status_active_branch():")
+}
+
+func TestHandleGenerateTestsUsesJavaScriptCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "sum.js")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
 	}
+	if err := os.WriteFile(source, []byte("function add(a, b) {\n  if (a === 0) return b;\n  return a + b;\n}\n\nmodule.exports = { add };\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:              "jest-add-branch",
+		Framework:       "jest",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		Goal:            "cover add zero branch",
+		TestFile:        filepath.Join(dir, "src", "sum.test.js"),
+		TestName:        "should cover add zero branch",
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		AssertionFocus:  []string{"assert zero branch"},
+		Confidence:      0.9,
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	assertGeneratedCoverageTaskOutput(t, result, task, "it('should cover add zero branch'")
 }
 
 func TestCountGeneratedCasesByLanguage(t *testing.T) {
