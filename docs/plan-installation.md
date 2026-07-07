@@ -16,35 +16,35 @@
 
 ## 当前发布
 
-- 当前版本：`v0.4.8`
-- Tag：`v0.4.8` -> `61e500770f4a2a92254e2b52347a8b55f6030d82`
-- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.8
-- Release Artifacts run：`28793678783`
-- Homebrew tap commit：`ad9ec75f222f120964176df002277b6f1b942fa3`
+- 当前版本：`v0.4.9`
+- Tag：`v0.4.9` -> `be0e18028b3994693f82b8b4cc5547c965588d5c`
+- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.9
+- Release Artifacts run：`28833047972`
+- Homebrew tap commit：`5e3083b58f521931f103fec73ea45de23cf8b19f`
 
-`v0.4.8` Release 已包含：
+`v0.4.9` Release 已包含：
 
-- `testloop-mcp_v0.4.8_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.8_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.8_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.8_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.8_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.8_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.8_windows_amd64.zip`
-- `testloop-mcp_v0.4.8_windows_amd64.zip.sha256`
-- `testloop-mcp_v0.4.8_windows_arm64.zip`
-- `testloop-mcp_v0.4.8_windows_arm64.zip.sha256`
+- `testloop-mcp_v0.4.9_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.9_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.9_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.9_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.9_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.9_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.9_windows_amd64.zip`
+- `testloop-mcp_v0.4.9_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.9_windows_arm64.zip`
+- `testloop-mcp_v0.4.9_windows_arm64.zip.sha256`
 
-`v0.4.8` 已验证：
+`v0.4.9` 已验证：
 
 - [x] 远端 CI passed
-- [x] Release Artifacts run `28793678783` passed
-- [x] `TESTLOOP_MCP_VERSION=v0.4.8 sh scripts/install.sh` 在 release 资产生成前可回退到 `go install`，并安装可用的 `testloop-mcp` / `testloop-testgen`
-- [x] `TESTLOOP_MCP_VERSION=v0.4.8 TESTLOOP_MCP_INSTALL_DIR=... sh scripts/install.sh` 可直接下载 release 资产、校验 `.sha256` 并安装
-- [x] Windows amd64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
-- [x] Windows arm64 zip 已下载并通过 `.sha256` 校验，内容包含 `testloop-mcp.exe`、`testloop-testgen.exe`、`README.md` 和 `LICENSE`
+- [x] Release Artifacts run `28833047972` passed
+- [x] `TESTLOOP_MCP_VERSION=v0.4.9 TESTLOOP_MCP_INSTALL_DIR=... sh scripts/install.sh` 可直接下载 release 资产、校验 `.sha256` 并安装
+- [x] Windows amd64 zip 已下载、通过 `.sha256` 校验，并安装 `testloop-mcp.exe` / `testloop-testgen.exe`
+- [x] Windows arm64 zip 已下载、通过 `.sha256` 校验，并安装 `testloop-mcp.exe` / `testloop-testgen.exe`
 - [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
-- [x] `brew reinstall sleticalboy/tap/testloop-mcp`
+- [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
+- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 
 ## 版本摘要
@@ -59,6 +59,7 @@
 | `v0.4.6` | 将发布后验证通过的 Homebrew formula help 测试修复纳入正式 release source archive | Release run `28782811885`；Homebrew tap 升级到 `0.4.6` 并通过 `brew test` |
 | `v0.4.7` | 正式发布 Windows arm64 预构建 zip，并增强 Windows zip 运行验证 | Release run `28784950785`；Homebrew tap 升级到 `0.4.7` 并通过 `brew test` |
 | `v0.4.8` | 编辑器接入体验增强，补齐 MCP 客户端配置生成、校验、诊断和 Agent 闭环示例 | Release run `28793678783`；Homebrew tap 升级到 `0.4.8` 并通过 `brew test` |
+| `v0.4.9` | Agent 修复闭环和配置诊断细化，补充 `fix_suggestions` 分类与源码上下文 | Release run `28833047972`；Homebrew tap 升级到 `0.4.9` 并通过 `brew test` |
 
 ## 发布维护流程
 
