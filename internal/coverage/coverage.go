@@ -193,13 +193,13 @@ func coverageTaskCommand(framework string, file string) string {
 		}
 		return "go test ./" + filepath.ToSlash(dir)
 	case "jest":
-		return "npx jest " + file
+		return "npx jest " + filepath.ToSlash(file)
 	case "vitest":
-		return "npx vitest run " + file
+		return "npx vitest run " + filepath.ToSlash(file)
 	case "mocha":
-		return "npx mocha"
+		return "npx mocha " + filepath.ToSlash(file)
 	case "pytest":
-		return "pytest " + file
+		return "python3 -m pytest " + filepath.ToSlash(file)
 	case "cargo-test":
 		return "cargo test"
 	case "junit":

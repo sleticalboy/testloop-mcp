@@ -167,6 +167,72 @@ func marshalCoverageTasksGolden(tasks []types.CoverageTestTask) ([]byte, error) 
 	return buf.Bytes(), nil
 }
 
+func TestCoverageTaskCommandMatchesRunTestsFrameworkCommands(t *testing.T) {
+	tests := []struct {
+		name      string
+		framework string
+		file      string
+		want      string
+	}{
+		{
+			name:      "go root",
+			framework: "go-test",
+			file:      "calc.go",
+			want:      "go test ./...",
+		},
+		{
+			name:      "go package",
+			framework: "go-test",
+			file:      filepath.Join("pkg", "calc.go"),
+			want:      "go test ./pkg",
+		},
+		{
+			name:      "jest",
+			framework: "jest",
+			file:      filepath.Join("src", "sum.js"),
+			want:      "npx jest src/sum.js",
+		},
+		{
+			name:      "vitest",
+			framework: "vitest",
+			file:      filepath.Join("src", "sum.ts"),
+			want:      "npx vitest run src/sum.ts",
+		},
+		{
+			name:      "mocha",
+			framework: "mocha",
+			file:      filepath.Join("test", "calc.test.js"),
+			want:      "npx mocha test/calc.test.js",
+		},
+		{
+			name:      "pytest",
+			framework: "pytest",
+			file:      filepath.Join("tests", "test_calc.py"),
+			want:      "python3 -m pytest tests/test_calc.py",
+		},
+		{
+			name:      "rust",
+			framework: "cargo-test",
+			file:      "src/lib.rs",
+			want:      "cargo test",
+		},
+		{
+			name:      "java",
+			framework: "junit",
+			file:      filepath.Join("src", "main", "java", "Calc.java"),
+			want:      "mvn test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := coverageTaskCommand(tt.framework, tt.file); got != tt.want {
+				t.Fatalf("coverageTaskCommand() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseGoCoverageMapsUncoveredBlocksToFunctions(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "calc.go")
