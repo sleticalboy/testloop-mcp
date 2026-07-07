@@ -94,16 +94,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		output, err = cmd.CombinedOutput()
 
 	case "pytest":
-		args := []string{"-m", "pytest"}
-		if verbose {
-			args = append(args, "-v")
-		}
-		if coverage {
-			args = append(args, "--cov")
-		}
-		args = append(args, path)
-		cmd := exec.CommandContext(ctx, "python3", args...)
-		cmd.Dir = getProjectRoot(path)
+		cmd := pytestCommand(ctx, path, verbose, coverage)
 		output, err = cmd.CombinedOutput()
 
 	case "cargo-test":
@@ -223,6 +214,28 @@ func commandPathArg(path, dir string) string {
 		}
 	}
 	return filepath.ToSlash(path)
+}
+
+func pytestCommand(ctx context.Context, path string, verbose, coverage bool) *exec.Cmd {
+	root := findProjectRoot(path, "pyproject.toml", "setup.py", "pytest.ini", "tox.ini", "setup.cfg")
+	args := pytestArgs(path, root, verbose, coverage)
+	cmd := exec.CommandContext(ctx, "python3", args...)
+	cmd.Dir = root
+	return cmd
+}
+
+func pytestArgs(path, root string, verbose, coverage bool) []string {
+	args := []string{"-m", "pytest"}
+	if verbose {
+		args = append(args, "-v")
+	}
+	if coverage {
+		args = append(args, "--cov")
+	}
+	if path != "." {
+		args = append(args, commandPathArg(path, root))
+	}
+	return args
 }
 
 func sourceCandidateFromRunPath(path string) string {

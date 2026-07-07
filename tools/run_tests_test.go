@@ -646,6 +646,45 @@ func TestHandleRunTestsJSUsesPackageRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestPytestArgsUsesRelativePath(t *testing.T) {
+	dir := t.TempDir()
+	testFile := filepath.Join(dir, "tests", "test_calc.py")
+	got := pytestArgs(testFile, dir, true, true)
+	want := []string{"-m", "pytest", "-v", "--cov", "tests/test_calc.py"}
+	if !equalStrings(got, want) {
+		t.Fatalf("pytestArgs() = %v, want %v", got, want)
+	}
+}
+
+func TestHandleRunTestsPytestUsesProjectRootAndRelativePath(t *testing.T) {
+	dir := writeTempNestedPytestPackage(t)
+	testFile := filepath.Join(dir, "tests", "test_calc.py")
+	logPath := installFakePython3Recorder(t, pytestFailureOutput())
+
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "pytest",
+	}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read fake python3 log: %v", err)
+	}
+	logText := string(logData)
+	wantDir, err := filepath.Abs(filepath.Clean(dir))
+	if err != nil {
+		t.Fatalf("abs dir: %v", err)
+	}
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake python3 cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=-m pytest -v tests/test_calc.py\n") {
+		t.Fatalf("fake python3 args log = %q, want relative pytest args", logText)
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -818,6 +857,31 @@ func writeTempPytestPackage(t *testing.T) string {
 	return "./" + filepath.Base(dir)
 }
 
+func writeTempNestedPytestPackage(t *testing.T) string {
+	t.Helper()
+	dir := writeTempPytestPackage(t)
+	testsDir := filepath.Join(dir, "tests")
+	if err := os.MkdirAll(testsDir, 0o755); err != nil {
+		t.Fatalf("mkdir nested pytest tests: %v", err)
+	}
+	oldTest := filepath.Join(dir, "test_calc.py")
+	newTest := filepath.Join(testsDir, "test_calc.py")
+	data, err := os.ReadFile(oldTest)
+	if err != nil {
+		t.Fatalf("read root pytest test: %v", err)
+	}
+	if err := os.WriteFile(newTest, data, 0o644); err != nil {
+		t.Fatalf("write nested pytest test: %v", err)
+	}
+	if err := os.Remove(oldTest); err != nil {
+		t.Fatalf("remove root pytest test: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "pyproject.toml"), []byte("[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"), 0o644); err != nil {
+		t.Fatalf("write pyproject.toml: %v", err)
+	}
+	return dir
+}
+
 func writeTempJestPackage(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp(".", "run-tests-jest-")
@@ -975,6 +1039,25 @@ func installFakePython3(t *testing.T, output string) {
 		t.Fatalf("write fake python3: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakePython3Recorder(t *testing.T, output string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "python3.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"cat <<'PYTEST_OUTPUT'\n" + output + "\nPYTEST_OUTPUT\n" +
+		"exit 1\n"
+	path := filepath.Join(fakeBin, "python3")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake python3: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
 }
 
 func installFakeNpx(t *testing.T, output string) {
