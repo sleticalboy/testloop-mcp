@@ -1356,14 +1356,7 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 			typeExpr = branch
 		}
 	}
-	if strings.HasSuffix(typeExpr, "[]") {
-		inner := strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]"))
-		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
-			return "[" + payload + "]", true
-		}
-		return "[]", true
-	}
-	if inner, ok := jsTSGenericArg(typeExpr, "Array"); ok {
+	if inner, ok := jsTSArrayElementType(typeExpr); ok {
 		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
 			return "[" + payload + "]", true
 		}
@@ -1515,10 +1508,7 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		return "null"
 	case typeExpr == "undefined" || typeExpr == "void":
 		return "undefined"
-	case strings.HasSuffix(typeExpr, "[]"):
-		return "[]"
-	}
-	if _, ok := jsTSGenericArg(typeExpr, "Array"); ok {
+	case jsTSTypeIsArray(typeExpr):
 		return "[]"
 	}
 	if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
@@ -1652,6 +1642,28 @@ func jsTSGenericArg(typeExpr, name string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(typeExpr[len(prefix) : len(typeExpr)-1]), true
+}
+
+func jsTSArrayElementType(typeExpr string) (string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if strings.HasPrefix(typeExpr, "readonly ") {
+		typeExpr = strings.TrimSpace(strings.TrimPrefix(typeExpr, "readonly "))
+	}
+	if strings.HasSuffix(typeExpr, "[]") {
+		return strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]")), true
+	}
+	if inner, ok := jsTSGenericArg(typeExpr, "Array"); ok {
+		return inner, true
+	}
+	if inner, ok := jsTSGenericArg(typeExpr, "ReadonlyArray"); ok {
+		return inner, true
+	}
+	return "", false
+}
+
+func jsTSTypeIsArray(typeExpr string) bool {
+	_, ok := jsTSArrayElementType(typeExpr)
+	return ok
 }
 
 func jsNameLooksLikeResponseParam(name string) bool {

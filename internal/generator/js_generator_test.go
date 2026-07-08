@@ -366,8 +366,8 @@ type Profile = {
   owner?: User | null
 }
 
-type Users = User[]
-type MaybeUsers = Array<User | null>
+type Users = readonly User[]
+type MaybeUsers = ReadonlyArray<User | null>
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
@@ -962,7 +962,7 @@ export function status(): string {
   email: string
 }
 
-type Users = Array<User | null>
+type Users = ReadonlyArray<User | null>
 
 export async function listUsers(response: Response): Promise<Users> {
   return await response.json()
@@ -1911,9 +1911,12 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
 	}
-	typeDecls["Users"] = "Array<User | null>"
+	typeDecls["Users"] = "ReadonlyArray<User | null>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("array alias payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
+		t.Fatalf("readonly array payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
