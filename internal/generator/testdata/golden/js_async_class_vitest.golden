@@ -11,10 +11,6 @@ describe('fetchData', () => {
     await expect(fetchData(undefined)).rejects.toThrow();
   });
 
-  it('should throw on invalid input', async () => {
-    await expect(fetchData(undefined)).rejects.toThrow();
-  });
-
 });
 
 describe('Widget', () => {
@@ -46,11 +42,6 @@ describe('Widget', () => {
       const result = await instance.save({});
       expect(typeof result).toBe('object');
       expect(result).not.toBeNull();
-    });
-
-    it('should throw on invalid input', async () => {
-      const instance = new Widget();
-      await expect(instance.save(undefined)).rejects.toThrow();
     });
 
     it('should handle payload = undefined', async () => {

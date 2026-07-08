@@ -1178,6 +1178,53 @@ func TestJSClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:    "fetchData",
+		IsAsync: true,
+		Params:  []jsParamInfo{{Name: "url"}},
+		Analysis: jsFuncAnalysis{
+			Throws:    true,
+			HasReturn: true,
+			Boundaries: []jsBoundary{
+				{Param: "url", Value: "undefined", Type: "undefined"},
+			},
+		},
+	}
+	code := genJSFuncTest(fn, jsAssertionStyleJest)
+	if !strings.Contains(code, "it('should handle url = undefined'") {
+		t.Fatalf("expected boundary error-path case:\n%s", code)
+	}
+	if strings.Contains(code, "it('should throw on invalid input'") {
+		t.Fatalf("duplicate generic error-path case should be omitted:\n%s", code)
+	}
+
+	cls := jsClassInfo{
+		Name: "Widget",
+		Methods: []jsFuncInfo{
+			{
+				Name:    "save",
+				IsAsync: true,
+				Params:  []jsParamInfo{{Name: "payload"}},
+				Analysis: jsFuncAnalysis{
+					Throws:    true,
+					HasReturn: true,
+					Boundaries: []jsBoundary{
+						{Param: "payload", Value: "undefined", Type: "undefined"},
+					},
+				},
+			},
+		},
+	}
+	code = genJSClassTest(cls, jsAssertionStyleChai)
+	if !strings.Contains(code, "it('should handle payload = undefined'") {
+		t.Fatalf("expected class boundary error-path case:\n%s", code)
+	}
+	if strings.Contains(code, "it('should throw on invalid input'") {
+		t.Fatalf("duplicate class generic error-path case should be omitted:\n%s", code)
+	}
+}
+
 func TestJSFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",

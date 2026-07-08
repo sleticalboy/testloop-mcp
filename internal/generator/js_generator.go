@@ -454,10 +454,12 @@ func genJSFuncTest(fn jsFuncInfo, assertions jsAssertionStyle) string {
 	}
 
 	if fn.Analysis.Throws {
-		sb.WriteString(fmt.Sprintf("  it('should throw on invalid input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
 		args := jsInvalidArgList(fn.Params, fn.Analysis.Boundaries)
-		sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
-		sb.WriteString("  });\n\n")
+		if !jsErrorBoundaryArgsExist(fn.Params, fn.Analysis.Boundaries, args) {
+			sb.WriteString(fmt.Sprintf("  it('should throw on invalid input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
+			sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
+			sb.WriteString("  });\n\n")
+		}
 	}
 
 	if len(fn.Params) == 0 && fn.Analysis.HasReturn {
@@ -540,11 +542,13 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 		sb.WriteString("    });\n\n")
 
 		if method.Analysis.Throws {
-			sb.WriteString(fmt.Sprintf("    it('should throw on invalid input', %s => {\n", jsAsyncArrow(method.IsAsync)))
-			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 			args := jsInvalidArgList(method.Params, method.Analysis.Boundaries)
-			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
-			sb.WriteString("    });\n\n")
+			if !jsErrorBoundaryArgsExist(method.Params, method.Analysis.Boundaries, args) {
+				sb.WriteString(fmt.Sprintf("    it('should throw on invalid input', %s => {\n", jsAsyncArrow(method.IsAsync)))
+				sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
+				sb.WriteString("    });\n\n")
+			}
 		}
 
 		for _, b := range method.Analysis.Boundaries {
@@ -888,6 +892,21 @@ func jsInvalidArgList(params []jsParamInfo, boundaries []jsBoundary) string {
 		}
 	}
 	return jsPlaceholderArgList(params)
+}
+
+func jsErrorBoundaryArgsExist(params []jsParamInfo, boundaries []jsBoundary, args string) bool {
+	for _, b := range boundaries {
+		if !jsParamExists(params, b.Param) {
+			continue
+		}
+		if b.Value != "null" && b.Value != "undefined" {
+			continue
+		}
+		if jsArgListWithBoundary(params, b) == args {
+			return true
+		}
+	}
+	return false
 }
 
 func jsPlaceholderArgList(params []jsParamInfo) string {
