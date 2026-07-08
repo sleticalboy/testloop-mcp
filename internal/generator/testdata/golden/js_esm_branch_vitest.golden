@@ -1,0 +1,15 @@
+import { formatText } from './js_esm_branch';
+
+describe('formatText', () => {
+  it('should return expected result for normal input', () => {
+    const result = formatText('test', 'test', 'test');
+    expect(result).toBe(('test' + 'test'));
+  });
+
+  it('should handle mode = \'short\'', () => {
+    const result = formatText('short', 'test', 'test');
+    expect(result).toBe(('test'));
+  });
+
+});
+

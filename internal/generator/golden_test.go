@@ -49,6 +49,28 @@ func TestGeneratorGoldenOutputs(t *testing.T) {
 				return GenerateJavaScriptTestsWithFramework(sourcePath, "mocha")
 			},
 		},
+		{
+			name:   "js esm branch return",
+			source: "testdata/golden/js_esm_branch.ts",
+			golden: "testdata/golden/js_esm_branch.golden",
+			run:    GenerateJestTests,
+		},
+		{
+			name:   "js esm branch return vitest",
+			source: "testdata/golden/js_esm_branch.ts",
+			golden: "testdata/golden/js_esm_branch_vitest.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "vitest")
+			},
+		},
+		{
+			name:   "js esm branch return mocha",
+			source: "testdata/golden/js_esm_branch.ts",
+			golden: "testdata/golden/js_esm_branch_mocha.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "mocha")
+			},
+		},
 	}
 
 	for _, tt := range tests {
