@@ -100,6 +100,6 @@
       "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.90",
       "confidence": 0.9
     },
-    "test_file_content": "import { add } from './sum';\n\ndescribe('add', () =\u003e {\n  it('covers add coverage gap', () =\u003e {\n    // coverage task: vitest-1 | lines 2-2 | 断言未覆盖分支的返回值或副作用; 未覆盖 if 分支: a === 0; 覆盖未执行行: 2 | 构造满足条件 `a === 0` 的输入; 设置 a 覆盖未执行分支; 设置 b 覆盖未执行分支\n    const result = add(0, 2);\n    expect(result).toBe((2));\n  });\n\n});\n\n"
+    "test_file_content": "import { describe, it, expect } from 'vitest';\nimport { add } from './sum';\n\ndescribe('add', () =\u003e {\n  it('covers add coverage gap', () =\u003e {\n    // coverage task: vitest-1 | lines 2-2 | 断言未覆盖分支的返回值或副作用; 未覆盖 if 分支: a === 0; 覆盖未执行行: 2 | 构造满足条件 `a === 0` 的输入; 设置 a 覆盖未执行分支; 设置 b 覆盖未执行分支\n    const result = add(0, 2);\n    expect(result).toBe((2));\n  });\n\n});\n\n"
   }
 }

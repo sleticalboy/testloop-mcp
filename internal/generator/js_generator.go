@@ -142,7 +142,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		buf.WriteString("import { expect } from 'chai';\n")
 	} else if mochaTask {
 		buf.WriteString("const { expect } = require('chai');\n")
-	} else if vitestTask && isESModule && !coverageMode {
+	} else if vitestTask && isESModule {
 		buf.WriteString("import { describe, it, expect } from 'vitest';\n")
 	}
 	if isESModule {

@@ -170,6 +170,22 @@ func TestGeneratorCoverageTaskGoldenOutputs(t *testing.T) {
 			run: GenerateJavaScriptTestsForCoverageTask,
 		},
 		{
+			name:   "javascript vitest esm coverage task",
+			source: "testdata/golden/js_esm_branch.ts",
+			golden: "testdata/golden/js_esm_task_vitest.golden",
+			task: types.CoverageTestTask{
+				ID:              "vitest-esm-task-1",
+				Framework:       "vitest",
+				Target:          "formatText",
+				LineRange:       "2-4",
+				GapType:         "branch",
+				TestName:        "covers vitest formatText short branch",
+				AssertionFocus:  []string{"断言 Vitest ESM 分支返回值"},
+				SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+			},
+			run: GenerateJavaScriptTestsForCoverageTask,
+		},
+		{
 			name:   "rust coverage task",
 			source: "testdata/golden/rust_task.rs",
 			golden: "testdata/golden/rust_task.golden",

@@ -532,6 +532,7 @@ export function sub(a: number, b: number): number {
 				AssertionFocus:  []string{"断言 Vitest TypeScript 分支返回值"},
 			},
 			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
 				"import { add } from './sum';",
 				"it('covers vitest add zero branch'",
 				"coverage task: vitest-1 | lines 2-2 | 断言 Vitest TypeScript 分支返回值 | 构造满足条件 `a === 0` 的输入",
@@ -562,6 +563,7 @@ export function status(): string {
 				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
 			},
 			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
 				"import { fetchData } from './service';",
 				"it('covers vitest fetchData missing url', async () => {",
 				"coverage task: vitest-error-1 | lines 2-2 | 构造满足条件 `url === undefined` 的输入",
@@ -631,6 +633,7 @@ module.exports = { Widget };
 				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
 			},
 			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
 				"import { Widget } from './widget';",
 				"describe('Widget'",
 				"describe('load'",
