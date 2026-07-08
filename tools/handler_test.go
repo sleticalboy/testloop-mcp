@@ -694,6 +694,44 @@ func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsAutoDetectsJavaScriptFramework(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+  "scripts": { "test": "vitest run" },
+  "devDependencies": { "jest": "^29.0.0" }
+}`), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "calc.ts")
+	if err := os.WriteFile(source, []byte("export function add(a: number, b: number) { return a + b; }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Context == nil || generated.Context.Framework != "vitest" {
+		t.Fatalf("context framework = %+v, want vitest", generated.Context)
+	}
+	for _, want := range []string{
+		"import { add } from './calc';",
+		"expect(result).toBe((1 + 2));",
+	} {
+		if !strings.Contains(generated.Preview, want) {
+			t.Fatalf("expected %q in generated preview:\n%s", want, generated.Preview)
+		}
+	}
+	if strings.Contains(generated.Preview, "require('chai')") || strings.Contains(generated.Preview, "to.equal((1 + 2))") {
+		t.Fatalf("expected Vitest matcher style, got:\n%s", generated.Preview)
+	}
+}
+
 func assertGeneratedCoverageTaskOutput(t *testing.T, result *mcp.CallToolResult, task *types.CoverageTestTask, wantSnippet string) types.GenerateTestsOutput {
 	t.Helper()
 

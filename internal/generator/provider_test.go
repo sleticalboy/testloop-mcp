@@ -116,6 +116,29 @@ func TestGenerateTestsWithProviderOptionsUsesJavaScriptFramework(t *testing.T) {
 	}
 }
 
+func TestGenerateTestsWithProviderOptionsAutoDetectsJavaScriptFramework(t *testing.T) {
+	srcPath := writeProviderJavaScriptPackageSource(t, `{
+  "scripts": { "test": "mocha --reporter spec" },
+  "devDependencies": { "jest": "^29.0.0" }
+}`)
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, StaticProvider{}, GenerateTestsOptions{})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"expect(result).to.equal((1 + 2));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in auto-detected Mocha output:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "toBe((1 + 2))") {
+		t.Fatalf("expected auto-detected Mocha assertions, got:\n%s", code)
+	}
+}
+
 func TestGenerateTestsWithProviderUsesExternalLLMCommand(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell script fake provider is unix-only")
@@ -437,13 +460,30 @@ func writeProviderSource(t *testing.T) string {
 func writeProviderJavaScriptSource(t *testing.T) string {
 	t.Helper()
 
+	dir := t.TempDir()
+	return writeProviderJavaScriptSourceInDir(t, dir)
+}
+
+func writeProviderJavaScriptPackageSource(t *testing.T, packageJSON string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(packageJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return writeProviderJavaScriptSourceInDir(t, dir)
+}
+
+func writeProviderJavaScriptSourceInDir(t *testing.T, dir string) string {
+	t.Helper()
+
 	src := `function add(a, b) {
   return a + b;
 }
 
 module.exports = { add };
 `
-	path := filepath.Join(t.TempDir(), "calc.js")
+	path := filepath.Join(dir, "calc.js")
 	if err := os.WriteFile(path, []byte(src), 0644); err != nil {
 		t.Fatal(err)
 	}

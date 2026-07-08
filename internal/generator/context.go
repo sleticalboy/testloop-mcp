@@ -24,14 +24,9 @@ func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions
 		ctx = buildPyGenerationContext(srcPath)
 	}
 	if opts.CoverageTask == nil {
-		if ctx != nil && strings.TrimSpace(opts.Framework) != "" {
-			ctx.Framework = normalizedFrameworkForPath(srcPath, opts.Framework)
-		}
-		if ctx == nil && strings.TrimSpace(opts.Framework) != "" {
-			ctx = &types.TestGenerationContext{
-				Language:   languageNameForPath(srcPath),
-				Framework:  normalizedFrameworkForPath(srcPath, opts.Framework),
-				SourceFile: srcPath,
+		if framework := effectiveGenerationFramework(srcPath, opts); framework != "" {
+			if ctx != nil {
+				ctx.Framework = normalizedFrameworkForPath(srcPath, framework)
 			}
 		}
 		return ctx

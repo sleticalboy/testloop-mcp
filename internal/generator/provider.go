@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sleticalboy/testloop-mcp/internal/detector"
 	"github.com/sleticalboy/testloop-mcp/types"
 )
 
@@ -165,10 +166,23 @@ func generateTestsStaticWithOptions(srcPath string, opts GenerateTestsOptions) (
 	if opts.CoverageTask != nil {
 		return generateTestsForCoverageTask(srcPath, opts.CoverageTask)
 	}
-	if isJavaScriptPath(srcPath) && strings.TrimSpace(opts.Framework) != "" {
-		return GenerateJavaScriptTestsWithFramework(srcPath, opts.Framework)
+	if framework := effectiveGenerationFramework(srcPath, opts); isJavaScriptPath(srcPath) && framework != "" {
+		return GenerateJavaScriptTestsWithFramework(srcPath, framework)
 	}
 	return GenerateTestsStatic(srcPath)
+}
+
+func effectiveGenerationFramework(srcPath string, opts GenerateTestsOptions) string {
+	if opts.CoverageTask != nil && strings.TrimSpace(opts.CoverageTask.Framework) != "" {
+		return opts.CoverageTask.Framework
+	}
+	if !isJavaScriptPath(srcPath) {
+		return strings.TrimSpace(opts.Framework)
+	}
+	if strings.TrimSpace(opts.Framework) != "" {
+		return normalizeJavaScriptTestFramework(opts.Framework)
+	}
+	return normalizeJavaScriptTestFramework(detector.DetectFramework(srcPath))
 }
 
 func isJavaScriptPath(srcPath string) bool {
