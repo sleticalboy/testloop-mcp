@@ -330,8 +330,8 @@ func jsAttachTSTypeDeclsToClass(cls *jsClassInfo, decls map[string]string) {
 }
 
 var (
-	jsTSInterfaceDeclRe       = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{`)
-	jsTSObjectTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*\{`)
+	jsTSInterfaceDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{`)
+	jsTSTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=`)
 )
 
 func jsExtractTSTypeDecls(source string) map[string]string {
@@ -346,13 +346,12 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 			decls[name] = typeExpr
 		}
 	}
-	for _, match := range jsTSObjectTypeAliasDeclRe.FindAllStringSubmatchIndex(source, -1) {
+	for _, match := range jsTSTypeAliasDeclRe.FindAllStringSubmatchIndex(source, -1) {
 		if len(match) < 4 {
 			continue
 		}
 		name := source[match[2]:match[3]]
-		open := match[1] - 1
-		if typeExpr := jsExtractBracedTypeExpr(source, open); typeExpr != "" {
+		if typeExpr := jsExtractTSTypeAliasExpr(source, match[1]); typeExpr != "" {
 			decls[name] = typeExpr
 		}
 	}
@@ -379,6 +378,57 @@ func jsExtractBracedTypeExpr(source string, open int) string {
 		}
 	}
 	return ""
+}
+
+func jsExtractTSTypeAliasExpr(source string, start int) string {
+	if start < 0 || start >= len(source) {
+		return ""
+	}
+	for start < len(source) && (source[start] == ' ' || source[start] == '\t' || source[start] == '\n' || source[start] == '\r') {
+		start++
+	}
+	if start >= len(source) {
+		return ""
+	}
+	if source[start] == '{' {
+		return jsExtractBracedTypeExpr(source, start)
+	}
+
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	for i := start; i < len(source); i++ {
+		ch := source[i]
+		switch ch {
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case ';', '\n', '\r':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				return strings.TrimSpace(source[start:i])
+			}
+		}
+	}
+	return strings.TrimSpace(source[start:])
 }
 
 func jsExtractTSReturnTypeExpr(content string) string {

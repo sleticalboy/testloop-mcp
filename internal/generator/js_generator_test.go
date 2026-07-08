@@ -366,12 +366,23 @@ type Profile = {
   owner?: User | null
 }
 
+type Users = User[]
+type MaybeUsers = Array<User | null>
+
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
 }
 
 export async function loadProfile(client: { get(path: string): Promise<Profile> }): Promise<Profile> {
   return await client.get('/profile');
+}
+
+export async function listUsers(response: Response): Promise<Users> {
+  return await response.json();
+}
+
+export async function searchUsers(client: { fetch(path: string): Promise<MaybeUsers> }): Promise<MaybeUsers> {
+  return await client.fetch('/users');
 }
 `
 	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
@@ -390,6 +401,12 @@ export async function loadProfile(client: { get(path: string): Promise<Profile> 
 		"const result = await loadProfile(client);",
 		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
 		"expect(client.getCalls).toEqual([['/profile']]);",
+		"const result = await listUsers({ json: async () => ([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]) });",
+		"expect(result).toEqual([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]);",
+		"return [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }];",
+		"const result = await searchUsers(client);",
+		"expect(result).toEqual([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]);",
+		"expect(client.fetchCalls).toEqual([['/users']]);",
 	}, []string{
 		"{ ok: true }",
 		"expect(typeof result).toBe('object')",
@@ -934,6 +951,41 @@ export function status(): string {
 				"import { parseUser } from './api';",
 				"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active' }) });",
 				"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active' });",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript named response json array",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+}
+
+type Users = Array<User | null>
+
+export async function listUsers(response: Response): Promise<Users> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-array-1",
+				Framework:      "vitest",
+				Target:         "listUsers",
+				LineRange:      "8-8",
+				GapType:        "return_path",
+				TestName:       "covers vitest listUsers named array response",
+				AssertionFocus: []string{"断言命名数组 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { listUsers } from './api';",
+				"const result = await listUsers({ json: async () => ([{ userId: 1, email: 'user@example.com' }]) });",
+				"expect(result).toEqual([{ userId: 1, email: 'user@example.com' }]);",
 			},
 			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
@@ -1858,6 +1910,10 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
+	}
+	typeDecls["Users"] = "Array<User | null>"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
+		t.Fatalf("array alias payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},

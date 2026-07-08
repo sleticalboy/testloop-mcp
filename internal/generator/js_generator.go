@@ -1338,16 +1338,34 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
 		typeExpr = branch
 	}
+	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
+		if seen == nil {
+			seen = map[string]bool{}
+		}
+		if seen[name] {
+			return "{}", true
+		}
+		nextSeen := make(map[string]bool, len(seen)+1)
+		for key, value := range seen {
+			nextSeen[key] = value
+		}
+		nextSeen[name] = true
+		typeExpr = strings.TrimSpace(resolved)
+		seen = nextSeen
+		if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+			typeExpr = branch
+		}
+	}
 	if strings.HasSuffix(typeExpr, "[]") {
 		inner := strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]"))
-		if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
-			return "[" + object + "]", true
+		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
+			return "[" + payload + "]", true
 		}
 		return "[]", true
 	}
 	if inner, ok := jsTSGenericArg(typeExpr, "Array"); ok {
-		if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
-			return "[" + object + "]", true
+		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
+			return "[" + payload + "]", true
 		}
 		return "[]", true
 	}
@@ -1363,8 +1381,9 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 }
 
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
-	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
-	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
+	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
+	lookupType := jsNormalizeTSTypeExpr(typeExpr)
+	if name, resolved := jsResolveNamedTSType(lookupType, decls); resolved != "" {
 		if seen == nil {
 			seen = map[string]bool{}
 		}
@@ -1376,7 +1395,7 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 			nextSeen[key] = value
 		}
 		nextSeen[name] = true
-		typeExpr = resolved
+		typeExpr = strings.TrimSpace(resolved)
 		seen = nextSeen
 	}
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
