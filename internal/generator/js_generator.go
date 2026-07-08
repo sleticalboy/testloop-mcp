@@ -33,12 +33,13 @@ type jsParamInfo struct {
 
 // jsFuncAnalysis 函数体分析结果
 type jsFuncAnalysis struct {
-	ReturnType string       // number/string/array/object/boolean/null/undefined/unknown
-	Returns    []string     // return expressions found in the function body
-	Throws     bool         // 函数体包含 throw
-	Boundaries []jsBoundary // 边界条件检测
-	HasReturn  bool         // 是否有 return 语句（非 void）
-	IsGetter   bool         // 是否是简单的 getter（return expression 只有一个变量/字面量）
+	ReturnType     string       // number/string/array/object/boolean/null/undefined/unknown
+	ReturnTypeExpr string       // TypeScript return annotation, if available
+	Returns        []string     // return expressions found in the function body
+	Throws         bool         // 函数体包含 throw
+	Boundaries     []jsBoundary // 边界条件检测
+	HasReturn      bool         // 是否有 return 语句（非 void）
+	IsGetter       bool         // 是否是简单的 getter（return expression 只有一个变量/字面量）
 }
 
 // jsBoundary 边界条件
@@ -776,10 +777,10 @@ func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, 
 		return "", false, false
 	}
 	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
-	if expected, ok := jsExpectedResponseJSONReturn(expr, params); ok {
+	if expected, ok := jsExpectedResponseJSONReturn(expr, params, a); ok {
 		return expected, true, true
 	}
-	if expected, ok := jsExpectedInjectedClientReturn(expr, params); ok {
+	if expected, ok := jsExpectedInjectedClientReturn(expr, params, a); ok {
 		return expected, true, true
 	}
 	if !jsReturnExprIsSafe(expr) {
@@ -820,14 +821,14 @@ func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, 
 	return "(" + expr + ")", true, false
 }
 
-func jsExpectedResponseJSONReturn(expr string, params []jsParamInfo) (string, bool) {
+func jsExpectedResponseJSONReturn(expr string, params []jsParamInfo, analysis jsFuncAnalysis) (string, bool) {
 	receiver, ok := jsResponseJSONReceiver(expr)
 	if !ok {
 		return "", false
 	}
 	for _, p := range params {
 		if p.Name == receiver {
-			return "{ ok: true }", true
+			return jsMockPayloadForAnalysis(analysis), true
 		}
 	}
 	return "", false
@@ -845,14 +846,14 @@ func jsResponseJSONReceiver(expr string) (string, bool) {
 	return matches[1], true
 }
 
-func jsExpectedInjectedClientReturn(expr string, params []jsParamInfo) (string, bool) {
+func jsExpectedInjectedClientReturn(expr string, params []jsParamInfo, analysis jsFuncAnalysis) (string, bool) {
 	receiver, _, _, ok := jsInjectedClientCall(expr)
 	if !ok {
 		return "", false
 	}
 	for _, p := range params {
 		if p.Name == receiver && jsNameLooksLikeClientParam(jsCompactName(p.Name)) {
-			return "{ ok: true }", true
+			return jsMockPayloadForAnalysis(analysis), true
 		}
 	}
 	return "", false
@@ -1083,7 +1084,9 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 		if value := values[p.Name]; value != "" {
 			args[i] = value
 		} else if method := jsInjectedClientMethodForParam(analysis, p.Name); method != "" {
-			args[i] = jsInjectedClientMock(method)
+			args[i] = jsInjectedClientMockWithPayload(method, jsMockPayloadForAnalysisPtr(analysis))
+		} else if jsNameLooksLikeResponseParam(jsCompactName(p.Name)) {
+			args[i] = jsResponseJSONMock(jsMockPayloadForAnalysisPtr(analysis))
 		} else {
 			args[i] = jsArgValue(p, i)
 		}
@@ -1181,7 +1184,7 @@ func jsArgValue(p jsParamInfo, _ int) string {
 		return "{}"
 	}
 	if jsNameLooksLikeResponseParam(compact) {
-		return "{ json: async () => ({ ok: true }) }"
+		return jsResponseJSONMock("{ ok: true }")
 	}
 	if jsNameLooksLikeClientParam(compact) {
 		return jsInjectedClientMock("get")
@@ -1225,12 +1228,13 @@ func genJSInjectedClientSetup(params []jsParamInfo, analysis jsFuncAnalysis, ind
 	if info == nil {
 		return "", nil, nil
 	}
+	payload := jsMockPayloadForAnalysis(analysis)
 
 	setup := fmt.Sprintf("%sconst %s = {\n", indent, info.Param) +
 		fmt.Sprintf("%s  %sCalls: [],\n", indent, info.Method) +
 		fmt.Sprintf("%s  %s: async (...args) => {\n", indent, info.Method) +
 		fmt.Sprintf("%s    %s.%sCalls.push(args);\n", indent, info.Param, info.Method) +
-		fmt.Sprintf("%s    return { ok: true };\n", indent) +
+		fmt.Sprintf("%s    return %s;\n", indent, payload) +
 		fmt.Sprintf("%s  },\n", indent) +
 		fmt.Sprintf("%s};\n", indent)
 
@@ -1282,14 +1286,201 @@ func genJSInjectedClientCallAssertion(info *jsInjectedClientCallInfo, indent str
 }
 
 func jsInjectedClientMock(method string) string {
+	return jsInjectedClientMockWithPayload(method, "{ ok: true }")
+}
+
+func jsInjectedClientMockWithPayload(method, payload string) string {
 	switch method {
 	case "fetch":
-		return "{ fetch: async () => ({ ok: true }) }"
+		return fmt.Sprintf("{ fetch: async () => (%s) }", payload)
 	case "request":
-		return "{ request: async () => ({ ok: true }) }"
+		return fmt.Sprintf("{ request: async () => (%s) }", payload)
 	default:
-		return "{ get: async () => ({ ok: true }) }"
+		return fmt.Sprintf("{ get: async () => (%s) }", payload)
 	}
+}
+
+func jsResponseJSONMock(payload string) string {
+	return fmt.Sprintf("{ json: async () => (%s) }", payload)
+}
+
+func jsMockPayloadForAnalysisPtr(analysis *jsFuncAnalysis) string {
+	if analysis == nil {
+		return "{ ok: true }"
+	}
+	return jsMockPayloadForAnalysis(*analysis)
+}
+
+func jsMockPayloadForAnalysis(analysis jsFuncAnalysis) string {
+	if payload, ok := jsMockPayloadFromTSType(analysis.ReturnTypeExpr); ok {
+		return payload
+	}
+	return "{ ok: true }"
+}
+
+func jsMockPayloadFromTSType(typeExpr string) (string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if typeExpr == "" {
+		return "", false
+	}
+	typeExpr = jsUnwrapTSGeneric(typeExpr, "Promise")
+	typeExpr = jsUnwrapTSGeneric(typeExpr, "PromiseLike")
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if strings.HasSuffix(typeExpr, "[]") {
+		inner := strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]"))
+		if object, ok := jsObjectMockFromTSType(inner); ok {
+			return "[" + object + "]", true
+		}
+		return "[]", true
+	}
+	if inner, ok := jsTSGenericArg(typeExpr, "Array"); ok {
+		if object, ok := jsObjectMockFromTSType(inner); ok {
+			return "[" + object + "]", true
+		}
+		return "[]", true
+	}
+	return jsObjectMockFromTSType(typeExpr)
+}
+
+func jsObjectMockFromTSType(typeExpr string) (string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
+		return "", false
+	}
+	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(typeExpr, "{"), "}"))
+	fields := jsSplitTopLevelTypeFields(body)
+	if len(fields) == 0 {
+		return "", false
+	}
+
+	parts := make([]string, 0, len(fields))
+	for _, field := range fields {
+		name, typ, ok := jsParseTSTypeField(field)
+		if !ok {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", name, jsMockValueForTSType(name, typ)))
+	}
+	if len(parts) == 0 {
+		return "", false
+	}
+	return "{ " + strings.Join(parts, ", ") + " }", true
+}
+
+func jsSplitTopLevelTypeFields(body string) []string {
+	var fields []string
+	start := 0
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	for i, ch := range body {
+		switch ch {
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case ';', ',':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				if field := strings.TrimSpace(body[start:i]); field != "" {
+					fields = append(fields, field)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if field := strings.TrimSpace(body[start:]); field != "" {
+		fields = append(fields, field)
+	}
+	return fields
+}
+
+func jsParseTSTypeField(field string) (string, string, bool) {
+	field = strings.TrimSpace(field)
+	if field == "" || strings.Contains(field, "(") {
+		return "", "", false
+	}
+	parts := strings.SplitN(field, ":", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	name := strings.TrimSpace(parts[0])
+	name = strings.TrimSuffix(name, "?")
+	name = strings.Trim(name, `"'`)
+	if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(name) {
+		return "", "", false
+	}
+	return name, strings.TrimSpace(parts[1]), true
+}
+
+func jsMockValueForTSType(fieldName, typeExpr string) string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	switch {
+	case typeExpr == "number" || typeExpr == "bigint":
+		return "1"
+	case typeExpr == "string":
+		if jsNameHasAny(jsCompactName(fieldName), "email") {
+			return "'user@example.com'"
+		}
+		return "'test'"
+	case typeExpr == "boolean":
+		return "true"
+	case typeExpr == "null":
+		return "null"
+	case typeExpr == "undefined" || typeExpr == "void":
+		return "undefined"
+	case strings.HasSuffix(typeExpr, "[]"):
+		return "[]"
+	}
+	if _, ok := jsTSGenericArg(typeExpr, "Array"); ok {
+		return "[]"
+	}
+	if object, ok := jsObjectMockFromTSType(typeExpr); ok {
+		return object
+	}
+	return "{}"
+}
+
+func jsNormalizeTSTypeExpr(typeExpr string) string {
+	typeExpr = strings.TrimSpace(typeExpr)
+	typeExpr = strings.TrimSuffix(typeExpr, ";")
+	typeExpr = strings.Join(strings.Fields(typeExpr), " ")
+	typeExpr = strings.ReplaceAll(typeExpr, " ;", ";")
+	typeExpr = strings.ReplaceAll(typeExpr, " ,", ",")
+	typeExpr = strings.ReplaceAll(typeExpr, "{ ", "{ ")
+	return typeExpr
+}
+
+func jsUnwrapTSGeneric(typeExpr, name string) string {
+	if inner, ok := jsTSGenericArg(typeExpr, name); ok {
+		return inner
+	}
+	return typeExpr
+}
+
+func jsTSGenericArg(typeExpr, name string) (string, bool) {
+	prefix := name + "<"
+	if !strings.HasPrefix(typeExpr, prefix) || !strings.HasSuffix(typeExpr, ">") {
+		return "", false
+	}
+	return strings.TrimSpace(typeExpr[len(prefix) : len(typeExpr)-1]), true
 }
 
 func jsNameLooksLikeResponseParam(name string) bool {

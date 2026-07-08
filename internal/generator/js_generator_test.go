@@ -261,6 +261,31 @@ func TestGenerateJavaScriptTestsAsyncResponseJSON(t *testing.T) {
 	})
 }
 
+func TestGenerateJavaScriptTestsResponseJSONReturnTypePayload(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `export async function parseUser(response: Response): Promise<{ id: number; name: string; active: boolean }> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"const result = await parseUser({ json: async () => ({ id: 1, name: 'test', active: true }) });",
+		"expect(result).toEqual({ id: 1, name: 'test', active: true });",
+	}, []string{
+		"{ ok: true }",
+		"expect(typeof result).toBe('object')",
+	})
+}
+
 func TestGenerateJavaScriptTestsInjectedClientCall(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "users.ts")
@@ -291,6 +316,34 @@ func TestGenerateJavaScriptTestsInjectedClientCall(t *testing.T) {
 		"request: async",
 		"expect(typeof result).toBe('object')",
 		"expect(result).not.toBeNull()",
+	})
+}
+
+func TestGenerateJavaScriptTestsInjectedClientReturnTypePayload(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "users.ts")
+	src := `export async function loadUser(client: { get(path: string): Promise<{ id: number; email: string }> }): Promise<{ id: number; email: string }> {
+  return await client.get('/users/1');
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"const client = {",
+		"return { id: 1, email: 'user@example.com' };",
+		"const result = await loadUser(client);",
+		"expect(result).toEqual({ id: 1, email: 'user@example.com' });",
+		"expect(client.getCalls).toEqual([['/users/1']]);",
+	}, []string{
+		"{ ok: true }",
+		"expect(typeof result).toBe('object')",
 	})
 }
 
@@ -437,7 +490,7 @@ const arrow = (a, b) => a + b;
 }
 
 func TestTreeSitterJS_ParsesTSParamsAndSkipsHelpers(t *testing.T) {
-	source := []byte(`export function typed(text: string, count?: number, enabled = true, ...items: string[]) {
+	source := []byte(`export function typed(text: string, count?: number, enabled = true, ...items: string[]): Promise<Array<{ id: number; name: string }>> {
   return text;
 }
 function test(name: string) { return name; }
@@ -445,7 +498,7 @@ const destructured = ({ id } = {}) => id;
 class Widget {
   constructor(name: string) {}
   static(value: string) { return value; }
-  render(props?: Record<string, unknown>) { return props; }
+  render(props?: Record<string, unknown>): { ok: boolean } { return props; }
 }
 `)
 	funcs, classes, isESModule := parseJSWithTreeSitter(source, ".ts")
@@ -476,6 +529,9 @@ class Widget {
 		typedFn.Params[3].Name != "...items" || typedFn.Params[3].IsRest {
 		t.Fatalf("unexpected typed params: %+v", typedFn.Params)
 	}
+	if typedFn.Analysis.ReturnTypeExpr != "Promise<Array<{ id: number; name: string }>>" {
+		t.Fatalf("typed return type = %q", typedFn.Analysis.ReturnTypeExpr)
+	}
 	if destructuredFn == nil || len(destructuredFn.Params) != 1 || destructuredFn.Params[0].Name != "id" || destructuredFn.Params[0].HasDefault {
 		t.Fatalf("unexpected destructured params: %+v", destructuredFn)
 	}
@@ -488,6 +544,9 @@ class Widget {
 	}
 	if len(classes[0].Methods[0].Params) != 1 || classes[0].Methods[0].Params[0].Name != "props" || !classes[0].Methods[0].Params[0].HasDefault {
 		t.Fatalf("unexpected render params: %+v", classes[0].Methods[0].Params)
+	}
+	if classes[0].Methods[0].Analysis.ReturnTypeExpr != "{ ok: boolean }" {
+		t.Fatalf("render return type = %q", classes[0].Methods[0].Analysis.ReturnTypeExpr)
 	}
 }
 
@@ -1665,6 +1724,12 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	callInfo := &jsInjectedClientCallInfo{Param: "http", Method: "request", Args: "'/users/1', { method: 'GET' }"}
 	if got := genJSInjectedClientCallAssertion(callInfo, "  ", jsAssertionStyleChai); got != "  expect(http.requestCalls).to.deep.equal([['/users/1', { method: 'GET' }]]);\n" {
 		t.Fatalf("Chai client call assertion = %q", got)
+	}
+	if got, ok := jsMockPayloadFromTSType("Promise<Array<{ id: number; name: string }>>"); !ok || got != "[{ id: 1, name: 'test' }]" {
+		t.Fatalf("array payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSType("Promise<User>"); ok || got != "" {
+		t.Fatalf("named type payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},

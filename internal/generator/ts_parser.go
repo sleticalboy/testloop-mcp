@@ -134,6 +134,7 @@ func jsExtractFunction(node *sitter.Node, source []byte, isExported bool) jsFunc
 	bodyNode := node.ChildByFieldName("body")
 	fn.Body = jsExtractBody(bodyNode, source)
 	fn.Analysis = analyzeJSBody(fn.Body)
+	fn.Analysis.ReturnTypeExpr = jsExtractTSReturnTypeExpr(content)
 
 	return fn
 }
@@ -155,6 +156,7 @@ func jsExtractArrowFunction(node *sitter.Node, source []byte, name string, isExp
 	bodyNode := node.ChildByFieldName("body")
 	fn.Body = jsExtractBody(bodyNode, source)
 	fn.Analysis = analyzeJSBody(fn.Body)
+	fn.Analysis.ReturnTypeExpr = jsExtractTSReturnTypeExpr(content)
 
 	return fn
 }
@@ -203,6 +205,7 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 		bodyNode := methodNode.ChildByFieldName("body")
 		method.Body = jsExtractBody(bodyNode, source)
 		method.Analysis = analyzeJSBody(method.Body)
+		method.Analysis.ReturnTypeExpr = jsExtractTSReturnTypeExpr(content)
 
 		cls.Methods = append(cls.Methods, method)
 	}
@@ -302,6 +305,94 @@ func jsFindIdentifierChild(node *sitter.Node, source []byte) string {
 		}
 	}
 	return ""
+}
+
+func jsExtractTSReturnTypeExpr(content string) string {
+	content = strings.TrimSpace(content)
+	closeParen := jsFindFirstMatchingParen(content)
+	if closeParen < 0 || closeParen+1 >= len(content) {
+		return ""
+	}
+	rest := strings.TrimSpace(content[closeParen+1:])
+	if !strings.HasPrefix(rest, ":") {
+		return ""
+	}
+	rest = strings.TrimSpace(strings.TrimPrefix(rest, ":"))
+	if rest == "" {
+		return ""
+	}
+
+	started := false
+	startedWithBrace := false
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	for i := 0; i < len(rest); i++ {
+		ch := rest[i]
+		if !started {
+			if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
+				continue
+			}
+			started = true
+			startedWithBrace = ch == '{'
+		}
+		if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+			if i+1 < len(rest) && rest[i:i+2] == "=>" {
+				return strings.TrimSpace(rest[:i])
+			}
+			if ch == '{' && !startedWithBrace {
+				return strings.TrimSpace(rest[:i])
+			}
+		}
+		switch ch {
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+				if startedWithBrace && angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+					return strings.TrimSpace(rest[:i+1])
+				}
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		}
+	}
+	return ""
+}
+
+func jsFindFirstMatchingParen(content string) int {
+	open := strings.Index(content, "(")
+	if open < 0 {
+		return -1
+	}
+	depth := 0
+	for i := open; i < len(content); i++ {
+		switch content[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 // ============================================================
