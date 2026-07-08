@@ -279,6 +279,78 @@ func TestHandleGenerateTestsUsesJavaScriptCoverageTaskTestFile(t *testing.T) {
 	assertGeneratedCoverageTaskOutput(t, result, task, "it('should cover add zero branch'")
 }
 
+func TestHandleGenerateTestsUsesJavaCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "main", "java", "Calculator.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte("public class Calculator {\n    public int add(int a, int b) {\n        return a + b;\n    }\n\n    public int sub(int a, int b) {\n        return a - b;\n    }\n}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:              "junit-calculator-add",
+		Framework:       "junit",
+		File:            source,
+		Target:          "Calculator.add",
+		Kind:            "method",
+		LineRange:       "2-4",
+		GapType:         "branch",
+		Goal:            "cover Calculator.add branch",
+		TestFile:        filepath.Join(dir, "src", "test", "java", "CalculatorTaskTest.java"),
+		TestName:        "shouldCoverCalculatorAddGap",
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		AssertionFocus:  []string{"assert add result"},
+		Confidence:      0.9,
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	assertGeneratedCoverageTaskOutput(t, result, task, "void shouldCoverCalculatorAddGap()")
+}
+
+func TestHandleGenerateTestsUsesRustCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "lib.rs")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte("pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\npub fn sub(a: i32, b: i32) -> i32 {\n    a - b\n}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:              "cargo-add-gap",
+		Framework:       "cargo-test",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "1-3",
+		GapType:         "branch",
+		Goal:            "cover add branch",
+		TestFile:        filepath.Join(dir, "tests", "add_gap_test.rs"),
+		TestName:        "test_add_gap",
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		AssertionFocus:  []string{"assert add result"},
+		Confidence:      0.9,
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	assertGeneratedCoverageTaskOutput(t, result, task, "fn test_add_gap()")
+}
+
 func TestCountGeneratedCasesByLanguage(t *testing.T) {
 	tests := []struct {
 		name string
