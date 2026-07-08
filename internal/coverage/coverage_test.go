@@ -493,6 +493,66 @@ func TestParseJestCoverage(t *testing.T) {
 	t.Logf("建议数: %d", len(report.Suggestions))
 }
 
+func TestParseJestCoverageEnrichesSourceTask(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("src", "sum.js")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `export function add(a, b) {
+  if (a === 0) return b;
+  return a + b;
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{
+		"src/sum.js": {
+			"path": "src/sum.js",
+			"statementMap": {
+				"0": {"start": {"line": 1, "column": 0}, "end": {"line": 1, "column": 28}},
+				"1": {"start": {"line": 2, "column": 2}, "end": {"line": 2, "column": 26}},
+				"2": {"start": {"line": 3, "column": 2}, "end": {"line": 3, "column": 15}}
+			},
+			"s": {"0": 1, "1": 0, "2": 1},
+			"fnMap": {},
+			"f": {},
+			"branchMap": {},
+			"b": {}
+		}
+	}`
+
+	report, err := ParseJestCoverage(raw, "jest")
+	if err != nil {
+		t.Fatalf("ParseJestCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "add")
+	if suggestion == nil {
+		t.Fatalf("expected add suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.Kind != "function" || suggestion.GapType != "branch" || suggestion.LineRange != "2-2" {
+		t.Fatalf("unexpected jest suggestion: %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, "未覆盖 if 分支: a === 0") ||
+		!containsString(suggestion.SuggestedInputs, "构造满足条件 `a === 0` 的输入") ||
+		!containsString(suggestion.SuggestedInputs, "设置 a 覆盖未执行分支") ||
+		!containsString(suggestion.SuggestedInputs, "设置 b 覆盖未执行分支") {
+		t.Fatalf("unexpected jest suggestion hints: %+v", suggestion)
+	}
+	task := findCoverageTask(report.TestTasks, "add")
+	if task == nil {
+		t.Fatalf("expected add task, got %+v", report.TestTasks)
+	}
+	if task.Kind != "function" || task.GapType != "branch" || task.TestFile != filepath.Join("src", "sum.test.js") || task.TestName != "covers add coverage gap" {
+		t.Fatalf("unexpected jest task: %+v", task)
+	}
+	if !containsString(task.AssertionFocus, "覆盖未执行行: 2") {
+		t.Fatalf("unexpected jest assertion focus: %+v", task)
+	}
+}
+
 func TestParsePytestCoverage(t *testing.T) {
 	raw := `{
 		"totals": {

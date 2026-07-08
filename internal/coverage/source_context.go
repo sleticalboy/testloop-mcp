@@ -33,6 +33,11 @@ func mapSourceRangesByFile(files []types.CoverageFile, framework string) map[str
 		}
 		var ranges []sourceRange
 		switch framework {
+		case "jest", "vitest", "mocha":
+			ranges = parseJavaScriptFunctionRangesWithTreeSitter(sourcePath)
+			if len(ranges) == 0 {
+				ranges = parseJavaScriptFunctionRanges(sourcePath)
+			}
 		case "cargo-test":
 			ranges = parseRustFunctionRangesWithTreeSitter(sourcePath)
 			if len(ranges) == 0 {
@@ -288,6 +293,11 @@ func extractSourceCondition(source string, keyword string) string {
 		source = source[idx+len(keyword):]
 	}
 	source = strings.TrimSpace(source)
+	if strings.HasPrefix(source, "(") {
+		if idx := strings.Index(source, ")"); idx > 0 {
+			source = source[1:idx]
+		}
+	}
 	if idx := strings.Index(source, "{"); idx >= 0 {
 		source = source[:idx]
 	}
