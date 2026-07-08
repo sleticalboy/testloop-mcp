@@ -687,6 +687,32 @@ export function status(): string {
 			forbidden: []string{"describe('status'", "status(", "to.equal(", "require('chai')", "caughtError"},
 		},
 		{
+			name:     "vitest typescript object branch",
+			fileName: "summary.ts",
+			source: `export function summarize(mode: string, count: number): { mode: string, count: number } {
+  if (mode === 'short') return { mode, count }
+  return { mode, count: count + 1 }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-object-1",
+				Framework:       "vitest",
+				Target:          "summarize",
+				LineRange:       "2-2",
+				GapType:         "branch",
+				TestName:        "covers vitest summarize short branch",
+				SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入", "设置 `count = 1`"},
+				AssertionFocus:  []string{"断言对象返回值"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { summarize } from './summary';",
+				"const result = summarize('short', 1);",
+				"expect(result).toEqual({ mode: 'short', count: 1 });",
+			},
+			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
 			name:     "jest commonjs class branch",
 			fileName: "widget.js",
 			source: `class Widget {
@@ -1425,6 +1451,31 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if expr, ok = jsExpectedReturnExpr(jsFuncAnalysis{Returns: []string{"unknown + 1"}}, nil, nil); ok || expr != "" {
 		t.Fatalf("unsafe jsExpectedReturnExpr() = %q, %v", expr, ok)
 	}
+	expr, ok = jsExpectedReturnExpr(
+		jsFuncAnalysis{Returns: []string{"{ url, ok: true }"}},
+		[]jsParamInfo{{Name: "url"}},
+		nil,
+	)
+	if !ok || expr != "{ url: 'https://example.com', ok: true }" {
+		t.Fatalf("object shorthand jsExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+	expr, ok = jsExpectedReturnExpr(
+		jsFuncAnalysis{Returns: []string{"[a, b, 3]"}},
+		[]jsParamInfo{{Name: "a"}, {Name: "b"}},
+		nil,
+	)
+	if !ok || expr != "[1, 2, 3]" {
+		t.Fatalf("array literal jsExpectedReturnExpr() = %q, %v", expr, ok)
+	}
+	expr, ok = jsExpectedReturnExprWithValues(
+		jsFuncAnalysis{Returns: []string{"{ mode, count: count + 1 }"}},
+		[]jsParamInfo{{Name: "mode"}, {Name: "count"}},
+		nil,
+		map[string]string{"mode": "'short'", "count": "1"},
+	)
+	if !ok || expr != "{ mode: 'short', count: 1 + 1 }" {
+		t.Fatalf("coverage object jsExpectedReturnExprWithValues() = %q, %v", expr, ok)
+	}
 	for input, want := range map[string]bool{
 		"":       false,
 		"1":      true,
@@ -1443,6 +1494,8 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 		"new Widget()": false,
 		"value => 1":   false,
 		"items[0]":     false,
+		"{ ok: true }": true,
+		"[a, b]":       true,
 		"":             false,
 	} {
 		if got := jsReturnExprIsSafe(input); got != want {
@@ -1474,6 +1527,24 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got := jsArgListWithValues([]jsParamInfo{{Name: "enabled"}, {Name: "title"}}, map[string]string{"title": "'custom'"}); got != "true, 'custom'" {
 		t.Fatalf("jsArgListWithValues() = %q", got)
+	}
+	if got := genJSResultAssertionWithArgsStyle(
+		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
+		nil,
+		nil,
+		"  ",
+		jsAssertionStyleJest,
+	); got != "  expect(result).toEqual({ ok: true });\n" {
+		t.Fatalf("Jest object assertion = %q", got)
+	}
+	if got := genJSResultAssertionWithArgsStyle(
+		jsFuncAnalysis{HasReturn: true, ReturnType: "array", Returns: []string{"[a, b]"}},
+		[]jsParamInfo{{Name: "a"}, {Name: "b"}},
+		nil,
+		"  ",
+		jsAssertionStyleChai,
+	); got != "  expect(result).to.deep.equal([1, 2]);\n" {
+		t.Fatalf("Chai array assertion = %q", got)
 	}
 	boundaries := []jsBoundary{{Param: "mode", Value: "'short'"}, {Param: "enabled", Value: "false"}}
 	task := &types.CoverageTestTask{SuggestedInputs: []string{"构造满足条件 `enabled == false` 的输入"}}

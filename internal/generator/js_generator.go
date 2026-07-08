@@ -219,7 +219,7 @@ var (
 	jsThrowRe    = regexp.MustCompile(`\bthrow\b`)
 	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*([^)]+?)\s*\)`)
 	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*(null|undefined)\s*\)`)
-	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(?:===?|==)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(.+?)(?:;|\n|\})`)
+	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(?:===?|==)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
 )
 
 // analyzeJSBody 分析 JS 函数体，推断返回类型、检测 throw 和边界条件
@@ -683,9 +683,13 @@ func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInf
 		return sb.String()
 	}
 
-	if expected, ok := jsExpectedReturnExprWithValues(a, params, boundary, values); ok {
-		if style == jsAssertionStyleChai {
+	if expected, ok, deepEqual := jsExpectedReturnExprWithValuesKind(a, params, boundary, values); ok {
+		if style == jsAssertionStyleChai && deepEqual {
+			sb.WriteString(indent + "expect(result).to.deep.equal(" + expected + ");\n")
+		} else if style == jsAssertionStyleChai {
 			sb.WriteString(indent + "expect(result).to.equal(" + expected + ");\n")
+		} else if deepEqual {
+			sb.WriteString(indent + "expect(result).toEqual(" + expected + ");\n")
 		} else {
 			sb.WriteString(indent + "expect(result).toBe(" + expected + ");\n")
 		}
@@ -747,6 +751,11 @@ func jsExpectedReturnExpr(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBo
 }
 
 func jsExpectedReturnExprWithValues(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string) (string, bool) {
+	expr, ok, _ := jsExpectedReturnExprWithValuesKind(a, params, boundary, values)
+	return expr, ok
+}
+
+func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string) (string, bool, bool) {
 	expr := ""
 	if boundary != nil && boundary.ReturnExpr != "" {
 		expr = strings.TrimSpace(boundary.ReturnExpr)
@@ -756,13 +765,14 @@ func jsExpectedReturnExprWithValues(a jsFuncAnalysis, params []jsParamInfo, boun
 		expr = strings.TrimSpace(a.Returns[len(a.Returns)-1])
 	}
 	if expr == "" {
-		return "", false
+		return "", false, false
 	}
 	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
 	if !jsReturnExprIsSafe(expr) {
-		return "", false
+		return "", false, false
 	}
 
+	deepEqual := jsReturnExprIsSimpleLiteral(expr)
 	for i, p := range params {
 		if p.IsRest {
 			continue
@@ -774,19 +784,30 @@ func jsExpectedReturnExprWithValues(a jsFuncAnalysis, params []jsParamInfo, boun
 		if values != nil && values[p.Name] != "" {
 			value = values[p.Name]
 		}
-		expr = replaceIdentifier(expr, p.Name, value)
+		if deepEqual && jsReturnExprIsSimpleObjectLiteral(expr) {
+			expr = replaceIdentifierInJSObjectLiteral(expr, p.Name, value)
+		} else {
+			expr = replaceIdentifier(expr, p.Name, value)
+		}
 	}
 
-	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+	identifierSource := stripQuotedLiterals(expr)
+	if deepEqual && jsReturnExprIsSimpleObjectLiteral(expr) {
+		identifierSource = stripJSObjectPropertyKeys(identifierSource)
+	}
+	if hasUnknownIdentifiers(identifierSource, map[string]bool{
 		"true": true, "false": true, "null": true, "undefined": true,
 	}) {
-		return "", false
+		return "", false, false
 	}
-	return "(" + expr + ")", true
+	if deepEqual {
+		return expr, true, true
+	}
+	return "(" + expr + ")", true, false
 }
 
 func jsReturnExprIsSafe(expr string) bool {
-	if expr == "" || strings.ContainsAny(expr, "\n;{}[]") {
+	if expr == "" {
 		return false
 	}
 	for _, blocked := range []string{"await ", "function", "=>", "new ", "this.", "(", ")("} {
@@ -794,7 +815,135 @@ func jsReturnExprIsSafe(expr string) bool {
 			return false
 		}
 	}
+	if jsReturnExprIsSimpleLiteral(expr) {
+		return !strings.ContainsAny(expr, "\n;")
+	}
+	if strings.ContainsAny(expr, "\n;{}[]") {
+		return false
+	}
 	return true
+}
+
+func jsReturnExprIsSimpleLiteral(expr string) bool {
+	return jsReturnExprIsSimpleObjectLiteral(expr) || jsReturnExprIsSimpleArrayLiteral(expr)
+}
+
+func jsReturnExprIsSimpleObjectLiteral(expr string) bool {
+	expr = strings.TrimSpace(expr)
+	return strings.HasPrefix(expr, "{") && strings.HasSuffix(expr, "}")
+}
+
+func jsReturnExprIsSimpleArrayLiteral(expr string) bool {
+	expr = strings.TrimSpace(expr)
+	return strings.HasPrefix(expr, "[") && strings.HasSuffix(expr, "]")
+}
+
+func replaceIdentifierInJSObjectLiteral(expr, name, value string) string {
+	if name == "" || !jsReturnExprIsSimpleObjectLiteral(expr) {
+		return expr
+	}
+	inner := strings.TrimSpace(expr[1 : len(expr)-1])
+	if inner == "" {
+		return expr
+	}
+	parts := splitTopLevelJSCSV(inner)
+	for i, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" || strings.HasPrefix(trimmed, "...") {
+			continue
+		}
+		if key, val, ok := splitJSObjectProperty(trimmed); ok {
+			parts[i] = key + ": " + replaceIdentifier(val, name, value)
+			continue
+		}
+		if trimmed == name {
+			parts[i] = name + ": " + value
+		}
+	}
+	return "{ " + strings.Join(parts, ", ") + " }"
+}
+
+func splitJSObjectProperty(prop string) (string, string, bool) {
+	depth := 0
+	inQuote := rune(0)
+	escaped := false
+	for i, ch := range prop {
+		if inQuote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == inQuote {
+				inQuote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"', '`':
+			inQuote = ch
+		case '{', '[':
+			depth++
+		case '}', ']':
+			if depth > 0 {
+				depth--
+			}
+		case ':':
+			if depth == 0 {
+				return strings.TrimSpace(prop[:i]), strings.TrimSpace(prop[i+1:]), true
+			}
+		}
+	}
+	return "", "", false
+}
+
+func splitTopLevelJSCSV(input string) []string {
+	var parts []string
+	start := 0
+	depth := 0
+	inQuote := rune(0)
+	escaped := false
+	for i, ch := range input {
+		if inQuote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == inQuote {
+				inQuote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"', '`':
+			inQuote = ch
+		case '{', '[':
+			depth++
+		case '}', ']':
+			if depth > 0 {
+				depth--
+			}
+		case ',':
+			if depth == 0 {
+				parts = append(parts, strings.TrimSpace(input[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	parts = append(parts, strings.TrimSpace(input[start:]))
+	return parts
+}
+
+func stripJSObjectPropertyKeys(expr string) string {
+	re := regexp.MustCompile(`\b[A-Za-z_$][A-Za-z0-9_$]*\s*:`)
+	return re.ReplaceAllString(expr, " ")
 }
 
 // ---- 辅助函数 ----

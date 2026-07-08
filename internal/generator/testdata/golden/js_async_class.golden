@@ -3,8 +3,7 @@ const { fetchData, Widget } = require('./js_async_class');
 describe('fetchData', () => {
   it('should return expected result for normal input', async () => {
     const result = await fetchData('https://example.com');
-    expect(typeof result).toBe('object');
-    expect(result).not.toBeNull();
+    expect(result).toEqual({ url: 'https://example.com' });
   });
 
   it('should handle url = undefined', async () => {
@@ -40,8 +39,7 @@ describe('Widget', () => {
     it('should return expected result', async () => {
       const instance = new Widget();
       const result = await instance.save({});
-      expect(typeof result).toBe('object');
-      expect(result).not.toBeNull();
+      expect(result).toEqual({ ok: true });
     });
 
     it('should handle payload = undefined', async () => {
