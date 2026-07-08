@@ -435,6 +435,91 @@ module.exports = { add, sub };
 	}
 }
 
+func TestGenerateMochaCoverageTaskUsesChaiSyncErrorAssertion(t *testing.T) {
+	src := `function divide(a, b) {
+  if (b === 0) throw new Error('zero')
+  return a / b
+}
+
+module.exports = { divide };
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-error-1",
+		Framework:       "mocha",
+		Target:          "divide",
+		LineRange:       "2-2",
+		GapType:         "error_path",
+		TestName:        "covers divide zero error",
+		SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"it('covers divide zero error'",
+		"expect(() => divide(1, 0)).to.throw();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha error assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
+func TestGenerateMochaCoverageTaskUsesChaiAsyncErrorAssertion(t *testing.T) {
+	src := `async function fetchData(url) {
+  if (url === undefined) throw new Error('missing')
+  return { ok: true }
+}
+
+module.exports = { fetchData };
+`
+	srcPath := filepath.Join(t.TempDir(), "service.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-error-2",
+		Framework:       "mocha",
+		Target:          "fetchData",
+		LineRange:       "2-2",
+		GapType:         "error_path",
+		TestName:        "covers fetchData missing url",
+		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"let caughtError;",
+		"try {",
+		"await fetchData(undefined);",
+		"caughtError = err;",
+		"expect(caughtError).to.exist;",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "rejects.toThrow()") || strings.Contains(code, "toThrow()") {
+		t.Fatalf("Mocha async error assertion should not use Jest matchers:\n%s", code)
+	}
+}
+
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
 	funcs := []jsFuncInfo{{Name: "add"}, {Name: "sub"}}
 	classes := []jsClassInfo{

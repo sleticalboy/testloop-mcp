@@ -465,13 +465,7 @@ func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask)
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
 	if fn.Analysis.Throws || task.GapType == "error_path" {
-		if assertions == jsAssertionStyleChai && !fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).to.throw();\n", fn.Name, args))
-		} else if fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
-		} else {
-			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
-		}
+		sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
 		sb.WriteString("  });\n\n")
 		sb.WriteString("});\n\n")
 		return sb.String()
@@ -576,13 +570,7 @@ func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTa
 		}
 		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 		if method.Analysis.Throws || task.GapType == "error_path" {
-			if assertions == jsAssertionStyleChai && !method.IsAsync {
-				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).to.throw();\n", method.Name, args))
-			} else if method.IsAsync {
-				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
-			} else {
-				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
-			}
+			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
 			sb.WriteString("    });\n\n")
 			sb.WriteString("  });\n\n")
 			continue
@@ -625,6 +613,25 @@ func jsAssertionStyleForCoverageTask(task *types.CoverageTestTask) jsAssertionSt
 		return jsAssertionStyleChai
 	}
 	return jsAssertionStyleJest
+}
+
+func genJSErrorAssertion(style jsAssertionStyle, isAsync bool, callExpr string, indent string) string {
+	if style == jsAssertionStyleChai {
+		if isAsync {
+			return indent + "let caughtError;\n" +
+				indent + "try {\n" +
+				indent + "  await " + callExpr + ";\n" +
+				indent + "} catch (err) {\n" +
+				indent + "  caughtError = err;\n" +
+				indent + "}\n" +
+				indent + "expect(caughtError).to.exist;\n"
+		}
+		return fmt.Sprintf("%sexpect(() => %s).to.throw();\n", indent, callExpr)
+	}
+	if isAsync {
+		return fmt.Sprintf("%sawait expect(%s).rejects.toThrow();\n", indent, callExpr)
+	}
+	return fmt.Sprintf("%sexpect(() => %s).toThrow();\n", indent, callExpr)
 }
 
 func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string, style jsAssertionStyle) string {
