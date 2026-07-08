@@ -166,6 +166,121 @@ func TestGenerateJavaScriptTestsWithFrameworkESMVitestImportsAPI(t *testing.T) {
 	})
 }
 
+func TestGenerateJavaScriptTestsESMImportPathFollowsTSConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		tsconfig   string
+		wantImport string
+		forbidden  string
+	}{
+		{
+			name: "nodenext uses emitted js extension",
+			tsconfig: `{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  }
+}`,
+			wantImport: "import { add } from './sum.js';",
+			forbidden:  "import { add } from './sum';",
+		},
+		{
+			name: "jsonc node16 uses emitted js extension",
+			tsconfig: `{
+  // jsonc comments are common in tsconfig files
+  "compilerOptions": {
+    "moduleResolution": "node16"
+  }
+}`,
+			wantImport: "import { add } from './sum.js';",
+			forbidden:  "import { add } from './sum';",
+		},
+		{
+			name: "bundler keeps extensionless import",
+			tsconfig: `{
+  "compilerOptions": {
+    "moduleResolution": "bundler"
+  }
+}`,
+			wantImport: "import { add } from './sum';",
+			forbidden:  "import { add } from './sum.js';",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			srcDir := filepath.Join(dir, "src")
+			if err := os.MkdirAll(srcDir, 0o755); err != nil {
+				t.Fatalf("create source dir: %v", err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(tt.tsconfig+"\n"), 0o644); err != nil {
+				t.Fatalf("write tsconfig: %v", err)
+			}
+			srcPath := filepath.Join(srcDir, "sum.ts")
+			src := `export function add(a: number, b: number): number {
+  return a + b;
+}
+`
+			if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+				t.Fatalf("write source: %v", err)
+			}
+
+			code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+			if err != nil {
+				t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+			}
+			assertGeneratedJS(t, code, []string{tt.wantImport}, []string{tt.forbidden})
+		})
+	}
+}
+
+func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{
+  "compilerOptions": {
+    "module": "NodeNext"
+  }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write tsconfig: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "sum.ts")
+	src := `export function add(a: number, b: number): number {
+  if (a === 0) return b;
+  return a + b;
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "vitest-nodenext-1",
+		Framework:       "vitest",
+		Target:          "add",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		TestName:        "covers add zero branch",
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { add } from './sum.js';",
+		"expect(result).toBe((2));",
+	}, []string{
+		"import { add } from './sum';",
+	})
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;

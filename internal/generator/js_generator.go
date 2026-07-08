@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -133,6 +134,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	}
 
 	moduleName := stripExt(baseName(srcPath))
+	moduleImportPath := jsSourceModuleImportPath(srcPath)
 
 	var buf strings.Builder
 
@@ -146,7 +148,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		buf.WriteString("import { describe, it, expect } from 'vitest';\n")
 	}
 	if isESModule {
-		buf.WriteString(fmt.Sprintf("import { %s } from './%s';\n\n", joinExportNames(funcs, classes), moduleName))
+		buf.WriteString(fmt.Sprintf("import { %s } from '%s';\n\n", joinExportNames(funcs, classes), moduleImportPath))
 	} else {
 		buf.WriteString(fmt.Sprintf("const { %s } = require('./%s');\n\n", joinExportNames(funcs, classes), moduleName))
 	}
@@ -1064,4 +1066,76 @@ func stripExt(filename string) string {
 		return filename[:idx]
 	}
 	return filename
+}
+
+func jsSourceModuleImportPath(srcPath string) string {
+	moduleName := stripExt(baseName(srcPath))
+	importPath := "./" + moduleName
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	if (ext == ".ts" || ext == ".tsx") && jsUsesNodeNextResolution(srcPath) {
+		return importPath + ".js"
+	}
+	return importPath
+}
+
+func jsUsesNodeNextResolution(srcPath string) bool {
+	tsconfig := findNearestFile(filepath.Dir(srcPath), "tsconfig.json")
+	if tsconfig == "" {
+		return false
+	}
+	data, err := os.ReadFile(tsconfig)
+	if err != nil {
+		return false
+	}
+	moduleResolution, module := parseTSConfigModuleSettings(data)
+	return isNodeNextTSSetting(moduleResolution) || isNodeNextTSSetting(module)
+}
+
+type tsConfigFile struct {
+	CompilerOptions struct {
+		ModuleResolution string `json:"moduleResolution"`
+		Module           string `json:"module"`
+	} `json:"compilerOptions"`
+}
+
+func parseTSConfigModuleSettings(data []byte) (moduleResolution, module string) {
+	var cfg tsConfigFile
+	if err := json.Unmarshal(data, &cfg); err == nil {
+		return cfg.CompilerOptions.ModuleResolution, cfg.CompilerOptions.Module
+	}
+	return jsonStringField(data, "moduleResolution"), jsonStringField(data, "module")
+}
+
+func jsonStringField(data []byte, field string) string {
+	pattern := fmt.Sprintf(`(?i)"%s"\s*:\s*"([^"]+)"`, regexp.QuoteMeta(field))
+	re := regexp.MustCompile(pattern)
+	matches := re.FindSubmatch(data)
+	if len(matches) != 2 {
+		return ""
+	}
+	return string(matches[1])
+}
+
+func isNodeNextTSSetting(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "node16", "nodenext":
+		return true
+	default:
+		return false
+	}
+}
+
+func findNearestFile(dir, name string) string {
+	for i := 0; i < 6; i++ {
+		candidate := filepath.Join(dir, name)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
 }
