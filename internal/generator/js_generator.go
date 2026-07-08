@@ -768,6 +768,9 @@ func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, 
 		return "", false, false
 	}
 	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
+	if expected, ok := jsExpectedResponseJSONReturn(expr, params); ok {
+		return expected, true, true
+	}
 	if !jsReturnExprIsSafe(expr) {
 		return "", false, false
 	}
@@ -804,6 +807,31 @@ func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, 
 		return expr, true, true
 	}
 	return "(" + expr + ")", true, false
+}
+
+func jsExpectedResponseJSONReturn(expr string, params []jsParamInfo) (string, bool) {
+	receiver, ok := jsResponseJSONReceiver(expr)
+	if !ok {
+		return "", false
+	}
+	for _, p := range params {
+		if p.Name == receiver {
+			return "{ ok: true }", true
+		}
+	}
+	return "", false
+}
+
+func jsResponseJSONReceiver(expr string) (string, bool) {
+	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
+	expr = strings.TrimPrefix(expr, "await ")
+	expr = strings.TrimSpace(expr)
+	re := regexp.MustCompile(`^([A-Za-z_$][A-Za-z0-9_$]*)\.json\(\)$`)
+	matches := re.FindStringSubmatch(expr)
+	if len(matches) != 2 {
+		return "", false
+	}
+	return matches[1], true
 }
 
 func jsReturnExprIsSafe(expr string) bool {
@@ -1102,6 +1130,9 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	if jsNameHasAny(compact, "options", "opts", "config", "payload", "data", "body", "params", "query", "user", "metadata") {
 		return "{}"
 	}
+	if jsNameLooksLikeResponseParam(compact) {
+		return "{ json: async () => ({ ok: true }) }"
+	}
 	if jsNameHasAny(compact, "url", "uri", "endpoint", "href") {
 		return "'https://example.com'"
 	}
@@ -1116,6 +1147,15 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	}
 
 	return "undefined"
+}
+
+func jsNameLooksLikeResponseParam(name string) bool {
+	switch name {
+	case "response", "res", "resp":
+		return true
+	default:
+		return false
+	}
 }
 
 func jsNameHasAny(name string, parts ...string) bool {

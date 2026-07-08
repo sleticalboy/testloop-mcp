@@ -235,6 +235,32 @@ func TestGenerateJavaScriptTestsESMImportPathFollowsTSConfig(t *testing.T) {
 	}
 }
 
+func TestGenerateJavaScriptTestsAsyncResponseJSON(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `export async function parseUser(response: Response): Promise<{ ok: boolean }> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"const result = await parseUser({ json: async () => ({ ok: true }) });",
+		"expect(result).toEqual({ ok: true });",
+	}, []string{
+		"expect(typeof result).toBe('object')",
+		"expect(result).not.toBeNull()",
+	})
+}
+
 func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "src")
@@ -709,6 +735,30 @@ export function status(): string {
 				"import { summarize } from './summary';",
 				"const result = summarize('short', 1);",
 				"expect(result).toEqual({ mode: 'short', count: 1 });",
+			},
+			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript response json",
+			fileName: "api.ts",
+			source: `export async function parseUser(response: Response): Promise<{ ok: boolean }> {
+  return await response.json()
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-1",
+				Framework:      "vitest",
+				Target:         "parseUser",
+				LineRange:      "2-2",
+				GapType:        "return_path",
+				TestName:       "covers vitest parseUser json response",
+				AssertionFocus: []string{"断言 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { parseUser } from './api';",
+				"const result = await parseUser({ json: async () => ({ ok: true }) });",
+				"expect(result).toEqual({ ok: true });",
 			},
 			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
