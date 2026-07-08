@@ -1629,12 +1629,19 @@ func jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string
 }
 
 func jsNormalizeTSTupleElementType(elem string) string {
-	elem = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(elem), "..."))
+	elem = strings.TrimSpace(elem)
+	isRest := strings.HasPrefix(elem, "...")
+	elem = strings.TrimSpace(strings.TrimPrefix(elem, "..."))
 	if elem == "" || strings.HasPrefix(elem, "{") || strings.HasPrefix(elem, "[") {
 		return elem
 	}
 	if _, typ, ok := jsParseTSTypeField(elem); ok {
-		return typ
+		elem = typ
+	}
+	if isRest {
+		if inner, ok := jsTSArrayElementType(elem); ok {
+			return inner
+		}
 	}
 	return elem
 }

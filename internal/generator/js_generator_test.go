@@ -373,7 +373,7 @@ type Meta = {
 
 type Users = readonly User[]
 type MaybeUsers = ReadonlyArray<User | null>
-type UserTuple = readonly [User, Meta]
+type UserTuple = readonly [user: User, meta?: Meta]
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
@@ -1014,7 +1014,7 @@ type Meta = {
   nextUrl?: string | null
 }
 
-type UserTuple = readonly [User, Meta]
+type UserTuple = readonly [user: User, meta?: Meta]
 
 export async function loadUserTuple(response: Response): Promise<UserTuple> {
   return await response.json()
@@ -1971,9 +1971,12 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)
 	}
 	typeDecls["Meta"] = "{ total: number; nextUrl?: string | null }"
-	typeDecls["UserTuple"] = "readonly [User, Meta]"
+	typeDecls["UserTuple"] = "readonly [user: User, meta?: Meta]"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<UserTuple>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]" {
 		t.Fatalf("tuple alias payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly [User, ...Meta[]]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]" {
+		t.Fatalf("rest tuple payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
