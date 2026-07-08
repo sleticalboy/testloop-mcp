@@ -1331,6 +1331,9 @@ func jsMockPayloadFromTSTypeWithDecls(typeExpr string, decls map[string]string) 
 	typeExpr = jsUnwrapTSGeneric(typeExpr, "Promise")
 	typeExpr = jsUnwrapTSGeneric(typeExpr, "PromiseLike")
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+		typeExpr = branch
+	}
 	if strings.HasSuffix(typeExpr, "[]") {
 		inner := strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]"))
 		if object, ok := jsObjectMockFromTSTypeWithDecls(inner, decls); ok {
@@ -1448,7 +1451,10 @@ func jsMockValueForTSType(fieldName, typeExpr string) string {
 
 func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]string) string {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
-	if value, ok := jsMockValueForTSLiteralUnion(typeExpr); ok {
+	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+		typeExpr = branch
+	}
+	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
 	}
 	compactName := jsCompactName(fieldName)
@@ -1478,6 +1484,65 @@ func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]
 	return "{}"
 }
 
+func jsPreferredTSTypeUnionBranch(typeExpr string) (string, bool) {
+	parts := jsSplitTopLevelTypeUnion(typeExpr)
+	if len(parts) <= 1 {
+		return "", false
+	}
+	for _, part := range parts {
+		part = jsNormalizeTSTypeExpr(part)
+		if part != "" && part != "null" && part != "undefined" {
+			return part, true
+		}
+	}
+	return jsNormalizeTSTypeExpr(parts[0]), true
+}
+
+func jsSplitTopLevelTypeUnion(typeExpr string) []string {
+	var parts []string
+	start := 0
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	for i, ch := range typeExpr {
+		switch ch {
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '|':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				if part := strings.TrimSpace(typeExpr[start:i]); part != "" {
+					parts = append(parts, part)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if part := strings.TrimSpace(typeExpr[start:]); part != "" {
+		parts = append(parts, part)
+	}
+	return parts
+}
+
 func jsMockStringValueForFieldName(name string) (string, bool) {
 	switch {
 	case jsNameHasAny(name, "email"):
@@ -1499,19 +1564,14 @@ func jsMockStringValueForFieldName(name string) (string, bool) {
 	}
 }
 
-func jsMockValueForTSLiteralUnion(typeExpr string) (string, bool) {
-	if !strings.Contains(typeExpr, "|") {
-		return "", false
+func jsMockValueForTSLiteral(typeExpr string) (string, bool) {
+	value := strings.TrimSpace(typeExpr)
+	if (strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) ||
+		(strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) {
+		return "'" + strings.Trim(value, `'"`) + "'", true
 	}
-	for _, part := range strings.Split(typeExpr, "|") {
-		value := strings.TrimSpace(part)
-		if (strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) ||
-			(strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) {
-			return "'" + strings.Trim(value, `'"`) + "'", true
-		}
-		if value == "true" || value == "false" || value == "null" || value == "undefined" || isNumericLiteral(value) {
-			return value, true
-		}
+	if value == "true" || value == "false" || value == "null" || value == "undefined" || isNumericLiteral(value) {
+		return value, true
 	}
 	return "", false
 }
