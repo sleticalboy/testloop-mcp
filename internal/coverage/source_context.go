@@ -43,6 +43,11 @@ func mapSourceRangesByFile(files []types.CoverageFile, framework string) map[str
 			if len(ranges) == 0 {
 				ranges = parseJavaMethodRanges(sourcePath)
 			}
+		case "pytest":
+			ranges = parsePythonFunctionRangesWithTreeSitter(sourcePath)
+			if len(ranges) == 0 {
+				ranges = parsePythonFunctionRanges(sourcePath)
+			}
 		}
 		if len(ranges) > 0 {
 			result[file.Path] = ranges
@@ -286,7 +291,7 @@ func extractSourceCondition(source string, keyword string) string {
 	if idx := strings.Index(source, "{"); idx >= 0 {
 		source = source[:idx]
 	}
-	source = strings.Trim(source, "() ")
+	source = strings.Trim(source, "() :")
 	if source == "" {
 		return "条件表达式"
 	}

@@ -543,6 +543,70 @@ func TestParsePytestCoverage(t *testing.T) {
 	t.Logf("建议数: %d", len(report.Suggestions))
 }
 
+func TestParsePytestCoverageEnrichesSourceTask(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("src", "service.py")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `def status(value):
+    if value == "active":
+        return "ok"
+    return "idle"
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{
+		"totals": {
+			"covered_lines": 3,
+			"num_statements": 4,
+			"percent_covered": 75.0,
+			"missing_lines": 1
+		},
+		"files": {
+			"src/service.py": {
+				"executed_lines": [1, 3, 4],
+				"missing_lines": [2],
+				"summary": {
+					"covered_lines": 3,
+					"num_statements": 4,
+					"percent_covered": 75.0,
+					"missing_lines": 1
+				}
+			}
+		}
+	}`
+
+	report, err := ParsePytestCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParsePytestCoverage 失败: %v", err)
+	}
+	suggestion := findCoverageSuggestion(report.Suggestions, "status")
+	if suggestion == nil {
+		t.Fatalf("expected status suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.Kind != "function" || suggestion.GapType != "branch" || suggestion.LineRange != "2-2" {
+		t.Fatalf("unexpected pytest suggestion: %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, `未覆盖 if 分支: value == "active"`) ||
+		!containsString(suggestion.SuggestedInputs, `构造满足条件 `+"`"+`value == "active"`+"`"+` 的输入`) ||
+		!containsString(suggestion.SuggestedInputs, "设置 value 覆盖未执行分支") {
+		t.Fatalf("unexpected pytest suggestion hints: %+v", suggestion)
+	}
+	task := findCoverageTask(report.TestTasks, "status")
+	if task == nil {
+		t.Fatalf("expected status task, got %+v", report.TestTasks)
+	}
+	if task.Kind != "function" || task.GapType != "branch" || task.TestFile != filepath.Join("tests", "test_service.py") || task.TestName != "test_status_covers_gap" {
+		t.Fatalf("unexpected pytest task: %+v", task)
+	}
+	if !containsString(task.AssertionFocus, "覆盖未执行行: 2") {
+		t.Fatalf("unexpected pytest assertion focus: %+v", task)
+	}
+}
+
 func TestParseRustTarpaulinCoverageLCOV(t *testing.T) {
 	raw := `TN:
 SF:src/lib.rs

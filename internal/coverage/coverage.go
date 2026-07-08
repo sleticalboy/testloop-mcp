@@ -51,7 +51,7 @@ func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestio
 	if report.Framework == "go-test" {
 		goFunctions = mapGoFunctionsByFile(report.Files)
 	}
-	if report.Framework == "cargo-test" || report.Framework == "junit" {
+	if report.Framework == "pytest" || report.Framework == "cargo-test" || report.Framework == "junit" {
 		sourceRanges = mapSourceRangesByFile(report.Files, report.Framework)
 	}
 
