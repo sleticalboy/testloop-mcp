@@ -435,6 +435,20 @@ module.exports = { add, sub };
 	}
 }
 
+func assertGeneratedJS(t *testing.T, code string, wants []string, forbidden []string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, item := range forbidden {
+		if strings.Contains(code, item) {
+			t.Fatalf("generated code should not contain %q:\n%s", item, code)
+		}
+	}
+}
+
 func TestGenerateMochaCoverageTaskUsesChaiSyncErrorAssertion(t *testing.T) {
 	src := `function divide(a, b) {
   if (b === 0) throw new Error('zero')
@@ -461,20 +475,11 @@ module.exports = { divide };
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"const { expect } = require('chai');",
 		"it('covers divide zero error'",
 		"expect(() => divide(1, 0)).to.throw();",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiAsyncErrorAssertion(t *testing.T) {
@@ -503,21 +508,14 @@ module.exports = { fetchData };
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"const { expect } = require('chai');",
 		"let caughtError;",
 		"try {",
 		"await fetchData(undefined);",
 		"caughtError = err;",
 		"expect(caughtError).to.exist;",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	if strings.Contains(code, "rejects.toThrow()") || strings.Contains(code, "toThrow()") {
-		t.Fatalf("Mocha async error assertion should not use Jest matchers:\n%s", code)
-	}
+	}, []string{"rejects.toThrow()", "toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiClassSyncErrorAssertion(t *testing.T) {
@@ -552,7 +550,7 @@ module.exports = { Widget };
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"const { expect } = require('chai');",
 		"const { Widget } = require('./widget');",
 		"describe('Widget'",
@@ -560,16 +558,7 @@ module.exports = { Widget };
 		"it('covers widget save missing payload'",
 		"const instance = new Widget();",
 		"expect(() => instance.save(null)).to.throw();",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"describe('load'", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha class sync error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"describe('load'", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiClassAsyncErrorAssertion(t *testing.T) {
@@ -604,7 +593,7 @@ module.exports = { Widget };
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"const { expect } = require('chai');",
 		"const { Widget } = require('./widget');",
 		"describe('Widget'",
@@ -615,16 +604,7 @@ module.exports = { Widget };
 		"await instance.load(undefined);",
 		"caughtError = err;",
 		"expect(caughtError).to.exist;",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"describe('save'", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha class async error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"describe('save'", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiESMFunctionErrorAssertion(t *testing.T) {
@@ -655,21 +635,12 @@ export function add(a, b) {
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { divide } from './calc';",
 		"it('covers esm divide zero error'",
 		"expect(() => divide(1, 0)).to.throw();",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('add'", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha ESM function error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./calc')", "describe('add'", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing.T) {
@@ -702,7 +673,7 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { Widget } from './widget';",
 		"describe('Widget'",
@@ -713,16 +684,7 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing
 		"await instance.load(undefined);",
 		"caughtError = err;",
 		"expect(caughtError).to.exist;",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha ESM class async error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiESMFunctionReturnAssertion(t *testing.T) {
@@ -753,23 +715,14 @@ export function sub(a, b) {
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { add } from './calc';",
 		"it('covers esm add zero left operand'",
 		"coverage task: mocha-esm-return-1 | lines 2-2 | 断言 ESM 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
 		"const result = add(0, 2);",
 		"expect(result).to.equal((0 + 2));",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha ESM function return assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) {
@@ -803,7 +756,7 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) 
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { Widget } from './widget';",
 		"describe('Widget'",
@@ -813,16 +766,7 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) 
 		"const instance = new Widget();",
 		"const result = instance.load('short', 1);",
 		"expect(result).to.equal((1));",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha ESM class branch assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionReturnAssertion(t *testing.T) {
@@ -853,23 +797,14 @@ export function sub(a: number, b: number): number {
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { add } from './calc';",
 		"it('covers ts add zero left operand'",
 		"coverage task: mocha-ts-return-1 | lines 2-2 | 断言 TypeScript 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
 		"const result = add(0, 2);",
 		"expect(result).to.equal((0 + 2));",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha TypeScript function return assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *testing.T) {
@@ -903,7 +838,7 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *test
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { Widget } from './widget';",
 		"describe('Widget'",
@@ -913,16 +848,7 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *test
 		"const instance = new Widget();",
 		"const result = instance.load('short', 1);",
 		"expect(result).to.equal((1));",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha TypeScript class branch assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionErrorAssertion(t *testing.T) {
@@ -953,21 +879,12 @@ export function add(a: number, b: number): number {
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { divide } from './calc';",
 		"it('covers ts divide zero error'",
 		"expect(() => divide(1, 0)).to.throw();",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('add'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha TypeScript function error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./calc')", "describe('add'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassAsyncErrorAssertion(t *testing.T) {
@@ -1000,7 +917,7 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassAsyncErrorAssertion(t *
 	if err != nil {
 		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
 	}
-	for _, want := range []string{
+	assertGeneratedJS(t, code, []string{
 		"import { expect } from 'chai';",
 		"import { Widget } from './widget';",
 		"describe('Widget'",
@@ -1011,16 +928,7 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassAsyncErrorAssertion(t *
 		"await instance.load(undefined);",
 		"caughtError = err;",
 		"expect(caughtError).to.exist;",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"} {
-		if strings.Contains(code, forbidden) {
-			t.Fatalf("Mocha TypeScript class async error assertion should not contain %q:\n%s", forbidden, code)
-		}
-	}
+	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
