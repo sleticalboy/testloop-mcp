@@ -390,8 +390,19 @@ return prefix + text;`)
 	}
 }
 
-func TestGenerateJestTestsForCoverageTaskUsesTaskNameAndInputs(t *testing.T) {
-	src := `function add(a, b) {
+func TestGenerateJestVitestCoverageTaskMatrixAssertions(t *testing.T) {
+	tests := []struct {
+		name      string
+		fileName  string
+		source    string
+		task      types.CoverageTestTask
+		wants     []string
+		forbidden []string
+	}{
+		{
+			name:     "jest commonjs function return",
+			fileName: "calc.js",
+			source: `function add(a, b) {
   return a + b;
 }
 
@@ -400,38 +411,100 @@ function sub(a, b) {
 }
 
 module.exports = { add, sub };
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "jest-1",
-		Framework:       "jest",
-		Target:          "add",
-		LineRange:       "2-2",
-		GapType:         "return_path",
-		TestName:        "covers add zero left operand",
-		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
-		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+`,
+			task: types.CoverageTestTask{
+				ID:              "jest-1",
+				Framework:       "jest",
+				Target:          "add",
+				LineRange:       "2-2",
+				GapType:         "return_path",
+				TestName:        "covers add zero left operand",
+				SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+				AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+			},
+			wants: []string{
+				"const { add } = require('./calc');",
+				"it('covers add zero left operand'",
+				"coverage task: jest-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
+				"const result = add(0, 2);",
+				"expect(result).toBe((0 + 2));",
+			},
+			forbidden: []string{"describe('sub'", "sub(", "to.equal(", "require('chai')"},
+		},
+		{
+			name:     "vitest typescript function branch",
+			fileName: "sum.ts",
+			source: `export function add(a: number, b: number): number {
+  if (a === 0) return b
+  return a + b
+}
+
+export function sub(a: number, b: number): number {
+  return a - b
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-1",
+				Framework:       "vitest",
+				Target:          "add",
+				LineRange:       "2-2",
+				GapType:         "branch",
+				TestName:        "covers vitest add zero branch",
+				SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+				AssertionFocus:  []string{"断言 Vitest TypeScript 分支返回值"},
+			},
+			wants: []string{
+				"import { add } from './sum';",
+				"it('covers vitest add zero branch'",
+				"coverage task: vitest-1 | lines 2-2 | 断言 Vitest TypeScript 分支返回值 | 构造满足条件 `a === 0` 的输入",
+				"const result = add(0, 2);",
+				"expect(result).toBe((2));",
+			},
+			forbidden: []string{"describe('sub'", "sub(", "to.equal(", "require('chai')"},
+		},
+		{
+			name:     "vitest typescript function async error",
+			fileName: "service.ts",
+			source: `export async function fetchData(url?: string): Promise<{ ok: boolean }> {
+  if (url === undefined) throw new Error('missing url')
+  return { ok: true }
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-error-1",
+				Framework:       "vitest",
+				Target:          "fetchData",
+				LineRange:       "2-2",
+				GapType:         "error_path",
+				TestName:        "covers vitest fetchData missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"import { fetchData } from './service';",
+				"it('covers vitest fetchData missing url', async () => {",
+				"coverage task: vitest-error-1 | lines 2-2 | 构造满足条件 `url === undefined` 的输入",
+				"await expect(fetchData(undefined)).rejects.toThrow();",
+			},
+			forbidden: []string{"describe('status'", "status(", "to.equal(", "require('chai')", "caughtError"},
+		},
 	}
 
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	for _, want := range []string{
-		"it('covers add zero left operand'",
-		"coverage task: jest-1 | lines 2-2 | 断言未覆盖返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
-		"const result = add(0, 2);",
-		"expect(result).toBe((0 + 2));",
-	} {
-		if !strings.Contains(code, want) {
-			t.Fatalf("expected %q in generated code:\n%s", want, code)
-		}
-	}
-	if strings.Contains(code, "describe('sub'") || strings.Contains(code, "sub(") {
-		t.Fatalf("task-aware generation should only target add:\n%s", code)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srcPath := filepath.Join(t.TempDir(), tt.fileName)
+			if err := os.WriteFile(srcPath, []byte(tt.source), 0644); err != nil {
+				t.Fatal(err)
+			}
+			code, err := GenerateJestTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+			}
+			assertGeneratedJS(t, code, tt.wants, tt.forbidden)
+		})
 	}
 }
 
