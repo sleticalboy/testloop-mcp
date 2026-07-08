@@ -750,6 +750,7 @@ func TestHandleGenerateTestsOutputRunsWithDetectedJavaScriptFramework(t *testing
 			source:      "export function add(a: number, b: number) { return a + b; }\n",
 			wantTestRel: filepath.Join("src", "sum.test.ts"),
 			wantPreview: []string{
+				"import { describe, it, expect } from 'vitest';",
 				"import { add } from './sum';",
 				"expect(result).toBe((1 + 2));",
 			},
@@ -829,6 +830,75 @@ func TestHandleGenerateTestsOutputRunsWithDetectedJavaScriptFramework(t *testing
 				t.Fatalf("fake npx args log = %q, want ARGS=%s", logText, tt.wantArgs)
 			}
 		})
+	}
+}
+
+func TestHandleGenerateCoverageTaskVitestESMOutputRunsWithDetectedFramework(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "src", "sum.ts")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte(`export function add(a: number, b: number): number {
+  if (a === 0) return b
+  return a + b
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	task := &types.CoverageTestTask{
+		ID:              "vitest-sum-branch",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		Goal:            "cover add zero branch",
+		TestFile:        filepath.Join(dir, "src", "sum.test.ts"),
+		TestName:        "covers add zero branch",
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		AssertionFocus:  []string{"assert zero branch"},
+		Confidence:      0.9,
+	}
+
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+	generated := assertGeneratedCoverageTaskOutput(t, generateResult, task, "it('covers add zero branch'")
+	for _, want := range []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { add } from './sum';",
+		"expect(result).toBe((2));",
+	} {
+		if !strings.Contains(generated.Preview, want) {
+			t.Fatalf("generated preview missing %q:\n%s", want, generated.Preview)
+		}
+	}
+
+	logPath := installFakeNpxRecorder(t, strings.Join([]string{
+		" ✓ src/sum.test.ts (1 test)",
+		" Test Files  1 passed (1)",
+		"      Tests  1 passed (1)",
+	}, "\n"))
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{Path: generated.TestFile}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
+		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }
 
