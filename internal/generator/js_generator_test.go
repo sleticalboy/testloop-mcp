@@ -901,6 +901,40 @@ export function status(): string {
 			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
 		{
+			name:     "vitest typescript named response json",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+  status: 'active' | 'disabled'
+}
+
+export async function parseUser(response: Response): Promise<User> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-named-1",
+				Framework:      "vitest",
+				Target:         "parseUser",
+				LineRange:      "7-7",
+				GapType:        "return_path",
+				TestName:       "covers vitest parseUser named response",
+				AssertionFocus: []string{"断言命名类型 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { parseUser } from './api';",
+				"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active' }) });",
+				"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active' });",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
 			name:     "vitest typescript injected api fetch",
 			fileName: "users.ts",
 			source: `export async function loadUser(api: { fetch(path: string): Promise<{ ok: boolean }> }): Promise<{ ok: boolean }> {
@@ -928,6 +962,44 @@ export function status(): string {
 				"expect(api.fetchCalls).toEqual([['/users/1']]);",
 			},
 			forbidden: []string{"to.equal(", "require('chai')", "get: async", "request: async", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript named injected api fetch",
+			fileName: "users.ts",
+			source: `type User = {
+  userId: number
+  email: string
+  createdAt: string
+}
+
+export async function loadUser(api: { fetch(path: string): Promise<User> }): Promise<User> {
+  return await api.fetch('/users/1')
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-client-named-1",
+				Framework:      "vitest",
+				Target:         "loadUser",
+				LineRange:      "7-7",
+				GapType:        "return_path",
+				TestName:       "covers vitest loadUser named api",
+				AssertionFocus: []string{"断言命名类型注入 API 返回结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { loadUser } from './users';",
+				"const api = {",
+				"fetchCalls: [],",
+				"return { userId: 1, email: 'user@example.com', createdAt: '2026-01-01T00:00:00.000Z' };",
+				"const result = await loadUser(api);",
+				"expect(result).toEqual({ userId: 1, email: 'user@example.com', createdAt: '2026-01-01T00:00:00.000Z' });",
+				"expect(api.fetchCalls).toEqual([['/users/1']]);",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "get: async", "request: async", "expect(typeof result).toBe('object')"},
 		},
 		{
 			name:     "jest commonjs class branch",
