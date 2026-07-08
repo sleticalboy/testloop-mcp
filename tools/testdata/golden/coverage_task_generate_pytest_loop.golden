@@ -1,0 +1,51 @@
+{
+  "parsed_task": {
+    "id": "pytest-1",
+    "framework": "pytest",
+    "file": "src/service.py",
+    "target": "service.py",
+    "line_range": "2-2",
+    "goal": "为 service.py 补充测试，覆盖未执行行段 2-2",
+    "command": "python3 -m pytest src/service.py",
+    "test_file": "tests/test_service.py",
+    "test_name": "test_service_py_covers_gap",
+    "priority": 15,
+    "priority_reason": "已有推荐测试文件；置信度 0.90",
+    "confidence": 0.9
+  },
+  "generated": {
+    "status": "ok",
+    "provider": "static",
+    "test_file": "tests/test_service.py",
+    "generated_cases": 1,
+    "coverage_task": {
+      "id": "pytest-1",
+      "framework": "pytest",
+      "file": "src/service.py",
+      "target": "service.py",
+      "line_range": "2-2",
+      "goal": "为 service.py 补充测试，覆盖未执行行段 2-2",
+      "command": "python3 -m pytest src/service.py",
+      "test_file": "tests/test_service.py",
+      "test_name": "test_service_py_covers_gap",
+      "priority": 15,
+      "priority_reason": "已有推荐测试文件；置信度 0.90",
+      "confidence": 0.9
+    },
+    "context_coverage_task": {
+      "id": "pytest-1",
+      "framework": "pytest",
+      "file": "src/service.py",
+      "target": "service.py",
+      "line_range": "2-2",
+      "goal": "为 service.py 补充测试，覆盖未执行行段 2-2",
+      "command": "python3 -m pytest src/service.py",
+      "test_file": "tests/test_service.py",
+      "test_name": "test_service_py_covers_gap",
+      "priority": 15,
+      "priority_reason": "已有推荐测试文件；置信度 0.90",
+      "confidence": 0.9
+    },
+    "test_file_content": "from service import status\n\ndef test_service_py_covers_gap():\n    # coverage task: pytest-1 | lines 2-2\n    result = status('test')\n    assert result == (\"idle\")\n\n"
+  }
+}
