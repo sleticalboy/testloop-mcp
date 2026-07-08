@@ -1,0 +1,88 @@
+const { expect } = require('chai');
+const { fetchData, Widget } = require('./js_async_class');
+
+describe('fetchData', () => {
+  it('should return expected result for normal input', async () => {
+    const result = await fetchData('https://example.com');
+    expect(result).to.be.an('object');
+    expect(result).to.not.equal(null);
+  });
+
+  it('should handle url = undefined', async () => {
+    let caughtError;
+    try {
+      await fetchData(undefined);
+    } catch (err) {
+      caughtError = err;
+    }
+    expect(caughtError).to.exist;
+  });
+
+  it('should throw on invalid input', async () => {
+    let caughtError;
+    try {
+      await fetchData(undefined);
+    } catch (err) {
+      caughtError = err;
+    }
+    expect(caughtError).to.exist;
+  });
+
+});
+
+describe('Widget', () => {
+  describe('constructor', () => {
+    it('should create an instance', () => {
+      const instance = new Widget();
+      expect(instance).to.be.instanceOf(Widget);
+    });
+  });
+
+  describe('load', () => {
+    it('should return expected result', () => {
+      const instance = new Widget();
+      const result = instance.load('test', 1);
+      expect(result).to.equal((1 + 1));
+    });
+
+    it('should handle mode = \'short\'', () => {
+      const instance = new Widget();
+      const result = instance.load('short', 1);
+      expect(result).to.equal((1));
+    });
+
+  });
+
+  describe('save', () => {
+    it('should return expected result', async () => {
+      const instance = new Widget();
+      const result = await instance.save({});
+      expect(result).to.be.an('object');
+      expect(result).to.not.equal(null);
+    });
+
+    it('should throw on invalid input', async () => {
+      const instance = new Widget();
+      let caughtError;
+      try {
+        await instance.save(undefined);
+      } catch (err) {
+        caughtError = err;
+      }
+      expect(caughtError).to.exist;
+    });
+
+    it('should handle payload = undefined', async () => {
+      const instance = new Widget();
+      let caughtError;
+      try {
+        await instance.save(undefined);
+      } catch (err) {
+        caughtError = err;
+      }
+      expect(caughtError).to.exist;
+    });
+
+  });
+
+});

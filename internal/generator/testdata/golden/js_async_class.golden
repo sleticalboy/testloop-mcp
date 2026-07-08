@@ -1,0 +1,63 @@
+const { fetchData, Widget } = require('./js_async_class');
+
+describe('fetchData', () => {
+  it('should return expected result for normal input', async () => {
+    const result = await fetchData('https://example.com');
+    expect(typeof result).toBe('object');
+    expect(result).not.toBeNull();
+  });
+
+  it('should handle url = undefined', async () => {
+    await expect(fetchData(undefined)).rejects.toThrow();
+  });
+
+  it('should throw on invalid input', async () => {
+    await expect(fetchData(undefined)).rejects.toThrow();
+  });
+
+});
+
+describe('Widget', () => {
+  describe('constructor', () => {
+    it('should create an instance', () => {
+      const instance = new Widget();
+      expect(instance).toBeInstanceOf(Widget);
+    });
+  });
+
+  describe('load', () => {
+    it('should return expected result', () => {
+      const instance = new Widget();
+      const result = instance.load('test', 1);
+      expect(result).toBe((1 + 1));
+    });
+
+    it('should handle mode = \'short\'', () => {
+      const instance = new Widget();
+      const result = instance.load('short', 1);
+      expect(result).toBe((1));
+    });
+
+  });
+
+  describe('save', () => {
+    it('should return expected result', async () => {
+      const instance = new Widget();
+      const result = await instance.save({});
+      expect(typeof result).toBe('object');
+      expect(result).not.toBeNull();
+    });
+
+    it('should throw on invalid input', async () => {
+      const instance = new Widget();
+      await expect(instance.save(undefined)).rejects.toThrow();
+    });
+
+    it('should handle payload = undefined', async () => {
+      const instance = new Widget();
+      await expect(instance.save(undefined)).rejects.toThrow();
+    });
+
+  });
+
+});

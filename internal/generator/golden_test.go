@@ -71,6 +71,28 @@ func TestGeneratorGoldenOutputs(t *testing.T) {
 				return GenerateJavaScriptTestsWithFramework(sourcePath, "mocha")
 			},
 		},
+		{
+			name:   "js async class error paths",
+			source: "testdata/golden/js_async_class.js",
+			golden: "testdata/golden/js_async_class.golden",
+			run:    GenerateJestTests,
+		},
+		{
+			name:   "js async class error paths vitest",
+			source: "testdata/golden/js_async_class.js",
+			golden: "testdata/golden/js_async_class_vitest.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "vitest")
+			},
+		},
+		{
+			name:   "js async class error paths mocha",
+			source: "testdata/golden/js_async_class.js",
+			golden: "testdata/golden/js_async_class_mocha.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "mocha")
+			},
+		},
 	}
 
 	for _, tt := range tests {
