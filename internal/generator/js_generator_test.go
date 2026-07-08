@@ -825,6 +825,106 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) 
 	}
 }
 
+func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionReturnAssertion(t *testing.T) {
+	src := `export function add(a: number, b: number): number {
+  return a + b
+}
+
+export function sub(a: number, b: number): number {
+  return a - b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.ts")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-ts-return-1",
+		Framework:       "mocha",
+		Target:          "add",
+		LineRange:       "2-2",
+		GapType:         "return_path",
+		TestName:        "covers ts add zero left operand",
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		AssertionFocus:  []string{"断言 TypeScript 返回路径的具体结果"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import { expect } from 'chai';",
+		"import { add } from './calc';",
+		"it('covers ts add zero left operand'",
+		"coverage task: mocha-ts-return-1 | lines 2-2 | 断言 TypeScript 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
+		"const result = add(0, 2);",
+		"expect(result).to.equal((0 + 2));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha TypeScript function return assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
+func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *testing.T) {
+	src := `export class Widget {
+  load(mode: string, count: number): number {
+    if (mode === 'short') return count
+    return count + 1
+  }
+
+  save(payload: unknown): unknown {
+    return payload
+  }
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "widget.ts")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-ts-class-branch-1",
+		Framework:       "mocha",
+		Target:          "Widget.load",
+		LineRange:       "3-3",
+		GapType:         "branch",
+		TestName:        "covers ts widget short mode",
+		SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+		AssertionFocus:  []string{"断言 TypeScript class 分支返回值"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import { expect } from 'chai';",
+		"import { Widget } from './widget';",
+		"describe('Widget'",
+		"describe('load'",
+		"it('covers ts widget short mode'",
+		"coverage task: mocha-ts-class-branch-1 | lines 3-3 | 断言 TypeScript class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
+		"const instance = new Widget();",
+		"const result = instance.load('short', 1);",
+		"expect(result).to.equal((1));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha TypeScript class branch assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
 	funcs := []jsFuncInfo{{Name: "add"}, {Name: "sub"}}
 	classes := []jsClassInfo{
