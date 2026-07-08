@@ -131,7 +131,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask) (stri
 
 	for _, fn := range funcs {
 		if task != nil {
-			buf.WriteString(genJestFuncTestForCoverageTask(fn, task))
+			buf.WriteString(genJSFuncTestForCoverageTask(fn, task))
 		} else {
 			buf.WriteString(genJestFuncTest(fn))
 		}
@@ -139,7 +139,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask) (stri
 
 	for _, cls := range classes {
 		if task != nil {
-			buf.WriteString(genJestClassTestForCoverageTask(cls, task))
+			buf.WriteString(genJSClassTestForCoverageTask(cls, task))
 		} else {
 			buf.WriteString(genJestClassTest(cls, isESModule, moduleName))
 		}
@@ -461,12 +461,12 @@ func genJestFuncTest(fn jsFuncInfo) string {
 	return sb.String()
 }
 
-func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) string {
+func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
 	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
 	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
 	args := jsArgListForCoverageTask(fn.Params, task, boundary)
-	assertions := jsAssertionStyleForCoverageTask(task)
+	assertions := jsAssertionStyleForTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -562,9 +562,9 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 	return sb.String()
 }
 
-func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
+func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
-	assertions := jsAssertionStyleForCoverageTask(task)
+	assertions := jsAssertionStyleForTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", cls.Name))
 	for _, method := range cls.Methods {
@@ -617,7 +617,7 @@ const (
 	jsAssertionStyleChai jsAssertionStyle = "chai"
 )
 
-func jsAssertionStyleForCoverageTask(task *types.CoverageTestTask) jsAssertionStyle {
+func jsAssertionStyleForTask(task *types.CoverageTestTask) jsAssertionStyle {
 	if task != nil && strings.EqualFold(task.Framework, "mocha") {
 		return jsAssertionStyleChai
 	}

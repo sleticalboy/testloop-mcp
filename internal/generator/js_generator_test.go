@@ -1077,7 +1077,7 @@ func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
 	}
 }
 
-func TestJestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
+func TestJSClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:              "jest-class-1",
 		Target:          "Widget.load",
@@ -1111,7 +1111,7 @@ func TestJestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 		},
 	}
 
-	code := genJestClassTestForCoverageTask(cls, &task)
+	code := genJSClassTestForCoverageTask(cls, &task)
 	for _, want := range []string{
 		"describe('Widget'",
 		"it('covers widget load'",
@@ -1127,7 +1127,7 @@ func TestJestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
-func TestJestFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
+func TestJSFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",
 		IsAsync: true,
@@ -1146,7 +1146,7 @@ func TestJestFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
 		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
 	}
 
-	code := genJestFuncTestForCoverageTask(fn, &task)
+	code := genJSFuncTestForCoverageTask(fn, &task)
 	for _, want := range []string{
 		"describe('fetchData'",
 		"it('should cover fetchData coverage gap', async () => {",

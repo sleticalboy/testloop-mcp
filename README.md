@@ -43,7 +43,7 @@ AI IDE (Claude Code / Cursor / Copilot)
 | Python | pytest | ✅ | ✅ | ✅ | ✅ |
 | Java | JUnit 5 (Maven/Gradle) | ✅ | ✅ | ✅ | ✅ |
 
-> 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。传入 `coverage_task` 时，Go/Python/Jest/Rust/Java 静态生成器会优先聚焦任务目标函数或方法，使用任务推荐测试名，并把建议输入代入生成的测试草稿。
+> 测试生成：Go 优先使用 `gotests`，失败时回退内置 `go/ast`；JS/TS/Python/Rust/Java 基于 tree-sitter/轻量解析器。传入 `coverage_task` 时，Go/Python/JS/TS/Rust/Java 静态生成器会优先聚焦任务目标函数或方法，使用任务推荐测试名，并把建议输入代入生成的测试草稿；JS/TS 会根据任务框架输出 Jest/Vitest 或 Mocha/Chai 风格断言。
 > 覆盖率：当前支持 Go coverprofile、Istanbul coverage JSON（Jest/Vitest/Mocha）、coverage.py JSON、Rust `cargo tarpaulin --out Lcov` 生成的 LCOV，以及 Java JaCoCo XML。Go/Rust/Java 覆盖率建议会尽量定位到具体函数或方法，并输出常见分支/返回/错误路径分类，便于 AI Agent 直接补测试。
 
 ## 安装
@@ -176,7 +176,7 @@ command = "/absolute/path/to/testloop-mcp"
 
 ### `generate_tests`
 
-根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（Jest）、Python（pytest）。
+根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（默认 Jest 风格；coverage task 支持 Jest/Vitest/Mocha 断言风格）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
@@ -187,7 +187,7 @@ command = "/absolute/path/to/testloop-mcp"
 
 **返回：** `{ status, test_file, generated_cases, preview, context, coverage_task, provider }`
 
-传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/Jest/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
+传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。JS/TS coverage task 会按任务框架选择 Jest/Vitest 的 `expect(...).toBe(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` 风格。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
 
 **LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
 
@@ -340,7 +340,7 @@ testloop-mcp/
 │   │   ├── context.go                # 面向 LLM/AI Agent 的测试生成上下文
 │   │   ├── go_gotests.go             # gotests 优先生成器
 │   │   ├── go_generator.go           # Go AST 回退测试生成器（泛型/通道/接口/变参）
-│   │   ├── js_generator.go           # JS/TS Jest 测试生成器（函数/箭头/类/async）
+│   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；coverage task 支持 Jest/Vitest/Mocha）
 │   │   ├── py_generator.go           # Python pytest 测试生成器（def/class/async）
 │   │   ├── rs_generator.go           # Rust 测试生成器
 │   │   └── java_generator.go         # Java JUnit 5 测试生成器
