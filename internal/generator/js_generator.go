@@ -1324,6 +1324,10 @@ func jsMockPayloadFromTSType(typeExpr string) (string, bool) {
 }
 
 func jsMockPayloadFromTSTypeWithDecls(typeExpr string, decls map[string]string) (string, bool) {
+	return jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, nil)
+}
+
+func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
 	if typeExpr == "" {
 		return "", false
@@ -1336,18 +1340,18 @@ func jsMockPayloadFromTSTypeWithDecls(typeExpr string, decls map[string]string) 
 	}
 	if strings.HasSuffix(typeExpr, "[]") {
 		inner := strings.TrimSpace(strings.TrimSuffix(typeExpr, "[]"))
-		if object, ok := jsObjectMockFromTSTypeWithDecls(inner, decls); ok {
+		if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
 			return "[" + object + "]", true
 		}
 		return "[]", true
 	}
 	if inner, ok := jsTSGenericArg(typeExpr, "Array"); ok {
-		if object, ok := jsObjectMockFromTSTypeWithDecls(inner, decls); ok {
+		if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
 			return "[" + object + "]", true
 		}
 		return "[]", true
 	}
-	return jsObjectMockFromTSTypeWithDecls(typeExpr, decls)
+	return jsObjectMockFromTSTypeWithDeclsSeen(typeExpr, decls, seen)
 }
 
 func jsObjectMockFromTSType(typeExpr string) (string, bool) {
@@ -1355,9 +1359,25 @@ func jsObjectMockFromTSType(typeExpr string) (string, bool) {
 }
 
 func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (string, bool) {
+	return jsObjectMockFromTSTypeWithDeclsSeen(typeExpr, decls, nil)
+}
+
+func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
-	if resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
+	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
+		if seen == nil {
+			seen = map[string]bool{}
+		}
+		if seen[name] {
+			return "{}", true
+		}
+		nextSeen := make(map[string]bool, len(seen)+1)
+		for key, value := range seen {
+			nextSeen[key] = value
+		}
+		nextSeen[name] = true
 		typeExpr = resolved
+		seen = nextSeen
 	}
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
 		return "", false
@@ -1374,7 +1394,7 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 		if !ok {
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("%s: %s", name, jsMockValueForTSTypeWithDecls(name, typ, decls)))
+		parts = append(parts, fmt.Sprintf("%s: %s", name, jsMockValueForTSTypeWithDeclsSeen(name, typ, decls, seen)))
 	}
 	if len(parts) == 0 {
 		return "", false
@@ -1450,6 +1470,10 @@ func jsMockValueForTSType(fieldName, typeExpr string) string {
 }
 
 func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]string) string {
+	return jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr, decls, nil)
+}
+
+func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[string]string, seen map[string]bool) string {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
 	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
 		typeExpr = branch
@@ -1478,7 +1502,7 @@ func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]
 	if _, ok := jsTSGenericArg(typeExpr, "Array"); ok {
 		return "[]"
 	}
-	if object, ok := jsObjectMockFromTSTypeWithDecls(typeExpr, decls); ok {
+	if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return object
 	}
 	return "{}"
@@ -1576,14 +1600,14 @@ func jsMockValueForTSLiteral(typeExpr string) (string, bool) {
 	return "", false
 }
 
-func jsResolveNamedTSType(typeExpr string, decls map[string]string) string {
+func jsResolveNamedTSType(typeExpr string, decls map[string]string) (string, string) {
 	if len(decls) == 0 {
-		return ""
+		return "", ""
 	}
 	if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(typeExpr) {
-		return ""
+		return "", ""
 	}
-	return strings.TrimSpace(decls[typeExpr])
+	return typeExpr, strings.TrimSpace(decls[typeExpr])
 }
 
 func jsNormalizeTSTypeExpr(typeExpr string) string {

@@ -356,6 +356,7 @@ func TestGenerateJavaScriptTestsNamedReturnTypePayloads(t *testing.T) {
   status: 'active' | 'disabled'
   createdAt: string
   displayName?: string | null
+  manager?: User | null
 }
 
 type Profile = {
@@ -383,11 +384,11 @@ export async function loadProfile(client: { get(path: string): Promise<Profile> 
 	}
 
 	assertGeneratedJS(t, code, []string{
-		"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' }) });",
-		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' });",
-		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' } };",
+		"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }) });",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
+		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } };",
 		"const result = await loadProfile(client);",
-		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' } });",
+		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
 		"expect(client.getCalls).toEqual([['/profile']]);",
 	}, []string{
 		"{ ok: true }",
@@ -1851,11 +1852,11 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSType("Promise<User>"); ok || got != "" {
 		t.Fatalf("named type payload = %q, %v", got, ok)
 	}
-	typeDecls := map[string]string{"User": "{ userId: number; email: string; status: 'active' | 'disabled'; createdAt: string; displayName?: string | null }"}
-	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User | null>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' }" {
+	typeDecls := map[string]string{"User": "{ userId: number; email: string; status: 'active' | 'disabled'; createdAt: string; displayName?: string | null; manager?: User | null }"}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User | null>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("decl payload = %q, %v", got, ok)
 	}
-	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' }" {
+	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
