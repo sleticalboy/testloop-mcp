@@ -604,6 +604,59 @@ func TestParseVitestCoverageEnrichesTypeScriptSourceTask(t *testing.T) {
 	}
 }
 
+func TestParseMochaCoverageEnrichesCommonJSSourceTask(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("lib", "calc.js")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `function divide(a, b) {
+  if (b === 0) return 0;
+  return a / b;
+}
+
+module.exports = { divide };
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{
+		"lib/calc.js": {
+			"path": "lib/calc.js",
+			"statementMap": {
+				"0": {"start": {"line": 1, "column": 0}, "end": {"line": 1, "column": 22}},
+				"1": {"start": {"line": 2, "column": 2}, "end": {"line": 2, "column": 28}},
+				"2": {"start": {"line": 3, "column": 2}, "end": {"line": 3, "column": 15}}
+			},
+			"s": {"0": 1, "1": 0, "2": 1},
+			"fnMap": {},
+			"f": {},
+			"branchMap": {},
+			"b": {}
+		}
+	}`
+
+	report, err := ParseJestCoverage(raw, "mocha")
+	if err != nil {
+		t.Fatalf("ParseJestCoverage 失败: %v", err)
+	}
+	task := findCoverageTask(report.TestTasks, "divide")
+	if task == nil {
+		t.Fatalf("expected divide task, got %+v", report.TestTasks)
+	}
+	if task.Framework != "mocha" || task.Kind != "function" || task.GapType != "branch" || task.TestFile != filepath.Join("lib", "calc.spec.js") {
+		t.Fatalf("unexpected mocha task: %+v", task)
+	}
+	if task.Command != "npx mocha lib/calc.js" || task.TestName != "covers divide coverage gap" {
+		t.Fatalf("unexpected mocha command/test name: %+v", task)
+	}
+	if !containsString(task.SuggestedInputs, "构造满足条件 `b === 0` 的输入") ||
+		!containsString(task.AssertionFocus, "覆盖未执行行: 2") {
+		t.Fatalf("unexpected mocha task hints: %+v", task)
+	}
+}
+
 func TestParsePytestCoverage(t *testing.T) {
 	raw := `{
 		"totals": {

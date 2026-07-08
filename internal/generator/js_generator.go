@@ -108,6 +108,12 @@ func generateJestTests(srcPath string, task *types.CoverageTestTask) (string, er
 
 	var buf strings.Builder
 
+	mochaTask := task != nil && strings.EqualFold(task.Framework, "mocha")
+	if mochaTask && isESModule {
+		buf.WriteString("import { expect } from 'chai';\n")
+	} else if mochaTask {
+		buf.WriteString("const { expect } = require('chai');\n")
+	}
 	if isESModule {
 		buf.WriteString(fmt.Sprintf("import { %s } from './%s';\n\n", joinExportNames(funcs, classes), moduleName))
 	} else {
@@ -451,6 +457,7 @@ func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask)
 	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
 	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
 	args := jsArgListForCoverageTask(fn.Params, task, boundary)
+	assertions := jsAssertionStyleForCoverageTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -458,7 +465,9 @@ func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask)
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
 	if fn.Analysis.Throws || task.GapType == "error_path" {
-		if fn.IsAsync {
+		if assertions == jsAssertionStyleChai && !fn.IsAsync {
+			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).to.throw();\n", fn.Name, args))
+		} else if fn.IsAsync {
 			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
 		} else {
 			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
@@ -473,7 +482,7 @@ func genJestFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask)
 	} else {
 		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 	}
-	sb.WriteString(genJSResultAssertionWithTaskArgs(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    "))
+	sb.WriteString(genJSResultAssertionWithTaskArgsStyle(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    ", assertions))
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -552,6 +561,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 
 func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
+	assertions := jsAssertionStyleForCoverageTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", cls.Name))
 	for _, method := range cls.Methods {
@@ -566,7 +576,9 @@ func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTa
 		}
 		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 		if method.Analysis.Throws || task.GapType == "error_path" {
-			if method.IsAsync {
+			if assertions == jsAssertionStyleChai && !method.IsAsync {
+				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).to.throw();\n", method.Name, args))
+			} else if method.IsAsync {
 				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
 			} else {
 				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
@@ -580,7 +592,7 @@ func genJestClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTa
 		} else {
 			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
 		}
-		sb.WriteString(genJSResultAssertionWithTaskArgs(method.Analysis, method.Params, boundary, coverageTaskInputValues(task, "javascript"), "      "))
+		sb.WriteString(genJSResultAssertionWithTaskArgsStyle(method.Analysis, method.Params, boundary, coverageTaskInputValues(task, "javascript"), "      ", assertions))
 		sb.WriteString("    });\n\n")
 		sb.WriteString("  });\n\n")
 	}
@@ -598,6 +610,24 @@ func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, bounda
 }
 
 func genJSResultAssertionWithTaskArgs(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string) string {
+	return genJSResultAssertionWithTaskArgsStyle(a, params, boundary, values, indent, jsAssertionStyleJest)
+}
+
+type jsAssertionStyle string
+
+const (
+	jsAssertionStyleJest jsAssertionStyle = "jest"
+	jsAssertionStyleChai jsAssertionStyle = "chai"
+)
+
+func jsAssertionStyleForCoverageTask(task *types.CoverageTestTask) jsAssertionStyle {
+	if task != nil && strings.EqualFold(task.Framework, "mocha") {
+		return jsAssertionStyleChai
+	}
+	return jsAssertionStyleJest
+}
+
+func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string, style jsAssertionStyle) string {
 	var sb strings.Builder
 
 	if !a.HasReturn {
@@ -606,7 +636,36 @@ func genJSResultAssertionWithTaskArgs(a jsFuncAnalysis, params []jsParamInfo, bo
 	}
 
 	if expected, ok := jsExpectedReturnExprWithValues(a, params, boundary, values); ok {
-		sb.WriteString(indent + "expect(result).toBe(" + expected + ");\n")
+		if style == jsAssertionStyleChai {
+			sb.WriteString(indent + "expect(result).to.equal(" + expected + ");\n")
+		} else {
+			sb.WriteString(indent + "expect(result).toBe(" + expected + ");\n")
+		}
+		return sb.String()
+	}
+
+	if style == jsAssertionStyleChai {
+		switch a.ReturnType {
+		case "number":
+			sb.WriteString(indent + "expect(result).to.be.a('number');\n")
+			sb.WriteString(indent + "expect(Number.isNaN(result)).to.equal(false);\n")
+		case "string":
+			sb.WriteString(indent + "expect(result).to.be.a('string');\n")
+			sb.WriteString(indent + "expect(result.length).to.be.at.least(0);\n")
+		case "boolean":
+			sb.WriteString(indent + "expect(result).to.be.a('boolean');\n")
+		case "array":
+			sb.WriteString(indent + "expect(Array.isArray(result)).to.equal(true);\n")
+		case "object":
+			sb.WriteString(indent + "expect(result).to.be.an('object');\n")
+			sb.WriteString(indent + "expect(result).to.not.equal(null);\n")
+		case "null":
+			sb.WriteString(indent + "expect(result).to.equal(null);\n")
+		case "undefined":
+			sb.WriteString(indent + "expect(result).to.equal(undefined);\n")
+		default:
+			sb.WriteString(indent + "expect(result).to.not.equal(undefined);\n")
+		}
 		return sb.String()
 	}
 

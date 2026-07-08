@@ -1,0 +1,105 @@
+{
+  "parsed_task": {
+    "id": "mocha-1",
+    "framework": "mocha",
+    "file": "lib/calc.js",
+    "target": "divide",
+    "kind": "function",
+    "line_range": "2-2",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: b === 0"
+    ],
+    "uncovered_lines": [
+      2
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `b === 0` 的输入",
+      "设置 a 覆盖未执行分支",
+      "设置 b 覆盖未执行分支"
+    ],
+    "goal": "为 divide 补充测试，覆盖未执行行段 2-2",
+    "command": "npx mocha lib/calc.js",
+    "test_file": "lib/calc.spec.js",
+    "test_name": "covers divide coverage gap",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用",
+      "未覆盖 if 分支: b === 0",
+      "覆盖未执行行: 2"
+    ],
+    "priority": 103,
+    "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.90",
+    "confidence": 0.9
+  },
+  "generated": {
+    "status": "ok",
+    "provider": "static",
+    "test_file": "lib/calc.spec.js",
+    "generated_cases": 1,
+    "coverage_task": {
+      "id": "mocha-1",
+      "framework": "mocha",
+      "file": "lib/calc.js",
+      "target": "divide",
+      "kind": "function",
+      "line_range": "2-2",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: b === 0"
+      ],
+      "uncovered_lines": [
+        2
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `b === 0` 的输入",
+        "设置 a 覆盖未执行分支",
+        "设置 b 覆盖未执行分支"
+      ],
+      "goal": "为 divide 补充测试，覆盖未执行行段 2-2",
+      "command": "npx mocha lib/calc.js",
+      "test_file": "lib/calc.spec.js",
+      "test_name": "covers divide coverage gap",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用",
+        "未覆盖 if 分支: b === 0",
+        "覆盖未执行行: 2"
+      ],
+      "priority": 103,
+      "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.90",
+      "confidence": 0.9
+    },
+    "context_coverage_task": {
+      "id": "mocha-1",
+      "framework": "mocha",
+      "file": "lib/calc.js",
+      "target": "divide",
+      "kind": "function",
+      "line_range": "2-2",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: b === 0"
+      ],
+      "uncovered_lines": [
+        2
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `b === 0` 的输入",
+        "设置 a 覆盖未执行分支",
+        "设置 b 覆盖未执行分支"
+      ],
+      "goal": "为 divide 补充测试，覆盖未执行行段 2-2",
+      "command": "npx mocha lib/calc.js",
+      "test_file": "lib/calc.spec.js",
+      "test_name": "covers divide coverage gap",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用",
+        "未覆盖 if 分支: b === 0",
+        "覆盖未执行行: 2"
+      ],
+      "priority": 103,
+      "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.90",
+      "confidence": 0.9
+    },
+    "test_file_content": "const { expect } = require('chai');\nconst { divide } = require('./calc');\n\ndescribe('divide', () =\u003e {\n  it('covers divide coverage gap', () =\u003e {\n    // coverage task: mocha-1 | lines 2-2 | 断言未覆盖分支的返回值或副作用; 未覆盖 if 分支: b === 0; 覆盖未执行行: 2 | 构造满足条件 `b === 0` 的输入; 设置 a 覆盖未执行分支; 设置 b 覆盖未执行分支\n    const result = divide(1, 0);\n    expect(result).to.equal((0));\n  });\n\n});\n\n"
+  }
+}
