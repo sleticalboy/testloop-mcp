@@ -430,9 +430,9 @@ func genJSFuncTest(fn jsFuncInfo, assertions jsAssertionStyle) string {
 
 	sb.WriteString(fmt.Sprintf("  it('should return expected result for normal input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
 	if fn.IsAsync {
-		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, jsArgList(fn.Params)))
+		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, jsArgListForAnalysis(fn.Params, fn.Analysis)))
 	} else {
-		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgList(fn.Params)))
+		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgListForAnalysis(fn.Params, fn.Analysis)))
 	}
 	sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, nil, "    ", assertions))
 	sb.WriteString("  });\n\n")
@@ -448,9 +448,9 @@ func genJSFuncTest(fn jsFuncInfo, assertions jsAssertionStyle) string {
 			sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
 		} else {
 			if fn.IsAsync {
-				sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
+				sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, jsArgListWithBoundaryForAnalysis(fn.Params, b, fn.Analysis)))
 			} else {
-				sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
+				sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgListWithBoundaryForAnalysis(fn.Params, b, fn.Analysis)))
 			}
 			boundary := b
 			sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, &boundary, "    ", assertions))
@@ -491,7 +491,7 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	var sb strings.Builder
 	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
 	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
-	args := jsArgListForCoverageTask(fn.Params, task, boundary)
+	args := jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis)
 	assertions := jsAssertionStyleForTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
@@ -539,9 +539,9 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 		sb.WriteString(fmt.Sprintf("    it('should return expected result', %s => {\n", jsAsyncArrow(method.IsAsync)))
 		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 		if method.IsAsync {
-			sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, jsArgList(method.Params)))
+			sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, jsArgListForAnalysis(method.Params, method.Analysis)))
 		} else {
-			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgList(method.Params)))
+			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgListForAnalysis(method.Params, method.Analysis)))
 		}
 		sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, nil, "      ", assertions))
 		sb.WriteString("    });\n\n")
@@ -568,9 +568,9 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
 			} else {
 				if method.IsAsync {
-					sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
+					sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis)))
 				} else {
-					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
+					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis)))
 				}
 				boundary := b
 				sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, &boundary, "      ", assertions))
@@ -598,7 +598,7 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	for _, method := range cls.Methods {
 		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
-		args := jsArgListForCoverageTask(method.Params, task, boundary)
+		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis)
 
 		sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 		sb.WriteString(fmt.Sprintf("    it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(method.IsAsync)))
@@ -1046,15 +1046,24 @@ func jsArgListWithBoundary(params []jsParamInfo, b jsBoundary) string {
 	return strings.Join(args, ", ")
 }
 
-func jsArgListForCoverageTask(params []jsParamInfo, task *types.CoverageTestTask, boundary *jsBoundary) string {
+func jsArgListWithBoundaryForAnalysis(params []jsParamInfo, b jsBoundary, analysis jsFuncAnalysis) string {
+	values := map[string]string{b.Param: b.Value}
+	return jsArgListWithValuesForAnalysis(params, values, &analysis)
+}
+
+func jsArgListForCoverageTask(params []jsParamInfo, task *types.CoverageTestTask, boundary *jsBoundary, analysis jsFuncAnalysis) string {
 	values := coverageTaskInputValues(task, "javascript")
 	if boundary != nil {
 		values[boundary.Param] = boundary.Value
 	}
-	return jsArgListWithValues(params, values)
+	return jsArgListWithValuesForAnalysis(params, values, &analysis)
 }
 
 func jsArgListWithValues(params []jsParamInfo, values map[string]string) string {
+	return jsArgListWithValuesForAnalysis(params, values, nil)
+}
+
+func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]string, analysis *jsFuncAnalysis) string {
 	if len(params) == 0 {
 		return ""
 	}
@@ -1062,6 +1071,8 @@ func jsArgListWithValues(params []jsParamInfo, values map[string]string) string 
 	for i, p := range params {
 		if value := values[p.Name]; value != "" {
 			args[i] = value
+		} else if method := jsInjectedClientMethodForParam(analysis, p.Name); method != "" {
+			args[i] = jsInjectedClientMock(method)
 		} else {
 			args[i] = jsArgValue(p, i)
 		}
@@ -1085,14 +1096,14 @@ func jsBoundaryForCoverageTask(boundaries []jsBoundary, task *types.CoverageTest
 }
 
 func jsArgList(params []jsParamInfo) string {
+	return jsArgListForAnalysis(params, jsFuncAnalysis{})
+}
+
+func jsArgListForAnalysis(params []jsParamInfo, analysis jsFuncAnalysis) string {
 	if len(params) == 0 {
 		return ""
 	}
-	args := make([]string, len(params))
-	for i, p := range params {
-		args[i] = jsArgValue(p, i)
-	}
-	return strings.Join(args, ", ")
+	return jsArgListWithValuesForAnalysis(params, nil, &analysis)
 }
 
 func jsInvalidArgList(params []jsParamInfo, boundaries []jsBoundary) string {
@@ -1162,7 +1173,7 @@ func jsArgValue(p jsParamInfo, _ int) string {
 		return "{ json: async () => ({ ok: true }) }"
 	}
 	if jsNameLooksLikeClientParam(compact) {
-		return "{ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) }"
+		return jsInjectedClientMock("get")
 	}
 	if jsNameHasAny(compact, "url", "uri", "endpoint", "href") {
 		return "'https://example.com'"
@@ -1183,6 +1194,34 @@ func jsArgValue(p jsParamInfo, _ int) string {
 func jsCompactName(name string) string {
 	name = strings.ToLower(name)
 	return strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+}
+
+func jsInjectedClientMethodForParam(analysis *jsFuncAnalysis, param string) string {
+	if analysis == nil || param == "" || !jsNameLooksLikeClientParam(jsCompactName(param)) {
+		return ""
+	}
+	for _, expr := range analysis.Returns {
+		if receiver, method, ok := jsInjectedClientCall(expr); ok && receiver == param {
+			return method
+		}
+	}
+	for _, boundary := range analysis.Boundaries {
+		if receiver, method, ok := jsInjectedClientCall(boundary.ReturnExpr); ok && receiver == param {
+			return method
+		}
+	}
+	return ""
+}
+
+func jsInjectedClientMock(method string) string {
+	switch method {
+	case "fetch":
+		return "{ fetch: async () => ({ ok: true }) }"
+	case "request":
+		return "{ request: async () => ({ ok: true }) }"
+	default:
+		return "{ get: async () => ({ ok: true }) }"
+	}
 }
 
 func jsNameLooksLikeResponseParam(name string) bool {

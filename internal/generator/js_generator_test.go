@@ -279,9 +279,11 @@ func TestGenerateJavaScriptTestsInjectedClientCall(t *testing.T) {
 
 	assertGeneratedJS(t, code, []string{
 		"import { describe, it, expect } from 'vitest';",
-		"const result = await loadUser({ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) });",
+		"const result = await loadUser({ get: async () => ({ ok: true }) });",
 		"expect(result).toEqual({ ok: true });",
 	}, []string{
+		"fetch: async",
+		"request: async",
 		"expect(typeof result).toBe('object')",
 		"expect(result).not.toBeNull()",
 	})
@@ -807,10 +809,10 @@ export function status(): string {
 			wants: []string{
 				"import { describe, it, expect } from 'vitest';",
 				"import { loadUser } from './users';",
-				"const result = await loadUser({ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) });",
+				"const result = await loadUser({ fetch: async () => ({ ok: true }) });",
 				"expect(result).toEqual({ ok: true });",
 			},
-			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+			forbidden: []string{"to.equal(", "require('chai')", "get: async", "request: async", "expect(typeof result).toBe('object')"},
 		},
 		{
 			name:     "jest commonjs class branch",
@@ -1627,6 +1629,24 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got := jsArgListWithValues([]jsParamInfo{{Name: "enabled"}, {Name: "title"}}, map[string]string{"title": "'custom'"}); got != "true, 'custom'" {
 		t.Fatalf("jsArgListWithValues() = %q", got)
+	}
+	if got := jsArgListForAnalysis(
+		[]jsParamInfo{{Name: "client"}},
+		jsFuncAnalysis{Returns: []string{"await client.get('/users/1')"}},
+	); got != "{ get: async () => ({ ok: true }) }" {
+		t.Fatalf("jsArgListForAnalysis(get) = %q", got)
+	}
+	if got := jsArgListForAnalysis(
+		[]jsParamInfo{{Name: "api"}},
+		jsFuncAnalysis{Returns: []string{"await api.fetch('/users/1')"}},
+	); got != "{ fetch: async () => ({ ok: true }) }" {
+		t.Fatalf("jsArgListForAnalysis(fetch) = %q", got)
+	}
+	if got := jsArgListForAnalysis(
+		[]jsParamInfo{{Name: "http"}},
+		jsFuncAnalysis{Returns: []string{"await http.request('/users/1')"}},
+	); got != "{ request: async () => ({ ok: true }) }" {
+		t.Fatalf("jsArgListForAnalysis(request) = %q", got)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
