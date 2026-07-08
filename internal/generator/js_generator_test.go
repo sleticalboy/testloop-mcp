@@ -351,13 +351,16 @@ func TestGenerateJavaScriptTestsNamedReturnTypePayloads(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "api.ts")
 	src := `interface User {
-  id: number
+  userId: number
   email: string
+  status: 'active' | 'disabled'
+  createdAt: string
 }
 
 type Profile = {
-  name: string
+  title: string
   active: boolean
+  avatarUrl: string
 }
 
 export async function parseUser(response: Response): Promise<User> {
@@ -378,11 +381,11 @@ export async function loadProfile(client: { get(path: string): Promise<Profile> 
 	}
 
 	assertGeneratedJS(t, code, []string{
-		"const result = await parseUser({ json: async () => ({ id: 1, email: 'user@example.com' }) });",
-		"expect(result).toEqual({ id: 1, email: 'user@example.com' });",
-		"return { name: 'test', active: true };",
+		"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }) });",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' });",
+		"return { title: 'test', active: true, avatarUrl: 'https://example.com' };",
 		"const result = await loadProfile(client);",
-		"expect(result).toEqual({ name: 'test', active: true });",
+		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com' });",
 		"expect(client.getCalls).toEqual([['/profile']]);",
 	}, []string{
 		"{ ok: true }",
@@ -1774,8 +1777,8 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSType("Promise<User>"); ok || got != "" {
 		t.Fatalf("named type payload = %q, %v", got, ok)
 	}
-	typeDecls := map[string]string{"User": "{ id: number; email: string }"}
-	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User>", typeDecls); !ok || got != "{ id: 1, email: 'user@example.com' }" {
+	typeDecls := map[string]string{"User": "{ userId: number; email: string; status: 'active' | 'disabled'; createdAt: string }"}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }" {
 		t.Fatalf("decl payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(

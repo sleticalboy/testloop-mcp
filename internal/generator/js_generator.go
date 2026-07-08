@@ -1448,12 +1448,16 @@ func jsMockValueForTSType(fieldName, typeExpr string) string {
 
 func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]string) string {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if value, ok := jsMockValueForTSLiteralUnion(typeExpr); ok {
+		return value
+	}
+	compactName := jsCompactName(fieldName)
 	switch {
 	case typeExpr == "number" || typeExpr == "bigint":
 		return "1"
 	case typeExpr == "string":
-		if jsNameHasAny(jsCompactName(fieldName), "email") {
-			return "'user@example.com'"
+		if value, ok := jsMockStringValueForFieldName(compactName); ok {
+			return value
 		}
 		return "'test'"
 	case typeExpr == "boolean":
@@ -1472,6 +1476,44 @@ func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]
 		return object
 	}
 	return "{}"
+}
+
+func jsMockStringValueForFieldName(name string) (string, bool) {
+	switch {
+	case jsNameHasAny(name, "email"):
+		return "'user@example.com'", true
+	case name == "id" || strings.HasSuffix(name, "id"):
+		return "'id-1'", true
+	case jsNameHasAny(name, "url", "uri", "endpoint", "href"):
+		return "'https://example.com'", true
+	case jsNameHasAny(name, "createdat", "updatedat", "deletedat", "timestamp", "datetime"):
+		return "'2026-01-01T00:00:00.000Z'", true
+	case name == "date" || strings.HasSuffix(name, "date"):
+		return "'2026-01-01'", true
+	case jsNameHasAny(name, "status", "state"):
+		return "'active'", true
+	case jsNameHasAny(name, "name", "title", "label"):
+		return "'test'", true
+	default:
+		return "", false
+	}
+}
+
+func jsMockValueForTSLiteralUnion(typeExpr string) (string, bool) {
+	if !strings.Contains(typeExpr, "|") {
+		return "", false
+	}
+	for _, part := range strings.Split(typeExpr, "|") {
+		value := strings.TrimSpace(part)
+		if (strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) ||
+			(strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) {
+			return "'" + strings.Trim(value, `'"`) + "'", true
+		}
+		if value == "true" || value == "false" || value == "null" || value == "undefined" || isNumericLiteral(value) {
+			return value, true
+		}
+	}
+	return "", false
 }
 
 func jsResolveNamedTSType(typeExpr string, decls map[string]string) string {
