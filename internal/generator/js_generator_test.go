@@ -627,6 +627,104 @@ module.exports = { Widget };
 	}
 }
 
+func TestGenerateMochaCoverageTaskUsesChaiESMFunctionErrorAssertion(t *testing.T) {
+	src := `export function divide(a, b) {
+  if (b === 0) throw new Error('zero')
+  return a / b
+}
+
+export function add(a, b) {
+  return a + b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-esm-error-1",
+		Framework:       "mocha",
+		Target:          "divide",
+		LineRange:       "2-2",
+		GapType:         "error_path",
+		TestName:        "covers esm divide zero error",
+		SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import { expect } from 'chai';",
+		"import { divide } from './calc';",
+		"it('covers esm divide zero error'",
+		"expect(() => divide(1, 0)).to.throw();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"require('chai')", "require('./calc')", "describe('add'", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha ESM function error assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
+func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing.T) {
+	src := `export class Widget {
+  async load(url) {
+    if (url === undefined) throw new Error('missing url')
+    return { ok: true }
+  }
+
+  save(payload) {
+    return payload
+  }
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "widget.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-esm-class-error-1",
+		Framework:       "mocha",
+		Target:          "Widget.load",
+		LineRange:       "3-3",
+		GapType:         "error_path",
+		TestName:        "covers esm widget load missing url",
+		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import { expect } from 'chai';",
+		"import { Widget } from './widget';",
+		"describe('Widget'",
+		"describe('load'",
+		"it('covers esm widget load missing url', async () => {",
+		"const instance = new Widget();",
+		"let caughtError;",
+		"await instance.load(undefined);",
+		"caughtError = err;",
+		"expect(caughtError).to.exist;",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"require('chai')", "require('./widget')", "describe('save'", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha ESM class async error assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
 	funcs := []jsFuncInfo{{Name: "add"}, {Name: "sub"}}
 	classes := []jsClassInfo{
