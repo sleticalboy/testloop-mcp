@@ -29,6 +29,7 @@ type TestGenerationRequest struct {
 
 type GenerateTestsOptions struct {
 	CoverageTask *types.CoverageTestTask
+	Framework    string
 }
 
 type StaticProvider struct{}
@@ -164,7 +165,19 @@ func generateTestsStaticWithOptions(srcPath string, opts GenerateTestsOptions) (
 	if opts.CoverageTask != nil {
 		return generateTestsForCoverageTask(srcPath, opts.CoverageTask)
 	}
+	if isJavaScriptPath(srcPath) && strings.TrimSpace(opts.Framework) != "" {
+		return GenerateJavaScriptTestsWithFramework(srcPath, opts.Framework)
+	}
 	return GenerateTestsStatic(srcPath)
+}
+
+func isJavaScriptPath(srcPath string) bool {
+	switch strings.ToLower(filepath.Ext(srcPath)) {
+	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+		return true
+	default:
+		return false
+	}
 }
 
 func generateTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {

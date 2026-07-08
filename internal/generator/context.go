@@ -24,6 +24,16 @@ func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions
 		ctx = buildPyGenerationContext(srcPath)
 	}
 	if opts.CoverageTask == nil {
+		if ctx != nil && strings.TrimSpace(opts.Framework) != "" {
+			ctx.Framework = normalizedFrameworkForPath(srcPath, opts.Framework)
+		}
+		if ctx == nil && strings.TrimSpace(opts.Framework) != "" {
+			ctx = &types.TestGenerationContext{
+				Language:   languageNameForPath(srcPath),
+				Framework:  normalizedFrameworkForPath(srcPath, opts.Framework),
+				SourceFile: srcPath,
+			}
+		}
 		return ctx
 	}
 	if ctx == nil {
@@ -35,6 +45,13 @@ func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions
 	}
 	ctx.CoverageTask = opts.CoverageTask
 	return ctx
+}
+
+func normalizedFrameworkForPath(srcPath, framework string) string {
+	if isJavaScriptPath(srcPath) {
+		return normalizeJavaScriptTestFramework(framework)
+	}
+	return strings.TrimSpace(framework)
 }
 
 func languageNameForPath(srcPath string) string {

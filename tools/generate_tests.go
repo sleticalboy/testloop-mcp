@@ -16,7 +16,7 @@ import (
 
 type generateTestsInput struct {
 	FilePath     string                  `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go"`
-	Framework    string                  `json:"framework,omitempty" jsonschema:"测试框架，默认 go test"`
+	Framework    string                  `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认按文件类型选择"`
 	Provider     string                  `json:"provider,omitempty" jsonschema:"测试生成 provider: static、llm 或 auto，默认 static"`
 	CoverageTask *types.CoverageTestTask `json:"coverage_task,omitempty" jsonschema:"parse_coverage 返回的单个 test_tasks 项，用于按覆盖率缺口生成测试"`
 }
@@ -37,7 +37,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, err
 	}
 
-	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask}
+	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask, Framework: input.Framework}
 	code, err := generator.GenerateTestsWithProviderOptions(ctx, filePath, provider, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("生成测试失败: %w", err)

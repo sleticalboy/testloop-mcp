@@ -176,18 +176,18 @@ command = "/absolute/path/to/testloop-mcp"
 
 ### `generate_tests`
 
-根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（默认 Jest 风格；coverage task 支持 Jest/Vitest/Mocha 断言风格）、Python（pytest）。
+根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（默认 Jest 风格；传入 `framework=vitest/mocha` 时切换匹配断言风格）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `file_path` | string | ✅ | 源文件路径（`.go` / `.rs` / `.java` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
-| `framework` | string | — | 测试框架，默认根据文件扩展名自动选择 |
+| `framework` | string | — | 测试框架，默认根据文件扩展名自动选择；JS/TS 支持 `jest` / `vitest` / `mocha` |
 | `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
 | `coverage_task` | object | — | `parse_coverage` 返回的单个 `test_tasks` 项，用于按覆盖率缺口生成测试 |
 
 **返回：** `{ status, test_file, generated_cases, preview, context, coverage_task, provider }`
 
-传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。JS/TS coverage task 会按任务框架选择 Jest/Vitest 的 `expect(...).toBe(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` 风格。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
+传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。JS/TS 普通生成和 coverage task 都会按框架选择 Jest/Vitest 的 `expect(...).toBe(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` 风格。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
 
 **LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
 
@@ -340,7 +340,7 @@ testloop-mcp/
 │   │   ├── context.go                # 面向 LLM/AI Agent 的测试生成上下文
 │   │   ├── go_gotests.go             # gotests 优先生成器
 │   │   ├── go_generator.go           # Go AST 回退测试生成器（泛型/通道/接口/变参）
-│   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；coverage task 支持 Jest/Vitest/Mocha）
+│   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；支持 Jest/Vitest/Mocha 断言风格）
 │   │   ├── py_generator.go           # Python pytest 测试生成器（def/class/async）
 │   │   ├── rs_generator.go           # Rust 测试生成器
 │   │   └── java_generator.go         # Java JUnit 5 测试生成器

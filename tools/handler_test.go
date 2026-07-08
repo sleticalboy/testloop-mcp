@@ -662,6 +662,38 @@ func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.js")
+	if err := os.WriteFile(source, []byte("function add(a, b) {\n  return a + b;\n}\n\nmodule.exports = { add };\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source, Framework: "mocha"})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"expect(result).to.equal((1 + 2));",
+	} {
+		if !strings.Contains(generated.Preview, want) {
+			t.Fatalf("expected %q in generated preview:\n%s", want, generated.Preview)
+		}
+	}
+	if strings.Contains(generated.Preview, "toBe((1 + 2))") {
+		t.Fatalf("expected Mocha/Chai assertions, got:\n%s", generated.Preview)
+	}
+	if generated.Context == nil || generated.Context.Framework != "mocha" {
+		t.Fatalf("context framework = %+v, want mocha", generated.Context)
+	}
+}
+
 func assertGeneratedCoverageTaskOutput(t *testing.T, result *mcp.CallToolResult, task *types.CoverageTestTask, wantSnippet string) types.GenerateTestsOutput {
 	t.Helper()
 

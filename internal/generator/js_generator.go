@@ -78,7 +78,15 @@ func (a jsFuncAnalysis) returnTypeForAssert() string {
 
 // GenerateJestTests reads JS/TS source and generates default Jest-style tests.
 func GenerateJestTests(srcPath string) (string, error) {
-	return generateJavaScriptTests(srcPath, nil)
+	return GenerateJavaScriptTestsWithFramework(srcPath, "jest")
+}
+
+// GenerateJavaScriptTestsWithFramework reads JS/TS source and generates tests
+// for the requested JavaScript framework. Empty, Jest, and Vitest use Jest-style
+// matchers; Mocha uses Chai assertions.
+func GenerateJavaScriptTestsWithFramework(srcPath, framework string) (string, error) {
+	framework = normalizeJavaScriptTestFramework(framework)
+	return generateJavaScriptTests(srcPath, &types.CoverageTestTask{Framework: framework}, false)
 }
 
 // GenerateJavaScriptTestsForCoverageTask generates JS/TS tests from a coverage
@@ -88,7 +96,18 @@ func GenerateJavaScriptTestsForCoverageTask(srcPath string, task *types.Coverage
 	if task == nil {
 		return GenerateJestTests(srcPath)
 	}
-	return generateJavaScriptTests(srcPath, task)
+	return generateJavaScriptTests(srcPath, task, true)
+}
+
+func normalizeJavaScriptTestFramework(framework string) string {
+	switch strings.ToLower(strings.TrimSpace(framework)) {
+	case "mocha":
+		return "mocha"
+	case "vitest":
+		return "vitest"
+	default:
+		return "jest"
+	}
 }
 
 // GenerateJestTestsForCoverageTask is kept for compatibility with existing
@@ -97,7 +116,7 @@ func GenerateJestTestsForCoverageTask(srcPath string, task *types.CoverageTestTa
 	return GenerateJavaScriptTestsForCoverageTask(srcPath, task)
 }
 
-func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask) (string, error) {
+func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, coverageMode bool) (string, error) {
 	source, err := os.ReadFile(srcPath)
 	if err != nil {
 		return "", fmt.Errorf("读取源文件失败: %w", err)
@@ -130,18 +149,22 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask) (stri
 	}
 
 	for _, fn := range funcs {
-		if task != nil {
+		if coverageMode {
 			buf.WriteString(genJSFuncTestForCoverageTask(fn, task))
+		} else if task != nil {
+			buf.WriteString(genJSFuncTest(fn, jsAssertionStyleForTask(task)))
 		} else {
-			buf.WriteString(genJestFuncTest(fn))
+			buf.WriteString(genJSFuncTest(fn, jsAssertionStyleJest))
 		}
 	}
 
 	for _, cls := range classes {
-		if task != nil {
+		if coverageMode {
 			buf.WriteString(genJSClassTestForCoverageTask(cls, task))
+		} else if task != nil {
+			buf.WriteString(genJSClassTest(cls, jsAssertionStyleForTask(task)))
 		} else {
-			buf.WriteString(genJestClassTest(cls, isESModule, moduleName))
+			buf.WriteString(genJSClassTest(cls, jsAssertionStyleJest))
 		}
 	}
 
@@ -395,7 +418,7 @@ func extractJSBranchReturns(body string) map[string]string {
 
 // ---- 测试生成 ----
 
-func genJestFuncTest(fn jsFuncInfo) string {
+func genJSFuncTest(fn jsFuncInfo, assertions jsAssertionStyle) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
@@ -406,7 +429,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 	} else {
 		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgList(fn.Params)))
 	}
-	sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, nil, "    "))
+	sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, nil, "    ", assertions))
 	sb.WriteString("  });\n\n")
 
 	for _, b := range fn.Analysis.Boundaries {
@@ -417,11 +440,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 			b.Param, jsEscapeTestNameValue(b.Value), jsAsyncArrow(fn.IsAsync)))
 		args := jsArgListWithBoundary(fn.Params, b)
 		if fn.Analysis.Throws {
-			if fn.IsAsync {
-				sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
-			} else {
-				sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
-			}
+			sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
 		} else {
 			if fn.IsAsync {
 				sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
@@ -429,7 +448,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 				sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 			}
 			boundary := b
-			sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, &boundary, "    "))
+			sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, &boundary, "    ", assertions))
 		}
 		sb.WriteString("  });\n\n")
 	}
@@ -437,11 +456,7 @@ func genJestFuncTest(fn jsFuncInfo) string {
 	if fn.Analysis.Throws {
 		sb.WriteString(fmt.Sprintf("  it('should throw on invalid input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
 		args := jsInvalidArgList(fn.Params, fn.Analysis.Boundaries)
-		if fn.IsAsync {
-			sb.WriteString(fmt.Sprintf("    await expect(%s(%s)).rejects.toThrow();\n", fn.Name, args))
-		} else {
-			sb.WriteString(fmt.Sprintf("    expect(() => %s(%s)).toThrow();\n", fn.Name, args))
-		}
+		sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
 		sb.WriteString("  });\n\n")
 	}
 
@@ -452,13 +467,17 @@ func genJestFuncTest(fn jsFuncInfo) string {
 		} else {
 			sb.WriteString(fmt.Sprintf("    const result = %s();\n", fn.Name))
 		}
-		sb.WriteString(genJSResultAssertionWithArgs(fn.Analysis, fn.Params, nil, "    "))
+		sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, nil, "    ", assertions))
 		sb.WriteString("  });\n\n")
 	}
 
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func genJestFuncTest(fn jsFuncInfo) string {
+	return genJSFuncTest(fn, jsAssertionStyleJest)
 }
 
 func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) string {
@@ -491,7 +510,7 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	return sb.String()
 }
 
-func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) string {
+func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", cls.Name))
@@ -499,7 +518,11 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 	sb.WriteString(fmt.Sprintf("  describe('constructor', () => {\n"))
 	sb.WriteString(fmt.Sprintf("    it('should create an instance', () => {\n"))
 	sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
-	sb.WriteString(fmt.Sprintf("      expect(instance).toBeInstanceOf(%s);\n", cls.Name))
+	if assertions == jsAssertionStyleChai {
+		sb.WriteString(fmt.Sprintf("      expect(instance).to.be.instanceOf(%s);\n", cls.Name))
+	} else {
+		sb.WriteString(fmt.Sprintf("      expect(instance).toBeInstanceOf(%s);\n", cls.Name))
+	}
 	sb.WriteString("    });\n")
 	sb.WriteString("  });\n\n")
 
@@ -513,18 +536,14 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 		} else {
 			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgList(method.Params)))
 		}
-		sb.WriteString(genJSResultAssertionWithArgs(method.Analysis, method.Params, nil, "      "))
+		sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, nil, "      ", assertions))
 		sb.WriteString("    });\n\n")
 
 		if method.Analysis.Throws {
 			sb.WriteString(fmt.Sprintf("    it('should throw on invalid input', %s => {\n", jsAsyncArrow(method.IsAsync)))
 			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 			args := jsInvalidArgList(method.Params, method.Analysis.Boundaries)
-			if method.IsAsync {
-				sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
-			} else {
-				sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
-			}
+			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
 			sb.WriteString("    });\n\n")
 		}
 
@@ -537,11 +556,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
 			args := jsArgListWithBoundary(method.Params, b)
 			if method.Analysis.Throws {
-				if method.IsAsync {
-					sb.WriteString(fmt.Sprintf("      await expect(instance.%s(%s)).rejects.toThrow();\n", method.Name, args))
-				} else {
-					sb.WriteString(fmt.Sprintf("      expect(() => instance.%s(%s)).toThrow();\n", method.Name, args))
-				}
+				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
 			} else {
 				if method.IsAsync {
 					sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
@@ -549,7 +564,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
 				}
 				boundary := b
-				sb.WriteString(genJSResultAssertionWithArgs(method.Analysis, method.Params, &boundary, "      "))
+				sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, &boundary, "      ", assertions))
 			}
 			sb.WriteString("    });\n\n")
 		}
@@ -560,6 +575,10 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) string {
+	return genJSClassTest(cls, jsAssertionStyleJest)
 }
 
 func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
@@ -608,6 +627,10 @@ func genJSResultAssertionWithArgs(a jsFuncAnalysis, params []jsParamInfo, bounda
 
 func genJSResultAssertionWithTaskArgs(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string) string {
 	return genJSResultAssertionWithTaskArgsStyle(a, params, boundary, values, indent, jsAssertionStyleJest)
+}
+
+func genJSResultAssertionWithArgsStyle(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, indent string, style jsAssertionStyle) string {
+	return genJSResultAssertionWithTaskArgsStyle(a, params, boundary, nil, indent, style)
 }
 
 type jsAssertionStyle string

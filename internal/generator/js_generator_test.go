@@ -88,6 +88,57 @@ export class Baz {
 	}
 }
 
+func TestGenerateJavaScriptTestsWithFramework(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "calc.js")
+	src := `function add(a, b) {
+  return a + b;
+}
+
+module.exports = { add };
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		framework string
+		want      []string
+		forbidden []string
+	}{
+		{
+			name:      "vitest keeps jest style matchers",
+			framework: "vitest",
+			want: []string{
+				"const { add } = require('./calc');",
+				"expect(result).toBe((1 + 2));",
+			},
+			forbidden: []string{"require('chai')", "to.equal((1 + 2))"},
+		},
+		{
+			name:      "mocha uses chai assertions",
+			framework: "mocha",
+			want: []string{
+				"const { expect } = require('chai');",
+				"const { add } = require('./calc');",
+				"expect(result).to.equal((1 + 2));",
+			},
+			forbidden: []string{"toBe((1 + 2))", "rejects.toThrow()"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, err := GenerateJavaScriptTestsWithFramework(srcPath, tt.framework)
+			if err != nil {
+				t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+			}
+			assertGeneratedJS(t, code, tt.want, tt.forbidden)
+		})
+	}
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;
