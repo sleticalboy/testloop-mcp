@@ -491,6 +491,78 @@ export function status(): string {
 			},
 			forbidden: []string{"describe('status'", "status(", "to.equal(", "require('chai')", "caughtError"},
 		},
+		{
+			name:     "jest commonjs class branch",
+			fileName: "widget.js",
+			source: `class Widget {
+  load(mode, count) {
+    if (mode === 'short') return count
+    return count + 1
+  }
+
+  save(payload) {
+    return payload
+  }
+}
+
+module.exports = { Widget };
+`,
+			task: types.CoverageTestTask{
+				ID:              "jest-class-branch-1",
+				Framework:       "jest",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers jest widget short mode",
+				SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+				AssertionFocus:  []string{"断言 Jest class 分支返回值"},
+			},
+			wants: []string{
+				"const { Widget } = require('./widget');",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers jest widget short mode'",
+				"coverage task: jest-class-branch-1 | lines 3-3 | 断言 Jest class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
+				"const instance = new Widget();",
+				"const result = instance.load('short', 1);",
+				"expect(result).toBe((1));",
+			},
+			forbidden: []string{"describe('save'", "to.equal(", "require('chai')", "caughtError"},
+		},
+		{
+			name:     "vitest typescript class async error",
+			fileName: "widget.ts",
+			source: `export class Widget {
+  async load(url?: string): Promise<{ ok: boolean }> {
+    if (url === undefined) throw new Error('missing url')
+    return { ok: true }
+  }
+
+  save(payload: unknown): unknown {
+    return payload
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-class-error-1",
+				Framework:       "vitest",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "error_path",
+				TestName:        "covers vitest widget load missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"import { Widget } from './widget';",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers vitest widget load missing url', async () => {",
+				"coverage task: vitest-class-error-1 | lines 3-3 | 构造满足条件 `url === undefined` 的输入",
+				"const instance = new Widget();",
+				"await expect(instance.load(undefined)).rejects.toThrow();",
+			},
+			forbidden: []string{"describe('save'", "to.equal(", "require('chai')", "caughtError"},
+		},
 	}
 
 	for _, tt := range tests {
