@@ -139,6 +139,33 @@ module.exports = { add };
 	}
 }
 
+func TestGenerateJavaScriptTestsWithFrameworkESMVitestImportsAPI(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "calc.ts")
+	src := `export function add(a: number, b: number): number {
+  return a + b;
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { add } from './calc';",
+		"expect(result).toBe((1 + 2));",
+	}, []string{
+		"from 'chai'",
+		"require('vitest')",
+		"to.equal((1 + 2))",
+	})
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;
