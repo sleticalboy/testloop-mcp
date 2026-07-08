@@ -429,12 +429,16 @@ func genJSFuncTest(fn jsFuncInfo, assertions jsAssertionStyle) string {
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 
 	sb.WriteString(fmt.Sprintf("  it('should return expected result for normal input', %s => {\n", jsAsyncArrow(fn.IsAsync)))
+	setup, callValues, clientCall := genJSInjectedClientSetup(fn.Params, fn.Analysis, "    ")
+	sb.WriteString(setup)
+	args := jsArgListWithValuesForAnalysis(fn.Params, callValues, &fn.Analysis)
 	if fn.IsAsync {
-		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, jsArgListForAnalysis(fn.Params, fn.Analysis)))
+		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
 	} else {
-		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, jsArgListForAnalysis(fn.Params, fn.Analysis)))
+		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 	}
 	sb.WriteString(genJSResultAssertionWithArgsStyle(fn.Analysis, fn.Params, nil, "    ", assertions))
+	sb.WriteString(genJSInjectedClientCallAssertion(clientCall, "    ", assertions))
 	sb.WriteString("  });\n\n")
 
 	for _, b := range fn.Analysis.Boundaries {
@@ -491,7 +495,7 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	var sb strings.Builder
 	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
 	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
-	args := jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis)
+	args := jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis, nil)
 	assertions := jsAssertionStyleForTask(task)
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
@@ -506,12 +510,16 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 		return sb.String()
 	}
 
+	setup, callValues, clientCall := genJSInjectedClientSetup(fn.Params, fn.Analysis, "    ")
+	args = jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis, callValues)
+	sb.WriteString(setup)
 	if fn.IsAsync {
 		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
 	} else {
 		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 	}
 	sb.WriteString(genJSResultAssertionWithTaskArgsStyle(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    ", assertions))
+	sb.WriteString(genJSInjectedClientCallAssertion(clientCall, "    ", assertions))
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -598,7 +606,7 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	for _, method := range cls.Methods {
 		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
-		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis)
+		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, nil)
 
 		sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 		sb.WriteString(fmt.Sprintf("    it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(method.IsAsync)))
@@ -838,7 +846,7 @@ func jsResponseJSONReceiver(expr string) (string, bool) {
 }
 
 func jsExpectedInjectedClientReturn(expr string, params []jsParamInfo) (string, bool) {
-	receiver, _, ok := jsInjectedClientCall(expr)
+	receiver, _, _, ok := jsInjectedClientCall(expr)
 	if !ok {
 		return "", false
 	}
@@ -850,16 +858,16 @@ func jsExpectedInjectedClientReturn(expr string, params []jsParamInfo) (string, 
 	return "", false
 }
 
-func jsInjectedClientCall(expr string) (receiver, method string, ok bool) {
+func jsInjectedClientCall(expr string) (receiver, method, args string, ok bool) {
 	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
 	expr = strings.TrimPrefix(expr, "await ")
 	expr = strings.TrimSpace(expr)
-	re := regexp.MustCompile(`^([A-Za-z_$][A-Za-z0-9_$]*)\.(get|fetch|request)\s*\(`)
+	re := regexp.MustCompile(`^([A-Za-z_$][A-Za-z0-9_$]*)\.(get|fetch|request)\s*\((.*)\)$`)
 	matches := re.FindStringSubmatch(expr)
-	if len(matches) != 3 {
-		return "", "", false
+	if len(matches) != 4 {
+		return "", "", "", false
 	}
-	return matches[1], matches[2], true
+	return matches[1], matches[2], strings.TrimSpace(matches[3]), true
 }
 
 func jsReturnExprIsSafe(expr string) bool {
@@ -1051,10 +1059,13 @@ func jsArgListWithBoundaryForAnalysis(params []jsParamInfo, b jsBoundary, analys
 	return jsArgListWithValuesForAnalysis(params, values, &analysis)
 }
 
-func jsArgListForCoverageTask(params []jsParamInfo, task *types.CoverageTestTask, boundary *jsBoundary, analysis jsFuncAnalysis) string {
+func jsArgListForCoverageTask(params []jsParamInfo, task *types.CoverageTestTask, boundary *jsBoundary, analysis jsFuncAnalysis, overrides map[string]string) string {
 	values := coverageTaskInputValues(task, "javascript")
 	if boundary != nil {
 		values[boundary.Param] = boundary.Value
+	}
+	for name, value := range overrides {
+		values[name] = value
 	}
 	return jsArgListWithValuesForAnalysis(params, values, &analysis)
 }
@@ -1197,20 +1208,77 @@ func jsCompactName(name string) string {
 }
 
 func jsInjectedClientMethodForParam(analysis *jsFuncAnalysis, param string) string {
+	if info := jsInjectedClientCallForParam(analysis, param); info != nil {
+		return info.Method
+	}
+	return ""
+}
+
+type jsInjectedClientCallInfo struct {
+	Param  string
+	Method string
+	Args   string
+}
+
+func genJSInjectedClientSetup(params []jsParamInfo, analysis jsFuncAnalysis, indent string) (string, map[string]string, *jsInjectedClientCallInfo) {
+	info := jsInjectedClientCallForParams(params, analysis)
+	if info == nil {
+		return "", nil, nil
+	}
+
+	setup := fmt.Sprintf("%sconst %s = {\n", indent, info.Param) +
+		fmt.Sprintf("%s  %sCalls: [],\n", indent, info.Method) +
+		fmt.Sprintf("%s  %s: async (...args) => {\n", indent, info.Method) +
+		fmt.Sprintf("%s    %s.%sCalls.push(args);\n", indent, info.Param, info.Method) +
+		fmt.Sprintf("%s    return { ok: true };\n", indent) +
+		fmt.Sprintf("%s  },\n", indent) +
+		fmt.Sprintf("%s};\n", indent)
+
+	return setup, map[string]string{info.Param: info.Param}, info
+}
+
+func jsInjectedClientCallForParams(params []jsParamInfo, analysis jsFuncAnalysis) *jsInjectedClientCallInfo {
+	for _, p := range params {
+		if !jsNameLooksLikeClientParam(jsCompactName(p.Name)) {
+			continue
+		}
+		if info := jsInjectedClientCallForParam(&analysis, p.Name); info != nil {
+			return info
+		}
+	}
+	return nil
+}
+
+func jsInjectedClientCallForParam(analysis *jsFuncAnalysis, param string) *jsInjectedClientCallInfo {
 	if analysis == nil || param == "" || !jsNameLooksLikeClientParam(jsCompactName(param)) {
-		return ""
+		return nil
 	}
 	for _, expr := range analysis.Returns {
-		if receiver, method, ok := jsInjectedClientCall(expr); ok && receiver == param {
-			return method
+		if receiver, method, args, ok := jsInjectedClientCall(expr); ok && receiver == param {
+			return &jsInjectedClientCallInfo{Param: param, Method: method, Args: args}
 		}
 	}
 	for _, boundary := range analysis.Boundaries {
-		if receiver, method, ok := jsInjectedClientCall(boundary.ReturnExpr); ok && receiver == param {
-			return method
+		if receiver, method, args, ok := jsInjectedClientCall(boundary.ReturnExpr); ok && receiver == param {
+			return &jsInjectedClientCallInfo{Param: param, Method: method, Args: args}
 		}
 	}
-	return ""
+	return nil
+}
+
+func genJSInjectedClientCallAssertion(info *jsInjectedClientCallInfo, indent string, style jsAssertionStyle) string {
+	if info == nil {
+		return ""
+	}
+	expectedArgs := "[]"
+	if args := strings.TrimSpace(info.Args); args != "" {
+		expectedArgs = "[" + args + "]"
+	}
+	expectedCalls := "[" + expectedArgs + "]"
+	if style == jsAssertionStyleChai {
+		return fmt.Sprintf("%sexpect(%s.%sCalls).to.deep.equal(%s);\n", indent, info.Param, info.Method, expectedCalls)
+	}
+	return fmt.Sprintf("%sexpect(%s.%sCalls).toEqual(%s);\n", indent, info.Param, info.Method, expectedCalls)
 }
 
 func jsInjectedClientMock(method string) string {

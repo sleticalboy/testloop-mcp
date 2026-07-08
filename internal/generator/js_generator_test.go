@@ -279,8 +279,13 @@ func TestGenerateJavaScriptTestsInjectedClientCall(t *testing.T) {
 
 	assertGeneratedJS(t, code, []string{
 		"import { describe, it, expect } from 'vitest';",
-		"const result = await loadUser({ get: async () => ({ ok: true }) });",
+		"const client = {",
+		"getCalls: [],",
+		"get: async (...args) => {",
+		"client.getCalls.push(args);",
+		"const result = await loadUser(client);",
 		"expect(result).toEqual({ ok: true });",
+		"expect(client.getCalls).toEqual([['/users/1']]);",
 	}, []string{
 		"fetch: async",
 		"request: async",
@@ -809,8 +814,13 @@ export function status(): string {
 			wants: []string{
 				"import { describe, it, expect } from 'vitest';",
 				"import { loadUser } from './users';",
-				"const result = await loadUser({ fetch: async () => ({ ok: true }) });",
+				"const api = {",
+				"fetchCalls: [],",
+				"fetch: async (...args) => {",
+				"api.fetchCalls.push(args);",
+				"const result = await loadUser(api);",
 				"expect(result).toEqual({ ok: true });",
+				"expect(api.fetchCalls).toEqual([['/users/1']]);",
 			},
 			forbidden: []string{"to.equal(", "require('chai')", "get: async", "request: async", "expect(typeof result).toBe('object')"},
 		},
@@ -1647,6 +1657,14 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 		jsFuncAnalysis{Returns: []string{"await http.request('/users/1')"}},
 	); got != "{ request: async () => ({ ok: true }) }" {
 		t.Fatalf("jsArgListForAnalysis(request) = %q", got)
+	}
+	receiver, method, args, ok := jsInjectedClientCall("await http.request('/users/1', { method: 'GET' })")
+	if !ok || receiver != "http" || method != "request" || args != "'/users/1', { method: 'GET' }" {
+		t.Fatalf("jsInjectedClientCall() = %q, %q, %q, %v", receiver, method, args, ok)
+	}
+	callInfo := &jsInjectedClientCallInfo{Param: "http", Method: "request", Args: "'/users/1', { method: 'GET' }"}
+	if got := genJSInjectedClientCallAssertion(callInfo, "  ", jsAssertionStyleChai); got != "  expect(http.requestCalls).to.deep.equal([['/users/1', { method: 'GET' }]]);\n" {
+		t.Fatalf("Chai client call assertion = %q", got)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
