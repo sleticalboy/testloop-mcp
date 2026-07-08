@@ -520,6 +520,113 @@ module.exports = { fetchData };
 	}
 }
 
+func TestGenerateMochaCoverageTaskUsesChaiClassSyncErrorAssertion(t *testing.T) {
+	src := `class Widget {
+  save(payload) {
+    if (payload === null) throw new Error('missing payload')
+    return true
+  }
+
+  load(mode) {
+    return mode
+  }
+}
+
+module.exports = { Widget };
+`
+	srcPath := filepath.Join(t.TempDir(), "widget.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-class-error-1",
+		Framework:       "mocha",
+		Target:          "Widget.save",
+		LineRange:       "3-3",
+		GapType:         "error_path",
+		TestName:        "covers widget save missing payload",
+		SuggestedInputs: []string{"构造满足条件 `payload === null` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"const { Widget } = require('./widget');",
+		"describe('Widget'",
+		"describe('save'",
+		"it('covers widget save missing payload'",
+		"const instance = new Widget();",
+		"expect(() => instance.save(null)).to.throw();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"describe('load'", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha class sync error assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
+func TestGenerateMochaCoverageTaskUsesChaiClassAsyncErrorAssertion(t *testing.T) {
+	src := `class Widget {
+  async load(url) {
+    if (url === undefined) throw new Error('missing url')
+    return { ok: true }
+  }
+
+  save(payload) {
+    return payload
+  }
+}
+
+module.exports = { Widget };
+`
+	srcPath := filepath.Join(t.TempDir(), "widget.js")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "mocha-class-error-2",
+		Framework:       "mocha",
+		Target:          "Widget.load",
+		LineRange:       "3-3",
+		GapType:         "error_path",
+		TestName:        "covers widget load missing url",
+		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+	}
+
+	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"const { expect } = require('chai');",
+		"const { Widget } = require('./widget');",
+		"describe('Widget'",
+		"describe('load'",
+		"it('covers widget load missing url', async () => {",
+		"const instance = new Widget();",
+		"let caughtError;",
+		"await instance.load(undefined);",
+		"caughtError = err;",
+		"expect(caughtError).to.exist;",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"describe('save'", "toThrow()", "rejects.toThrow()"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("Mocha class async error assertion should not contain %q:\n%s", forbidden, code)
+		}
+	}
+}
+
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
 	funcs := []jsFuncInfo{{Name: "add"}, {Name: "sub"}}
 	classes := []jsClassInfo{
