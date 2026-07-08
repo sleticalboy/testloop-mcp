@@ -33,6 +33,22 @@ func TestGeneratorGoldenOutputs(t *testing.T) {
 			golden: "testdata/golden/js_branch.golden",
 			run:    GenerateJestTests,
 		},
+		{
+			name:   "js branch return vitest",
+			source: "testdata/golden/js_branch.js",
+			golden: "testdata/golden/js_branch_vitest.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "vitest")
+			},
+		},
+		{
+			name:   "js branch return mocha",
+			source: "testdata/golden/js_branch.js",
+			golden: "testdata/golden/js_branch_mocha.golden",
+			run: func(sourcePath string) (string, error) {
+				return GenerateJavaScriptTestsWithFramework(sourcePath, "mocha")
+			},
+		},
 	}
 
 	for _, tt := range tests {
