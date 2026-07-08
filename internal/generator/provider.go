@@ -174,7 +174,7 @@ func generateTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) 
 	case ".py":
 		return GeneratePytestTestsForCoverageTask(srcPath, task)
 	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
-		return GenerateJestTestsForCoverageTask(srcPath, task)
+		return GenerateJavaScriptTestsForCoverageTask(srcPath, task)
 	case ".rs":
 		source, err := os.ReadFile(srcPath)
 		if err != nil {

@@ -571,9 +571,9 @@ module.exports = { Widget };
 			if err := os.WriteFile(srcPath, []byte(tt.source), 0644); err != nil {
 				t.Fatal(err)
 			}
-			code, err := GenerateJestTestsForCoverageTask(srcPath, &tt.task)
+			code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &tt.task)
 			if err != nil {
-				t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+				t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
 			}
 			assertGeneratedJS(t, code, tt.wants, tt.forbidden)
 		})
@@ -1009,9 +1009,9 @@ export function add(a: number, b: number): number {
 			if err := os.WriteFile(srcPath, []byte(tt.source), 0644); err != nil {
 				t.Fatal(err)
 			}
-			code, err := GenerateJestTestsForCoverageTask(srcPath, &tt.task)
+			code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &tt.task)
 			if err != nil {
-				t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+				t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
 			}
 			assertGeneratedJS(t, code, tt.wants, tt.forbidden)
 		})

@@ -76,19 +76,28 @@ func (a jsFuncAnalysis) returnTypeForAssert() string {
 
 // ---- 核心函数 ----
 
-// GenerateJestTests 读取 JS/TS 源文件，用 tree-sitter 解析后生成 Jest 测试代码
+// GenerateJestTests reads JS/TS source and generates default Jest-style tests.
 func GenerateJestTests(srcPath string) (string, error) {
-	return generateJestTests(srcPath, nil)
+	return generateJavaScriptTests(srcPath, nil)
 }
 
-func GenerateJestTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+// GenerateJavaScriptTestsForCoverageTask generates JS/TS tests from a coverage
+// task. The task framework controls matcher/import style for Jest, Vitest, and
+// Mocha while keeping the same static JS/TS parser pipeline.
+func GenerateJavaScriptTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
 	if task == nil {
 		return GenerateJestTests(srcPath)
 	}
-	return generateJestTests(srcPath, task)
+	return generateJavaScriptTests(srcPath, task)
 }
 
-func generateJestTests(srcPath string, task *types.CoverageTestTask) (string, error) {
+// GenerateJestTestsForCoverageTask is kept for compatibility with existing
+// callers. New code should call GenerateJavaScriptTestsForCoverageTask.
+func GenerateJestTestsForCoverageTask(srcPath string, task *types.CoverageTestTask) (string, error) {
+	return GenerateJavaScriptTestsForCoverageTask(srcPath, task)
+}
+
+func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask) (string, error) {
 	source, err := os.ReadFile(srcPath)
 	if err != nil {
 		return "", fmt.Errorf("读取源文件失败: %w", err)

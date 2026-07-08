@@ -94,7 +94,7 @@ func TestGeneratorCoverageTaskGoldenOutputs(t *testing.T) {
 			run: GeneratePytestTestsForCoverageTask,
 		},
 		{
-			name:   "jest coverage task",
+			name:   "javascript coverage task",
 			source: "testdata/golden/js_task.js",
 			golden: "testdata/golden/js_task.golden",
 			task: types.CoverageTestTask{
@@ -107,7 +107,7 @@ func TestGeneratorCoverageTaskGoldenOutputs(t *testing.T) {
 				AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
 				SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
 			},
-			run: GenerateJestTestsForCoverageTask,
+			run: GenerateJavaScriptTestsForCoverageTask,
 		},
 		{
 			name:   "rust coverage task",

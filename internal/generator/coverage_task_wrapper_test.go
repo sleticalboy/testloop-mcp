@@ -39,12 +39,19 @@ func Add(a, b int) int {
 
 module.exports = { add };
 `)
-	jsCode, err := GenerateJestTestsForCoverageTask(jsPath, nil)
+	jsCode, err := GenerateJavaScriptTestsForCoverageTask(jsPath, nil)
 	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask(nil) error = %v", err)
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask(nil) error = %v", err)
 	}
 	if !strings.Contains(jsCode, "describe('add'") {
 		t.Fatalf("expected regular Jest output, got:\n%s", jsCode)
+	}
+	legacyJSCode, err := GenerateJestTestsForCoverageTask(jsPath, nil)
+	if err != nil {
+		t.Fatalf("GenerateJestTestsForCoverageTask(nil) error = %v", err)
+	}
+	if legacyJSCode != jsCode {
+		t.Fatalf("legacy Jest coverage wrapper diverged from JavaScript wrapper")
 	}
 
 	_, javaCode, err := GenerateJavaTestsForCoverageTask([]byte(`public class Calculator {
