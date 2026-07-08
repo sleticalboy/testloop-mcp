@@ -366,8 +366,14 @@ type Profile = {
   owner?: User | null
 }
 
+type Meta = {
+  total: number
+  nextUrl?: string | null
+}
+
 type Users = readonly User[]
 type MaybeUsers = ReadonlyArray<User | null>
+type UserTuple = readonly [User, Meta]
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
@@ -383,6 +389,10 @@ export async function listUsers(response: Response): Promise<Users> {
 
 export async function searchUsers(client: { fetch(path: string): Promise<MaybeUsers> }): Promise<MaybeUsers> {
   return await client.fetch('/users');
+}
+
+export async function loadUserTuple(response: Response): Promise<UserTuple> {
+  return await response.json();
 }
 `
 	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
@@ -407,6 +417,8 @@ export async function searchUsers(client: { fetch(path: string): Promise<MaybeUs
 		"const result = await searchUsers(client);",
 		"expect(result).toEqual([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]);",
 		"expect(client.fetchCalls).toEqual([['/users']]);",
+		"const result = await loadUserTuple({ json: async () => ([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]) });",
+		"expect(result).toEqual([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]);",
 	}, []string{
 		"{ ok: true }",
 		"expect(typeof result).toBe('object')",
@@ -986,6 +998,46 @@ export function status(): string {
 				"import { listUsers } from './api';",
 				"const result = await listUsers({ json: async () => ([{ userId: 1, email: 'user@example.com' }]) });",
 				"expect(result).toEqual([{ userId: 1, email: 'user@example.com' }]);",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript named response json tuple",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+}
+
+type Meta = {
+  total: number
+  nextUrl?: string | null
+}
+
+type UserTuple = readonly [User, Meta]
+
+export async function loadUserTuple(response: Response): Promise<UserTuple> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-tuple-1",
+				Framework:      "vitest",
+				Target:         "loadUserTuple",
+				LineRange:      "12-12",
+				GapType:        "return_path",
+				TestName:       "covers vitest loadUserTuple named tuple response",
+				AssertionFocus: []string{"断言命名 tuple JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { loadUserTuple } from './api';",
+				"const result = await loadUserTuple({ json: async () => ([{ userId: 1, email: 'user@example.com' }, { total: 1, nextUrl: 'https://example.com' }]) });",
+				"expect(result).toEqual([{ userId: 1, email: 'user@example.com' }, { total: 1, nextUrl: 'https://example.com' }]);",
 			},
 			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
@@ -1917,6 +1969,11 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)
+	}
+	typeDecls["Meta"] = "{ total: number; nextUrl?: string | null }"
+	typeDecls["UserTuple"] = "readonly [User, Meta]"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<UserTuple>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]" {
+		t.Fatalf("tuple alias payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},

@@ -1356,6 +1356,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 			typeExpr = branch
 		}
 	}
+	if payload, ok := jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if inner, ok := jsTSArrayElementType(typeExpr); ok {
 		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
 			return "[" + payload + "]", true
@@ -1508,6 +1511,11 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		return "null"
 	case typeExpr == "undefined" || typeExpr == "void":
 		return "undefined"
+	case jsTSTypeIsTuple(typeExpr):
+		if payload, ok := jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+			return payload
+		}
+		return "[]"
 	case jsTSTypeIsArray(typeExpr):
 		return "[]"
 	}
@@ -1597,6 +1605,40 @@ func jsMockStringValueForFieldName(name string) (string, bool) {
 	}
 }
 
+func jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	elements, ok := jsTSTupleElementTypes(typeExpr)
+	if !ok {
+		return "", false
+	}
+	values := make([]string, 0, len(elements))
+	for _, elem := range elements {
+		elem = jsNormalizeTSTupleElementType(elem)
+		if elem == "" {
+			continue
+		}
+		if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(elem, decls, seen); ok {
+			values = append(values, payload)
+			continue
+		}
+		values = append(values, jsMockValueForTSTypeWithDeclsSeen("", elem, decls, seen))
+	}
+	if len(values) == 0 {
+		return "[]", true
+	}
+	return "[" + strings.Join(values, ", ") + "]", true
+}
+
+func jsNormalizeTSTupleElementType(elem string) string {
+	elem = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(elem), "..."))
+	if elem == "" || strings.HasPrefix(elem, "{") || strings.HasPrefix(elem, "[") {
+		return elem
+	}
+	if _, typ, ok := jsParseTSTypeField(elem); ok {
+		return typ
+	}
+	return elem
+}
+
 func jsMockValueForTSLiteral(typeExpr string) (string, bool) {
 	value := strings.TrimSpace(typeExpr)
 	if (strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) ||
@@ -1663,6 +1705,26 @@ func jsTSArrayElementType(typeExpr string) (string, bool) {
 
 func jsTSTypeIsArray(typeExpr string) bool {
 	_, ok := jsTSArrayElementType(typeExpr)
+	return ok
+}
+
+func jsTSTupleElementTypes(typeExpr string) ([]string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if strings.HasPrefix(typeExpr, "readonly ") {
+		typeExpr = strings.TrimSpace(strings.TrimPrefix(typeExpr, "readonly "))
+	}
+	if !strings.HasPrefix(typeExpr, "[") || !strings.HasSuffix(typeExpr, "]") {
+		return nil, false
+	}
+	inner := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(typeExpr, "["), "]"))
+	if inner == "" {
+		return nil, true
+	}
+	return jsSplitTopLevelTypeFields(inner), true
+}
+
+func jsTSTypeIsTuple(typeExpr string) bool {
+	_, ok := jsTSTupleElementTypes(typeExpr)
 	return ok
 }
 
