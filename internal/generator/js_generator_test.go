@@ -449,77 +449,74 @@ func assertGeneratedJS(t *testing.T, code string, wants []string, forbidden []st
 	}
 }
 
-func TestGenerateMochaCoverageTaskUsesChaiSyncErrorAssertion(t *testing.T) {
-	src := `function divide(a, b) {
+func TestGenerateMochaCoverageTaskUsesChaiMatrixAssertions(t *testing.T) {
+	tests := []struct {
+		name      string
+		fileName  string
+		source    string
+		task      types.CoverageTestTask
+		wants     []string
+		forbidden []string
+	}{
+		{
+			name:     "commonjs function sync error",
+			fileName: "calc.js",
+			source: `function divide(a, b) {
   if (b === 0) throw new Error('zero')
   return a / b
 }
 
 module.exports = { divide };
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-error-1",
-		Framework:       "mocha",
-		Target:          "divide",
-		LineRange:       "2-2",
-		GapType:         "error_path",
-		TestName:        "covers divide zero error",
-		SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"const { expect } = require('chai');",
-		"it('covers divide zero error'",
-		"expect(() => divide(1, 0)).to.throw();",
-	}, []string{"toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiAsyncErrorAssertion(t *testing.T) {
-	src := `async function fetchData(url) {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-error-1",
+				Framework:       "mocha",
+				Target:          "divide",
+				LineRange:       "2-2",
+				GapType:         "error_path",
+				TestName:        "covers divide zero error",
+				SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
+			},
+			wants: []string{
+				"const { expect } = require('chai');",
+				"it('covers divide zero error'",
+				"expect(() => divide(1, 0)).to.throw();",
+			},
+			forbidden: []string{"toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "commonjs function async error",
+			fileName: "service.js",
+			source: `async function fetchData(url) {
   if (url === undefined) throw new Error('missing')
   return { ok: true }
 }
 
 module.exports = { fetchData };
-`
-	srcPath := filepath.Join(t.TempDir(), "service.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-error-2",
-		Framework:       "mocha",
-		Target:          "fetchData",
-		LineRange:       "2-2",
-		GapType:         "error_path",
-		TestName:        "covers fetchData missing url",
-		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"const { expect } = require('chai');",
-		"let caughtError;",
-		"try {",
-		"await fetchData(undefined);",
-		"caughtError = err;",
-		"expect(caughtError).to.exist;",
-	}, []string{"rejects.toThrow()", "toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiClassSyncErrorAssertion(t *testing.T) {
-	src := `class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-error-2",
+				Framework:       "mocha",
+				Target:          "fetchData",
+				LineRange:       "2-2",
+				GapType:         "error_path",
+				TestName:        "covers fetchData missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"const { expect } = require('chai');",
+				"let caughtError;",
+				"try {",
+				"await fetchData(undefined);",
+				"caughtError = err;",
+				"expect(caughtError).to.exist;",
+			},
+			forbidden: []string{"rejects.toThrow()", "toThrow()"},
+		},
+		{
+			name:     "commonjs class sync error",
+			fileName: "widget.js",
+			source: `class Widget {
   save(payload) {
     if (payload === null) throw new Error('missing payload')
     return true
@@ -531,38 +528,31 @@ func TestGenerateMochaCoverageTaskUsesChaiClassSyncErrorAssertion(t *testing.T) 
 }
 
 module.exports = { Widget };
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-class-error-1",
-		Framework:       "mocha",
-		Target:          "Widget.save",
-		LineRange:       "3-3",
-		GapType:         "error_path",
-		TestName:        "covers widget save missing payload",
-		SuggestedInputs: []string{"构造满足条件 `payload === null` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"const { expect } = require('chai');",
-		"const { Widget } = require('./widget');",
-		"describe('Widget'",
-		"describe('save'",
-		"it('covers widget save missing payload'",
-		"const instance = new Widget();",
-		"expect(() => instance.save(null)).to.throw();",
-	}, []string{"describe('load'", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiClassAsyncErrorAssertion(t *testing.T) {
-	src := `class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-class-error-1",
+				Framework:       "mocha",
+				Target:          "Widget.save",
+				LineRange:       "3-3",
+				GapType:         "error_path",
+				TestName:        "covers widget save missing payload",
+				SuggestedInputs: []string{"构造满足条件 `payload === null` 的输入"},
+			},
+			wants: []string{
+				"const { expect } = require('chai');",
+				"const { Widget } = require('./widget');",
+				"describe('Widget'",
+				"describe('save'",
+				"it('covers widget save missing payload'",
+				"const instance = new Widget();",
+				"expect(() => instance.save(null)).to.throw();",
+			},
+			forbidden: []string{"describe('load'", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "commonjs class async error",
+			fileName: "widget.js",
+			source: `class Widget {
   async load(url) {
     if (url === undefined) throw new Error('missing url')
     return { ok: true }
@@ -574,41 +564,34 @@ func TestGenerateMochaCoverageTaskUsesChaiClassAsyncErrorAssertion(t *testing.T)
 }
 
 module.exports = { Widget };
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-class-error-2",
-		Framework:       "mocha",
-		Target:          "Widget.load",
-		LineRange:       "3-3",
-		GapType:         "error_path",
-		TestName:        "covers widget load missing url",
-		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"const { expect } = require('chai');",
-		"const { Widget } = require('./widget');",
-		"describe('Widget'",
-		"describe('load'",
-		"it('covers widget load missing url', async () => {",
-		"const instance = new Widget();",
-		"let caughtError;",
-		"await instance.load(undefined);",
-		"caughtError = err;",
-		"expect(caughtError).to.exist;",
-	}, []string{"describe('save'", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiESMFunctionErrorAssertion(t *testing.T) {
-	src := `export function divide(a, b) {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-class-error-2",
+				Framework:       "mocha",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "error_path",
+				TestName:        "covers widget load missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"const { expect } = require('chai');",
+				"const { Widget } = require('./widget');",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers widget load missing url', async () => {",
+				"const instance = new Widget();",
+				"let caughtError;",
+				"await instance.load(undefined);",
+				"caughtError = err;",
+				"expect(caughtError).to.exist;",
+			},
+			forbidden: []string{"describe('save'", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "esm function sync error",
+			fileName: "calc.js",
+			source: `export function divide(a, b) {
   if (b === 0) throw new Error('zero')
   return a / b
 }
@@ -616,35 +599,28 @@ func TestGenerateMochaCoverageTaskUsesChaiESMFunctionErrorAssertion(t *testing.T
 export function add(a, b) {
   return a + b
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-esm-error-1",
-		Framework:       "mocha",
-		Target:          "divide",
-		LineRange:       "2-2",
-		GapType:         "error_path",
-		TestName:        "covers esm divide zero error",
-		SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { divide } from './calc';",
-		"it('covers esm divide zero error'",
-		"expect(() => divide(1, 0)).to.throw();",
-	}, []string{"require('chai')", "require('./calc')", "describe('add'", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing.T) {
-	src := `export class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-esm-error-1",
+				Framework:       "mocha",
+				Target:          "divide",
+				LineRange:       "2-2",
+				GapType:         "error_path",
+				TestName:        "covers esm divide zero error",
+				SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { divide } from './calc';",
+				"it('covers esm divide zero error'",
+				"expect(() => divide(1, 0)).to.throw();",
+			},
+			forbidden: []string{"require('chai')", "require('./calc')", "describe('add'", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "esm class async error",
+			fileName: "widget.js",
+			source: `export class Widget {
   async load(url) {
     if (url === undefined) throw new Error('missing url')
     return { ok: true }
@@ -654,79 +630,65 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassAsyncErrorAssertion(t *testing
     return payload
   }
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-esm-class-error-1",
-		Framework:       "mocha",
-		Target:          "Widget.load",
-		LineRange:       "3-3",
-		GapType:         "error_path",
-		TestName:        "covers esm widget load missing url",
-		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { Widget } from './widget';",
-		"describe('Widget'",
-		"describe('load'",
-		"it('covers esm widget load missing url', async () => {",
-		"const instance = new Widget();",
-		"let caughtError;",
-		"await instance.load(undefined);",
-		"caughtError = err;",
-		"expect(caughtError).to.exist;",
-	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiESMFunctionReturnAssertion(t *testing.T) {
-	src := `export function add(a, b) {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-esm-class-error-1",
+				Framework:       "mocha",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "error_path",
+				TestName:        "covers esm widget load missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { Widget } from './widget';",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers esm widget load missing url', async () => {",
+				"const instance = new Widget();",
+				"let caughtError;",
+				"await instance.load(undefined);",
+				"caughtError = err;",
+				"expect(caughtError).to.exist;",
+			},
+			forbidden: []string{"require('chai')", "require('./widget')", "describe('save'", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "esm function return",
+			fileName: "calc.js",
+			source: `export function add(a, b) {
   return a + b
 }
 
 export function sub(a, b) {
   return a - b
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-esm-return-1",
-		Framework:       "mocha",
-		Target:          "add",
-		LineRange:       "2-2",
-		GapType:         "return_path",
-		TestName:        "covers esm add zero left operand",
-		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
-		AssertionFocus:  []string{"断言 ESM 返回路径的具体结果"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { add } from './calc';",
-		"it('covers esm add zero left operand'",
-		"coverage task: mocha-esm-return-1 | lines 2-2 | 断言 ESM 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
-		"const result = add(0, 2);",
-		"expect(result).to.equal((0 + 2));",
-	}, []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) {
-	src := `export class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-esm-return-1",
+				Framework:       "mocha",
+				Target:          "add",
+				LineRange:       "2-2",
+				GapType:         "return_path",
+				TestName:        "covers esm add zero left operand",
+				SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+				AssertionFocus:  []string{"断言 ESM 返回路径的具体结果"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { add } from './calc';",
+				"it('covers esm add zero left operand'",
+				"coverage task: mocha-esm-return-1 | lines 2-2 | 断言 ESM 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
+				"const result = add(0, 2);",
+				"expect(result).to.equal((0 + 2));",
+			},
+			forbidden: []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "esm class branch",
+			fileName: "widget.js",
+			source: `export class Widget {
   load(mode, count) {
     if (mode === 'short') return count
     return count + 1
@@ -736,79 +698,65 @@ func TestGenerateMochaCoverageTaskUsesChaiESMClassBranchAssertion(t *testing.T) 
     return payload
   }
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.js")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-esm-class-branch-1",
-		Framework:       "mocha",
-		Target:          "Widget.load",
-		LineRange:       "3-3",
-		GapType:         "branch",
-		TestName:        "covers esm widget short mode",
-		SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
-		AssertionFocus:  []string{"断言 ESM class 分支返回值"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { Widget } from './widget';",
-		"describe('Widget'",
-		"describe('load'",
-		"it('covers esm widget short mode'",
-		"coverage task: mocha-esm-class-branch-1 | lines 3-3 | 断言 ESM class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
-		"const instance = new Widget();",
-		"const result = instance.load('short', 1);",
-		"expect(result).to.equal((1));",
-	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionReturnAssertion(t *testing.T) {
-	src := `export function add(a: number, b: number): number {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-esm-class-branch-1",
+				Framework:       "mocha",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers esm widget short mode",
+				SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+				AssertionFocus:  []string{"断言 ESM class 分支返回值"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { Widget } from './widget';",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers esm widget short mode'",
+				"coverage task: mocha-esm-class-branch-1 | lines 3-3 | 断言 ESM class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
+				"const instance = new Widget();",
+				"const result = instance.load('short', 1);",
+				"expect(result).to.equal((1));",
+			},
+			forbidden: []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "typescript function return",
+			fileName: "calc.ts",
+			source: `export function add(a: number, b: number): number {
   return a + b
 }
 
 export function sub(a: number, b: number): number {
   return a - b
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.ts")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-ts-return-1",
-		Framework:       "mocha",
-		Target:          "add",
-		LineRange:       "2-2",
-		GapType:         "return_path",
-		TestName:        "covers ts add zero left operand",
-		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
-		AssertionFocus:  []string{"断言 TypeScript 返回路径的具体结果"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { add } from './calc';",
-		"it('covers ts add zero left operand'",
-		"coverage task: mocha-ts-return-1 | lines 2-2 | 断言 TypeScript 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
-		"const result = add(0, 2);",
-		"expect(result).to.equal((0 + 2));",
-	}, []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *testing.T) {
-	src := `export class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-ts-return-1",
+				Framework:       "mocha",
+				Target:          "add",
+				LineRange:       "2-2",
+				GapType:         "return_path",
+				TestName:        "covers ts add zero left operand",
+				SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+				AssertionFocus:  []string{"断言 TypeScript 返回路径的具体结果"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { add } from './calc';",
+				"it('covers ts add zero left operand'",
+				"coverage task: mocha-ts-return-1 | lines 2-2 | 断言 TypeScript 返回路径的具体结果 | 构造满足条件 `a === 0` 的输入",
+				"const result = add(0, 2);",
+				"expect(result).to.equal((0 + 2));",
+			},
+			forbidden: []string{"require('chai')", "require('./calc')", "describe('sub'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "typescript class branch",
+			fileName: "widget.ts",
+			source: `export class Widget {
   load(mode: string, count: number): number {
     if (mode === 'short') return count
     return count + 1
@@ -818,41 +766,34 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassBranchAssertion(t *test
     return payload
   }
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.ts")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-ts-class-branch-1",
-		Framework:       "mocha",
-		Target:          "Widget.load",
-		LineRange:       "3-3",
-		GapType:         "branch",
-		TestName:        "covers ts widget short mode",
-		SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
-		AssertionFocus:  []string{"断言 TypeScript class 分支返回值"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { Widget } from './widget';",
-		"describe('Widget'",
-		"describe('load'",
-		"it('covers ts widget short mode'",
-		"coverage task: mocha-ts-class-branch-1 | lines 3-3 | 断言 TypeScript class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
-		"const instance = new Widget();",
-		"const result = instance.load('short', 1);",
-		"expect(result).to.equal((1));",
-	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionErrorAssertion(t *testing.T) {
-	src := `export function divide(a: number, b: number): number {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-ts-class-branch-1",
+				Framework:       "mocha",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers ts widget short mode",
+				SuggestedInputs: []string{"构造满足条件 `mode === 'short'` 的输入"},
+				AssertionFocus:  []string{"断言 TypeScript class 分支返回值"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { Widget } from './widget';",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers ts widget short mode'",
+				"coverage task: mocha-ts-class-branch-1 | lines 3-3 | 断言 TypeScript class 分支返回值 | 构造满足条件 `mode === 'short'` 的输入",
+				"const instance = new Widget();",
+				"const result = instance.load('short', 1);",
+				"expect(result).to.equal((1));",
+			},
+			forbidden: []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "typescript function sync error",
+			fileName: "calc.ts",
+			source: `export function divide(a: number, b: number): number {
   if (b === 0) throw new Error('zero')
   return a / b
 }
@@ -860,35 +801,28 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptFunctionErrorAssertion(t *te
 export function add(a: number, b: number): number {
   return a + b
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "calc.ts")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-ts-error-1",
-		Framework:       "mocha",
-		Target:          "divide",
-		LineRange:       "2-2",
-		GapType:         "error_path",
-		TestName:        "covers ts divide zero error",
-		SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
-	}
-
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
-	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { divide } from './calc';",
-		"it('covers ts divide zero error'",
-		"expect(() => divide(1, 0)).to.throw();",
-	}, []string{"require('chai')", "require('./calc')", "describe('add'", "toBe(", "toThrow()", "rejects.toThrow()"})
-}
-
-func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassAsyncErrorAssertion(t *testing.T) {
-	src := `export class Widget {
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-ts-error-1",
+				Framework:       "mocha",
+				Target:          "divide",
+				LineRange:       "2-2",
+				GapType:         "error_path",
+				TestName:        "covers ts divide zero error",
+				SuggestedInputs: []string{"构造满足条件 `b === 0` 的输入"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { divide } from './calc';",
+				"it('covers ts divide zero error'",
+				"expect(() => divide(1, 0)).to.throw();",
+			},
+			forbidden: []string{"require('chai')", "require('./calc')", "describe('add'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
+		{
+			name:     "typescript class async error",
+			fileName: "widget.ts",
+			source: `export class Widget {
   async load(url?: string): Promise<{ ok: boolean }> {
     if (url === undefined) throw new Error('missing url')
     return { ok: true }
@@ -898,37 +832,45 @@ func TestGenerateMochaCoverageTaskUsesChaiTypeScriptClassAsyncErrorAssertion(t *
     return payload
   }
 }
-`
-	srcPath := filepath.Join(t.TempDir(), "widget.ts")
-	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
-		t.Fatal(err)
-	}
-	task := types.CoverageTestTask{
-		ID:              "mocha-ts-class-error-1",
-		Framework:       "mocha",
-		Target:          "Widget.load",
-		LineRange:       "3-3",
-		GapType:         "error_path",
-		TestName:        "covers ts widget load missing url",
-		SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+`,
+			task: types.CoverageTestTask{
+				ID:              "mocha-ts-class-error-1",
+				Framework:       "mocha",
+				Target:          "Widget.load",
+				LineRange:       "3-3",
+				GapType:         "error_path",
+				TestName:        "covers ts widget load missing url",
+				SuggestedInputs: []string{"构造满足条件 `url === undefined` 的输入"},
+			},
+			wants: []string{
+				"import { expect } from 'chai';",
+				"import { Widget } from './widget';",
+				"describe('Widget'",
+				"describe('load'",
+				"it('covers ts widget load missing url', async () => {",
+				"const instance = new Widget();",
+				"let caughtError;",
+				"await instance.load(undefined);",
+				"caughtError = err;",
+				"expect(caughtError).to.exist;",
+			},
+			forbidden: []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"},
+		},
 	}
 
-	code, err := GenerateJestTestsForCoverageTask(srcPath, &task)
-	if err != nil {
-		t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srcPath := filepath.Join(t.TempDir(), tt.fileName)
+			if err := os.WriteFile(srcPath, []byte(tt.source), 0644); err != nil {
+				t.Fatal(err)
+			}
+			code, err := GenerateJestTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJestTestsForCoverageTask() error = %v", err)
+			}
+			assertGeneratedJS(t, code, tt.wants, tt.forbidden)
+		})
 	}
-	assertGeneratedJS(t, code, []string{
-		"import { expect } from 'chai';",
-		"import { Widget } from './widget';",
-		"describe('Widget'",
-		"describe('load'",
-		"it('covers ts widget load missing url', async () => {",
-		"const instance = new Widget();",
-		"let caughtError;",
-		"await instance.load(undefined);",
-		"caughtError = err;",
-		"expect(caughtError).to.exist;",
-	}, []string{"require('chai')", "require('./widget')", "describe('save'", "toBe(", "toThrow()", "rejects.toThrow()"})
 }
 
 func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
