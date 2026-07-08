@@ -347,6 +347,49 @@ func TestGenerateJavaScriptTestsInjectedClientReturnTypePayload(t *testing.T) {
 	})
 }
 
+func TestGenerateJavaScriptTestsNamedReturnTypePayloads(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `interface User {
+  id: number
+  email: string
+}
+
+type Profile = {
+  name: string
+  active: boolean
+}
+
+export async function parseUser(response: Response): Promise<User> {
+  return await response.json();
+}
+
+export async function loadProfile(client: { get(path: string): Promise<Profile> }): Promise<Profile> {
+  return await client.get('/profile');
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"const result = await parseUser({ json: async () => ({ id: 1, email: 'user@example.com' }) });",
+		"expect(result).toEqual({ id: 1, email: 'user@example.com' });",
+		"return { name: 'test', active: true };",
+		"const result = await loadProfile(client);",
+		"expect(result).toEqual({ name: 'test', active: true });",
+		"expect(client.getCalls).toEqual([['/profile']]);",
+	}, []string{
+		"{ ok: true }",
+		"expect(typeof result).toBe('object')",
+	})
+}
+
 func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "src")
@@ -1730,6 +1773,10 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got, ok := jsMockPayloadFromTSType("Promise<User>"); ok || got != "" {
 		t.Fatalf("named type payload = %q, %v", got, ok)
+	}
+	typeDecls := map[string]string{"User": "{ id: number; email: string }"}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User>", typeDecls); !ok || got != "{ id: 1, email: 'user@example.com' }" {
+		t.Fatalf("decl payload = %q, %v", got, ok)
 	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},

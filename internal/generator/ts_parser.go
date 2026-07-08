@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"regexp"
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -32,7 +33,7 @@ func parseJSWithTreeSitter(source []byte, ext string) (funcs []jsFuncInfo, class
 	defer tree.Close()
 
 	root := tree.RootNode()
-	ctx := &jsParseCtx{}
+	ctx := &jsParseCtx{tsTypes: jsExtractTSTypeDecls(string(source))}
 	jsWalkNode(root, source, ctx)
 
 	return ctx.funcs, ctx.classes, ctx.isESModule
@@ -43,6 +44,7 @@ type jsParseCtx struct {
 	classes    []jsClassInfo
 	isESModule bool
 	exported   bool
+	tsTypes    map[string]string
 }
 
 func jsWalkNode(node *sitter.Node, source []byte, ctx *jsParseCtx) {
@@ -67,6 +69,7 @@ func jsHandleNode(node *sitter.Node, source []byte, ctx *jsParseCtx) {
 
 	case "function_declaration":
 		fn := jsExtractFunction(node, source, ctx.exported)
+		jsAttachTSTypeDeclsToFunc(&fn, ctx.tsTypes)
 		if fn.Name != "" && !isTestHelper(fn.Name) {
 			ctx.funcs = append(ctx.funcs, fn)
 		}
@@ -85,6 +88,7 @@ func jsHandleNode(node *sitter.Node, source []byte, ctx *jsParseCtx) {
 
 	case "class_declaration":
 		cls := jsExtractClass(node, source)
+		jsAttachTSTypeDeclsToClass(&cls, ctx.tsTypes)
 		if cls.Name != "" {
 			ctx.classes = append(ctx.classes, cls)
 		}
@@ -109,11 +113,13 @@ func jsHandleDeclarator(node *sitter.Node, source []byte, ctx *jsParseCtx) {
 	switch valueNode.Type() {
 	case "arrow_function":
 		fn := jsExtractArrowFunction(valueNode, source, name, ctx.exported)
+		jsAttachTSTypeDeclsToFunc(&fn, ctx.tsTypes)
 		ctx.funcs = append(ctx.funcs, fn)
 	case "function_expression":
 		fn := jsExtractFunction(valueNode, source, ctx.exported)
 		fn.Name = name // 匿名函数表达式，名字来自变量名
 		fn.IsArrow = false
+		jsAttachTSTypeDeclsToFunc(&fn, ctx.tsTypes)
 		ctx.funcs = append(ctx.funcs, fn)
 	}
 }
@@ -302,6 +308,74 @@ func jsFindIdentifierChild(node *sitter.Node, source []byte) string {
 		child := node.NamedChild(i)
 		if child != nil && child.Type() == "identifier" {
 			return child.Content(source)
+		}
+	}
+	return ""
+}
+
+func jsAttachTSTypeDeclsToFunc(fn *jsFuncInfo, decls map[string]string) {
+	if len(decls) == 0 {
+		return
+	}
+	fn.Analysis.TSTypeDecls = decls
+}
+
+func jsAttachTSTypeDeclsToClass(cls *jsClassInfo, decls map[string]string) {
+	if len(decls) == 0 {
+		return
+	}
+	for i := range cls.Methods {
+		cls.Methods[i].Analysis.TSTypeDecls = decls
+	}
+}
+
+var (
+	jsTSInterfaceDeclRe       = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{`)
+	jsTSObjectTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*\{`)
+)
+
+func jsExtractTSTypeDecls(source string) map[string]string {
+	decls := map[string]string{}
+	for _, match := range jsTSInterfaceDeclRe.FindAllStringSubmatchIndex(source, -1) {
+		if len(match) < 4 {
+			continue
+		}
+		name := source[match[2]:match[3]]
+		open := match[1] - 1
+		if typeExpr := jsExtractBracedTypeExpr(source, open); typeExpr != "" {
+			decls[name] = typeExpr
+		}
+	}
+	for _, match := range jsTSObjectTypeAliasDeclRe.FindAllStringSubmatchIndex(source, -1) {
+		if len(match) < 4 {
+			continue
+		}
+		name := source[match[2]:match[3]]
+		open := match[1] - 1
+		if typeExpr := jsExtractBracedTypeExpr(source, open); typeExpr != "" {
+			decls[name] = typeExpr
+		}
+	}
+	if len(decls) == 0 {
+		return nil
+	}
+	return decls
+}
+
+func jsExtractBracedTypeExpr(source string, open int) string {
+	if open < 0 || open >= len(source) || source[open] != '{' {
+		return ""
+	}
+	depth := 0
+	for i := open; i < len(source); i++ {
+		switch source[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return strings.TrimSpace(source[open : i+1])
+			}
 		}
 	}
 	return ""
