@@ -101,6 +101,115 @@ func TestHandleParseCoverageValidatesInput(t *testing.T) {
 	}
 }
 
+type coverageTaskGenerateLoopGolden struct {
+	ParsedTask types.CoverageTestTask                `json:"parsed_task"`
+	Generated  coverageTaskGenerateLoopGeneratedPart `json:"generated"`
+}
+
+type coverageTaskGenerateLoopGeneratedPart struct {
+	Status              string                 `json:"status"`
+	Provider            string                 `json:"provider"`
+	TestFile            string                 `json:"test_file"`
+	GeneratedCases      int                    `json:"generated_cases"`
+	CoverageTask        types.CoverageTestTask `json:"coverage_task"`
+	ContextCoverageTask types.CoverageTestTask `json:"context_coverage_task"`
+	TestFileContent     string                 `json:"test_file_content"`
+}
+
+func TestHandleParseCoverageGenerateTestsLoopGolden(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, filepath.Join("pkg", "calc.go"), strings.Join([]string{
+		"package calc",
+		"",
+		"func Add(a, b int) int {",
+		"	if a == 0 {",
+		"		return b",
+		"	}",
+		"	return a + b",
+		"}",
+	}, "\n")+"\n")
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+
+	coverageProfile := strings.Join([]string{
+		"mode: set",
+		"pkg/calc.go:4.2,4.10 1 0",
+		"pkg/calc.go:7.2,7.14 1 1",
+	}, "\n")
+	coverageResult, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{
+		Data:      coverageProfile,
+		Framework: "go-test",
+	})
+	if err != nil {
+		t.Fatalf("HandleParseCoverage returned error: %v", err)
+	}
+
+	var report types.CoverageReport
+	if err := json.Unmarshal([]byte(resultText(t, coverageResult)), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v", err)
+	}
+	if len(report.TestTasks) != 1 {
+		t.Fatalf("test tasks len = %d, want 1: %+v", len(report.TestTasks), report.TestTasks)
+	}
+	task := report.TestTasks[0]
+
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     task.File,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, generateResult)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.CoverageTask == nil || generated.Context == nil || generated.Context.CoverageTask == nil {
+		t.Fatalf("expected coverage task in generated output and context: %+v", generated)
+	}
+	content, err := os.ReadFile(task.TestFile)
+	if err != nil {
+		t.Fatalf("read generated test file: %v", err)
+	}
+
+	gotBytes, err := json.MarshalIndent(coverageTaskGenerateLoopGolden{
+		ParsedTask: task,
+		Generated: coverageTaskGenerateLoopGeneratedPart{
+			Status:              generated.Status,
+			Provider:            generated.Provider,
+			TestFile:            generated.TestFile,
+			GeneratedCases:      generated.GeneratedCases,
+			CoverageTask:        *generated.CoverageTask,
+			ContextCoverageTask: *generated.Context.CoverageTask,
+			TestFileContent:     string(content),
+		},
+	}, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal loop golden: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join(oldWD, "testdata", "golden", "coverage_task_generate_loop.golden"))
+	if err != nil {
+		t.Fatalf("read golden: %v\n--- got ---\n%s", err, got)
+	}
+	want := string(wantBytes)
+	if strings.TrimSpace(got) != strings.TrimSpace(want) {
+		t.Fatalf("golden mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestHandleGenerateTestsValidatesInput(t *testing.T) {
 	if _, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{}); err == nil {
 		t.Fatal("expected missing file_path error")

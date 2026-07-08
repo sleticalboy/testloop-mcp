@@ -1,0 +1,105 @@
+{
+  "parsed_task": {
+    "id": "go-test-1",
+    "framework": "go-test",
+    "file": "pkg/calc.go",
+    "target": "Add",
+    "kind": "function",
+    "line_range": "4-4",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: a == 0"
+    ],
+    "uncovered_lines": [
+      4
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `a == 0` 的输入",
+      "设置 a 覆盖未执行分支",
+      "设置 b 覆盖未执行分支"
+    ],
+    "goal": "为 Add 补充测试，覆盖未执行行段 4-4",
+    "command": "go test ./pkg",
+    "test_file": "pkg/calc_test.go",
+    "test_name": "TestAdd",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用",
+      "未覆盖 if 分支: a == 0",
+      "覆盖未执行行: 4"
+    ],
+    "priority": 103,
+    "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.95",
+    "confidence": 0.95
+  },
+  "generated": {
+    "status": "ok",
+    "provider": "static",
+    "test_file": "pkg/calc_test.go",
+    "generated_cases": 1,
+    "coverage_task": {
+      "id": "go-test-1",
+      "framework": "go-test",
+      "file": "pkg/calc.go",
+      "target": "Add",
+      "kind": "function",
+      "line_range": "4-4",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: a == 0"
+      ],
+      "uncovered_lines": [
+        4
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `a == 0` 的输入",
+        "设置 a 覆盖未执行分支",
+        "设置 b 覆盖未执行分支"
+      ],
+      "goal": "为 Add 补充测试，覆盖未执行行段 4-4",
+      "command": "go test ./pkg",
+      "test_file": "pkg/calc_test.go",
+      "test_name": "TestAdd",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用",
+        "未覆盖 if 分支: a == 0",
+        "覆盖未执行行: 4"
+      ],
+      "priority": 103,
+      "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.95",
+      "confidence": 0.95
+    },
+    "context_coverage_task": {
+      "id": "go-test-1",
+      "framework": "go-test",
+      "file": "pkg/calc.go",
+      "target": "Add",
+      "kind": "function",
+      "line_range": "4-4",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: a == 0"
+      ],
+      "uncovered_lines": [
+        4
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `a == 0` 的输入",
+        "设置 a 覆盖未执行分支",
+        "设置 b 覆盖未执行分支"
+      ],
+      "goal": "为 Add 补充测试，覆盖未执行行段 4-4",
+      "command": "go test ./pkg",
+      "test_file": "pkg/calc_test.go",
+      "test_name": "TestAdd",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用",
+        "未覆盖 if 分支: a == 0",
+        "覆盖未执行行: 4"
+      ],
+      "priority": 103,
+      "priority_reason": "已定位到具体函数或方法；分支缺口通常能生成高价值断言；已有建议输入；已有未覆盖行列表；已有推荐测试文件；置信度 0.95",
+      "confidence": 0.95
+    },
+    "test_file_content": "package calc\n\nimport (\n\t\"testing\"\n)\n\n// TestAdd 测试 Add\n// coverage task: go-test-1 | lines 4-4 | 断言未覆盖分支的返回值或副作用; 未覆盖 if 分支: a == 0; 覆盖未执行行: 4\nfunc TestAdd(t *testing.T) {\n\ttype testCase struct {\n\t\tname string\n\t\tskip bool\n\t\ta    int\n\t\tb    int\n\t\tret0 int\n\t}\n\n\ttests := []testCase{\n\t\t{\n\t\t\tname: \"coverage branch gap\",\n\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n\t\t\ta:    0,\n\t\t\tb:    0,\n\t\t\tret0: 0,\n\t\t},\n\t}\n\n\tfor _, tt := range tests {\n\t\tt.Run(tt.name, func(t *testing.T) {\n\t\t\tif tt.skip {\n\t\t\t\tt.Skip(\"TODO: fill in meaningful test inputs and expected values\")\n\t\t\t}\n\t\t\tgot := Add(tt.a, tt.b)\n\t\t\tif got != tt.ret0 {\n\t\t\t\tt.Errorf(\"got %v, want %v\", got, tt.ret0)\n\t\t\t}\n\t\t})\n\t}\n}\n"
+  }
+}
