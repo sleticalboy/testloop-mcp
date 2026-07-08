@@ -261,6 +261,32 @@ func TestGenerateJavaScriptTestsAsyncResponseJSON(t *testing.T) {
 	})
 }
 
+func TestGenerateJavaScriptTestsInjectedClientCall(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "users.ts")
+	src := `export async function loadUser(client: { get(path: string): Promise<{ ok: boolean }> }): Promise<{ ok: boolean }> {
+  return await client.get('/users/1');
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"const result = await loadUser({ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) });",
+		"expect(result).toEqual({ ok: true });",
+	}, []string{
+		"expect(typeof result).toBe('object')",
+		"expect(result).not.toBeNull()",
+	})
+}
+
 func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "src")
@@ -758,6 +784,30 @@ export function status(): string {
 				"import { describe, it, expect } from 'vitest';",
 				"import { parseUser } from './api';",
 				"const result = await parseUser({ json: async () => ({ ok: true }) });",
+				"expect(result).toEqual({ ok: true });",
+			},
+			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript injected api fetch",
+			fileName: "users.ts",
+			source: `export async function loadUser(api: { fetch(path: string): Promise<{ ok: boolean }> }): Promise<{ ok: boolean }> {
+  return await api.fetch('/users/1')
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-client-1",
+				Framework:      "vitest",
+				Target:         "loadUser",
+				LineRange:      "2-2",
+				GapType:        "return_path",
+				TestName:       "covers vitest loadUser injected api",
+				AssertionFocus: []string{"断言注入 API 返回结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { loadUser } from './users';",
+				"const result = await loadUser({ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) });",
 				"expect(result).toEqual({ ok: true });",
 			},
 			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},

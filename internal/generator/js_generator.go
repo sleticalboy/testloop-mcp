@@ -771,6 +771,9 @@ func jsExpectedReturnExprWithValuesKind(a jsFuncAnalysis, params []jsParamInfo, 
 	if expected, ok := jsExpectedResponseJSONReturn(expr, params); ok {
 		return expected, true, true
 	}
+	if expected, ok := jsExpectedInjectedClientReturn(expr, params); ok {
+		return expected, true, true
+	}
 	if !jsReturnExprIsSafe(expr) {
 		return "", false, false
 	}
@@ -832,6 +835,31 @@ func jsResponseJSONReceiver(expr string) (string, bool) {
 		return "", false
 	}
 	return matches[1], true
+}
+
+func jsExpectedInjectedClientReturn(expr string, params []jsParamInfo) (string, bool) {
+	receiver, _, ok := jsInjectedClientCall(expr)
+	if !ok {
+		return "", false
+	}
+	for _, p := range params {
+		if p.Name == receiver && jsNameLooksLikeClientParam(jsCompactName(p.Name)) {
+			return "{ ok: true }", true
+		}
+	}
+	return "", false
+}
+
+func jsInjectedClientCall(expr string) (receiver, method string, ok bool) {
+	expr = strings.TrimSpace(strings.TrimSuffix(expr, ";"))
+	expr = strings.TrimPrefix(expr, "await ")
+	expr = strings.TrimSpace(expr)
+	re := regexp.MustCompile(`^([A-Za-z_$][A-Za-z0-9_$]*)\.(get|fetch|request)\s*\(`)
+	matches := re.FindStringSubmatch(expr)
+	if len(matches) != 3 {
+		return "", "", false
+	}
+	return matches[1], matches[2], true
 }
 
 func jsReturnExprIsSafe(expr string) bool {
@@ -1112,7 +1140,7 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	}
 
 	name := strings.ToLower(p.Name)
-	compact := strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+	compact := jsCompactName(name)
 
 	if jsNameHasPrefix(compact, "is", "has", "can", "should") ||
 		jsNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {
@@ -1133,6 +1161,9 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	if jsNameLooksLikeResponseParam(compact) {
 		return "{ json: async () => ({ ok: true }) }"
 	}
+	if jsNameLooksLikeClientParam(compact) {
+		return "{ get: async () => ({ ok: true }), fetch: async () => ({ ok: true }), request: async () => ({ ok: true }) }"
+	}
 	if jsNameHasAny(compact, "url", "uri", "endpoint", "href") {
 		return "'https://example.com'"
 	}
@@ -1149,9 +1180,23 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	return "undefined"
 }
 
+func jsCompactName(name string) string {
+	name = strings.ToLower(name)
+	return strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
+}
+
 func jsNameLooksLikeResponseParam(name string) bool {
 	switch name {
 	case "response", "res", "resp":
+		return true
+	default:
+		return false
+	}
+}
+
+func jsNameLooksLikeClientParam(name string) bool {
+	switch name {
+	case "client", "api", "http", "fetcher", "requester":
 		return true
 	default:
 		return false
