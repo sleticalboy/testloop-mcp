@@ -553,6 +553,57 @@ func TestParseJestCoverageEnrichesSourceTask(t *testing.T) {
 	}
 }
 
+func TestParseVitestCoverageEnrichesTypeScriptSourceTask(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("src", "sum.ts")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `export function add(a: number, b: number): number {
+  if (a === 0) return b;
+  return a + b;
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `{
+		"src/sum.ts": {
+			"path": "src/sum.ts",
+			"statementMap": {
+				"0": {"start": {"line": 1, "column": 0}, "end": {"line": 1, "column": 52}},
+				"1": {"start": {"line": 2, "column": 2}, "end": {"line": 2, "column": 26}},
+				"2": {"start": {"line": 3, "column": 2}, "end": {"line": 3, "column": 15}}
+			},
+			"s": {"0": 1, "1": 0, "2": 1},
+			"fnMap": {},
+			"f": {},
+			"branchMap": {},
+			"b": {}
+		}
+	}`
+
+	report, err := ParseJestCoverage(raw, "vitest")
+	if err != nil {
+		t.Fatalf("ParseJestCoverage 失败: %v", err)
+	}
+	task := findCoverageTask(report.TestTasks, "add")
+	if task == nil {
+		t.Fatalf("expected add task, got %+v", report.TestTasks)
+	}
+	if task.Framework != "vitest" || task.Kind != "function" || task.GapType != "branch" || task.TestFile != filepath.Join("src", "sum.test.ts") {
+		t.Fatalf("unexpected vitest task: %+v", task)
+	}
+	if task.Command != "npx vitest run src/sum.ts" || task.TestName != "covers add coverage gap" {
+		t.Fatalf("unexpected vitest command/test name: %+v", task)
+	}
+	if !containsString(task.SuggestedInputs, "构造满足条件 `a === 0` 的输入") ||
+		!containsString(task.AssertionFocus, "覆盖未执行行: 2") {
+		t.Fatalf("unexpected vitest task hints: %+v", task)
+	}
+}
+
 func TestParsePytestCoverage(t *testing.T) {
 	raw := `{
 		"totals": {
