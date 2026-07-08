@@ -732,6 +732,106 @@ func TestHandleGenerateTestsAutoDetectsJavaScriptFramework(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsOutputRunsWithDetectedJavaScriptFramework(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageJSON string
+		sourceRel   string
+		source      string
+		wantTestRel string
+		wantPreview []string
+		wantArgs    string
+		output      string
+	}{
+		{
+			name:        "vitest keeps generated test beside source",
+			packageJSON: `{"scripts":{"test":"vitest run"}}`,
+			sourceRel:   filepath.Join("src", "sum.ts"),
+			source:      "export function add(a: number, b: number) { return a + b; }\n",
+			wantTestRel: filepath.Join("src", "sum.test.ts"),
+			wantPreview: []string{
+				"import { add } from './sum';",
+				"expect(result).toBe((1 + 2));",
+			},
+			wantArgs: "vitest run --verbose src/sum.test.ts",
+			output: strings.Join([]string{
+				" ✓ src/sum.test.ts (1 test)",
+				" Test Files  1 passed (1)",
+				"      Tests  1 passed (1)",
+			}, "\n"),
+		},
+		{
+			name:        "mocha keeps generated test beside source",
+			packageJSON: `{"scripts":{"test":"mocha --reporter spec"}}`,
+			sourceRel:   filepath.Join("lib", "calc.js"),
+			source:      "function add(a, b) {\n  return a + b;\n}\n\nmodule.exports = { add };\n",
+			wantTestRel: filepath.Join("lib", "calc.test.js"),
+			wantPreview: []string{
+				"const { expect } = require('chai');",
+				"const { add } = require('./calc');",
+				"expect(result).to.equal((1 + 2));",
+			},
+			wantArgs: "mocha --reporter spec lib/calc.test.js",
+			output: strings.Join([]string{
+				"  add",
+				"    ✓ should return expected result for normal input",
+				"",
+				"  1 passing (8ms)",
+			}, "\n"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(tt.packageJSON+"\n"), 0o644); err != nil {
+				t.Fatalf("write package.json: %v", err)
+			}
+			source := filepath.Join(dir, tt.sourceRel)
+			if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+				t.Fatalf("create source dir: %v", err)
+			}
+			if err := os.WriteFile(source, []byte(tt.source), 0o644); err != nil {
+				t.Fatalf("write source: %v", err)
+			}
+
+			generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+			if err != nil {
+				t.Fatalf("HandleGenerateTests returned error: %v", err)
+			}
+			var generated types.GenerateTestsOutput
+			if err := json.Unmarshal([]byte(resultText(t, generateResult)), &generated); err != nil {
+				t.Fatalf("unmarshal generated output: %v", err)
+			}
+			wantTestFile := filepath.Join(dir, tt.wantTestRel)
+			if generated.TestFile != wantTestFile {
+				t.Fatalf("test file = %q, want %q", generated.TestFile, wantTestFile)
+			}
+			for _, want := range tt.wantPreview {
+				if !strings.Contains(generated.Preview, want) {
+					t.Fatalf("expected %q in generated preview:\n%s", want, generated.Preview)
+				}
+			}
+			if _, err := os.Stat(generated.TestFile); err != nil {
+				t.Fatalf("expected generated test file: %v", err)
+			}
+
+			logPath := installFakeNpxRecorder(t, tt.output)
+			if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{Path: generated.TestFile}); err != nil {
+				t.Fatalf("HandleRunTests returned error: %v", err)
+			}
+			logText := readTextFile(t, logPath)
+			wantDir := absCleanPath(t, dir)
+			if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+				t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+			}
+			if !strings.Contains(logText, "ARGS="+tt.wantArgs+"\n") {
+				t.Fatalf("fake npx args log = %q, want ARGS=%s", logText, tt.wantArgs)
+			}
+		})
+	}
+}
+
 func assertGeneratedCoverageTaskOutput(t *testing.T, result *mcp.CallToolResult, task *types.CoverageTestTask, wantSnippet string) types.GenerateTestsOutput {
 	t.Helper()
 
