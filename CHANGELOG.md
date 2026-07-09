@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- `scripts/install.sh` 的 `go install` fallback 日志会根据实际落盘文件名输出安装路径，避免跨平台 dry run 下载失败时把当前主机二进制误报为 `.exe`。
+
 ## v0.4.12 - 2026-07-09
 
 ### Added

@@ -19,40 +19,40 @@
 
 ## 当前发布
 
-- 当前版本：`v0.4.11`
-- Tag：`v0.4.11` -> `2a9b98fab1c14f02c38e406550227097ea814919`
-- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.11
-- CI run：`28997546307`
-- Release Artifacts run：`28995989142`
-- Post-Release Verify run：`29010902985`
-- Homebrew tap commit：`513d843762bbd75f20c8716f4589419650bebaa3`
+- 当前版本：`v0.4.12`
+- Tag：`v0.4.12` -> `ccf38f2b9f902b62e6c923a7017f31391e3a91fd`
+- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.12
+- CI run：`29021717743`
+- Release Artifacts run：`29022581976`
+- Post-Release Verify run：`29025114403`
+- Homebrew tap commit：`1c62ce0d1037902ae84f64db1f83dd17570c90e2`
 
-`v0.4.11` Release 已包含：
+`v0.4.12` Release 已包含：
 
-- `testloop-mcp_v0.4.11_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.11_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.11_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.11_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.11_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.11_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.11_windows_amd64.zip`
-- `testloop-mcp_v0.4.11_windows_amd64.zip.sha256`
-- `testloop-mcp_v0.4.11_windows_arm64.zip`
-- `testloop-mcp_v0.4.11_windows_arm64.zip.sha256`
+- `testloop-mcp_v0.4.12_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.12_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.12_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.12_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.12_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.12_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.12_windows_amd64.zip`
+- `testloop-mcp_v0.4.12_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.12_windows_arm64.zip`
+- `testloop-mcp_v0.4.12_windows_arm64.zip.sha256`
 
-`v0.4.11` 已验证：
+`v0.4.12` 已验证：
 
 - [x] 远端 CI passed
-- [x] Release Artifacts run `28995989142` passed
-- [x] `scripts/verify-release-assets.sh v0.4.11` 验证 release 页面包含 10 个必需资产
-- [x] 手动触发 `Post-Release Verify` workflow `29010902985`，五平台安装脚本 dry run 全部通过；macOS arm64 首次排队被取消，rerun 后通过
-- [x] macOS arm64 release 资产可直连下载、校验 `.sha256` 并解包出 `testloop-mcp` / `testloop-testgen`
+- [x] Release Artifacts run `29022581976` passed
+- [x] `scripts/verify-release-assets.sh v0.4.12` 验证 release 页面包含 10 个必需资产
+- [x] 手动触发 `Post-Release Verify` workflow `29025114403`，五平台安装脚本 dry run 全部通过
 - [x] `scripts/install.sh` 在本机 GitHub 443 网络不稳定时可回退 `go install`，安装路径和两个命令 help 输出已验证
 - [x] `brew fetch sleticalboy/tap/testloop-mcp`
 - [x] `brew audit --formula --strict sleticalboy/tap/testloop-mcp`
 - [x] `brew upgrade sleticalboy/tap/testloop-mcp`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
 - [x] `scripts/install.sh` 的 fallback 提示已区分平台不支持、latest 解析失败、release 资产下载失败和缺少解压器，避免网络失败被误读成资产缺失
+- [x] 发布后 main 上已修正跨平台 dry run 下载失败时 fallback 日志误报 `.exe` 路径的问题，待下一版本发布
 
 ## 版本摘要
 
@@ -69,6 +69,7 @@
 | `v0.4.9` | Agent 修复闭环和配置诊断细化，补充 `fix_suggestions` 分类与源码上下文 | Release run `28833047972`；Homebrew tap 升级到 `0.4.9` 并通过 `brew test` |
 | `v0.4.10` | 将 `repair_task` 和 `run_tests.include_fix_suggestions` 纳入正式发布，并补强安装脚本下载重试 | Release run `28845299697`；Homebrew tap 升级到 `0.4.10` 并通过 `brew test` |
 | `v0.4.11` | JS/TS 静态生成质量增强，补强复杂 TypeScript DTO payload 和 handler 闭环检查 | Release run `28995989142`；Homebrew tap 升级到 `0.4.11` 并通过 `brew test` |
+| `v0.4.12` | JS/TS 同文件简单泛型 DTO 展开，payload 回退原因贯通到工具输出和 LLM provider 输入 | Release run `29022581976`；Post-Release Verify run `29025114403`；Homebrew tap 升级到 `0.4.12` 并通过 `brew test` |
 
 ## 发布维护流程
 

@@ -212,8 +212,38 @@ test_download_failure_fallback_message() {
   assert_log_contains /tmp/testloop-install-download-fallback.out "check that the asset exists and that the network can reach GitHub. Falling back to go install."
 }
 
+test_windows_download_failure_fallback_logs_actual_go_install_paths() {
+  install_dir="${tmp_dir}/install-windows-download-fallback"
+  go_log="${tmp_dir}/go-windows-download-fallback.log"
+  curl_log="${tmp_dir}/curl-windows-download-fallback.log"
+  : > "$go_log"
+  : > "$curl_log"
+
+  PATH="${fake_bin}:$PATH" \
+    TESTLOOP_FAKE_GO_LOG="$go_log" \
+    TESTLOOP_FAKE_CURL_LOG="$curl_log" \
+    TESTLOOP_FAKE_FIXTURES="$fixture_dir" \
+    TESTLOOP_MCP_VERSION="v9.9.9" \
+    TESTLOOP_MCP_OS="windows" \
+    TESTLOOP_MCP_ARCH="arm64" \
+    TESTLOOP_MCP_INSTALL_DIR="$install_dir" \
+    sh "${repo_root}/scripts/install.sh" >/tmp/testloop-install-windows-download-fallback.out
+
+  assert_file "${install_dir}/testloop-mcp"
+  assert_file "${install_dir}/testloop-testgen"
+  if [ -e "${install_dir}/testloop-mcp.exe" ] || [ -e "${install_dir}/testloop-testgen.exe" ]; then
+    echo "expected go install fallback to log and keep current-host binary names" >&2
+    exit 1
+  fi
+  assert_log_contains "$curl_log" "testloop-mcp_v9.9.9_windows_arm64.zip"
+  assert_log_contains /tmp/testloop-install-windows-download-fallback.out "Failed to download release asset testloop-mcp_v9.9.9_windows_arm64.zip"
+  assert_log_contains /tmp/testloop-install-windows-download-fallback.out "Installed testloop-mcp to ${install_dir}/testloop-mcp"
+  assert_log_contains /tmp/testloop-install-windows-download-fallback.out "Installed testloop-testgen to ${install_dir}/testloop-testgen"
+}
+
 test_windows_zip_sha256_fallback
 test_go_install_fallback_renames_testgen
 test_download_failure_fallback_message
+test_windows_download_failure_fallback_logs_actual_go_install_paths
 
 echo "install script tests passed"

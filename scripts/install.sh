@@ -76,11 +76,21 @@ go_install_fallback() {
   log "${reason} Falling back to go install."
   GOBIN="$install_dir" go install "github.com/${repo}@${version}"
   GOBIN="$install_dir" go install "github.com/${repo}/cmd/testgen@${version}"
-  if [ -x "${install_dir}/testgen${binary_suffix}" ] && [ ! -e "${install_dir}/testloop-testgen${binary_suffix}" ]; then
-    mv "${install_dir}/testgen${binary_suffix}" "${install_dir}/testloop-testgen${binary_suffix}"
+  fallback_mcp="${install_dir}/testloop-mcp"
+  fallback_testgen="${install_dir}/testloop-testgen"
+  if [ -x "${install_dir}/testloop-mcp.exe" ]; then
+    fallback_mcp="${install_dir}/testloop-mcp.exe"
   fi
-  log "Installed testloop-mcp to ${install_dir}/testloop-mcp${binary_suffix}"
-  log "Installed testloop-testgen to ${install_dir}/testloop-testgen${binary_suffix}"
+  if [ -x "${install_dir}/testgen.exe" ] && [ ! -e "${install_dir}/testloop-testgen.exe" ]; then
+    mv "${install_dir}/testgen.exe" "${install_dir}/testloop-testgen.exe"
+  elif [ -x "${install_dir}/testgen" ] && [ ! -e "${install_dir}/testloop-testgen" ]; then
+    mv "${install_dir}/testgen" "${install_dir}/testloop-testgen"
+  fi
+  if [ -x "${install_dir}/testloop-testgen.exe" ]; then
+    fallback_testgen="${install_dir}/testloop-testgen.exe"
+  fi
+  log "Installed testloop-mcp to ${fallback_mcp}"
+  log "Installed testloop-testgen to ${fallback_testgen}"
 }
 
 os="${TESTLOOP_MCP_OS:-}"

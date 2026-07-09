@@ -1,4 +1,4 @@
-# v0.4.12 发布说明草案
+# v0.4.12 发布说明
 
 ## 标题
 
@@ -10,9 +10,9 @@ testloop-mcp v0.4.12
 - [x] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.12 - 2026-07-09`。
 - [x] 更新 README、安装文档和必要的版本引用。
 - [x] 跑完整本地发布前验证。
-- [ ] 推送 `v0.4.12` tag 并等待 Release Artifacts workflow 完成。
-- [ ] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
-- [ ] 发布 GitHub Release 正文。
+- [x] 推送 `v0.4.12` tag 并等待 Release Artifacts workflow 完成。
+- [x] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
+- [x] 发布 GitHub Release 正文。
 
 ## 摘要
 
@@ -64,11 +64,15 @@ v0.4.12 是 v0.4.11 之后的小版本收口，重点增强两条链路：
 - [x] `bash test/install_script_test.sh`
 - [x] `git diff --check`
 - [x] `go test ./...`
-- [ ] 远端 CI 通过。
+- [x] 远端 CI 通过：run `29021717743`。
+- [x] Release Artifacts 通过：run `29022581976`。
+- [x] `scripts/verify-release-assets.sh v0.4.12` 确认 10 个 release 资产完整。
+- [x] Post-Release Verify 通过：run `29025114403`，五平台安装脚本 dry run 全部通过。
+- [x] Homebrew tap 更新到 `0.4.12`：commit `1c62ce0`。
 
 ## 发布备注
 
-- 这是 v0.4.12 候选发布资料，当前还未正式发版。
+- v0.4.12 已正式发布：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.12
 - 本轮新增的 `return_type_expr` 和 `payload_notes` 是向后兼容字段；未使用该字段的调用方可以继续忽略。
 - `payload_notes` 是给 Agent/LLM provider 的解释信息，不会写入生成的测试文件。
-- v0.4.12 的正式发布仍需要走版本号更新、tag、Release Artifacts、资产校验和 Homebrew tap 更新流程。
+- 发布后在 main 上发现并修复了跨平台 dry run 下载失败时 fallback 安装路径日志不准确的问题；该修复记录在 `CHANGELOG.md` 的 Unreleased，不属于 `v0.4.12` tag 资产。
