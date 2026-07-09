@@ -6,6 +6,7 @@
 
 - JS/TS `payload_notes` 在遇到 imported type 时会追加 import 来源和候选源码文件提示，帮助 Agent/LLM provider 读取跨文件类型上下文，而不是误把保守 mock 当作完整 DTO。
 - `examples/llm-provider.sh` 支持读取 `payload_notes` 中的候选源码文件并组装调试 prompt，可通过 `TESTLOOP_LLM_PROVIDER_MODEL_CMD` 接入真实模型命令。
+- 外部 LLM provider 输出会清洗常见 Markdown 代码围栏和前后解释性文本；如果输出不含可识别测试代码，会返回明确错误。
 
 ### Changed
 

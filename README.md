@@ -191,7 +191,7 @@ command = "/absolute/path/to/testloop-mcp"
 
 普通生成的 JS/TS 测试文件默认写在源文件同目录，例如 `src/sum.ts` → `src/sum.test.ts`、`lib/calc.js` → `lib/calc.test.js`。`run_tests` 会从 `package.json` 所在目录执行，并把生成文件转成相对项目根的参数；覆盖率任务仍优先使用 `coverage_task.test_file` 推荐路径。
 
-**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；JS/TS 目标还会在 `return_type_expr` 和 `payload_notes` 中说明 TypeScript 返回注解、跨文件类型/复杂泛型等导致静态 payload 回退的原因，以及 imported type 的来源和候选源码文件；stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。`auto` 在未配置命令时会自动回退到 `static`。
+**LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；JS/TS 目标还会在 `return_type_expr` 和 `payload_notes` 中说明 TypeScript 返回注解、跨文件类型/复杂泛型等导致静态 payload 回退的原因，以及 imported type 的来源和候选源码文件；stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。provider 输出会自动清洗常见 Markdown 代码围栏和前后解释性文本；如果输出不含可识别测试代码，会返回错误。`auto` 在未配置命令时会自动回退到 `static`。
 
 LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examples/llm-provider.sh](./examples/llm-provider.sh)。示例脚本会根据 `payload_notes` 读取 imported type 的候选文件并组装 prompt；可通过 `TESTLOOP_LLM_PROVIDER_PROMPT_FILE` 调试 prompt，或通过 `TESTLOOP_LLM_PROVIDER_MODEL_CMD` 接入真实模型命令。
 

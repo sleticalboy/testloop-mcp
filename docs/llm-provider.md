@@ -65,7 +65,21 @@ provider 的 stdout 支持两种返回格式：
 1. 直接返回测试代码。
 2. 返回 JSON：`{"code":"..."}`。
 
-stderr 会作为失败信息返回给 MCP 调用方。stdout 为空会被视为失败。
+provider 输出会自动清洗常见 Markdown 代码围栏和前后解释性文本。例如模型返回：
+
+````markdown
+下面是测试代码：
+
+```ts
+import { describe, it, expect } from 'vitest';
+
+it('loads user', async () => {
+  // ...
+});
+```
+````
+
+最终只会写入代码围栏内的内容。stderr 会作为失败信息返回给 MCP 调用方。stdout 为空、JSON 中缺少 `code`、或清洗后没有可识别测试代码都会被视为失败。
 
 ## 使用示例
 
@@ -107,6 +121,6 @@ TESTLOOP_LLM_PROVIDER_MODEL_CMD="your-model-cli --generate-tests" \
 ## 设计约束
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
-- provider 应只输出测试代码，不要输出解释性文本，否则会被写入测试文件。
+- provider 应优先只输出测试代码；常见 Markdown 代码围栏会被清洗，但不要依赖模型输出长篇解释。
 - `static_code` 是可用回退结果，LLM provider 可以基于它做增强，而不是从零生成。
 - 当存在 `context.coverage_task` 时，provider 应只补充该任务对应的增量测试，避免覆盖或扩写成整文件测试套件。

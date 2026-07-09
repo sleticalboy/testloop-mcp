@@ -107,10 +107,88 @@ func parseLLMProviderOutput(out []byte) (string, error) {
 		if strings.TrimSpace(resp.Code) == "" {
 			return "", fmt.Errorf("llm provider json output missing code")
 		}
-		return resp.Code, nil
+		return cleanLLMProviderCode(resp.Code)
 	}
 
-	return string(out), nil
+	return cleanLLMProviderCode(text)
+}
+
+func cleanLLMProviderCode(text string) (string, error) {
+	text = strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n"))
+	if text == "" {
+		return "", fmt.Errorf("llm provider returned empty output")
+	}
+	if fenced, ok := extractFirstCodeFence(text); ok {
+		return fenced, nil
+	}
+
+	lines := strings.Split(text, "\n")
+	start := -1
+	for i, line := range lines {
+		if llmProviderLineLooksLikeCode(line) {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return "", fmt.Errorf("llm provider output did not contain test code")
+	}
+	end := start
+	for i := len(lines) - 1; i >= start; i-- {
+		if llmProviderLineLooksLikeCode(lines[i]) {
+			end = i
+			break
+		}
+	}
+	code := strings.TrimSpace(strings.Join(lines[start:end+1], "\n"))
+	if code == "" {
+		return "", fmt.Errorf("llm provider output did not contain test code")
+	}
+	return code, nil
+}
+
+func extractFirstCodeFence(text string) (string, bool) {
+	start := strings.Index(text, "```")
+	if start < 0 {
+		return "", false
+	}
+	afterStart := text[start+3:]
+	if newline := strings.IndexByte(afterStart, '\n'); newline >= 0 {
+		afterStart = afterStart[newline+1:]
+	} else {
+		return "", false
+	}
+	end := strings.Index(afterStart, "```")
+	if end < 0 {
+		return "", false
+	}
+	code := strings.TrimSpace(afterStart[:end])
+	return code, code != ""
+}
+
+func llmProviderLineLooksLikeCode(line string) bool {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return false
+	}
+	lower := strings.ToLower(line)
+	codePrefixes := []string{
+		"package ", "import ", "from ", "func ", "def ", "class ", "public ", "private ", "protected ",
+		"const ", "let ", "var ", "export ", "module.exports", "require(", "describe(", "it(", "test(",
+		"assert ", "expect(", "return ", "use ", "#[", "@", "//", "/*", "*", "}", ")", "]",
+	}
+	for _, prefix := range codePrefixes {
+		if strings.HasPrefix(line, prefix) || strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	codeMarkers := []string{"=>", ":=", "==", "!=", "<=", ">=", "{", "}", ";", "()", "&&", "||"}
+	for _, marker := range codeMarkers {
+		if strings.Contains(line, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func NewTestProvider(mode string) (TestProvider, error) {

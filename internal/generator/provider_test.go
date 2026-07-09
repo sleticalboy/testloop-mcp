@@ -160,6 +160,43 @@ EOF
 	}
 }
 
+func TestParseLLMProviderOutputCleansMarkdownFence(t *testing.T) {
+	raw := []byte("Here is the test:\n\n```python\nfrom calc import add\n\n\ndef test_add():\n    assert add(1, 2) == 3\n```\n\nThis covers the happy path.\n")
+
+	code, err := parseLLMProviderOutput(raw)
+	if err != nil {
+		t.Fatalf("parseLLMProviderOutput() error = %v", err)
+	}
+	if strings.Contains(code, "Here is") || strings.Contains(code, "```") || strings.Contains(code, "This covers") {
+		t.Fatalf("expected markdown prose to be stripped, got:\n%s", code)
+	}
+	if !strings.Contains(code, "def test_add():") || !strings.Contains(code, "assert add(1, 2) == 3") {
+		t.Fatalf("expected fenced code, got:\n%s", code)
+	}
+}
+
+func TestParseLLMProviderJSONOutputCleansMarkdownFence(t *testing.T) {
+	raw := []byte("{\"code\":\"```javascript\\nconst { add } = require('./calc');\\n\\ntest('adds', () => {\\n  expect(add(1, 2)).toBe(3);\\n});\\n```\"}")
+
+	code, err := parseLLMProviderOutput(raw)
+	if err != nil {
+		t.Fatalf("parseLLMProviderOutput() error = %v", err)
+	}
+	if strings.Contains(code, "```") {
+		t.Fatalf("expected code fence to be stripped, got:\n%s", code)
+	}
+	if !strings.Contains(code, "const { add } = require('./calc');") || !strings.Contains(code, "expect(add(1, 2)).toBe(3);") {
+		t.Fatalf("expected JS test code, got:\n%s", code)
+	}
+}
+
+func TestParseLLMProviderOutputRejectsExplanationOnly(t *testing.T) {
+	_, err := parseLLMProviderOutput([]byte("I would test the add function by checking a simple happy path."))
+	if err == nil || !strings.Contains(err.Error(), "did not contain test code") {
+		t.Fatalf("parseLLMProviderOutput() error = %v, want missing code error", err)
+	}
+}
+
 func TestExternalLLMProviderRejectsEmptyCommand(t *testing.T) {
 	_, err := ExternalLLMProvider{}.GenerateTests(context.Background(), TestGenerationRequest{})
 	if err == nil || !strings.Contains(err.Error(), EnvLLMProviderCommand+" is empty") {
