@@ -1340,7 +1340,7 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 		typeExpr = branch
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
-	if payload, ok := jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
 	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
@@ -1386,7 +1386,7 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
 	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
-	if payload, ok := jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
 	lookupType := jsNormalizeTSTypeExpr(typeExpr)
@@ -1409,10 +1409,10 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
 		return "", false
 	}
-	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr, decls, seen, nil)
+	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr, decls, seen, nil, nil, false)
 }
 
-func jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool, include map[string]bool) (string, bool) {
+func jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool, include map[string]bool, exclude map[string]bool, allowEmpty bool) (string, bool) {
 	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(typeExpr), "{"), "}"))
 	fields := jsSplitTopLevelTypeFields(body)
 	if len(fields) == 0 {
@@ -1428,17 +1428,32 @@ func jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr string, decls map[stri
 		if include != nil && !include[name] {
 			continue
 		}
+		if exclude != nil && exclude[name] {
+			continue
+		}
 		parts = append(parts, fmt.Sprintf("%s: %s", name, jsMockValueForTSTypeWithDeclsSeen(name, typ, decls, seen)))
 	}
 	if len(parts) == 0 {
+		if allowEmpty {
+			return "{}", true
+		}
 		return "", false
 	}
 	return "{ " + strings.Join(parts, ", ") + " }", true
 }
 
-func jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
-	args, ok := jsTSGenericArgs(typeExpr, "Pick")
-	if !ok || len(args) != 2 {
+func jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	if args, ok := jsTSGenericArgs(typeExpr, "Pick"); ok {
+		return jsMockProjectedObjectPayload(args, decls, seen, false)
+	}
+	if args, ok := jsTSGenericArgs(typeExpr, "Omit"); ok {
+		return jsMockProjectedObjectPayload(args, decls, seen, true)
+	}
+	return "", false
+}
+
+func jsMockProjectedObjectPayload(args []string, decls map[string]string, seen map[string]bool, omit bool) (string, bool) {
+	if len(args) != 2 {
 		return "", false
 	}
 	keys, ok := jsTSStringLiteralUnionValues(args[1])
@@ -1449,7 +1464,10 @@ func jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]
 	if !ok {
 		return "", false
 	}
-	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, keys)
+	if omit {
+		return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, nil, keys, true)
+	}
+	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, keys, nil, false)
 }
 
 func jsResolvedObjectTypeForProjection(typeExpr string, decls map[string]string, seen map[string]bool) (string, map[string]bool, bool) {
