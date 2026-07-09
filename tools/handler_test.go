@@ -833,6 +833,100 @@ func TestHandleGenerateTestsOutputRunsWithDetectedJavaScriptFramework(t *testing
 	}
 }
 
+func TestHandleGenerateTestsComplexVitestOutputIsRunnerChecked(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "src", "api.ts")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte(`interface User {
+  userId: number
+  email: string
+  status: 'active' | 'disabled'
+  manager?: User | null
+}
+
+type Meta = {
+  total: number
+  nextUrl?: string | null
+}
+
+type AuditFields = {
+  traceId: string
+  page: number
+}
+
+type ApiResponse = {
+  data: User
+  meta: Meta
+  debug: string
+}
+
+type Directory = Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>
+type DirectoryEnvelope = Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>
+type DirectorySummary = Pick<DirectoryEnvelope, 'directory' | 'meta'>
+type DirectoryBundle = {
+  reports: User[]
+  pair: readonly [user: User, meta?: Meta]
+  directory: Record<string, Pick<User, 'userId' | 'email'>>
+  summary: DirectorySummary
+}
+
+export async function loadDirectoryBundleClient(api: { fetch(path: string): Promise<DirectoryBundle> }): Promise<DirectoryBundle> {
+  return await api.fetch('/directory/bundle')
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, generateResult)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.TestFile != filepath.Join(dir, "src", "api.test.ts") {
+		t.Fatalf("test file = %q", generated.TestFile)
+	}
+
+	logPath := installFakeNpxContentChecker(t, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { loadDirectoryBundleClient } from './api';",
+		"return { reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } };",
+		"const result = await loadDirectoryBundleClient(api);",
+		"expect(result).toEqual({ reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } });",
+		"expect(api.fetchCalls).toEqual([['/directory/bundle']]);",
+	}, strings.Join([]string{
+		" ✓ src/api.test.ts (1 test)",
+		" Test Files  1 passed (1)",
+		"      Tests  1 passed (1)",
+	}, "\n"))
+	runResult, _, err := HandleRunTests(context.Background(), nil, runTestsInput{Path: generated.TestFile})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, runResult)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "vitest" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=vitest run --verbose src/api.test.ts\n") {
+		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
+	}
+}
+
 func TestHandleGenerateCoverageTaskVitestESMOutputRunsWithDetectedFramework(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
@@ -929,6 +1023,44 @@ func assertGeneratedCoverageTaskOutput(t *testing.T, result *mcp.CallToolResult,
 		t.Fatalf("generated preview missing %q:\n%s", wantSnippet, generated.Preview)
 	}
 	return generated
+}
+
+func installFakeNpxContentChecker(t *testing.T, requiredSnippets []string, output string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "npx.log")
+	patternPath := filepath.Join(t.TempDir(), "required-patterns.txt")
+	if err := os.WriteFile(patternPath, []byte(strings.Join(requiredSnippets, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write required patterns: %v", err)
+	}
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"test_file=''\n" +
+		"for arg in \"$@\"; do\n" +
+		"  case \"$arg\" in\n" +
+		"    *.test.ts|*.test.js) test_file=\"$arg\" ;;\n" +
+		"  esac\n" +
+		"done\n" +
+		"if [ -z \"$test_file\" ]; then echo 'missing test file argument' >&2; exit 2; fi\n" +
+		"if [ ! -f \"$test_file\" ]; then echo \"missing generated test file: $test_file\" >&2; exit 3; fi\n" +
+		"while IFS= read -r pattern; do\n" +
+		"  [ -z \"$pattern\" ] && continue\n" +
+		"  if ! grep -F \"$pattern\" \"$test_file\" >/dev/null; then\n" +
+		"    echo \"missing generated test snippet: $pattern\" >&2\n" +
+		"    exit 4\n" +
+		"  fi\n" +
+		"done < '" + patternPath + "'\n" +
+		"cat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx content checker: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
 }
 
 func TestHandleGenerateTestsUsesCoverageTaskTestFile(t *testing.T) {

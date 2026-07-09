@@ -69,6 +69,7 @@ JS/TS payload 已经有三层测试保护：
 - helper 级：直接固定 payload 推导函数，覆盖边界和负例。
 - 普通生成级：固定最终生成的 Jest/Vitest/Mocha 测试文本。
 - coverage task 级：固定目标过滤、任务上下文、建议输入和框架断言风格。
+- handler 闭环级：通过 `generate_tests -> run_tests` 临时项目 fixture 校验生成文件、执行路径和解析结果。
 
 最近补齐的字段级组合能力已经覆盖 `response.json()` 和注入式 client 两条真实生成路径。后续修改生成器时，至少应跑：
 
