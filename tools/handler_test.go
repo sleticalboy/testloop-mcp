@@ -746,6 +746,7 @@ export async function loadUser(response: Response): Promise<ExternalUser> {
 		t.Fatalf("return_type_expr = %q, want Promise<ExternalUser>", target.ReturnTypeExpr)
 	}
 	assertStringSliceContains(t, target.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+	assertStringSliceContains(t, target.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
 	for _, want := range []string{
 		"const result = await loadUser({ json: async () => ({ ok: true }) });",
 		"expect(result).toEqual({ ok: true });",

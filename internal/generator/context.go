@@ -87,11 +87,11 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 		if fn.IsMethod {
 			continue
 		}
-		ctx.Targets = append(ctx.Targets, jsTarget(fn, "function"))
+		ctx.Targets = append(ctx.Targets, jsTarget(fn, "function", ctx.Imports, srcPath))
 	}
 	for _, cls := range classes {
 		for _, method := range cls.Methods {
-			ctx.Targets = append(ctx.Targets, jsTarget(method, "method"))
+			ctx.Targets = append(ctx.Targets, jsTarget(method, "method", ctx.Imports, srcPath))
 		}
 	}
 
@@ -101,7 +101,7 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 	return ctx
 }
 
-func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
+func jsTarget(fn jsFuncInfo, kind string, imports []string, srcPath string) types.TestTarget {
 	target := types.TestTarget{
 		Name:              fn.Name,
 		Kind:              kind,
@@ -111,7 +111,7 @@ func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
 		ReturnType:        fn.Analysis.ReturnType,
 		ReturnTypeExpr:    fn.Analysis.ReturnTypeExpr,
 		ReturnExpressions: fn.Analysis.Returns,
-		PayloadNotes:      jsPayloadFallbackNotes(fn.Analysis),
+		PayloadNotes:      jsPayloadFallbackNotes(fn.Analysis, imports, srcPath),
 		HasErrorPath:      fn.Analysis.Throws,
 		BoundaryCases:     jsBoundaryLabels(fn.Analysis.Boundaries),
 	}
@@ -121,21 +121,24 @@ func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
 	return target
 }
 
-func jsPayloadFallbackNotes(analysis jsFuncAnalysis) []string {
+func jsPayloadFallbackNotes(analysis jsFuncAnalysis, imports []string, srcPath string) []string {
 	typeExpr := strings.TrimSpace(analysis.ReturnTypeExpr)
 	if typeExpr == "" {
 		return nil
 	}
+	inner := jsPayloadNoteTypeExpr(typeExpr)
+	importNotes := jsPayloadImportNotes(inner, imports, srcPath)
 	if _, ok := jsMockPayloadFromTSTypeWithDecls(typeExpr, analysis.TSTypeDecls); ok {
-		return nil
+		return importNotes
 	}
 
-	inner := jsPayloadNoteTypeExpr(typeExpr)
 	reason := jsExplainTSPayloadFallback(inner, analysis.TSTypeDecls)
 	if reason == "" {
 		reason = "return annotation is outside the static payload support boundary"
 	}
-	return []string{reason + "; static payload falls back to { ok: true }"}
+	notes := []string{reason + "; static payload falls back to { ok: true }"}
+	notes = append(notes, importNotes...)
+	return notes
 }
 
 func jsPayloadNoteTypeExpr(typeExpr string) string {
@@ -190,6 +193,169 @@ func jsExplainTSPayloadFallback(typeExpr string, decls map[string]string) string
 		return "generic return annotation " + typeExpr + " resolves to an unsupported payload shape"
 	}
 	return ""
+}
+
+type jsImportTypeHint struct {
+	Name      string
+	Module    string
+	Namespace bool
+}
+
+func jsPayloadImportNotes(typeExpr string, imports []string, srcPath string) []string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if typeExpr == "" || len(imports) == 0 {
+		return nil
+	}
+	hints := jsImportTypeHints(imports)
+	if len(hints) == 0 {
+		return nil
+	}
+	seen := make(map[string]bool)
+	var notes []string
+	for _, identifier := range jsIdentifiersInTSType(typeExpr) {
+		hint, ok := hints[identifier]
+		if !ok {
+			continue
+		}
+		key := hint.Name + "\x00" + hint.Module
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		notes = append(notes, jsImportTypeHintNote(hint, srcPath))
+	}
+	return notes
+}
+
+func jsImportTypeHintNote(hint jsImportTypeHint, srcPath string) string {
+	if hint.Namespace {
+		if candidates := jsImportCandidateFiles(srcPath, hint.Module); len(candidates) > 0 {
+			return "return annotation references namespace import " + hint.Name + " from '" + hint.Module + "'; read candidate source files: " + strings.Join(candidates, ", ")
+		}
+		return "return annotation references namespace import " + hint.Name + " from package '" + hint.Module + "'; static payload does not inspect package types"
+	}
+	if candidates := jsImportCandidateFiles(srcPath, hint.Module); len(candidates) > 0 {
+		return "return annotation references imported type " + hint.Name + " from '" + hint.Module + "'; read candidate source files: " + strings.Join(candidates, ", ")
+	}
+	return "return annotation references imported type " + hint.Name + " from package '" + hint.Module + "'; static payload does not inspect package types"
+}
+
+func jsImportTypeHints(imports []string) map[string]jsImportTypeHint {
+	hints := make(map[string]jsImportTypeHint)
+	for _, line := range imports {
+		module := jsImportModule(line)
+		if module == "" {
+			continue
+		}
+		for _, hint := range jsImportTypeHintsFromLine(line, module) {
+			if hint.Name == "" {
+				continue
+			}
+			hints[hint.Name] = hint
+		}
+	}
+	return hints
+}
+
+func jsImportTypeHintsFromLine(line, module string) []jsImportTypeHint {
+	var hints []jsImportTypeHint
+	if match := jsNamespaceImportRe.FindStringSubmatch(line); len(match) > 1 {
+		hints = append(hints, jsImportTypeHint{Name: strings.TrimSpace(match[1]), Module: module, Namespace: true})
+	}
+	for _, block := range jsImportNamedBlocks(line) {
+		for _, part := range strings.Split(block, ",") {
+			name := jsImportedLocalName(part)
+			if name != "" {
+				hints = append(hints, jsImportTypeHint{Name: name, Module: module})
+			}
+		}
+	}
+	if match := jsDefaultImportRe.FindStringSubmatch(line); len(match) > 1 {
+		name := strings.TrimSpace(match[1])
+		if name != "" && name != "type" {
+			hints = append(hints, jsImportTypeHint{Name: name, Module: module})
+		}
+	}
+	return hints
+}
+
+func jsImportModule(line string) string {
+	if match := jsImportFromModuleRe.FindStringSubmatch(line); len(match) > 1 {
+		return strings.TrimSpace(match[1])
+	}
+	if match := jsRequireModuleRe.FindStringSubmatch(line); len(match) > 1 {
+		return strings.TrimSpace(match[1])
+	}
+	return ""
+}
+
+func jsImportNamedBlocks(line string) []string {
+	matches := jsNamedImportBlockRe.FindAllStringSubmatch(line, -1)
+	blocks := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) > 1 {
+			blocks = append(blocks, match[1])
+		}
+	}
+	return blocks
+}
+
+func jsImportedLocalName(part string) string {
+	part = strings.TrimSpace(part)
+	part = strings.TrimPrefix(part, "type ")
+	part = strings.TrimSpace(part)
+	if part == "" {
+		return ""
+	}
+	fields := strings.Fields(part)
+	if len(fields) >= 3 && fields[len(fields)-2] == "as" {
+		return fields[len(fields)-1]
+	}
+	if len(fields) > 0 {
+		return fields[0]
+	}
+	return ""
+}
+
+func jsImportCandidateFiles(srcPath, module string) []string {
+	if !strings.HasPrefix(module, ".") {
+		return nil
+	}
+	base := filepath.Clean(module)
+	exts := []string{".ts", ".tsx", ".d.ts", ".js", ".jsx", ".mjs", ".cjs"}
+	candidates := make([]string, 0, len(exts)*2)
+	for _, ext := range exts {
+		candidates = append(candidates, filepath.ToSlash(base+ext))
+	}
+	for _, ext := range exts {
+		candidates = append(candidates, filepath.ToSlash(filepath.Join(base, "index"+ext)))
+	}
+	return candidates
+}
+
+func jsIdentifiersInTSType(typeExpr string) []string {
+	matches := jsTSIdentifierFindRe.FindAllString(typeExpr, -1)
+	seen := make(map[string]bool)
+	var identifiers []string
+	for _, match := range matches {
+		if jsBuiltinTSTypeIdentifier(match) || seen[match] {
+			continue
+		}
+		seen[match] = true
+		identifiers = append(identifiers, match)
+	}
+	return identifiers
+}
+
+func jsBuiltinTSTypeIdentifier(identifier string) bool {
+	switch identifier {
+	case "Array", "ReadonlyArray", "Promise", "PromiseLike", "Readonly", "Required", "Partial", "Pick", "Omit", "Record",
+		"string", "number", "boolean", "bigint", "symbol", "object", "unknown", "any", "void", "never", "null", "undefined",
+		"true", "false", "Date":
+		return true
+	default:
+		return false
+	}
 }
 
 func jsParamNames(params []jsParamInfo) []string {
@@ -281,6 +447,13 @@ var (
 	jsTypeDeclLineRe = regexp.MustCompile(`(?m)^\s*(?:export\s+)?(?:class|interface|type|enum)\s+([A-Za-z_$][\w$]*)`)
 	pyImportLineRe   = regexp.MustCompile(`(?m)^\s*(?:from\s+\S+\s+import\s+.+|import\s+.+)$`)
 	pyTypeDeclLineRe = regexp.MustCompile(`(?m)^\s*class\s+([A-Za-z_]\w*)`)
+
+	jsImportFromModuleRe = regexp.MustCompile(`\sfrom\s*['"]([^'"]+)['"]`)
+	jsRequireModuleRe    = regexp.MustCompile(`require\(\s*['"]([^'"]+)['"]\s*\)`)
+	jsNamedImportBlockRe = regexp.MustCompile(`\{([^}]*)\}`)
+	jsDefaultImportRe    = regexp.MustCompile(`^\s*import\s+(?:type\s+)?([A-Za-z_$][\w$]*)\s*(?:,|\s+from)`)
+	jsNamespaceImportRe  = regexp.MustCompile(`^\s*import\s+(?:type\s+)?\*\s+as\s+([A-Za-z_$][\w$]*)`)
+	jsTSIdentifierFindRe = regexp.MustCompile(`[A-Za-z_$][A-Za-z0-9_$]*`)
 )
 
 func extractJSImports(source string) []string {

@@ -278,6 +278,7 @@ EOF
 		t.Fatalf("return_type_expr = %q, want Promise<ExternalUser>", target.ReturnTypeExpr)
 	}
 	assertProviderSliceContains(t, target.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+	assertProviderSliceContains(t, target.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
 	if !strings.Contains(req.StaticCode, "expect(result).toEqual({ ok: true });") {
 		t.Fatalf("provider static_code missing fallback assertion:\n%s", req.StaticCode)
 	}

@@ -74,6 +74,10 @@ export async function loadExternal(response: Response): Promise<ExternalUser> {
   return await response.json();
 }
 
+export async function loadImportedBox(response: Response): Promise<Box<ExternalUser>> {
+  return await response.json();
+}
+
 export async function loadConstrained(response: Response): Promise<Constrained<User>> {
   return await response.json();
 }
@@ -123,6 +127,13 @@ export async function loadConstrained(response: Response): Promise<Constrained<U
 		t.Fatalf("loadExternal target not found: %+v", ctx.Targets)
 	}
 	assertContains(t, loadExternal.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+	assertContains(t, loadExternal.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
+
+	loadImportedBox := findTarget(ctx.Targets, "loadImportedBox")
+	if loadImportedBox == nil {
+		t.Fatalf("loadImportedBox target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, loadImportedBox.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
 
 	loadConstrained := findTarget(ctx.Targets, "loadConstrained")
 	if loadConstrained == nil {
@@ -198,7 +209,7 @@ func TestGenerationContextTargetHelpers(t *testing.T) {
 			Returns:    []string{"prefix + text"},
 			Boundaries: []jsBoundary{{Param: "prefix", Value: "'>'"}},
 		},
-	}, "method")
+	}, "method", nil, "")
 	if js.Name != "formatText" || js.Kind != "method" || js.ClassName != "Formatter" || !js.Async || !js.HasErrorPath {
 		t.Fatalf("unexpected JS target metadata: %+v", js)
 	}

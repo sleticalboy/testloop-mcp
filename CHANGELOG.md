@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- JS/TS `payload_notes` 在遇到 imported type 时会追加 import 来源和候选源码文件提示，帮助 Agent/LLM provider 读取跨文件类型上下文，而不是误把保守 mock 当作完整 DTO。
+
 ### Changed
 
 - `scripts/install.sh` 的 `go install` fallback 日志会根据实际落盘文件名输出安装路径，避免跨平台 dry run 下载失败时把当前主机二进制误报为 `.exe`。
