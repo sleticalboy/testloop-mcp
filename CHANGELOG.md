@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.11 - 2026-07-09
+
 ### Added
 
 - JS/TS 静态生成器补强 TypeScript DTO payload，覆盖 utility wrapper、Pick/Omit、Record、对象交叉、indexed access、数组和 tuple 组合。
