@@ -81,6 +81,18 @@ it('loads user', async () => {
 
 最终只会写入代码围栏内的内容。stderr 会作为失败信息返回给 MCP 调用方。stdout 为空、JSON 中缺少 `code`、或清洗后没有可识别测试代码都会被视为失败。
 
+清洗后还会按目标语言做一层轻量测试代码校验：
+
+| 目标语言 | 最低识别信号 |
+| --- | --- |
+| Go | `func Test...(` |
+| Python | `def test_...(` 或 `async def test_...(` |
+| JavaScript / TypeScript | `describe(...)`、`it(...)`、`test(...)`、`*.test(...)` 或 `expect(...)` |
+| Rust | `#[test]`、`#[tokio::test]` 或 `fn test_...(` |
+| Java | `@Test` 或 JUnit `Test` import |
+
+这只是防止解释文本、业务实现片段或调试脚本被误写入测试文件的后验保护，不替代 `run_tests` 的真实编译和执行。
+
 ## 使用示例
 
 ```bash

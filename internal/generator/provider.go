@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/sleticalboy/testloop-mcp/internal/detector"
@@ -84,6 +85,9 @@ func (p ExternalLLMProvider) GenerateTests(ctx context.Context, req TestGenerati
 
 	code, err := parseLLMProviderOutput(out)
 	if err != nil {
+		return "", err
+	}
+	if err := validateLLMProviderTestCode(req.SourceFile, code); err != nil {
 		return "", err
 	}
 	return code, nil
@@ -189,6 +193,42 @@ func llmProviderLineLooksLikeCode(line string) bool {
 		}
 	}
 	return false
+}
+
+var (
+	llmProviderGoTestRe         = regexp.MustCompile(`(?m)^\s*func\s+Test[A-Za-z0-9_]*\s*\(`)
+	llmProviderJavaScriptTestRe = regexp.MustCompile(`(?m)(?:^|[^\w$])(?:describe|it|test)(?:\s*\(|\.(?:each|only|skip|todo|concurrent)\s*\()|(?:^|[^\w$])expect\s*\(`)
+	llmProviderPythonTestRe     = regexp.MustCompile(`(?m)^\s*(?:async\s+)?def\s+test_[A-Za-z0-9_]*\s*\(`)
+	llmProviderRustTestRe       = regexp.MustCompile(`(?m)#\[(?:[A-Za-z0-9_]+::)?test\]|\bfn\s+test_[A-Za-z0-9_]*\s*\(`)
+	llmProviderJavaTestRe       = regexp.MustCompile(`(?m)^\s*@(?:org\.junit\.jupiter\.api\.)?Test\b|\borg\.junit(?:\.jupiter)?\.api\.Test\b`)
+)
+
+func validateLLMProviderTestCode(srcPath, code string) error {
+	language := languageNameForPath(srcPath)
+	if language == "" {
+		return nil
+	}
+	if llmProviderCodeLooksLikeTest(language, code) {
+		return nil
+	}
+	return fmt.Errorf("llm provider output did not look like %s test code", language)
+}
+
+func llmProviderCodeLooksLikeTest(language, code string) bool {
+	switch language {
+	case "go":
+		return llmProviderGoTestRe.MatchString(code)
+	case "javascript", "typescript":
+		return llmProviderJavaScriptTestRe.MatchString(code)
+	case "python":
+		return llmProviderPythonTestRe.MatchString(code)
+	case "rust":
+		return llmProviderRustTestRe.MatchString(code)
+	case "java":
+		return llmProviderJavaTestRe.MatchString(code)
+	default:
+		return true
+	}
 }
 
 func NewTestProvider(mode string) (TestProvider, error) {

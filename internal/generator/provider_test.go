@@ -160,6 +160,24 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderRejectsExternalLLMNonTestCode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	srcPath := writeProviderJavaScriptSource(t)
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+cat <<'EOF'
+{"code":"const value = add(1, 2);\nconsole.log(value);\n"}
+EOF
+`)
+
+	_, err := GenerateTestsWithProvider(context.Background(), srcPath, ExternalLLMProvider{Command: command})
+	if err == nil || !strings.Contains(err.Error(), "did not look like javascript test code") {
+		t.Fatalf("GenerateTestsWithProvider() error = %v, want non-test code error", err)
+	}
+}
+
 func TestParseLLMProviderOutputCleansMarkdownFence(t *testing.T) {
 	raw := []byte("Here is the test:\n\n```python\nfrom calc import add\n\n\ndef test_add():\n    assert add(1, 2) == 3\n```\n\nThis covers the happy path.\n")
 
@@ -194,6 +212,55 @@ func TestParseLLMProviderOutputRejectsExplanationOnly(t *testing.T) {
 	_, err := parseLLMProviderOutput([]byte("I would test the add function by checking a simple happy path."))
 	if err == nil || !strings.Contains(err.Error(), "did not contain test code") {
 		t.Fatalf("parseLLMProviderOutput() error = %v, want missing code error", err)
+	}
+}
+
+func TestValidateLLMProviderTestCodeAcceptsLanguagePatterns(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		code string
+	}{
+		{name: "go", path: "calc.go", code: "package calc\n\nfunc TestAdd(t *testing.T) {}\n"},
+		{name: "python", path: "calc.py", code: "def test_add():\n    assert add(1, 2) == 3\n"},
+		{name: "javascript", path: "calc.js", code: "test('adds', () => {\n  expect(add(1, 2)).toBe(3);\n});\n"},
+		{name: "typescript", path: "calc.ts", code: "import { it, expect } from 'vitest';\n\nit('adds', () => expect(add(1, 2)).toBe(3));\n"},
+		{name: "rust", path: "calc.rs", code: "#[test]\nfn test_add() {\n    assert_eq!(add(1, 2), 3);\n}\n"},
+		{name: "java", path: "Calculator.java", code: "import org.junit.jupiter.api.Test;\n\nclass CalculatorTest {\n  @Test\n  void adds() {}\n}\n"},
+		{name: "unknown", path: "calc.txt", code: "not test code"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateLLMProviderTestCode(tt.path, tt.code); err != nil {
+				t.Fatalf("validateLLMProviderTestCode() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateLLMProviderTestCodeRejectsLanguageNonTests(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		code string
+		want string
+	}{
+		{name: "go", path: "calc.go", code: "package calc\n\nfunc Add(a, b int) int { return a + b }\n", want: "go"},
+		{name: "python", path: "calc.py", code: "def helper():\n    return add(1, 2)\n", want: "python"},
+		{name: "javascript", path: "calc.js", code: "const value = add(1, 2);\nconsole.log(value);\n", want: "javascript"},
+		{name: "typescript", path: "calc.ts", code: "export const value: number = add(1, 2);\n", want: "typescript"},
+		{name: "rust", path: "calc.rs", code: "pub fn helper() -> i32 {\n    add(1, 2)\n}\n", want: "rust"},
+		{name: "java", path: "Calculator.java", code: "class CalculatorTest {\n  void adds() {}\n}\n", want: "java"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateLLMProviderTestCode(tt.path, tt.code)
+			if err == nil || !strings.Contains(err.Error(), "did not look like "+tt.want+" test code") {
+				t.Fatalf("validateLLMProviderTestCode() error = %v, want %s non-test error", err, tt.want)
+			}
+		})
 	}
 }
 
