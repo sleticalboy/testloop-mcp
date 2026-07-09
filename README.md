@@ -391,6 +391,7 @@ go test ./internal/parser/ -v
 
 # 用 CLI 工具对指定文件生成测试（脱离 MCP）
 go run ./cmd/testgen demo/calc.go
+go run ./cmd/testgen -provider llm -provider-check
 go run ./cmd/testgen -provider auto demo/calc.py /tmp/test_calc.py
 
 # 启动 MCP server

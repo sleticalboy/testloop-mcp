@@ -10,6 +10,7 @@
 - 外部 LLM provider 输出增加按目标语言的轻量测试代码校验，Go/Python/JS/TS/Rust/Java 会拒绝明显不是测试的代码片段。
 - 新增 `examples/llm-provider-prompt.md`、Ollama 模型命令包装和 OpenAI CLI 模型命令包装，降低外部 LLM provider 的真实模型接入成本。
 - 新增 LLM provider 生成结果进入 `run_tests include_fix_suggestions=true` 的 handler 回归测试，固定外部生成结果可进入失败解析和 repair task 闭环。
+- `cmd/testgen` 新增 `-provider-check`，用于诊断 provider 模式、`TESTLOOP_LLM_PROVIDER_CMD` 和命令可执行性。
 
 ### Changed
 

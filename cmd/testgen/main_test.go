@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/sleticalboy/testloop-mcp/internal/generator"
 )
 
 func TestRunTestgenRequiresSourceFile(t *testing.T) {
@@ -49,6 +52,112 @@ func TestRunTestgenRejectsUnknownProvider(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "Provider error") {
 		t.Fatalf("stderr missing provider error: %q", stderr.String())
+	}
+}
+
+func TestRunTestgenProviderCheckStatic(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider-check"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "provider=static") || !strings.Contains(stdout.String(), "status=ok") {
+		t.Fatalf("stdout missing static diagnostics: %q", stdout.String())
+	}
+}
+
+func TestRunTestgenProviderCheckAutoFallsBackToStatic(t *testing.T) {
+	t.Setenv(generator.EnvLLMProviderCommand, "")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider", "auto", "-provider-check"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "will fall back to static") {
+		t.Fatalf("stdout missing auto fallback detail: %q", stdout.String())
+	}
+}
+
+func TestRunTestgenProviderCheckLLMRequiresCommand(t *testing.T) {
+	t.Setenv(generator.EnvLLMProviderCommand, "")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider", "llm", "-provider-check"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1", code)
+	}
+	if !strings.Contains(stdout.String(), generator.EnvLLMProviderCommand+"=<unset>") {
+		t.Fatalf("stdout missing env diagnostic: %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "provider llm requires "+generator.EnvLLMProviderCommand) {
+		t.Fatalf("stderr missing missing-command diagnostic: %q", stderr.String())
+	}
+}
+
+func TestRunTestgenProviderCheckReportsMissingExecutable(t *testing.T) {
+	t.Setenv(generator.EnvLLMProviderCommand, filepath.Join(t.TempDir(), "missing-provider"))
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider", "llm", "-provider-check"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "provider command executable not found") {
+		t.Fatalf("stderr missing executable diagnostic: %q", stderr.String())
+	}
+}
+
+func TestRunTestgenProviderCheckReportsConfiguredCommand(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable: %v", err)
+	}
+	t.Setenv(generator.EnvLLMProviderCommand, exe+" --fake-provider")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider", "llm", "-provider-check"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "status=ok") || !strings.Contains(stdout.String(), "command="+exe+" --fake-provider") {
+		t.Fatalf("stdout missing configured-command diagnostic: %q", stdout.String())
+	}
+}
+
+func TestRunTestgenLLMFailureSuggestsProviderCheck(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+	dir := t.TempDir()
+	source := writeSource(t, dir)
+	provider := filepath.Join(t.TempDir(), "provider")
+	if err := os.WriteFile(provider, []byte(`#!/usr/bin/env sh
+cat <<'EOF'
+{"code":"package calc\n\nfunc Add(a, b int) int { return a + b }\n"}
+EOF
+`), 0o755); err != nil {
+		t.Fatalf("write provider: %v", err)
+	}
+	t.Setenv(generator.EnvLLMProviderCommand, provider)
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"-provider", "llm", source}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "did not look like go test code") {
+		t.Fatalf("stderr missing validation error: %q", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "-provider llm -provider-check") {
+		t.Fatalf("stderr missing provider-check hint: %q", stderr.String())
 	}
 }
 

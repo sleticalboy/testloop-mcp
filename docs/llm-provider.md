@@ -172,6 +172,26 @@ TESTLOOP_OPENAI_MODEL=gpt-5.5 \
 
 `examples/model-openai-cli.sh` 会调用官方 `openai responses create` 命令，默认通过 `--transform 'output.#(type=="message").content.0.text'` 只取模型文本输出。可以用 `TESTLOOP_OPENAI_MAX_OUTPUT_TOKENS` 调整最大输出长度。
 
+## 诊断 provider 配置
+
+独立 CLI `cmd/testgen` 提供 `-provider-check`，可以在真正生成测试前检查 provider 模式、`TESTLOOP_LLM_PROVIDER_CMD` 和命令可执行性：
+
+```bash
+go run ./cmd/testgen -provider llm -provider-check
+go run ./cmd/testgen -provider auto -provider-check
+```
+
+常见结果：
+
+| 场景 | 结果 |
+| --- | --- |
+| `provider=static` | 直接返回 `status=ok`，不需要外部配置。 |
+| `provider=auto` 且未设置 `TESTLOOP_LLM_PROVIDER_CMD` | 返回 `status=ok`，说明会回退到 static provider。 |
+| `provider=llm` 且未设置 `TESTLOOP_LLM_PROVIDER_CMD` | 返回 `status=error`，提示必须设置环境变量。 |
+| `TESTLOOP_LLM_PROVIDER_CMD` 的首个可执行文件不存在 | 返回 `status=error`，提示检查 `PATH` 或使用绝对路径。 |
+
+`-provider-check` 不会调用模型，也不会校验模型输出内容。模型命令失败、stdout 为空、JSON 缺少 `code`、Markdown 清洗后没有测试代码、或语言级测试代码校验失败，会在实际 `generate_tests` / `testgen` 生成阶段返回错误。`testgen` 使用 LLM provider 失败时会提示先运行 `-provider-check` 排查基础配置。
+
 ## 设计约束
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
