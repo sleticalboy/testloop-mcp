@@ -24,7 +24,7 @@
 - Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.11
 - CI run：`28997546307`
 - Release Artifacts run：`28995989142`
-- Post-Release Verify run：暂未触发；已在本机完成 Release 资产、安装脚本回退和 Homebrew 验证
+- Post-Release Verify run：`29010902985`
 - Homebrew tap commit：`513d843762bbd75f20c8716f4589419650bebaa3`
 
 `v0.4.11` Release 已包含：
@@ -45,6 +45,7 @@
 - [x] 远端 CI passed
 - [x] Release Artifacts run `28995989142` passed
 - [x] `scripts/verify-release-assets.sh v0.4.11` 验证 release 页面包含 10 个必需资产
+- [x] 手动触发 `Post-Release Verify` workflow `29010902985`，五平台安装脚本 dry run 全部通过；macOS arm64 首次排队被取消，rerun 后通过
 - [x] macOS arm64 release 资产可直连下载、校验 `.sha256` 并解包出 `testloop-mcp` / `testloop-testgen`
 - [x] `scripts/install.sh` 在本机 GitHub 443 网络不稳定时可回退 `go install`，安装路径和两个命令 help 输出已验证
 - [x] `brew fetch sleticalboy/tap/testloop-mcp`
