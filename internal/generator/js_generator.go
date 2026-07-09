@@ -1343,6 +1343,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
+	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
 		if seen == nil {
 			seen = map[string]bool{}
@@ -1362,6 +1365,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 			typeExpr = branch
 			typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		}
+	}
+	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if payload, ok := jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
@@ -1389,6 +1395,9 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
+	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	lookupType := jsNormalizeTSTypeExpr(typeExpr)
 	if name, resolved := jsResolveNamedTSType(lookupType, decls); resolved != "" {
 		if seen == nil {
@@ -1405,6 +1414,9 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		typeExpr = strings.TrimSpace(resolved)
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
+	}
+	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
 		return "", false
@@ -1468,6 +1480,35 @@ func jsMockProjectedObjectPayload(args []string, decls map[string]string, seen m
 		return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, nil, keys, true)
 	}
 	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, keys, nil, false)
+}
+
+func jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	args, ok := jsTSGenericArgs(typeExpr, "Record")
+	if !ok || len(args) != 2 {
+		return "", false
+	}
+	keys, ok := jsTSRecordKeys(args[0])
+	if !ok || len(keys) == 0 {
+		return "", false
+	}
+	valueType := strings.TrimSpace(args[1])
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		value, ok := jsMockPayloadFromTSTypeWithDeclsSeen(valueType, decls, seen)
+		if !ok {
+			value = jsMockValueForTSTypeWithDeclsSeen(key, valueType, decls, seen)
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", key, value))
+	}
+	return "{ " + strings.Join(parts, ", ") + " }", true
+}
+
+func jsTSRecordKeys(typeExpr string) ([]string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if typeExpr == "string" {
+		return []string{"key"}, true
+	}
+	return jsTSStringLiteralUnionList(typeExpr)
 }
 
 func jsResolvedObjectTypeForProjection(typeExpr string, decls map[string]string, seen map[string]bool) (string, map[string]bool, bool) {
@@ -1579,6 +1620,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	}
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
+	}
+	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload
 	}
 	compactName := jsCompactName(fieldName)
 	switch {
@@ -1857,11 +1901,23 @@ func jsSplitTopLevelGenericArgs(inner string) []string {
 }
 
 func jsTSStringLiteralUnionValues(typeExpr string) (map[string]bool, bool) {
+	keys, ok := jsTSStringLiteralUnionList(typeExpr)
+	if !ok {
+		return nil, false
+	}
+	values := make(map[string]bool, len(keys))
+	for _, key := range keys {
+		values[key] = true
+	}
+	return values, true
+}
+
+func jsTSStringLiteralUnionList(typeExpr string) ([]string, bool) {
 	parts := jsSplitTopLevelTypeUnion(typeExpr)
 	if len(parts) == 0 {
 		return nil, false
 	}
-	values := make(map[string]bool, len(parts))
+	values := make([]string, 0, len(parts))
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if len(part) < 2 {
@@ -1875,7 +1931,7 @@ func jsTSStringLiteralUnionValues(typeExpr string) (map[string]bool, bool) {
 		if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(key) {
 			return nil, false
 		}
-		values[key] = true
+		values = append(values, key)
 	}
 	return values, true
 }

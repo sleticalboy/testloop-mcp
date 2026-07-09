@@ -376,6 +376,8 @@ type MaybeUsers = ReadonlyArray<User | null>
 type UserTuple = readonly [user: User, meta?: Meta]
 type PublicUser = Pick<User, 'userId' | 'email'>
 type UserWithoutMeta = Omit<User, 'manager' | 'displayName'>
+type UserMap = Record<string, User>
+type FeaturedUsers = Record<'primary' | 'secondary', User>
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
@@ -390,6 +392,14 @@ export async function parsePublicUser(response: Response): Promise<PublicUser> {
 }
 
 export async function parseUserWithoutMeta(response: Response): Promise<UserWithoutMeta> {
+  return await response.json();
+}
+
+export async function parseUserMap(response: Response): Promise<UserMap> {
+  return await response.json();
+}
+
+export async function parseFeaturedUsers(response: Response): Promise<FeaturedUsers> {
   return await response.json();
 }
 
@@ -431,6 +441,10 @@ export async function loadUserTuple(response: Response): Promise<UserTuple> {
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 		"const result = await parseUserWithoutMeta({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }) });",
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' });",
+		"const result = await parseUserMap({ json: async () => ({ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }) });",
+		"expect(result).toEqual({ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
+		"const result = await parseFeaturedUsers({ json: async () => ({ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }) });",
+		"expect(result).toEqual({ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
 		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } };",
 		"const result = await loadProfile(client);",
 		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
@@ -1097,6 +1111,41 @@ export function status(): string {
 				"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 			},
 			forbidden: []string{"describe('status'", "status(", "status: 'active'", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript record named response json",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+}
+
+type FeaturedUsers = Record<'primary' | 'secondary', User>
+
+export async function loadFeaturedUsers(response: Response): Promise<FeaturedUsers> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-record-1",
+				Framework:      "vitest",
+				Target:         "loadFeaturedUsers",
+				LineRange:      "8-8",
+				GapType:        "return_path",
+				TestName:       "covers vitest loadFeaturedUsers record response",
+				AssertionFocus: []string{"断言 Record 命名类型 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { loadFeaturedUsers } from './api';",
+				"const result = await loadFeaturedUsers({ json: async () => ({ primary: { userId: 1, email: 'user@example.com' }, secondary: { userId: 1, email: 'user@example.com' } }) });",
+				"expect(result).toEqual({ primary: { userId: 1, email: 'user@example.com' }, secondary: { userId: 1, email: 'user@example.com' } });",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
 		{
 			name:     "vitest typescript named response json array",
@@ -2122,6 +2171,15 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Omit<User, keyof User>>", typeDecls); ok || got != "" {
 		t.Fatalf("unsupported omit payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Record<string, User>>", typeDecls); !ok || got != "{ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
+		t.Fatalf("record string payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Record<'primary' | 'secondary', User>>", typeDecls); !ok || got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
+		t.Fatalf("record literal payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Record<number, User>>", typeDecls); ok || got != "" {
+		t.Fatalf("unsupported record payload = %q, %v", got, ok)
+	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
 	}
@@ -2134,12 +2192,19 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got := jsMockValueForTSTypeWithDecls("owner", "Omit<User, 'manager'>", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test' }" {
 		t.Fatalf("omit owner value = %q", got)
 	}
+	if got := jsMockValueForTSTypeWithDecls("owners", "Record<'primary', User>", typeDecls); got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
+		t.Fatalf("record owners value = %q", got)
+	}
 	typeDecls["Users"] = "ReadonlyArray<User | null>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("array alias payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Readonly<Users>>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly utility array payload = %q, %v", got, ok)
+	}
+	typeDecls["UserMap"] = "Record<string, User>"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<UserMap>", typeDecls); !ok || got != "{ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
+		t.Fatalf("record alias payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)
