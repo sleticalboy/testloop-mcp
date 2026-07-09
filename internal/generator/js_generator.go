@@ -1340,6 +1340,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 		typeExpr = branch
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
+	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
@@ -1365,6 +1368,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 			typeExpr = branch
 			typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		}
+	}
+	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
@@ -1392,6 +1398,9 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
 	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
@@ -1414,6 +1423,9 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		typeExpr = strings.TrimSpace(resolved)
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
+	}
+	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
@@ -1450,6 +1462,28 @@ func jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr string, decls map[stri
 			return "{}", true
 		}
 		return "", false
+	}
+	return "{ " + strings.Join(parts, ", ") + " }", true
+}
+
+func jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	branches := jsSplitTopLevelTypeIntersection(typeExpr)
+	if len(branches) <= 1 {
+		return "", false
+	}
+	parts := make([]string, 0, len(branches))
+	for _, branch := range branches {
+		payload, ok := jsObjectMockFromTSTypeWithDeclsSeen(branch, decls, seen)
+		if !ok || !strings.HasPrefix(payload, "{") || !strings.HasSuffix(payload, "}") {
+			return "", false
+		}
+		body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(payload, "{"), "}"))
+		if body != "" {
+			parts = append(parts, jsSplitTopLevelTypeFields(body)...)
+		}
+	}
+	if len(parts) == 0 {
+		return "{}", true
 	}
 	return "{ " + strings.Join(parts, ", ") + " }", true
 }
@@ -1621,6 +1655,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
 	}
+	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload
+	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload
 	}
@@ -1698,6 +1735,51 @@ func jsSplitTopLevelTypeUnion(typeExpr string) []string {
 				parenDepth--
 			}
 		case '|':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				if part := strings.TrimSpace(typeExpr[start:i]); part != "" {
+					parts = append(parts, part)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if part := strings.TrimSpace(typeExpr[start:]); part != "" {
+		parts = append(parts, part)
+	}
+	return parts
+}
+
+func jsSplitTopLevelTypeIntersection(typeExpr string) []string {
+	var parts []string
+	start := 0
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	for i, ch := range typeExpr {
+		switch ch {
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '&':
 			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
 				if part := strings.TrimSpace(typeExpr[start:i]); part != "" {
 					parts = append(parts, part)
