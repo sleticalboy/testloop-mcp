@@ -2449,6 +2449,15 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly [User, ...Meta[]]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]" {
 		t.Fatalf("rest tuple payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ pair: [User, Meta] }>", typeDecls); !ok || got != "{ pair: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }] }" {
+		t.Fatalf("object tuple field payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ pair: readonly [user: User, meta?: Meta] }>", typeDecls); !ok || got != "{ pair: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }] }" {
+		t.Fatalf("object readonly tuple field payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ pair: readonly [User, ...Meta[]] }>", typeDecls); !ok || got != "{ pair: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }] }" {
+		t.Fatalf("object rest tuple field payload = %q, %v", got, ok)
+	}
 	if got := genJSResultAssertionWithArgsStyle(
 		jsFuncAnalysis{HasReturn: true, ReturnType: "object", Returns: []string{"{ ok: true }"}},
 		nil,
