@@ -109,7 +109,9 @@ func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
 		Params:            jsParamNames(fn.Params),
 		Async:             fn.IsAsync,
 		ReturnType:        fn.Analysis.ReturnType,
+		ReturnTypeExpr:    fn.Analysis.ReturnTypeExpr,
 		ReturnExpressions: fn.Analysis.Returns,
+		PayloadNotes:      jsPayloadFallbackNotes(fn.Analysis),
 		HasErrorPath:      fn.Analysis.Throws,
 		BoundaryCases:     jsBoundaryLabels(fn.Analysis.Boundaries),
 	}
@@ -117,6 +119,77 @@ func jsTarget(fn jsFuncInfo, kind string) types.TestTarget {
 		target.ReturnType = "unknown"
 	}
 	return target
+}
+
+func jsPayloadFallbackNotes(analysis jsFuncAnalysis) []string {
+	typeExpr := strings.TrimSpace(analysis.ReturnTypeExpr)
+	if typeExpr == "" {
+		return nil
+	}
+	if _, ok := jsMockPayloadFromTSTypeWithDecls(typeExpr, analysis.TSTypeDecls); ok {
+		return nil
+	}
+
+	inner := jsPayloadNoteTypeExpr(typeExpr)
+	reason := jsExplainTSPayloadFallback(inner, analysis.TSTypeDecls)
+	if reason == "" {
+		reason = "return annotation is outside the static payload support boundary"
+	}
+	return []string{reason + "; static payload falls back to { ok: true }"}
+}
+
+func jsPayloadNoteTypeExpr(typeExpr string) string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	typeExpr = jsUnwrapTSGeneric(typeExpr, "Promise")
+	typeExpr = jsUnwrapTSGeneric(typeExpr, "PromiseLike")
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+		typeExpr = jsUnwrapTSUtilityWrappers(branch)
+	}
+	return jsNormalizeTSTypeExpr(typeExpr)
+}
+
+func jsExplainTSPayloadFallback(typeExpr string, decls map[string]string) string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if typeExpr == "" {
+		return ""
+	}
+	if strings.Contains(typeExpr, "keyof") || regexp.MustCompile(`\[[A-Za-z_$][A-Za-z0-9_$]*\]`).MatchString(typeExpr) {
+		return "return annotation " + typeExpr + " uses dynamic indexed access or keyof, which static payload generation does not expand"
+	}
+	if jsTSIdentifierRe.MatchString(typeExpr) {
+		if strings.TrimSpace(decls[typeExpr]) == "" {
+			return "return annotation " + typeExpr + " is not declared in the same source file"
+		}
+		return "return annotation " + typeExpr + " resolves to a non-object or unsupported alias"
+	}
+	if name, args, ok := jsTSNamedGenericParts(typeExpr); ok {
+		foundBase := false
+		foundArity := false
+		for declName := range decls {
+			declBase, params, ok := jsTSNamedGenericParts(declName)
+			if !ok || declBase != name {
+				continue
+			}
+			foundBase = true
+			if len(params) != len(args) {
+				continue
+			}
+			foundArity = true
+			if !jsTSGenericParamsAreSimple(params) {
+				return "generic return annotation " + typeExpr + " uses constrained or defaulted type parameters"
+			}
+		}
+		if !foundBase {
+			return "generic return annotation " + typeExpr + " is not declared in the same source file"
+		}
+		if !foundArity {
+			return "generic return annotation " + typeExpr + " does not match the same-file generic declaration arity"
+		}
+		return "generic return annotation " + typeExpr + " resolves to an unsupported payload shape"
+	}
+	return ""
 }
 
 func jsParamNames(params []jsParamInfo) []string {

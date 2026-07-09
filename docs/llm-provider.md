@@ -16,33 +16,48 @@
 
 ```json
 {
-  "source_file": "src/calc.py",
+  "source_file": "src/api.ts",
   "context": {
-    "language": "python",
-    "framework": "pytest",
-    "source_file": "src/calc.py",
-    "imports": [],
+    "language": "typescript",
+    "framework": "vitest",
+    "source_file": "src/api.ts",
+    "imports": ["import type { ExternalUser } from './types'"],
     "types": [],
-    "targets": [],
+    "targets": [
+      {
+        "name": "loadUser",
+        "kind": "function",
+        "params": ["response"],
+        "async": true,
+        "return_type": "object",
+        "return_type_expr": "Promise<ExternalUser>",
+        "payload_notes": [
+          "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }"
+        ],
+        "return_expressions": ["await response.json()"]
+      }
+    ],
     "coverage_task": {
-      "id": "pytest-1",
-      "framework": "pytest",
-      "file": "src/calc.py",
-      "target": "add",
-      "line_range": "2-2",
+      "id": "vitest-1",
+      "framework": "vitest",
+      "file": "src/api.ts",
+      "target": "loadUser",
+      "line_range": "8-8",
       "gap_type": "return_path",
-      "test_file": "tests/test_calc.py",
-      "test_name": "test_add_covers_gap",
-      "suggested_inputs": ["构造满足条件 `a == 0` 的输入"],
+      "test_file": "src/api.test.ts",
+      "test_name": "covers loadUser response payload",
+      "suggested_inputs": ["构造带 json() 方法的 Response-like 输入"],
       "assertion_focus": ["断言未覆盖返回路径的具体结果"],
       "priority": 100
     }
   },
-  "static_code": "from calc import add\n\n\ndef test_add():\n    ..."
+  "static_code": "import { describe, it, expect } from 'vitest';\nimport { loadUser } from './api';\n\n..."
 }
 ```
 
 `coverage_task` 只会在 MCP 调用方传入单个覆盖率任务时出现。外部 LLM provider 应优先遵守其中的 `target`、`test_file`、`test_name`、`suggested_inputs` 和 `assertion_focus`，并把 `static_code` 当作可修改草稿，而不是重新生成整文件测试。
+
+JS/TS 目标中的 `return_type_expr` 会保留 TypeScript 返回注解。`payload_notes` 只在静态 payload 无法解释该注解时出现，例如跨文件类型、约束泛型、动态 indexed access 或 `keyof`；provider 可以据此读取更多项目上下文或保留静态草稿的保守 mock。
 
 provider 的 stdout 支持两种返回格式：
 

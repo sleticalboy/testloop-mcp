@@ -51,6 +51,8 @@ JS/TS payload 生成遵循三个原则：
 
 这些回退的核心目的是避免测试草稿看起来很具体，但其实来自不可解释的静态猜测。
 
+当顶层 TypeScript 返回注解无法展开时，`generate_tests.context.targets[].payload_notes` 会记录回退原因，例如跨文件类型未在同文件声明、泛型声明带约束或默认参数、动态 indexed access / `keyof` 等。静态测试文本仍优先保持可运行，解释信息留给 Agent 或 LLM provider 做二次增强。
+
 ## 明确不支持
 
 当前阶段不承诺支持完整 TypeScript 语义，包括：

@@ -92,7 +92,9 @@ type TestTarget struct {
 	Params            []string `json:"params,omitempty"`
 	Async             bool     `json:"async,omitempty"`
 	ReturnType        string   `json:"return_type,omitempty"`
+	ReturnTypeExpr    string   `json:"return_type_expr,omitempty"`
 	ReturnExpressions []string `json:"return_expressions,omitempty"`
+	PayloadNotes      []string `json:"payload_notes,omitempty"`
 	HasErrorPath      bool     `json:"has_error_path,omitempty"`
 	BoundaryCases     []string `json:"boundary_cases,omitempty"`
 }

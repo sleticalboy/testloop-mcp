@@ -50,9 +50,12 @@ def normalize(value):
 
 func TestBuildGenerationContext_JSMetadata(t *testing.T) {
 	src := `import { trim } from './text';
+import type { ExternalUser } from './types';
 const path = require('path');
 
 export type User = { name: string };
+type Box<T> = { data: T };
+type Constrained<T extends User> = { data: T };
 export class Greeter {
   greet(name) {
     return trim(name);
@@ -61,6 +64,18 @@ export class Greeter {
 
 export function add(a, b) {
   return a + b;
+}
+
+export async function loadBox(response: Response): Promise<Box<User>> {
+  return await response.json();
+}
+
+export async function loadExternal(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+
+export async function loadConstrained(response: Response): Promise<Constrained<User>> {
+  return await response.json();
 }
 `
 	srcPath := filepath.Join(t.TempDir(), "greeter.ts")
@@ -76,8 +91,11 @@ export function add(a, b) {
 		t.Fatalf("unexpected metadata: %+v", ctx)
 	}
 	assertContains(t, ctx.Imports, "import { trim } from './text'")
+	assertContains(t, ctx.Imports, "import type { ExternalUser } from './types'")
 	assertContains(t, ctx.Imports, "const path = require('path')")
 	assertContains(t, ctx.Types, "User")
+	assertContains(t, ctx.Types, "Box")
+	assertContains(t, ctx.Types, "Constrained")
 	assertContains(t, ctx.Types, "Greeter")
 
 	target := findTarget(ctx.Targets, "greet")
@@ -88,6 +106,29 @@ export function add(a, b) {
 		t.Fatalf("unexpected greet target: %+v", target)
 	}
 	assertContains(t, target.ReturnExpressions, "trim(name)")
+
+	loadBox := findTarget(ctx.Targets, "loadBox")
+	if loadBox == nil {
+		t.Fatalf("loadBox target not found: %+v", ctx.Targets)
+	}
+	if loadBox.ReturnTypeExpr != "Promise<Box<User>>" {
+		t.Fatalf("unexpected loadBox return type expr: %+v", loadBox)
+	}
+	if len(loadBox.PayloadNotes) != 0 {
+		t.Fatalf("supported same-file generic should not expose payload notes: %+v", loadBox.PayloadNotes)
+	}
+
+	loadExternal := findTarget(ctx.Targets, "loadExternal")
+	if loadExternal == nil {
+		t.Fatalf("loadExternal target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, loadExternal.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+
+	loadConstrained := findTarget(ctx.Targets, "loadConstrained")
+	if loadConstrained == nil {
+		t.Fatalf("loadConstrained target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, loadConstrained.PayloadNotes, "generic return annotation Constrained<User> uses constrained or defaulted type parameters; static payload falls back to { ok: true }")
 }
 
 func TestBuildGenerationContextCoverageTaskForStaticLanguages(t *testing.T) {
