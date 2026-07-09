@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- JS/TS payload 支持同文件简单泛型 alias/interface 的直接实例化，例如 `ApiEnvelope<User>`，会在可解释范围内展开为结构化 mock 数据。
+
 ### Changed
 
 - `scripts/install.sh` 的 `go install` fallback 会区分不支持的平台、latest 解析失败、Release 资产下载失败和缺少解压器，避免把网络失败误报成没有匹配资产。

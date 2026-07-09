@@ -34,6 +34,7 @@ JS/TS payload 生成遵循三个原则：
 - 字典类型：`Record<string, T>`、`Record<'a' | 'b', T>`。
 - 对象交叉：`A & B`，仅当所有分支都能解析为对象时合并。
 - indexed access：`T['field']`，仅支持单个字符串字面量 key。
+- 同文件简单泛型 alias/interface 直接实例化：`ApiEnvelope<User>`、`Pair<User, Meta>`，仅支持简单类型参数替换。
 - 对象字段内嵌组合：数组、tuple、Record、Pick/Omit、indexed access 和组合 alias 可以作为 DTO 字段继续展开。
 
 ## 保守回退策略
@@ -46,6 +47,7 @@ JS/TS payload 生成遵循三个原则：
 - 无法解释的 Record key：字段值回退 `{}`；顶层 `Record<number, T>` 不生成 payload。
 - 非对象交叉分支：例如 `User & string` 不生成半截对象。
 - indexed access 的 union key、`keyof`、泛型 `T[K]`：不展开。
+- 泛型约束、默认参数或无法按简单标识符替换的类型参数：不展开。
 
 这些回退的核心目的是避免测试草稿看起来很具体，但其实来自不可解释的静态猜测。
 
@@ -54,7 +56,7 @@ JS/TS payload 生成遵循三个原则：
 当前阶段不承诺支持完整 TypeScript 语义，包括：
 
 - 跨文件 import/export 类型解析。
-- 泛型实例化和约束推导，例如 `ApiResponse<T>`、`T extends User`。
+- 泛型约束/defaults/条件推导，例如 `T extends User`、`T = User`。
 - 条件类型、mapped type、template literal type。
 - `keyof`、动态 indexed access、复杂 union/discriminated union 完整分支枚举。
 - 运行时 schema 解析，例如 Zod、Yup、io-ts。

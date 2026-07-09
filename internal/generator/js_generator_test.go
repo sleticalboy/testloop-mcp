@@ -529,6 +529,11 @@ type ApiResponse = {
   debug: string
 }
 
+type ApiEnvelope<T> = {
+  data: T
+  meta: Meta
+}
+
 type Directory = Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>
 type DirectoryEnvelope = Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>
 type DirectorySummary = Pick<DirectoryEnvelope, 'directory' | 'meta'>
@@ -544,6 +549,10 @@ export async function loadDirectory(response: Response): Promise<DirectorySummar
 }
 
 export async function loadDirectoryBundle(response: Response): Promise<DirectoryBundle> {
+  return await response.json()
+}
+
+export async function loadUserEnvelope(response: Response): Promise<ApiEnvelope<User>> {
   return await response.json()
 }
 
@@ -566,11 +575,14 @@ export async function loadDirectoryClient(api: { fetch(path: string): Promise<Di
 
 	directoryPayload := "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }"
 	bundlePayload := "{ reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: " + directoryPayload + " }"
+	envelopePayload := "{ data: { userId: 1, email: 'user@example.com', status: 'active', manager: {} }, meta: { total: 1, nextUrl: 'https://example.com' } }"
 	assertGeneratedJS(t, code, []string{
 		"const result = await loadDirectory({ json: async () => (" + directoryPayload + ") });",
 		"expect(result).toEqual(" + directoryPayload + ");",
 		"const result = await loadDirectoryBundle({ json: async () => (" + bundlePayload + ") });",
 		"expect(result).toEqual(" + bundlePayload + ");",
+		"const result = await loadUserEnvelope({ json: async () => (" + envelopePayload + ") });",
+		"expect(result).toEqual(" + envelopePayload + ");",
 		"return " + bundlePayload + ";",
 		"const result = await loadDirectoryBundleClient(api);",
 		"expect(result).toEqual(" + bundlePayload + ");",
@@ -2470,6 +2482,21 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	typeDecls["DirectorySummary"] = "Pick<DirectoryEnvelope, 'directory' | 'meta'>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<DirectorySummary>", typeDecls); !ok || got != "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }" {
 		t.Fatalf("composed directory payload = %q, %v", got, ok)
+	}
+	typeDecls["ApiEnvelope<T>"] = "{ data: T; meta: Meta }"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiEnvelope<User>>", typeDecls); !ok || got != "{ data: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, meta: { total: 1, nextUrl: 'https://example.com' } }" {
+		t.Fatalf("generic envelope payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiEnvelope<Pick<User, 'userId' | 'email'>>>", typeDecls); !ok || got != "{ data: { userId: 1, email: 'user@example.com' }, meta: { total: 1, nextUrl: 'https://example.com' } }" {
+		t.Fatalf("generic projection payload = %q, %v", got, ok)
+	}
+	typeDecls["Pair<T,U>"] = "{ first: T; second: U }"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Pair<User, Meta>>", typeDecls); !ok || got != "{ first: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, second: { total: 1, nextUrl: 'https://example.com' } }" {
+		t.Fatalf("generic pair payload = %q, %v", got, ok)
+	}
+	typeDecls["Constrained<T extends User>"] = "{ data: T }"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Constrained<User>>", typeDecls); ok || got != "" {
+		t.Fatalf("unsupported constrained generic payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ summary: DirectorySummary }>", typeDecls); !ok || got != "{ summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } }" {
 		t.Fatalf("object composed projection field payload = %q, %v", got, ok)

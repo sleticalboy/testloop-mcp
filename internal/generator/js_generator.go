@@ -57,6 +57,8 @@ type jsClassInfo struct {
 	Methods []jsFuncInfo
 }
 
+var jsTSIdentifierRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+
 // returnTypeForAssert 返回 JS 类型字符串用于 typeof 断言
 func (a jsFuncAnalysis) returnTypeForAssert() string {
 	switch a.ReturnType {
@@ -1993,10 +1995,25 @@ func jsResolveNamedTSType(typeExpr string, decls map[string]string) (string, str
 	if len(decls) == 0 {
 		return "", ""
 	}
-	if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(typeExpr) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if jsTSIdentifierRe.MatchString(typeExpr) {
+		return typeExpr, strings.TrimSpace(decls[typeExpr])
+	}
+	name, args, ok := jsTSNamedGenericParts(typeExpr)
+	if !ok {
 		return "", ""
 	}
-	return typeExpr, strings.TrimSpace(decls[typeExpr])
+	for declName, decl := range decls {
+		declBase, params, ok := jsTSNamedGenericParts(declName)
+		if !ok || declBase != name || len(params) != len(args) {
+			continue
+		}
+		if !jsTSGenericParamsAreSimple(params) {
+			continue
+		}
+		return typeExpr, strings.TrimSpace(jsSubstituteTSTypeParams(decl, params, args))
+	}
+	return "", ""
 }
 
 func jsNormalizeTSTypeExpr(typeExpr string) string {
@@ -2047,6 +2064,79 @@ func jsTSGenericArgs(typeExpr, name string) ([]string, bool) {
 		return nil, false
 	}
 	return jsSplitTopLevelGenericArgs(inner), true
+}
+
+func jsTSNamedGenericParts(typeExpr string) (string, []string, bool) {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	if !strings.HasSuffix(typeExpr, ">") {
+		return "", nil, false
+	}
+	open := strings.Index(typeExpr, "<")
+	if open <= 0 {
+		return "", nil, false
+	}
+	name := strings.TrimSpace(typeExpr[:open])
+	if !jsTSIdentifierRe.MatchString(name) {
+		return "", nil, false
+	}
+	inner := strings.TrimSpace(typeExpr[open+1 : len(typeExpr)-1])
+	if inner == "" {
+		return "", nil, false
+	}
+	args := jsSplitTopLevelGenericArgs(inner)
+	if len(args) == 0 {
+		return "", nil, false
+	}
+	return name, args, true
+}
+
+func jsTSGenericParamsAreSimple(params []string) bool {
+	for _, param := range params {
+		if !jsTSIdentifierRe.MatchString(strings.TrimSpace(param)) {
+			return false
+		}
+	}
+	return true
+}
+
+func jsSubstituteTSTypeParams(typeExpr string, params, args []string) string {
+	if len(params) == 0 || len(params) != len(args) {
+		return typeExpr
+	}
+	replacements := make(map[string]string, len(params))
+	for i, param := range params {
+		replacements[strings.TrimSpace(param)] = strings.TrimSpace(args[i])
+	}
+
+	var out strings.Builder
+	for i := 0; i < len(typeExpr); {
+		ch := typeExpr[i]
+		if jsTSIdentifierStart(ch) {
+			start := i
+			i++
+			for i < len(typeExpr) && jsTSIdentifierPart(typeExpr[i]) {
+				i++
+			}
+			ident := typeExpr[start:i]
+			if replacement, ok := replacements[ident]; ok {
+				out.WriteString(replacement)
+			} else {
+				out.WriteString(ident)
+			}
+			continue
+		}
+		out.WriteByte(ch)
+		i++
+	}
+	return out.String()
+}
+
+func jsTSIdentifierStart(ch byte) bool {
+	return ch == '_' || ch == '$' || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+}
+
+func jsTSIdentifierPart(ch byte) bool {
+	return jsTSIdentifierStart(ch) || (ch >= '0' && ch <= '9')
 }
 
 func jsSplitTopLevelGenericArgs(inner string) []string {

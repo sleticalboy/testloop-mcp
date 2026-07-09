@@ -330,8 +330,8 @@ func jsAttachTSTypeDeclsToClass(cls *jsClassInfo, decls map[string]string) {
 }
 
 var (
-	jsTSInterfaceDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{`)
-	jsTSTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=`)
+	jsTSInterfaceDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*<([^>{}]*)>)?[^{]*\{`)
+	jsTSTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*<([^>=]*)>)?\s*=`)
 )
 
 func jsExtractTSTypeDecls(source string) map[string]string {
@@ -341,9 +341,13 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 			continue
 		}
 		name := source[match[2]:match[3]]
+		params := ""
+		if len(match) >= 6 && match[4] >= 0 && match[5] >= 0 {
+			params = source[match[4]:match[5]]
+		}
 		open := match[1] - 1
 		if typeExpr := jsExtractBracedTypeExpr(source, open); typeExpr != "" {
-			decls[name] = typeExpr
+			decls[jsTSTypeDeclKey(name, params)] = typeExpr
 		}
 	}
 	for _, match := range jsTSTypeAliasDeclRe.FindAllStringSubmatchIndex(source, -1) {
@@ -351,14 +355,33 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 			continue
 		}
 		name := source[match[2]:match[3]]
+		params := ""
+		if len(match) >= 6 && match[4] >= 0 && match[5] >= 0 {
+			params = source[match[4]:match[5]]
+		}
 		if typeExpr := jsExtractTSTypeAliasExpr(source, match[1]); typeExpr != "" {
-			decls[name] = typeExpr
+			decls[jsTSTypeDeclKey(name, params)] = typeExpr
 		}
 	}
 	if len(decls) == 0 {
 		return nil
 	}
 	return decls
+}
+
+func jsTSTypeDeclKey(name, params string) string {
+	params = strings.TrimSpace(params)
+	if params == "" {
+		return name
+	}
+	parts := jsSplitTopLevelGenericArgs(params)
+	if len(parts) == 0 {
+		return name
+	}
+	for i, part := range parts {
+		parts[i] = strings.TrimSpace(part)
+	}
+	return name + "<" + strings.Join(parts, ",") + ">"
 }
 
 func jsExtractBracedTypeExpr(source string, open int) string {
