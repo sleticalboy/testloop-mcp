@@ -21,6 +21,8 @@ Go 生成器仍是最成熟的静态生成路径。普通生成会优先使用 `
 
 JavaScript、TypeScript 和 Python 的声明提取已经通过 tree-sitter 得到明显改善。它们能更可靠地识别函数、类、异步函数、参数、静态方法和基础函数体，比正则扫描稳很多。简单 return 表达式、if-return 分支和常见边界输入已经能生成更具体的断言；传入 `coverage_task` 时，会按目标过滤测试草稿，并把 `assertion_focus`、`suggested_inputs` 转成测试名、注释、调用参数和精确断言。复杂业务构造仍需要 Agent 或 LLM provider 二次增强。
 
+JS/TS payload 已经从基础对象推进到同文件 DTO、数组、tuple、utility wrapper、Pick/Omit、Record、交叉类型、indexed access 和对象字段内嵌组合，并覆盖 `response.json()` 与注入式 client 两条真实生成路径。详细支持范围、保守回退和不支持边界见 [JS/TS payload 质量边界说明](./js-ts-payload-quality.md)。
+
 Rust 和 Java 已经从实验能力推进到可用的闭环能力：`run_tests`、`parse_results`、`parse_coverage`、`test_tasks` 和 `generate_tests` 都已覆盖对应主路径。Rust/Java 静态生成器仍偏骨架化，但在 task 模式下会减少整文件泛化输出，优先生成目标函数或方法的测试骨架，并把建议输入代入调用参数。
 
 ## 解析能力质量
