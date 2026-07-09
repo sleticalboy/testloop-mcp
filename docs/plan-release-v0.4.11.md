@@ -49,7 +49,7 @@ v0.4.11 候选发布重点见 [v0.4.11 发布说明草案](./plan-release-notes-
 - [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.4.11`。
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.4.11`。
 - [x] 重新运行完整验证：`go test ./...`、脚本语法检查、actionlint、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
+- [x] 提交版本准备改动后确认远端 CI 通过：`8232e6b` 对应 CI run `28995406760` 已通过。
 - [ ] 打 tag `v0.4.11` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.4.11` 验证 Release 资产。
@@ -58,4 +58,4 @@ v0.4.11 候选发布重点见 [v0.4.11 发布说明草案](./plan-release-notes-
 
 ## 当前结论
 
-v0.4.11 的版本准备改动已经通过本地完整验证；发布脚本和 workflow 无需为本版本做结构性改动。当前仍不打 tag，因为还需要提交版本准备改动并确认远端 CI 通过。
+v0.4.11 的版本准备改动已经通过本地完整验证，并且提交 `8232e6b` 的远端 CI 已通过；发布脚本和 workflow 无需为本版本做结构性改动。当前仍不打 tag，下一步进入 tag、Release Artifacts 和 Homebrew tap 发布核验阶段。
