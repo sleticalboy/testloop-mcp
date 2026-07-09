@@ -503,6 +503,68 @@ export async function loadUserTuple(response: Response): Promise<UserTuple> {
 	})
 }
 
+func TestGenerateJavaScriptTestsComplexTypeCompositionPayloads(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `interface User {
+  userId: number
+  email: string
+  status: 'active' | 'disabled'
+  manager?: User | null
+}
+
+type AuditFields = {
+  traceId: string
+  page: number
+}
+
+type Meta = {
+  total: number
+  nextUrl?: string | null
+}
+
+type ApiResponse = {
+  data: User
+  meta: Meta
+  debug: string
+}
+
+type Directory = Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>
+type DirectoryEnvelope = Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>
+type DirectorySummary = Pick<DirectoryEnvelope, 'directory' | 'meta'>
+
+export async function loadDirectory(response: Response): Promise<DirectorySummary> {
+  return await response.json()
+}
+
+export async function loadDirectoryClient(api: { fetch(path: string): Promise<DirectoryEnvelope> }): Promise<DirectoryEnvelope> {
+  return await api.fetch('/directory')
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsWithFramework(srcPath, "vitest")
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsWithFramework() error = %v", err)
+	}
+
+	directoryPayload := "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }"
+	assertGeneratedJS(t, code, []string{
+		"const result = await loadDirectory({ json: async () => (" + directoryPayload + ") });",
+		"expect(result).toEqual(" + directoryPayload + ");",
+		"return " + directoryPayload + ";",
+		"const result = await loadDirectoryClient(api);",
+		"expect(result).toEqual(" + directoryPayload + ");",
+		"expect(api.fetchCalls).toEqual([['/directory']]);",
+	}, []string{
+		"{ ok: true }",
+		"debug: 'test'",
+		"expect(typeof result).toBe('object')",
+	})
+}
+
 func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "src")
@@ -2363,10 +2425,20 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<UserMap>", typeDecls); !ok || got != "{ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
 		t.Fatalf("record alias payload = %q, %v", got, ok)
 	}
+	typeDecls["Meta"] = "{ total: number; nextUrl?: string | null }"
+	typeDecls["Directory"] = "Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>"
+	typeDecls["DirectoryEnvelope"] = "Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>"
+	typeDecls["DirectorySummary"] = "Pick<DirectoryEnvelope, 'directory' | 'meta'>"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<DirectorySummary>", typeDecls); !ok || got != "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }" {
+		t.Fatalf("composed directory payload = %q, %v", got, ok)
+	}
+	typeDecls["RecursiveDirectory"] = "Record<'primary', User & { reports: User[] }>"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<RecursiveDirectory>", typeDecls); !ok || got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, reports: [] } }" {
+		t.Fatalf("recursive directory payload = %q, %v", got, ok)
+	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)
 	}
-	typeDecls["Meta"] = "{ total: number; nextUrl?: string | null }"
 	typeDecls["UserTuple"] = "readonly [user: User, meta?: Meta]"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<UserTuple>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, { total: 1, nextUrl: 'https://example.com' }]" {
 		t.Fatalf("tuple alias payload = %q, %v", got, ok)

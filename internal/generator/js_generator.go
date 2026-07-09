@@ -1547,6 +1547,36 @@ func jsMockProjectedObjectPayload(args []string, decls map[string]string, seen m
 	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, keys, nil, false)
 }
 
+func jsProjectedObjectTypeFromTSType(typeExpr string, decls map[string]string, seen map[string]bool) (string, map[string]bool, bool) {
+	if args, ok := jsTSGenericArgs(typeExpr, "Pick"); ok {
+		return jsProjectedObjectType(args, decls, seen, false)
+	}
+	if args, ok := jsTSGenericArgs(typeExpr, "Omit"); ok {
+		return jsProjectedObjectType(args, decls, seen, true)
+	}
+	return "", seen, false
+}
+
+func jsProjectedObjectType(args []string, decls map[string]string, seen map[string]bool, omit bool) (string, map[string]bool, bool) {
+	if len(args) != 2 {
+		return "", seen, false
+	}
+	keys, ok := jsTSStringLiteralUnionValues(args[1])
+	if !ok || len(keys) == 0 {
+		return "", seen, false
+	}
+	sourceExpr, nextSeen, ok := jsResolvedObjectTypeForProjection(args[0], decls, seen)
+	if !ok {
+		return "", seen, false
+	}
+	if omit {
+		typeExpr, ok := jsObjectTypeFromResolvedTSType(sourceExpr, nil, keys, true)
+		return typeExpr, nextSeen, ok
+	}
+	typeExpr, ok := jsObjectTypeFromResolvedTSType(sourceExpr, keys, nil, false)
+	return typeExpr, nextSeen, ok
+}
+
 func jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	args, ok := jsTSGenericArgs(typeExpr, "Record")
 	if !ok || len(args) != 2 {
@@ -1599,10 +1629,42 @@ func jsResolvedObjectTypeForProjection(typeExpr string, decls map[string]string,
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
 	}
+	if projectedExpr, nextSeen, ok := jsProjectedObjectTypeFromTSType(typeExpr, decls, seen); ok {
+		return projectedExpr, nextSeen, true
+	}
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
 		return "", seen, false
 	}
 	return typeExpr, seen, true
+}
+
+func jsObjectTypeFromResolvedTSType(typeExpr string, include map[string]bool, exclude map[string]bool, allowEmpty bool) (string, bool) {
+	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(typeExpr), "{"), "}"))
+	fields := jsSplitTopLevelTypeFields(body)
+	if len(fields) == 0 {
+		return "", false
+	}
+	parts := make([]string, 0, len(fields))
+	for _, field := range fields {
+		name, typ, ok := jsParseTSTypeField(field)
+		if !ok {
+			continue
+		}
+		if include != nil && !include[name] {
+			continue
+		}
+		if exclude != nil && exclude[name] {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", name, typ))
+	}
+	if len(parts) == 0 {
+		if allowEmpty {
+			return "{}", true
+		}
+		return "", false
+	}
+	return "{ " + strings.Join(parts, "; ") + " }", true
 }
 
 func jsObjectFieldType(typeExpr, key string) (string, bool) {
