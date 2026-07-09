@@ -532,8 +532,18 @@ type ApiResponse = {
 type Directory = Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>
 type DirectoryEnvelope = Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>
 type DirectorySummary = Pick<DirectoryEnvelope, 'directory' | 'meta'>
+type DirectoryBundle = {
+  reports: User[]
+  pair: readonly [user: User, meta?: Meta]
+  directory: Record<string, Pick<User, 'userId' | 'email'>>
+  summary: DirectorySummary
+}
 
 export async function loadDirectory(response: Response): Promise<DirectorySummary> {
+  return await response.json()
+}
+
+export async function loadDirectoryBundle(response: Response): Promise<DirectoryBundle> {
   return await response.json()
 }
 
@@ -551,9 +561,12 @@ export async function loadDirectoryClient(api: { fetch(path: string): Promise<Di
 	}
 
 	directoryPayload := "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }"
+	bundlePayload := "{ reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: " + directoryPayload + " }"
 	assertGeneratedJS(t, code, []string{
 		"const result = await loadDirectory({ json: async () => (" + directoryPayload + ") });",
 		"expect(result).toEqual(" + directoryPayload + ");",
+		"const result = await loadDirectoryBundle({ json: async () => (" + bundlePayload + ") });",
+		"expect(result).toEqual(" + bundlePayload + ");",
 		"return " + directoryPayload + ";",
 		"const result = await loadDirectoryClient(api);",
 		"expect(result).toEqual(" + directoryPayload + ");",
