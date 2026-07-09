@@ -2,9 +2,9 @@
 
 ## 当前目标
 
-这是 v0.4.11 的发布前差异检查记录。当前只做准备与核对，不打 tag、不创建 GitHub Release、不更新 Homebrew tap。
+这是 v0.4.11 的发布检查记录。当前已经完成 tag、GitHub Release、Release Artifacts 资产验证和 Homebrew tap 更新。
 
-v0.4.11 候选发布重点见 [v0.4.11 发布说明草案](./plan-release-notes-v0.4.11.md)：本轮主要是 JS/TS 静态生成质量增强，不新增 MCP 工具协议。
+v0.4.11 发布重点见 [v0.4.11 发布说明](./plan-release-notes-v0.4.11.md)：本轮主要是 JS/TS 静态生成质量增强，不新增 MCP 工具协议。
 
 ## 当前差异核对
 
@@ -50,12 +50,12 @@ v0.4.11 候选发布重点见 [v0.4.11 发布说明草案](./plan-release-notes-
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.4.11`。
 - [x] 重新运行完整验证：`go test ./...`、脚本语法检查、actionlint、主服务/CLI 构建、打包 dry-run。
 - [x] 提交版本准备改动后确认远端 CI 通过：`8232e6b` 对应 CI run `28995406760` 已通过。
-- [ ] 打 tag `v0.4.11` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.4.11` 验证 Release 资产。
-- [ ] 验证安装脚本下载、checksum 校验和安装路径。
-- [ ] 更新 Homebrew tap 到 `0.4.11` 并跑 `brew fetch` / `brew audit` / `brew upgrade` / `brew test`。
+- [x] 打 tag `v0.4.11` 并推送。
+- [x] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `28995989142` 已通过。
+- [x] 使用 `scripts/verify-release-assets.sh v0.4.11` 验证 Release 资产，10 个资产通过。
+- [x] 验证 Release 资产直连下载、checksum 校验和解包内容；`scripts/install.sh` 在本机 GitHub 443 网络波动时回退 `go install`，安装路径和两个命令 help 输出已验证。
+- [x] 更新 Homebrew tap 到 `0.4.11` 并跑 `brew fetch` / `brew audit` / `brew upgrade` / `brew test`。
 
 ## 当前结论
 
-v0.4.11 的版本准备改动已经通过本地完整验证，并且提交 `8232e6b` 的远端 CI 已通过；发布脚本和 workflow 无需为本版本做结构性改动。当前仍不打 tag，下一步进入 tag、Release Artifacts 和 Homebrew tap 发布核验阶段。
+v0.4.11 已正式发布。GitHub Release 地址为 https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.11；Release Artifacts workflow、资产校验和 Homebrew tap 验证均已通过。本机安装脚本验证期间 GitHub 443 网络不稳定，脚本回退安装可用；release tarball 的直连下载、checksum 和解包内容已单独验证。
