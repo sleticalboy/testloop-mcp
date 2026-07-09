@@ -927,6 +927,117 @@ export async function loadDirectoryBundleClient(api: { fetch(path: string): Prom
 	}
 }
 
+func TestHandleGenerateCoverageTaskComplexVitestOutputIsRunnerChecked(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "src", "api.ts")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte(complexDirectoryBundleSource()), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	task := &types.CoverageTestTask{
+		ID:              "vitest-directory-bundle",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "loadDirectoryBundleClient",
+		Kind:            "function",
+		LineRange:       "31-33",
+		GapType:         "return_path",
+		Goal:            "cover directory bundle client payload",
+		TestFile:        filepath.Join(dir, "src", "api.test.ts"),
+		TestName:        "covers directory bundle client payload",
+		SuggestedInputs: []string{"调用注入式 `api.fetch('/directory/bundle')`"},
+		AssertionFocus:  []string{"断言复杂 DirectoryBundle payload 和 fetch 调用参数"},
+		Confidence:      0.9,
+	}
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+	generated := assertGeneratedCoverageTaskOutput(t, generateResult, task, "it('covers directory bundle client payload'")
+
+	logPath := installFakeNpxContentChecker(t, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { loadDirectoryBundleClient } from './api';",
+		"coverage task: vitest-directory-bundle | lines 31-33 | 断言复杂 DirectoryBundle payload 和 fetch 调用参数 | 调用注入式 `api.fetch('/directory/bundle')`",
+		"return { reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } };",
+		"const result = await loadDirectoryBundleClient(api);",
+		"expect(result).toEqual({ reports: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }], pair: [{ userId: 1, email: 'user@example.com', status: 'active', manager: {} }, { total: 1, nextUrl: 'https://example.com' }], directory: { key: { userId: 1, email: 'user@example.com' } }, summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } });",
+		"expect(api.fetchCalls).toEqual([['/directory/bundle']]);",
+	}, strings.Join([]string{
+		" ✓ src/api.test.ts (1 test)",
+		" Test Files  1 passed (1)",
+		"      Tests  1 passed (1)",
+	}, "\n"))
+	runResult, _, err := HandleRunTests(context.Background(), nil, runTestsInput{Path: generated.TestFile})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, runResult)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "vitest" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=vitest run --verbose src/api.test.ts\n") {
+		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
+	}
+}
+
+func complexDirectoryBundleSource() string {
+	return `interface User {
+  userId: number
+  email: string
+  status: 'active' | 'disabled'
+  manager?: User | null
+}
+
+type Meta = {
+  total: number
+  nextUrl?: string | null
+}
+
+type AuditFields = {
+  traceId: string
+  page: number
+}
+
+type ApiResponse = {
+  data: User
+  meta: Meta
+  debug: string
+}
+
+type Directory = Readonly<Record<'primary' | 'secondary', ApiResponse['data'] & AuditFields>>
+type DirectoryEnvelope = Omit<{ directory: Directory; meta: ApiResponse['meta']; debug: string }, 'debug'>
+type DirectorySummary = Pick<DirectoryEnvelope, 'directory' | 'meta'>
+type DirectoryBundle = {
+  reports: User[]
+  pair: readonly [user: User, meta?: Meta]
+  directory: Record<string, Pick<User, 'userId' | 'email'>>
+  summary: DirectorySummary
+}
+
+export async function loadDirectoryBundleClient(api: { fetch(path: string): Promise<DirectoryBundle> }): Promise<DirectoryBundle> {
+  return await api.fetch('/directory/bundle')
+}
+`
+}
+
 func TestHandleGenerateCoverageTaskVitestESMOutputRunsWithDetectedFramework(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
