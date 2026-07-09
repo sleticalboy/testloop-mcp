@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- JS/TS 静态生成器补强 TypeScript DTO payload，覆盖 utility wrapper、Pick/Omit、Record、对象交叉、indexed access、数组和 tuple 组合。
+- JS/TS 对象字段内部的数组、tuple、Record、投影类型和组合 alias 会继续生成结构化 payload。
+- 新增 JS/TS 复杂 payload 的 `generate_tests -> run_tests` handler 闭环检查，覆盖普通生成和 coverage task 两条路径。
+- 新增 `docs/js-ts-payload-quality.md`，记录 JS/TS payload 支持范围、保守回退和不支持边界。
+
 ## v0.4.10 - 2026-07-07
 
 ### Added
