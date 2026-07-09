@@ -1378,6 +1378,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
+	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
@@ -1437,6 +1440,9 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		return payload, true
 	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
+	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
@@ -1763,6 +1769,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		return payload
 	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload
+	}
+	if payload, ok := jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload
 	}
 	if payload, ok := jsMockRecordPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {

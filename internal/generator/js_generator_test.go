@@ -2350,6 +2350,12 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Omit<User, keyof User>>", typeDecls); ok || got != "" {
 		t.Fatalf("unsupported omit payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ owner: Pick<User, 'userId' | 'email'> }>", typeDecls); !ok || got != "{ owner: { userId: 1, email: 'user@example.com' } }" {
+		t.Fatalf("object pick field payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ owner: Omit<User, 'manager' | 'displayName'> }>", typeDecls); !ok || got != "{ owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' } }" {
+		t.Fatalf("object omit field payload = %q, %v", got, ok)
+	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Record<string, User>>", typeDecls); !ok || got != "{ key: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
 		t.Fatalf("record string payload = %q, %v", got, ok)
 	}
@@ -2383,6 +2389,9 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ data: { id: number; email: string } }['data']>", typeDecls); !ok || got != "{ id: 1, email: 'user@example.com' }" {
 		t.Fatalf("inline indexed access payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ data: ApiResponse['data'] }>", typeDecls); !ok || got != "{ data: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } }" {
+		t.Fatalf("object indexed access field payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiResponse['data' | 'meta']>", typeDecls); ok || got != "" {
 		t.Fatalf("unsupported indexed union key payload = %q, %v", got, ok)
@@ -2431,6 +2440,9 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	typeDecls["DirectorySummary"] = "Pick<DirectoryEnvelope, 'directory' | 'meta'>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<DirectorySummary>", typeDecls); !ok || got != "{ directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } }" {
 		t.Fatalf("composed directory payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ summary: DirectorySummary }>", typeDecls); !ok || got != "{ summary: { directory: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 } }, meta: { total: 1, nextUrl: 'https://example.com' } } }" {
+		t.Fatalf("object composed projection field payload = %q, %v", got, ok)
 	}
 	typeDecls["RecursiveDirectory"] = "Record<'primary', User & { reports: User[] }>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<RecursiveDirectory>", typeDecls); !ok || got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, reports: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }] } }" {
