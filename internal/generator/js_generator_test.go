@@ -379,8 +379,16 @@ export async function parseUser(response: Response): Promise<User> {
   return await response.json();
 }
 
+export async function parseReadonlyUser(response: Response): Promise<Readonly<User>> {
+  return await response.json();
+}
+
 export async function loadProfile(client: { get(path: string): Promise<Profile> }): Promise<Profile> {
   return await client.get('/profile');
+}
+
+export async function loadPartialProfile(client: { get(path: string): Promise<Partial<Profile>> }): Promise<Partial<Profile>> {
+  return await client.get('/profile/partial');
 }
 
 export async function listUsers(response: Response): Promise<Users> {
@@ -407,10 +415,15 @@ export async function loadUserTuple(response: Response): Promise<UserTuple> {
 	assertGeneratedJS(t, code, []string{
 		"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }) });",
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
+		"const result = await parseReadonlyUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }) });",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
 		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } };",
 		"const result = await loadProfile(client);",
 		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
 		"expect(client.getCalls).toEqual([['/profile']]);",
+		"const result = await loadPartialProfile(client);",
+		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
+		"expect(client.getCalls).toEqual([['/profile/partial']]);",
 		"const result = await listUsers({ json: async () => ([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]) });",
 		"expect(result).toEqual([{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]);",
 		"return [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }];",
@@ -963,6 +976,39 @@ export function status(): string {
 				"import { parseUser } from './api';",
 				"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active' }) });",
 				"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active' });",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript utility wrapped named response json",
+			fileName: "api.ts",
+			source: `type User = {
+  userId: number
+  email: string
+}
+
+export async function parseUser(response: Response): Promise<Required<User>> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-required-1",
+				Framework:      "vitest",
+				Target:         "parseUser",
+				LineRange:      "6-6",
+				GapType:        "return_path",
+				TestName:       "covers vitest parseUser required response",
+				AssertionFocus: []string{"断言 utility wrapped 命名类型 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { parseUser } from './api';",
+				"const result = await parseUser({ json: async () => ({ userId: 1, email: 'user@example.com' }) });",
+				"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 			},
 			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
@@ -1960,12 +2006,24 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User | null>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("decl payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Readonly<User>>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("readonly utility payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Partial<Readonly<User>>>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("nested utility payload = %q, %v", got, ok)
+	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
+	}
+	if got := jsMockValueForTSTypeWithDecls("owner", "Readonly<User>", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("readonly owner value = %q", got)
 	}
 	typeDecls["Users"] = "ReadonlyArray<User | null>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("array alias payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Readonly<Users>>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
+		t.Fatalf("readonly utility array payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)

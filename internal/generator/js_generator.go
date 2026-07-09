@@ -1335,8 +1335,10 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 	typeExpr = jsUnwrapTSGeneric(typeExpr, "Promise")
 	typeExpr = jsUnwrapTSGeneric(typeExpr, "PromiseLike")
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
 		typeExpr = branch
+		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
 	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
 		if seen == nil {
@@ -1351,9 +1353,11 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 		}
 		nextSeen[name] = true
 		typeExpr = strings.TrimSpace(resolved)
+		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
 		if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
 			typeExpr = branch
+			typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		}
 	}
 	if payload, ok := jsMockTuplePayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
@@ -1378,6 +1382,7 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	lookupType := jsNormalizeTSTypeExpr(typeExpr)
 	if name, resolved := jsResolveNamedTSType(lookupType, decls); resolved != "" {
 		if seen == nil {
@@ -1392,6 +1397,7 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		}
 		nextSeen[name] = true
 		typeExpr = strings.TrimSpace(resolved)
+		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
 	}
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
@@ -1490,8 +1496,10 @@ func jsMockValueForTSTypeWithDecls(fieldName, typeExpr string, decls map[string]
 
 func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[string]string, seen map[string]bool) string {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
 		typeExpr = branch
+		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
@@ -1683,6 +1691,23 @@ func jsUnwrapTSGeneric(typeExpr, name string) string {
 		return inner
 	}
 	return typeExpr
+}
+
+func jsUnwrapTSUtilityWrappers(typeExpr string) string {
+	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
+	for {
+		unwrapped := false
+		for _, name := range []string{"Readonly", "Required", "Partial"} {
+			if inner, ok := jsTSGenericArg(typeExpr, name); ok {
+				typeExpr = strings.TrimSpace(inner)
+				unwrapped = true
+				break
+			}
+		}
+		if !unwrapped {
+			return typeExpr
+		}
+	}
 }
 
 func jsTSGenericArg(typeExpr, name string) (string, bool) {
