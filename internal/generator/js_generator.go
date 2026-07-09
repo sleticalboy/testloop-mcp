@@ -1340,6 +1340,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 		typeExpr = branch
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
+	if payload, ok := jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if name, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
 		if seen == nil {
 			seen = map[string]bool{}
@@ -1383,6 +1386,9 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
 	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if payload, ok := jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	lookupType := jsNormalizeTSTypeExpr(typeExpr)
 	if name, resolved := jsResolveNamedTSType(lookupType, decls); resolved != "" {
 		if seen == nil {
@@ -1403,7 +1409,11 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
 		return "", false
 	}
-	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(typeExpr, "{"), "}"))
+	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr, decls, seen, nil)
+}
+
+func jsObjectMockFromResolvedTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool, include map[string]bool) (string, bool) {
+	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(typeExpr), "{"), "}"))
 	fields := jsSplitTopLevelTypeFields(body)
 	if len(fields) == 0 {
 		return "", false
@@ -1415,12 +1425,60 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		if !ok {
 			continue
 		}
+		if include != nil && !include[name] {
+			continue
+		}
 		parts = append(parts, fmt.Sprintf("%s: %s", name, jsMockValueForTSTypeWithDeclsSeen(name, typ, decls, seen)))
 	}
 	if len(parts) == 0 {
 		return "", false
 	}
 	return "{ " + strings.Join(parts, ", ") + " }", true
+}
+
+func jsMockPickPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	args, ok := jsTSGenericArgs(typeExpr, "Pick")
+	if !ok || len(args) != 2 {
+		return "", false
+	}
+	keys, ok := jsTSStringLiteralUnionValues(args[1])
+	if !ok || len(keys) == 0 {
+		return "", false
+	}
+	sourceExpr, nextSeen, ok := jsResolvedObjectTypeForProjection(args[0], decls, seen)
+	if !ok {
+		return "", false
+	}
+	return jsObjectMockFromResolvedTSTypeWithDeclsSeen(sourceExpr, decls, nextSeen, keys)
+}
+
+func jsResolvedObjectTypeForProjection(typeExpr string, decls map[string]string, seen map[string]bool) (string, map[string]bool, bool) {
+	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if typeExpr == "" {
+		return "", seen, false
+	}
+	lookupType := jsNormalizeTSTypeExpr(typeExpr)
+	if name, resolved := jsResolveNamedTSType(lookupType, decls); resolved != "" {
+		if seen == nil {
+			seen = map[string]bool{}
+		}
+		if seen[name] {
+			return "", seen, false
+		}
+		nextSeen := make(map[string]bool, len(seen)+1)
+		for key, value := range seen {
+			nextSeen[key] = value
+		}
+		nextSeen[name] = true
+		typeExpr = strings.TrimSpace(resolved)
+		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+		seen = nextSeen
+	}
+	if !strings.HasPrefix(typeExpr, "{") || !strings.HasSuffix(typeExpr, "}") {
+		return "", seen, false
+	}
+	return typeExpr, seen, true
 }
 
 func jsSplitTopLevelTypeFields(body string) []string {
@@ -1716,6 +1774,92 @@ func jsTSGenericArg(typeExpr, name string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(typeExpr[len(prefix) : len(typeExpr)-1]), true
+}
+
+func jsTSGenericArgs(typeExpr, name string) ([]string, bool) {
+	inner, ok := jsTSGenericArg(jsNormalizeTSTypeExpr(typeExpr), name)
+	if !ok {
+		return nil, false
+	}
+	return jsSplitTopLevelGenericArgs(inner), true
+}
+
+func jsSplitTopLevelGenericArgs(inner string) []string {
+	var args []string
+	start := 0
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	var quote rune
+	for i, ch := range inner {
+		if quote != 0 {
+			if ch == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"':
+			quote = ch
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case ',':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				if arg := strings.TrimSpace(inner[start:i]); arg != "" {
+					args = append(args, arg)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if arg := strings.TrimSpace(inner[start:]); arg != "" {
+		args = append(args, arg)
+	}
+	return args
+}
+
+func jsTSStringLiteralUnionValues(typeExpr string) (map[string]bool, bool) {
+	parts := jsSplitTopLevelTypeUnion(typeExpr)
+	if len(parts) == 0 {
+		return nil, false
+	}
+	values := make(map[string]bool, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if len(part) < 2 {
+			return nil, false
+		}
+		quote := part[0]
+		if (quote != '\'' && quote != '"') || part[len(part)-1] != quote {
+			return nil, false
+		}
+		key := strings.TrimSpace(part[1 : len(part)-1])
+		if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(key) {
+			return nil, false
+		}
+		values[key] = true
+	}
+	return values, true
 }
 
 func jsTSArrayElementType(typeExpr string) (string, bool) {

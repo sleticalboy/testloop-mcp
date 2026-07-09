@@ -374,12 +374,17 @@ type Meta = {
 type Users = readonly User[]
 type MaybeUsers = ReadonlyArray<User | null>
 type UserTuple = readonly [user: User, meta?: Meta]
+type PublicUser = Pick<User, 'userId' | 'email'>
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
 }
 
 export async function parseReadonlyUser(response: Response): Promise<Readonly<User>> {
+  return await response.json();
+}
+
+export async function parsePublicUser(response: Response): Promise<PublicUser> {
   return await response.json();
 }
 
@@ -417,6 +422,8 @@ export async function loadUserTuple(response: Response): Promise<UserTuple> {
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
 		"const result = await parseReadonlyUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }) });",
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
+		"const result = await parsePublicUser({ json: async () => ({ userId: 1, email: 'user@example.com' }) });",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } };",
 		"const result = await loadProfile(client);",
 		"expect(result).toEqual({ title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } });",
@@ -1011,6 +1018,42 @@ export function status(): string {
 				"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 			},
 			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript pick named response json",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+  status: 'active' | 'disabled'
+}
+
+type PublicUser = Pick<User, 'userId' | 'email'>
+
+export async function parsePublicUser(response: Response): Promise<PublicUser> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-pick-1",
+				Framework:      "vitest",
+				Target:         "parsePublicUser",
+				LineRange:      "9-9",
+				GapType:        "return_path",
+				TestName:       "covers vitest parsePublicUser pick response",
+				AssertionFocus: []string{"断言 Pick 命名类型 JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { parsePublicUser } from './api';",
+				"const result = await parsePublicUser({ json: async () => ({ userId: 1, email: 'user@example.com' }) });",
+				"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
+			},
+			forbidden: []string{"describe('status'", "status(", "status: 'active'", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
 		{
 			name:     "vitest typescript named response json array",
@@ -2012,11 +2055,23 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Partial<Readonly<User>>>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nested utility payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Pick<User, 'userId' | 'email'>>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com' }" {
+		t.Fatalf("pick payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Readonly<Pick<User, \"email\" | \"status\">>>", typeDecls); !ok || got != "{ email: 'user@example.com', status: 'active' }" {
+		t.Fatalf("readonly pick payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Pick<User, keyof User>>", typeDecls); ok || got != "" {
+		t.Fatalf("unsupported pick payload = %q, %v", got, ok)
+	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
 	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "Readonly<User>", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("readonly owner value = %q", got)
+	}
+	if got := jsMockValueForTSTypeWithDecls("owner", "Pick<User, 'userId'>", typeDecls); got != "{ userId: 1 }" {
+		t.Fatalf("pick owner value = %q", got)
 	}
 	typeDecls["Users"] = "ReadonlyArray<User | null>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
