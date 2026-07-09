@@ -75,7 +75,7 @@ jobs:
             TESTLOOP_MCP_INSTALL_DIR="$install_dir" \
             TESTLOOP_MCP_DOWNLOAD_MAX_TIME=120 \
             sh scripts/install.sh | tee "$log_file"
-          if grep -F "falling back to go install" "$log_file"; then
+          if grep -Fi "falling back to go install" "$log_file"; then
             echo "install script unexpectedly used go install fallback" >&2
             exit 1
           fi
