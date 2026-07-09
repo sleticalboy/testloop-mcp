@@ -2433,8 +2433,11 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 		t.Fatalf("composed directory payload = %q, %v", got, ok)
 	}
 	typeDecls["RecursiveDirectory"] = "Record<'primary', User & { reports: User[] }>"
-	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<RecursiveDirectory>", typeDecls); !ok || got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, reports: [] } }" {
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<RecursiveDirectory>", typeDecls); !ok || got != "{ primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, reports: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }] } }" {
 		t.Fatalf("recursive directory payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ reports: User[] }>", typeDecls); !ok || got != "{ reports: [{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }] }" {
+		t.Fatalf("object array field payload = %q, %v", got, ok)
 	}
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<readonly User[]>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
 		t.Fatalf("readonly array payload = %q, %v", got, ok)

@@ -1789,6 +1789,11 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		}
 		return "[]"
 	case jsTSTypeIsArray(typeExpr):
+		if inner, ok := jsTSArrayElementType(typeExpr); ok {
+			if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(inner, decls, seen); ok {
+				return "[" + payload + "]"
+			}
+		}
 		return "[]"
 	}
 	if object, ok := jsObjectMockFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
