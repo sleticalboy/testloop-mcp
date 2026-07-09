@@ -6,6 +6,7 @@
 
 - JS/TS payload 支持同文件简单泛型 alias/interface 的直接实例化，例如 `ApiEnvelope<User>`，会在可解释范围内展开为结构化 mock 数据。
 - `generate_tests.context.targets[]` 新增 JS/TS `return_type_expr` 和 `payload_notes`，在跨文件类型或复杂泛型导致静态 payload 回退时给 Agent/LLM provider 明确原因。
+- 新增 `generate_tests` handler 回归测试，固定 JS/TS `payload_notes` 会出现在 MCP 工具输出 JSON 中。
 
 ### Changed
 

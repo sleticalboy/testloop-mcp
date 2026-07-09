@@ -28,6 +28,25 @@ func resultText(t *testing.T, result *mcp.CallToolResult) string {
 	return text.Text
 }
 
+func findGeneratedTarget(targets []types.TestTarget, name string) *types.TestTarget {
+	for i := range targets {
+		if targets[i].Name == name {
+			return &targets[i]
+		}
+	}
+	return nil
+}
+
+func assertStringSliceContains(t *testing.T, values []string, want string) {
+	t.Helper()
+	for _, value := range values {
+		if value == want {
+			return
+		}
+	}
+	t.Fatalf("expected %q in %+v", want, values)
+}
+
 func TestHandleParseResultsDefaultsToGoTest(t *testing.T) {
 	output := strings.Join([]string{
 		`{"Action":"run","Package":"example.com/calc","Test":"TestAdd"}`,
@@ -691,6 +710,49 @@ func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
 	}
 	if generated.Context == nil || generated.Context.Framework != "mocha" {
 		t.Fatalf("context framework = %+v, want mocha", generated.Context)
+	}
+}
+
+func TestHandleGenerateTestsReturnsJavaScriptPayloadFallbackNotes(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "api.ts")
+	src := `import type { ExternalUser } from './types';
+
+export async function loadUser(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source, Framework: "vitest"})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Context == nil {
+		t.Fatal("expected generation context")
+	}
+	target := findGeneratedTarget(generated.Context.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", generated.Context.Targets)
+	}
+	if target.ReturnTypeExpr != "Promise<ExternalUser>" {
+		t.Fatalf("return_type_expr = %q, want Promise<ExternalUser>", target.ReturnTypeExpr)
+	}
+	assertStringSliceContains(t, target.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+	for _, want := range []string{
+		"const result = await loadUser({ json: async () => ({ ok: true }) });",
+		"expect(result).toEqual({ ok: true });",
+	} {
+		if !strings.Contains(generated.Preview, want) {
+			t.Fatalf("generated preview missing %q:\n%s", want, generated.Preview)
+		}
 	}
 }
 
