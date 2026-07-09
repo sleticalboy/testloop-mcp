@@ -37,6 +37,10 @@ SRC
 request_json="${tmp_dir}/request.json"
 prompt_file="${tmp_dir}/prompt.md"
 stdout_json="${tmp_dir}/stdout.json"
+model_stdout_json="${tmp_dir}/model-stdout.json"
+model_prompt_file="${tmp_dir}/model-prompt.md"
+fake_model="${tmp_dir}/fake-model.sh"
+captured_model_prompt="${tmp_dir}/captured-model-prompt.md"
 
 cat > "$request_json" <<JSON
 {
@@ -82,5 +86,50 @@ assert_contains "$prompt_file" "### types.ts"
 assert_contains "$prompt_file" "export interface ExternalUser"
 assert_contains "$prompt_file" "userId: number;"
 assert_contains "$prompt_file" "return annotation references imported type ExternalUser"
+assert_contains "$prompt_file" "## Static Draft"
+assert_contains "$prompt_file" "## Full Request JSON"
+
+if grep -F -- "{{REQUEST_JSON}}" "$prompt_file" >/dev/null 2>&1; then
+  echo "prompt template placeholder was not rendered" >&2
+  cat "$prompt_file" >&2
+  exit 1
+fi
+
+cat > "$fake_model" <<MODEL
+#!/usr/bin/env sh
+set -eu
+cat > "$captured_model_prompt"
+cat <<'OUT'
+it('uses model output', () => {
+  expect(true).toBe(true);
+});
+OUT
+MODEL
+chmod +x "$fake_model"
+
+TESTLOOP_LLM_PROVIDER_PROMPT_FILE="$model_prompt_file" \
+  TESTLOOP_LLM_PROVIDER_MODEL_CMD="$fake_model" \
+  sh "${repo_root}/examples/llm-provider.sh" < "$request_json" > "$model_stdout_json"
+
+python3 - "$model_stdout_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+
+code = payload.get("code", "")
+if "uses model output" not in code:
+    raise SystemExit(f"provider did not return model output: {payload!r}")
+PY
+
+assert_contains "$captured_model_prompt" "## Static Draft"
+assert_contains "$captured_model_prompt" "export interface ExternalUser"
+
+printf '%s\n' 'prompt' | TESTLOOP_MODEL_DRY_RUN=1 sh "${repo_root}/examples/model-ollama.sh" > "${tmp_dir}/ollama-dry-run.out"
+assert_contains "${tmp_dir}/ollama-dry-run.out" "dry run prompt received"
+
+printf '%s\n' 'prompt' | TESTLOOP_MODEL_DRY_RUN=1 sh "${repo_root}/examples/model-openai-cli.sh" > "${tmp_dir}/openai-dry-run.out"
+assert_contains "${tmp_dir}/openai-dry-run.out" "dry run prompt received"
 
 echo "llm provider example tests passed"

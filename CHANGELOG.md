@@ -8,6 +8,7 @@
 - `examples/llm-provider.sh` 支持读取 `payload_notes` 中的候选源码文件并组装调试 prompt，可通过 `TESTLOOP_LLM_PROVIDER_MODEL_CMD` 接入真实模型命令。
 - 外部 LLM provider 输出会清洗常见 Markdown 代码围栏和前后解释性文本；如果输出不含可识别测试代码，会返回明确错误。
 - 外部 LLM provider 输出增加按目标语言的轻量测试代码校验，Go/Python/JS/TS/Rust/Java 会拒绝明显不是测试的代码片段。
+- 新增 `examples/llm-provider-prompt.md`、Ollama 模型命令包装和 OpenAI CLI 模型命令包装，降低外部 LLM provider 的真实模型接入成本。
 
 ### Changed
 

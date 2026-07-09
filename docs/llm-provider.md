@@ -112,6 +112,18 @@ export TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh"
 
 示例脚本还会消费 `payload_notes` 中的 `read candidate source files: ...` 提示：当候选文件存在于 `source_file` 同目录或子目录时，会读取这些文件并放入 prompt 的 `Imported Type Context` 小节。默认情况下 stdout 仍只返回 `static_code`，不会把 prompt 写入测试文件。
 
+默认 prompt 模板位于 `examples/llm-provider-prompt.md`。模板支持这些占位符：
+
+| 占位符 | 含义 |
+| --- | --- |
+| `{{SOURCE_FILE}}` | 当前源码文件路径 |
+| `{{LANGUAGE}}` | 目标语言 |
+| `{{FRAMEWORK}}` | 测试框架 |
+| `{{REQUEST_JSON}}` | 完整 provider 请求 JSON |
+| `{{STATIC_CODE}}` | 内置 static provider 生成的测试草稿 |
+| `{{IMPORTED_TYPE_CONTEXT}}` | 根据 `payload_notes` 读取到的候选类型文件内容 |
+| `{{COVERAGE_TASK_JSON}}` | 单个 coverage task JSON；没有任务时为 `{}` |
+
 调试 prompt：
 
 ```bash
@@ -120,7 +132,15 @@ TESTLOOP_LLM_PROVIDER_PROMPT_FILE=/tmp/testloop-prompt.md \
   testloop-mcp
 ```
 
-接入真实模型命令：
+替换 prompt 模板：
+
+```bash
+TESTLOOP_LLM_PROVIDER_PROMPT_TEMPLATE=/path/to/prompt.md \
+  TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh" \
+  testloop-mcp
+```
+
+接入任意真实模型命令：
 
 ```bash
 TESTLOOP_LLM_PROVIDER_MODEL_CMD="your-model-cli --generate-tests" \
@@ -130,9 +150,32 @@ TESTLOOP_LLM_PROVIDER_MODEL_CMD="your-model-cli --generate-tests" \
 
 `TESTLOOP_LLM_PROVIDER_MODEL_CMD` 会从 stdin 收到完整 prompt，并应在 stdout 输出最终测试代码。
 
+Ollama 示例：
+
+```bash
+TESTLOOP_OLLAMA_MODEL=qwen2.5-coder:7b \
+  TESTLOOP_LLM_PROVIDER_MODEL_CMD="sh examples/model-ollama.sh" \
+  TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh" \
+  testloop-mcp
+```
+
+`examples/model-ollama.sh` 会执行 `ollama run "$TESTLOOP_OLLAMA_MODEL"`，并把 prompt 通过 stdin 传给 Ollama。未设置模型时默认使用 `qwen2.5-coder:7b`。
+
+OpenAI CLI 示例：
+
+```bash
+TESTLOOP_OPENAI_MODEL=gpt-5.5 \
+  TESTLOOP_LLM_PROVIDER_MODEL_CMD="sh examples/model-openai-cli.sh" \
+  TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh" \
+  testloop-mcp
+```
+
+`examples/model-openai-cli.sh` 会调用官方 `openai responses create` 命令，默认通过 `--transform 'output.#(type=="message").content.0.text'` 只取模型文本输出。可以用 `TESTLOOP_OPENAI_MAX_OUTPUT_TOKENS` 调整最大输出长度。
+
 ## 设计约束
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
 - provider 应优先只输出测试代码；常见 Markdown 代码围栏会被清洗，但不要依赖模型输出长篇解释。
 - `static_code` 是可用回退结果，LLM provider 可以基于它做增强，而不是从零生成。
 - 当存在 `context.coverage_task` 时，provider 应只补充该任务对应的增量测试，避免覆盖或扩写成整文件测试套件。
+- `examples/model-ollama.sh` 和 `examples/model-openai-cli.sh` 是模型命令包装层，不直接处理 MCP provider JSON；它们只接收 prompt 并输出测试代码。
