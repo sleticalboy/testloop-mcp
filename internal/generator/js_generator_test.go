@@ -547,6 +547,10 @@ export async function loadDirectoryBundle(response: Response): Promise<Directory
   return await response.json()
 }
 
+export async function loadDirectoryBundleClient(api: { fetch(path: string): Promise<DirectoryBundle> }): Promise<DirectoryBundle> {
+  return await api.fetch('/directory/bundle')
+}
+
 export async function loadDirectoryClient(api: { fetch(path: string): Promise<DirectoryEnvelope> }): Promise<DirectoryEnvelope> {
   return await api.fetch('/directory')
 }
@@ -567,6 +571,10 @@ export async function loadDirectoryClient(api: { fetch(path: string): Promise<Di
 		"expect(result).toEqual(" + directoryPayload + ");",
 		"const result = await loadDirectoryBundle({ json: async () => (" + bundlePayload + ") });",
 		"expect(result).toEqual(" + bundlePayload + ");",
+		"return " + bundlePayload + ";",
+		"const result = await loadDirectoryBundleClient(api);",
+		"expect(result).toEqual(" + bundlePayload + ");",
+		"expect(api.fetchCalls).toEqual([['/directory/bundle']]);",
 		"return " + directoryPayload + ";",
 		"const result = await loadDirectoryClient(api);",
 		"expect(result).toEqual(" + directoryPayload + ");",
