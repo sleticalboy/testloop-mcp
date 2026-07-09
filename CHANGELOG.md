@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.12 - 2026-07-09
+
 ### Added
 
 - JS/TS payload 支持同文件简单泛型 alias/interface 的直接实例化，例如 `ApiEnvelope<User>`，会在可解释范围内展开为结构化 mock 数据。

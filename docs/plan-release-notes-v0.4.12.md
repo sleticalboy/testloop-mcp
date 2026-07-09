@@ -6,10 +6,10 @@ testloop-mcp v0.4.12
 
 ## 发布状态
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.4.12`。
-- [ ] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.12 - 2026-07-09`。
-- [ ] 更新 README、安装文档和必要的版本引用。
-- [ ] 跑完整本地发布前验证。
+- [x] 更新 `main.go` MCP implementation version 到 `0.4.12`。
+- [x] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.12 - 2026-07-09`。
+- [x] 更新 README、安装文档和必要的版本引用。
+- [x] 跑完整本地发布前验证。
 - [ ] 推送 `v0.4.12` tag 并等待 Release Artifacts workflow 完成。
 - [ ] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
 - [ ] 发布 GitHub Release 正文。
@@ -58,12 +58,12 @@ v0.4.12 是 v0.4.11 之后的小版本收口，重点增强两条链路：
 
 候选发布前至少需要重新执行：
 
-- [ ] `go test ./internal/generator -run 'TestJSExtractTSTypeDeclsKeepsSimpleGenericParams|TestGenerateJavaScriptTestsComplexTypeCompositionPayloads|TestJestAssertionAndDedupeCompatHelpers' -count=1`
-- [ ] `go test ./internal/generator -run 'TestGenerateTestsWithProviderIncludesJavaScriptPayloadFallbackNotes|TestGenerateTestsWithProviderIncludesCoverageTask' -count=1`
-- [ ] `go test ./tools -run 'TestHandleGenerateTestsReturnsJavaScriptPayloadFallbackNotes|TestHandleGenerateTestsUsesJavaScriptFramework' -count=1`
-- [ ] `bash test/install_script_test.sh`
-- [ ] `git diff --check`
-- [ ] `go test ./...`
+- [x] `go test ./internal/generator -run 'TestJSExtractTSTypeDeclsKeepsSimpleGenericParams|TestGenerateJavaScriptTestsComplexTypeCompositionPayloads|TestJestAssertionAndDedupeCompatHelpers' -count=1`
+- [x] `go test ./internal/generator -run 'TestGenerateTestsWithProviderIncludesJavaScriptPayloadFallbackNotes|TestGenerateTestsWithProviderIncludesCoverageTask' -count=1`
+- [x] `go test ./tools -run 'TestHandleGenerateTestsReturnsJavaScriptPayloadFallbackNotes|TestHandleGenerateTestsUsesJavaScriptFramework' -count=1`
+- [x] `bash test/install_script_test.sh`
+- [x] `git diff --check`
+- [x] `go test ./...`
 - [ ] 远端 CI 通过。
 
 ## 发布备注
