@@ -2365,6 +2365,15 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Record<number, User>>", typeDecls); ok || got != "" {
 		t.Fatalf("unsupported record payload = %q, %v", got, ok)
 	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ owners: Record<'primary' | 'secondary', User> }>", typeDecls); !ok || got != "{ owners: { primary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }, secondary: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } } }" {
+		t.Fatalf("object record literal field payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ directory: Record<string, Pick<User, 'userId' | 'email'>> }>", typeDecls); !ok || got != "{ directory: { key: { userId: 1, email: 'user@example.com' } } }" {
+		t.Fatalf("object record projection field payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ owners: Record<number, User> }>", typeDecls); !ok || got != "{ owners: {} }" {
+		t.Fatalf("object unsupported record field payload = %q, %v", got, ok)
+	}
 	typeDecls["AuditFields"] = "{ traceId: string; page: number }"
 	typeDecls["AuditedUser"] = "User & AuditFields"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User & AuditFields>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }" {
