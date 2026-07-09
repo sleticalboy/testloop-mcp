@@ -9,51 +9,49 @@
 - [x] Go module path 和文档仓库地址已统一为 `github.com/sleticalboy/testloop-mcp`。
 - [x] `LICENSE` 已补齐，README License badge 指向有效文件。
 - [x] `docs/installation.md` 覆盖 Homebrew、Release 下载、checksum 校验、源码构建、Docker、stdio、Streamable HTTP 和常见客户端配置。
-- [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失时回退到 `go install`，并对 release 下载设置重试和超时。
+- [x] `scripts/install.sh` 支持检测平台、下载匹配 release 资产、校验 `checksums.txt` 或单资产 `.sha256`、安装 `testloop-mcp` / `testloop-testgen`，资产缺失、平台不支持或下载失败时回退到 `go install`，并对 release 下载设置重试和超时。
 - [x] Release Artifacts workflow 覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64。
 - [x] Release Artifacts workflow 上传前会校验 `.sha256`，检查 tarball/zip 内包含两个二进制、`README.md` 和 `LICENSE`，并在 Windows runner 上实际运行 zip 内两个 `.exe --help`。
 - [x] Post-Release Verify workflow 可手动输入 tag，校验 release 资产清单，并对 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 执行安装脚本 dry run。
 - [x] Homebrew tap 已接入 `sleticalboy/tap`，公式由 `Formula/testloop-mcp.rb` 和 `scripts/generate-homebrew-formula.sh` 维护。
-- [x] `test/install_script_test.sh` 离线覆盖安装脚本的 Windows zip、单资产 `.sha256` fallback、下载重试/超时参数和 `go install` fallback。
+- [x] `test/install_script_test.sh` 离线覆盖安装脚本的 Windows zip、单资产 `.sha256` fallback、下载重试/超时参数、下载失败提示和 `go install` fallback。
 - [x] `scripts/verify-release-assets.sh` 可校验指定 tag 的五平台 release 资产和对应 `.sha256` 是否齐全，并有离线回归测试。
 
 ## 当前发布
 
-- 当前版本：`v0.4.10`
-- Tag：`v0.4.10` -> `4816c291bdadf320f356218eac7f35b48ebec094`
-- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.10
-- CI run：`28845217140`
-- Release Artifacts run：`28845299697`
-- Post-Release Verify run：`28851402908`
-- Homebrew tap commit：`0003c0c071c247c610cf8ed8f677f8f714610b17`
+- 当前版本：`v0.4.11`
+- Tag：`v0.4.11` -> `2a9b98fab1c14f02c38e406550227097ea814919`
+- Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.11
+- CI run：`28997546307`
+- Release Artifacts run：`28995989142`
+- Post-Release Verify run：暂未触发；已在本机完成 Release 资产、安装脚本回退和 Homebrew 验证
+- Homebrew tap commit：`513d843762bbd75f20c8716f4589419650bebaa3`
 
-`v0.4.10` Release 已包含：
+`v0.4.11` Release 已包含：
 
-- `testloop-mcp_v0.4.10_linux_amd64.tar.gz`
-- `testloop-mcp_v0.4.10_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.4.10_linux_arm64.tar.gz`
-- `testloop-mcp_v0.4.10_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.10_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.4.10_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.4.10_windows_amd64.zip`
-- `testloop-mcp_v0.4.10_windows_amd64.zip.sha256`
-- `testloop-mcp_v0.4.10_windows_arm64.zip`
-- `testloop-mcp_v0.4.10_windows_arm64.zip.sha256`
+- `testloop-mcp_v0.4.11_linux_amd64.tar.gz`
+- `testloop-mcp_v0.4.11_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.4.11_linux_arm64.tar.gz`
+- `testloop-mcp_v0.4.11_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.11_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.4.11_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.4.11_windows_amd64.zip`
+- `testloop-mcp_v0.4.11_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.4.11_windows_arm64.zip`
+- `testloop-mcp_v0.4.11_windows_arm64.zip.sha256`
 
-`v0.4.10` 已验证：
+`v0.4.11` 已验证：
 
 - [x] 远端 CI passed
-- [x] Release Artifacts run `28845299697` passed
-- [x] `TESTLOOP_MCP_VERSION=v0.4.10 TESTLOOP_MCP_INSTALL_DIR=... sh scripts/install.sh` 可直接下载 macOS arm64 release 资产、校验 `.sha256` 并安装
-- [x] Windows amd64 zip 已下载、通过 `.sha256` 校验，并安装 `testloop-mcp.exe` / `testloop-testgen.exe`
-- [x] Windows arm64 zip 已通过一次下载、`.sha256` 校验和安装；后续复跑受 GitHub 下载链路影响触发 fallback，未发现 release 资产缺失
-- [x] `brew fetch --force --formula sleticalboy/tap/testloop-mcp`
-- [x] `brew audit --strict --new sleticalboy/tap/testloop-mcp`
-- [x] `brew upgrade --formula sleticalboy/tap/testloop-mcp`
+- [x] Release Artifacts run `28995989142` passed
+- [x] `scripts/verify-release-assets.sh v0.4.11` 验证 release 页面包含 10 个必需资产
+- [x] macOS arm64 release 资产可直连下载、校验 `.sha256` 并解包出 `testloop-mcp` / `testloop-testgen`
+- [x] `scripts/install.sh` 在本机 GitHub 443 网络不稳定时可回退 `go install`，安装路径和两个命令 help 输出已验证
+- [x] `brew fetch sleticalboy/tap/testloop-mcp`
+- [x] `brew audit --formula --strict sleticalboy/tap/testloop-mcp`
+- [x] `brew upgrade sleticalboy/tap/testloop-mcp`
 - [x] `brew test sleticalboy/tap/testloop-mcp`
-- [x] `scripts/install.sh` 增加 curl/wget 重试和超时控制，避免 release 下载偶发卡住时无限等待
-- [x] `scripts/verify-release-assets.sh v0.4.10` 验证 release 页面包含 10 个必需资产
-- [x] 手动触发 `Post-Release Verify` workflow `28851402908`，五平台安装脚本 dry run 全部通过
+- [x] `scripts/install.sh` 的 fallback 提示已区分平台不支持、latest 解析失败、release 资产下载失败和缺少解压器，避免网络失败被误读成资产缺失
 
 ## 版本摘要
 
@@ -69,6 +67,7 @@
 | `v0.4.8` | 编辑器接入体验增强，补齐 MCP 客户端配置生成、校验、诊断和 Agent 闭环示例 | Release run `28793678783`；Homebrew tap 升级到 `0.4.8` 并通过 `brew test` |
 | `v0.4.9` | Agent 修复闭环和配置诊断细化，补充 `fix_suggestions` 分类与源码上下文 | Release run `28833047972`；Homebrew tap 升级到 `0.4.9` 并通过 `brew test` |
 | `v0.4.10` | 将 `repair_task` 和 `run_tests.include_fix_suggestions` 纳入正式发布，并补强安装脚本下载重试 | Release run `28845299697`；Homebrew tap 升级到 `0.4.10` 并通过 `brew test` |
+| `v0.4.11` | JS/TS 静态生成质量增强，补强复杂 TypeScript DTO payload 和 handler 闭环检查 | Release run `28995989142`；Homebrew tap 升级到 `0.4.11` 并通过 `brew test` |
 
 ## 发布维护流程
 

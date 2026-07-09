@@ -70,9 +70,10 @@ extract_archive() {
 }
 
 go_install_fallback() {
+  reason="${1:-No matching release asset was found.}"
   need_cmd go
   mkdir -p "$install_dir"
-  log "No matching release asset was found; falling back to go install."
+  log "${reason} Falling back to go install."
   GOBIN="$install_dir" go install "github.com/${repo}@${version}"
   GOBIN="$install_dir" go install "github.com/${repo}/cmd/testgen@${version}"
   if [ -x "${install_dir}/testgen${binary_suffix}" ] && [ ! -e "${install_dir}/testloop-testgen${binary_suffix}" ]; then
@@ -97,7 +98,7 @@ case "$os" in
   darwin) os="darwin" ;;
   windows) os="windows" ;;
   mingw*|msys*|cygwin*) os="windows" ;;
-  *) go_install_fallback; exit 0 ;;
+  *) go_install_fallback "Unsupported OS '${os}'."; exit 0 ;;
 esac
 
 if [ "$os" = "windows" ]; then
@@ -107,7 +108,7 @@ fi
 case "$arch" in
   x86_64|amd64) arch="amd64" ;;
   arm64|aarch64) arch="arm64" ;;
-  *) go_install_fallback; exit 0 ;;
+  *) go_install_fallback "Unsupported architecture '${arch}'."; exit 0 ;;
 esac
 
 archive_ext="tar.gz"
@@ -123,7 +124,7 @@ if [ "$version" = "latest" ]; then
     version="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${tmp_dir}/latest.json" | head -n 1)"
   fi
   if [ -z "$version" ] || [ "$version" = "latest" ]; then
-    go_install_fallback
+    go_install_fallback "Failed to resolve the latest release tag from GitHub."
     exit 0
   fi
 fi
@@ -132,7 +133,7 @@ asset="testloop-mcp_${version}_${os}_${arch}.${archive_ext}"
 base_url="https://github.com/${repo}/releases/download/${version}"
 
 if ! download "${base_url}/${asset}" "${tmp_dir}/${asset}" 2>/dev/null; then
-  go_install_fallback
+  go_install_fallback "Failed to download release asset ${asset} from ${base_url}/${asset}; check that the asset exists and that the network can reach GitHub."
   exit 0
 fi
 
@@ -151,8 +152,7 @@ fi
 
 mkdir -p "$install_dir"
 if ! extract_archive "${tmp_dir}/${asset}" "$tmp_dir"; then
-  log "No supported extractor was found for ${asset}; falling back to go install."
-  go_install_fallback
+  go_install_fallback "No supported extractor was found for ${asset}."
   exit 0
 fi
 install -m 755 "${tmp_dir}/testloop-mcp${binary_suffix}" "${install_dir}/testloop-mcp${binary_suffix}"

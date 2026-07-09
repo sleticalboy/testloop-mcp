@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- `scripts/install.sh` 的 `go install` fallback 会区分不支持的平台、latest 解析失败、Release 资产下载失败和缺少解压器，避免把网络失败误报成没有匹配资产。
+
 ## v0.4.11 - 2026-07-09
 
 ### Added

@@ -184,9 +184,36 @@ test_go_install_fallback_renames_testgen() {
   fi
   assert_log_contains "$go_log" "install github.com/sleticalboy/testloop-mcp@v9.9.9"
   assert_log_contains "$go_log" "install github.com/sleticalboy/testloop-mcp/cmd/testgen@v9.9.9"
+  assert_log_contains /tmp/testloop-install-fallback.out "Unsupported OS 'plan9'. Falling back to go install."
+}
+
+test_download_failure_fallback_message() {
+  install_dir="${tmp_dir}/install-download-fallback"
+  go_log="${tmp_dir}/go-download-fallback.log"
+  curl_log="${tmp_dir}/curl-download-fallback.log"
+  : > "$go_log"
+  : > "$curl_log"
+
+  PATH="${fake_bin}:$PATH" \
+    TESTLOOP_FAKE_GO_LOG="$go_log" \
+    TESTLOOP_FAKE_CURL_LOG="$curl_log" \
+    TESTLOOP_FAKE_FIXTURES="$fixture_dir" \
+    TESTLOOP_MCP_VERSION="v9.9.9" \
+    TESTLOOP_MCP_OS="darwin" \
+    TESTLOOP_MCP_ARCH="arm64" \
+    TESTLOOP_MCP_INSTALL_DIR="$install_dir" \
+    sh "${repo_root}/scripts/install.sh" >/tmp/testloop-install-download-fallback.out
+
+  assert_file "${install_dir}/testloop-mcp"
+  assert_file "${install_dir}/testloop-testgen"
+  assert_log_contains "$curl_log" "testloop-mcp_v9.9.9_darwin_arm64.tar.gz"
+  assert_log_contains "$go_log" "install github.com/sleticalboy/testloop-mcp@v9.9.9"
+  assert_log_contains /tmp/testloop-install-download-fallback.out "Failed to download release asset testloop-mcp_v9.9.9_darwin_arm64.tar.gz"
+  assert_log_contains /tmp/testloop-install-download-fallback.out "check that the asset exists and that the network can reach GitHub. Falling back to go install."
 }
 
 test_windows_zip_sha256_fallback
 test_go_install_fallback_renames_testgen
+test_download_failure_fallback_message
 
 echo "install script tests passed"
