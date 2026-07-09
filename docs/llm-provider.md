@@ -192,6 +192,18 @@ go run ./cmd/testgen -provider auto -provider-check
 
 `-provider-check` 不会调用模型，也不会校验模型输出内容。模型命令失败、stdout 为空、JSON 缺少 `code`、Markdown 清洗后没有测试代码、或语言级测试代码校验失败，会在实际 `generate_tests` / `testgen` 生成阶段返回错误。`testgen` 使用 LLM provider 失败时会提示先运行 `-provider-check` 排查基础配置。
 
+MCP `generate_tests` 在 provider 失败时会保留 error 路径，但错误文本包含稳定的 `provider_error kind=... action=...` 片段：
+
+| kind | action | 建议处理 |
+| --- | --- | --- |
+| `llm_config_missing` | `configure_provider` | 配置 `TESTLOOP_LLM_PROVIDER_CMD`，或把 provider 改成 `auto` / `static`。 |
+| `llm_command_failed` | `fix_provider_command_or_retry` | 检查 provider 脚本、模型命令、API key、网络或 stderr；可重试。 |
+| `llm_empty_output` | `retry_model_or_fallback_static` | 模型没有输出测试代码；可重试或降级 static。 |
+| `llm_json_error` | `retry_model_or_fallback_static` | stdout 看起来是 JSON 但无法解析；修 prompt 或模型包装。 |
+| `llm_missing_code` | `retry_model_or_fallback_static` | JSON 缺少非空 `code` 字段；修 provider 输出格式。 |
+| `llm_output_cleaning_failed` | `retry_model_or_fallback_static` | 清洗后找不到代码块；要求模型只输出测试代码。 |
+| `llm_output_validation_failed` | `adjust_prompt_or_fallback_static` | 输出像代码但不像目标语言测试；调整 prompt 或降级 static。 |
+
 ## 设计约束
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。

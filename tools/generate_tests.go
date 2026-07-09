@@ -34,13 +34,13 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 
 	provider, err := generator.NewTestProvider(input.Provider)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, formatGenerateTestsError(err)
 	}
 
 	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask, Framework: input.Framework}
 	code, err := generator.GenerateTestsWithProviderOptions(ctx, filePath, provider, opts)
 	if err != nil {
-		return nil, nil, fmt.Errorf("生成测试失败: %w", err)
+		return nil, nil, formatGenerateTestsError(err)
 	}
 
 	testFile := generator.TestFileName(filePath)
@@ -69,6 +69,28 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+func formatGenerateTestsError(err error) error {
+	if providerErr, ok := generator.ProviderErrorInfo(err); ok {
+		return fmt.Errorf("生成测试失败: provider_error kind=%s action=%s: %w", providerErr.Kind, providerErrorAction(providerErr.Kind), err)
+	}
+	return fmt.Errorf("生成测试失败: %w", err)
+}
+
+func providerErrorAction(kind generator.ProviderErrorKind) string {
+	switch kind {
+	case generator.ProviderErrorConfigMissing:
+		return "configure_provider"
+	case generator.ProviderErrorCommandFailed:
+		return "fix_provider_command_or_retry"
+	case generator.ProviderErrorEmptyOutput, generator.ProviderErrorJSON, generator.ProviderErrorMissingCode, generator.ProviderErrorOutputCleaningFailed:
+		return "retry_model_or_fallback_static"
+	case generator.ProviderErrorOutputValidationFailed:
+		return "adjust_prompt_or_fallback_static"
+	default:
+		return "inspect_provider"
+	}
 }
 
 func countGeneratedCases(code, ext string) int {

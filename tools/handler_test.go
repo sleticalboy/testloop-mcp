@@ -655,6 +655,50 @@ func TestHandleGenerateTestsValidatesInput(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsClassifiesLLMProviderConfigError(t *testing.T) {
+	t.Setenv(generator.EnvLLMProviderCommand, "")
+	dir := t.TempDir()
+	source := writeTestFile(t, dir, "calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n")
+
+	_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath: source,
+		Provider: "llm",
+	})
+	if err == nil {
+		t.Fatal("expected llm provider config error")
+	}
+	if !strings.Contains(err.Error(), "provider_error kind=llm_config_missing action=configure_provider") {
+		t.Fatalf("error missing provider classification: %v", err)
+	}
+}
+
+func TestHandleGenerateTestsClassifiesLLMProviderValidationError(t *testing.T) {
+	dir := t.TempDir()
+	source := writeTestFile(t, dir, "calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n")
+	providerPath := filepath.Join(t.TempDir(), "provider")
+	providerScript := `#!/usr/bin/env sh
+cat >/dev/null
+cat <<'EOF'
+{"code":"package calc\nfunc Add(a, b int) int { return a + b }\n"}
+EOF
+`
+	if err := os.WriteFile(providerPath, []byte(providerScript), 0o755); err != nil {
+		t.Fatalf("write provider: %v", err)
+	}
+	t.Setenv(generator.EnvLLMProviderCommand, providerPath)
+
+	_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath: source,
+		Provider: "llm",
+	})
+	if err == nil {
+		t.Fatal("expected llm provider validation error")
+	}
+	if !strings.Contains(err.Error(), "provider_error kind=llm_output_validation_failed action=adjust_prompt_or_fallback_static") {
+		t.Fatalf("error missing provider classification: %v", err)
+	}
+}
+
 func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")

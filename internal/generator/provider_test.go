@@ -285,6 +285,10 @@ exit 7
 	if err == nil || !strings.Contains(err.Error(), "provider exploded") {
 		t.Fatalf("ExternalLLMProvider.GenerateTests() error = %v, want stderr failure", err)
 	}
+	providerErr, ok := ProviderErrorInfo(err)
+	if !ok || providerErr.Kind != ProviderErrorCommandFailed {
+		t.Fatalf("ProviderErrorInfo() = %+v, %v; want command failed", providerErr, ok)
+	}
 }
 
 func TestGenerateTestsWithProviderIncludesCoverageTask(t *testing.T) {
@@ -581,6 +585,39 @@ func TestParseLLMProviderOutputRejectsInvalidResponses(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProviderErrorInfoClassifiesLLMProviderFailures(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		kind ProviderErrorKind
+	}{
+		{name: "empty output", err: mustProviderErr(parseLLMProviderOutput([]byte("  \n"))), kind: ProviderErrorEmptyOutput},
+		{name: "json error", err: mustProviderErr(parseLLMProviderOutput([]byte("{not-json"))), kind: ProviderErrorJSON},
+		{name: "missing code", err: mustProviderErr(parseLLMProviderOutput([]byte(`{"code":"   "}`))), kind: ProviderErrorMissingCode},
+		{name: "cleaning failed", err: mustProviderErr(parseLLMProviderOutput([]byte("I would test the add function."))), kind: ProviderErrorOutputCleaningFailed},
+		{name: "validation failed", err: validateLLMProviderTestCode("calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n"), kind: ProviderErrorOutputValidationFailed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			providerErr, ok := ProviderErrorInfo(tt.err)
+			if !ok {
+				t.Fatalf("ProviderErrorInfo() ok = false for %v", tt.err)
+			}
+			if providerErr.Kind != tt.kind {
+				t.Fatalf("ProviderErrorInfo().Kind = %q, want %q", providerErr.Kind, tt.kind)
+			}
+			if providerErr.Provider != "llm-command" {
+				t.Fatalf("ProviderErrorInfo().Provider = %q, want llm-command", providerErr.Provider)
+			}
+		})
+	}
+}
+
+func mustProviderErr(_ string, err error) error {
+	return err
 }
 
 type emptyProvider struct{}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +17,57 @@ import (
 )
 
 const EnvLLMProviderCommand = "TESTLOOP_LLM_PROVIDER_CMD"
+
+type ProviderErrorKind string
+
+const (
+	ProviderErrorConfigMissing          ProviderErrorKind = "llm_config_missing"
+	ProviderErrorCommandFailed          ProviderErrorKind = "llm_command_failed"
+	ProviderErrorEmptyOutput            ProviderErrorKind = "llm_empty_output"
+	ProviderErrorJSON                   ProviderErrorKind = "llm_json_error"
+	ProviderErrorMissingCode            ProviderErrorKind = "llm_missing_code"
+	ProviderErrorOutputCleaningFailed   ProviderErrorKind = "llm_output_cleaning_failed"
+	ProviderErrorOutputValidationFailed ProviderErrorKind = "llm_output_validation_failed"
+)
+
+type ProviderError struct {
+	Kind     ProviderErrorKind
+	Provider string
+	Message  string
+	Err      error
+}
+
+func (e *ProviderError) Error() string {
+	if e == nil {
+		return ""
+	}
+	msg := strings.TrimSpace(e.Message)
+	if msg == "" && e.Err != nil {
+		msg = e.Err.Error()
+	}
+	if msg == "" {
+		msg = string(e.Kind)
+	}
+	if e.Provider == "" {
+		return msg
+	}
+	return e.Provider + ": " + msg
+}
+
+func (e *ProviderError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
+func ProviderErrorInfo(err error) (*ProviderError, bool) {
+	var providerErr *ProviderError
+	if errors.As(err, &providerErr) {
+		return providerErr, true
+	}
+	return nil, false
+}
 
 // TestProvider generates test code from a source file and generation context.
 type TestProvider interface {
@@ -61,7 +113,7 @@ func (p ExternalLLMProvider) Name() string {
 func (p ExternalLLMProvider) GenerateTests(ctx context.Context, req TestGenerationRequest) (string, error) {
 	parts := strings.Fields(p.Command)
 	if len(parts) == 0 {
-		return "", fmt.Errorf("%s is empty", EnvLLMProviderCommand)
+		return "", llmProviderError(ProviderErrorConfigMissing, "%s is empty", EnvLLMProviderCommand)
 	}
 
 	payload, err := json.Marshal(req)
@@ -80,7 +132,7 @@ func (p ExternalLLMProvider) GenerateTests(ctx context.Context, req TestGenerati
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", fmt.Errorf("llm provider failed: %s", msg)
+		return "", llmProviderError(ProviderErrorCommandFailed, "llm provider failed: %s", msg)
 	}
 
 	code, err := parseLLMProviderOutput(out)
@@ -93,6 +145,14 @@ func (p ExternalLLMProvider) GenerateTests(ctx context.Context, req TestGenerati
 	return code, nil
 }
 
+func llmProviderError(kind ProviderErrorKind, format string, args ...any) error {
+	return &ProviderError{
+		Kind:     kind,
+		Provider: "llm-command",
+		Message:  fmt.Sprintf(format, args...),
+	}
+}
+
 type llmProviderResponse struct {
 	Code string `json:"code"`
 }
@@ -100,16 +160,21 @@ type llmProviderResponse struct {
 func parseLLMProviderOutput(out []byte) (string, error) {
 	text := strings.TrimSpace(string(out))
 	if text == "" {
-		return "", fmt.Errorf("llm provider returned empty output")
+		return "", llmProviderError(ProviderErrorEmptyOutput, "llm provider returned empty output")
 	}
 
 	if strings.HasPrefix(text, "{") {
 		var resp llmProviderResponse
 		if err := json.Unmarshal(out, &resp); err != nil {
-			return "", fmt.Errorf("parse llm provider json output: %w", err)
+			return "", &ProviderError{
+				Kind:     ProviderErrorJSON,
+				Provider: "llm-command",
+				Message:  "parse llm provider json output: " + err.Error(),
+				Err:      err,
+			}
 		}
 		if strings.TrimSpace(resp.Code) == "" {
-			return "", fmt.Errorf("llm provider json output missing code")
+			return "", llmProviderError(ProviderErrorMissingCode, "llm provider json output missing code")
 		}
 		return cleanLLMProviderCode(resp.Code)
 	}
@@ -120,7 +185,7 @@ func parseLLMProviderOutput(out []byte) (string, error) {
 func cleanLLMProviderCode(text string) (string, error) {
 	text = strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n"))
 	if text == "" {
-		return "", fmt.Errorf("llm provider returned empty output")
+		return "", llmProviderError(ProviderErrorEmptyOutput, "llm provider returned empty output")
 	}
 	if fenced, ok := extractFirstCodeFence(text); ok {
 		return fenced, nil
@@ -135,7 +200,7 @@ func cleanLLMProviderCode(text string) (string, error) {
 		}
 	}
 	if start == -1 {
-		return "", fmt.Errorf("llm provider output did not contain test code")
+		return "", llmProviderError(ProviderErrorOutputCleaningFailed, "llm provider output did not contain test code")
 	}
 	end := start
 	for i := len(lines) - 1; i >= start; i-- {
@@ -146,7 +211,7 @@ func cleanLLMProviderCode(text string) (string, error) {
 	}
 	code := strings.TrimSpace(strings.Join(lines[start:end+1], "\n"))
 	if code == "" {
-		return "", fmt.Errorf("llm provider output did not contain test code")
+		return "", llmProviderError(ProviderErrorOutputCleaningFailed, "llm provider output did not contain test code")
 	}
 	return code, nil
 }
@@ -211,7 +276,7 @@ func validateLLMProviderTestCode(srcPath, code string) error {
 	if llmProviderCodeLooksLikeTest(language, code) {
 		return nil
 	}
-	return fmt.Errorf("llm provider output did not look like %s test code", language)
+	return llmProviderError(ProviderErrorOutputValidationFailed, "llm provider output did not look like %s test code", language)
 }
 
 func llmProviderCodeLooksLikeTest(language, code string) bool {
@@ -238,7 +303,11 @@ func NewTestProvider(mode string) (TestProvider, error) {
 	case "llm":
 		command := strings.TrimSpace(os.Getenv(EnvLLMProviderCommand))
 		if command == "" {
-			return nil, fmt.Errorf("provider llm requires %s", EnvLLMProviderCommand)
+			return nil, &ProviderError{
+				Kind:     ProviderErrorConfigMissing,
+				Provider: "llm-command",
+				Message:  fmt.Sprintf("provider llm requires %s", EnvLLMProviderCommand),
+			}
 		}
 		return ExternalLLMProvider{Command: command}, nil
 	case "auto":
