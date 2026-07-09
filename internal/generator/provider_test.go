@@ -224,6 +224,65 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderIncludesJavaScriptPayloadFallbackNotes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `import type { ExternalUser } from './types';
+
+export async function loadUser(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	requestPath := filepath.Join(t.TempDir(), "request.json")
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+cat > "`+requestPath+`"
+cat <<'EOF'
+{"code":"import { loadUser } from './api';\n\nit('uses llm output', async () => {\n  await loadUser({ json: async () => ({ ok: true }) });\n});\n"}
+EOF
+`)
+
+	code, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, ExternalLLMProvider{Command: command}, GenerateTestsOptions{
+		Framework: "vitest",
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+	if !strings.Contains(code, "uses llm output") {
+		t.Fatalf("expected llm provider output, got:\n%s", code)
+	}
+
+	raw, err := os.ReadFile(requestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var req TestGenerationRequest
+	if err := json.Unmarshal(raw, &req); err != nil {
+		t.Fatalf("parse provider request: %v\n%s", err, raw)
+	}
+	if req.Context == nil {
+		t.Fatalf("expected provider context, got %+v", req)
+	}
+	target := findProviderTarget(req.Context.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", req.Context.Targets)
+	}
+	if target.ReturnTypeExpr != "Promise<ExternalUser>" {
+		t.Fatalf("return_type_expr = %q, want Promise<ExternalUser>", target.ReturnTypeExpr)
+	}
+	assertProviderSliceContains(t, target.PayloadNotes, "return annotation ExternalUser is not declared in the same source file; static payload falls back to { ok: true }")
+	if !strings.Contains(req.StaticCode, "expect(result).toEqual({ ok: true });") {
+		t.Fatalf("provider static_code missing fallback assertion:\n%s", req.StaticCode)
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsRejectsProviderEmptyOutput(t *testing.T) {
 	srcPath := writeProviderSource(t)
 
@@ -488,6 +547,25 @@ module.exports = { add };
 		t.Fatal(err)
 	}
 	return path
+}
+
+func findProviderTarget(targets []types.TestTarget, name string) *types.TestTarget {
+	for i := range targets {
+		if targets[i].Name == name {
+			return &targets[i]
+		}
+	}
+	return nil
+}
+
+func assertProviderSliceContains(t *testing.T, values []string, want string) {
+	t.Helper()
+	for _, value := range values {
+		if value == want {
+			return
+		}
+	}
+	t.Fatalf("expected %q in %+v", want, values)
 }
 
 func writeFakeProviderCommand(t *testing.T, script string) string {
