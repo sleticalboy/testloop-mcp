@@ -1340,6 +1340,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 		typeExpr = branch
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
+	if payload, ok := jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
@@ -1368,6 +1371,9 @@ func jsMockPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]stri
 			typeExpr = branch
 			typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		}
+	}
+	if payload, ok := jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
@@ -1398,6 +1404,9 @@ func jsObjectMockFromTSTypeWithDecls(typeExpr string, decls map[string]string) (
 func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
 	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
 	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if payload, ok := jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
+	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
 	}
@@ -1423,6 +1432,9 @@ func jsObjectMockFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]strin
 		typeExpr = strings.TrimSpace(resolved)
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 		seen = nextSeen
+	}
+	if payload, ok := jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload, true
 	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload, true
@@ -1486,6 +1498,25 @@ func jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map
 		return "{}", true
 	}
 	return "{ " + strings.Join(parts, ", ") + " }", true
+}
+
+func jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
+	sourceType, key, ok := jsTSIndexedAccessParts(typeExpr)
+	if !ok {
+		return "", false
+	}
+	sourceExpr, nextSeen, ok := jsResolvedObjectTypeForProjection(sourceType, decls, seen)
+	if !ok {
+		return "", false
+	}
+	fieldType, ok := jsObjectFieldType(sourceExpr, key)
+	if !ok {
+		return "", false
+	}
+	if payload, ok := jsMockPayloadFromTSTypeWithDeclsSeen(fieldType, decls, nextSeen); ok {
+		return payload, true
+	}
+	return jsMockValueForTSTypeWithDeclsSeen(key, fieldType, decls, nextSeen), true
 }
 
 func jsMockProjectionPayloadFromTSTypeWithDeclsSeen(typeExpr string, decls map[string]string, seen map[string]bool) (string, bool) {
@@ -1574,6 +1605,17 @@ func jsResolvedObjectTypeForProjection(typeExpr string, decls map[string]string,
 	return typeExpr, seen, true
 }
 
+func jsObjectFieldType(typeExpr, key string) (string, bool) {
+	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(typeExpr), "{"), "}"))
+	for _, field := range jsSplitTopLevelTypeFields(body) {
+		name, typ, ok := jsParseTSTypeField(field)
+		if ok && name == key {
+			return typ, true
+		}
+	}
+	return "", false
+}
+
 func jsSplitTopLevelTypeFields(body string) []string {
 	var fields []string
 	start := 0
@@ -1654,6 +1696,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	}
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
+	}
+	if payload, ok := jsMockIndexedAccessPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
+		return payload
 	}
 	if payload, ok := jsMockIntersectionPayloadFromTSTypeWithDeclsSeen(typeExpr, decls, seen); ok {
 		return payload
@@ -2016,6 +2061,74 @@ func jsTSStringLiteralUnionList(typeExpr string) ([]string, bool) {
 		values = append(values, key)
 	}
 	return values, true
+}
+
+func jsTSIndexedAccessParts(typeExpr string) (string, string, bool) {
+	typeExpr = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(typeExpr), ";"))
+	if !strings.HasSuffix(typeExpr, "]") {
+		return "", "", false
+	}
+	angleDepth, braceDepth, bracketDepth, parenDepth := 0, 0, 0, 0
+	var quote rune
+	for i, ch := range typeExpr {
+		if quote != 0 {
+			if ch == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"':
+			quote = ch
+		case '<':
+			angleDepth++
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			if angleDepth == 0 && braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 {
+				source := strings.TrimSpace(typeExpr[:i])
+				keyExpr := strings.TrimSpace(typeExpr[i+1 : len(typeExpr)-1])
+				key, ok := jsTSStringLiteralValue(keyExpr)
+				return source, key, ok && source != ""
+			}
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		}
+	}
+	return "", "", false
+}
+
+func jsTSStringLiteralValue(typeExpr string) (string, bool) {
+	typeExpr = strings.TrimSpace(typeExpr)
+	if len(typeExpr) < 2 {
+		return "", false
+	}
+	quote := typeExpr[0]
+	if (quote != '\'' && quote != '"') || typeExpr[len(typeExpr)-1] != quote {
+		return "", false
+	}
+	key := strings.TrimSpace(typeExpr[1 : len(typeExpr)-1])
+	if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(key) {
+		return "", false
+	}
+	return key, true
 }
 
 func jsTSArrayElementType(typeExpr string) (string, bool) {

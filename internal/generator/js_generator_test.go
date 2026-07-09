@@ -376,6 +376,12 @@ type AuditFields = {
   page: number
 }
 
+type ApiResponse = {
+  data: User
+  meta: Meta
+  count: number
+}
+
 type Users = readonly User[]
 type MaybeUsers = ReadonlyArray<User | null>
 type UserTuple = readonly [user: User, meta?: Meta]
@@ -384,6 +390,7 @@ type UserWithoutMeta = Omit<User, 'manager' | 'displayName'>
 type UserMap = Record<string, User>
 type FeaturedUsers = Record<'primary' | 'secondary', User>
 type AuditedUser = User & AuditFields
+type ResponseData = ApiResponse['data']
 
 export async function parseUser(response: Response): Promise<User> {
   return await response.json();
@@ -414,6 +421,14 @@ export async function parseAuditedUser(response: Response): Promise<AuditedUser>
 }
 
 export async function parseInlineIntersection(response: Response): Promise<{ id: number } & { email: string }> {
+  return await response.json();
+}
+
+export async function parseResponseData(response: Response): Promise<ResponseData> {
+  return await response.json();
+}
+
+export async function parseInlineIndexed(response: Response): Promise<{ data: { id: number; email: string } }['data']> {
   return await response.json();
 }
 
@@ -462,6 +477,10 @@ export async function loadUserTuple(response: Response): Promise<UserTuple> {
 		"const result = await parseAuditedUser({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }) });",
 		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 });",
 		"const result = await parseInlineIntersection({ json: async () => ({ id: 1, email: 'user@example.com' }) });",
+		"expect(result).toEqual({ id: 1, email: 'user@example.com' });",
+		"const result = await parseResponseData({ json: async () => ({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }) });",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} });",
+		"const result = await parseInlineIndexed({ json: async () => ({ id: 1, email: 'user@example.com' }) });",
 		"expect(result).toEqual({ id: 1, email: 'user@example.com' });",
 		"return { title: 'test', active: true, avatarUrl: 'https://example.com', owner: { userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} } };",
 		"const result = await loadProfile(client);",
@@ -1202,6 +1221,46 @@ export function status(): string {
 				"import { loadAuditedUser } from './api';",
 				"const result = await loadAuditedUser({ json: async () => ({ userId: 1, email: 'user@example.com', traceId: 'id-1', page: 1 }) });",
 				"expect(result).toEqual({ userId: 1, email: 'user@example.com', traceId: 'id-1', page: 1 });",
+			},
+			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
+		},
+		{
+			name:     "vitest typescript indexed access response json",
+			fileName: "api.ts",
+			source: `interface User {
+  userId: number
+  email: string
+}
+
+type ApiResponse = {
+  data: User
+  count: number
+}
+
+type ResponseData = ApiResponse['data']
+
+export async function loadResponseData(response: Response): Promise<ResponseData> {
+  return await response.json()
+}
+
+export function status(): string {
+  return 'ok'
+}
+`,
+			task: types.CoverageTestTask{
+				ID:             "vitest-json-indexed-1",
+				Framework:      "vitest",
+				Target:         "loadResponseData",
+				LineRange:      "13-13",
+				GapType:        "return_path",
+				TestName:       "covers vitest loadResponseData indexed response",
+				AssertionFocus: []string{"断言 indexed access JSON 响应结构"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { loadResponseData } from './api';",
+				"const result = await loadResponseData({ json: async () => ({ userId: 1, email: 'user@example.com' }) });",
+				"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
 			},
 			forbidden: []string{"describe('status'", "status(", "{ ok: true }", "to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
@@ -2252,6 +2311,26 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<User & string>", typeDecls); ok || got != "" {
 		t.Fatalf("unsupported intersection payload = %q, %v", got, ok)
 	}
+	typeDecls["ApiResponse"] = "{ data: User; meta: Meta; count: number }"
+	typeDecls["ResponseData"] = "ApiResponse['data']"
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiResponse['data']>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("indexed access payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ResponseData>", typeDecls); !ok || got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("indexed access alias payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<{ data: { id: number; email: string } }['data']>", typeDecls); !ok || got != "{ id: 1, email: 'user@example.com' }" {
+		t.Fatalf("inline indexed access payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiResponse['data' | 'meta']>", typeDecls); ok || got != "" {
+		t.Fatalf("unsupported indexed union key payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiResponse[keyof ApiResponse]>", typeDecls); ok || got != "" {
+		t.Fatalf("unsupported indexed keyof payload = %q, %v", got, ok)
+	}
+	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<ApiResponse['missing']>", typeDecls); ok || got != "" {
+		t.Fatalf("missing indexed access payload = %q, %v", got, ok)
+	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "null | User", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
 		t.Fatalf("nullable owner value = %q", got)
 	}
@@ -2269,6 +2348,9 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	}
 	if got := jsMockValueForTSTypeWithDecls("owner", "User & AuditFields", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {}, traceId: 'id-1', page: 1 }" {
 		t.Fatalf("intersection owner value = %q", got)
+	}
+	if got := jsMockValueForTSTypeWithDecls("data", "ApiResponse['data']", typeDecls); got != "{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }" {
+		t.Fatalf("indexed access data value = %q", got)
 	}
 	typeDecls["Users"] = "ReadonlyArray<User | null>"
 	if got, ok := jsMockPayloadFromTSTypeWithDecls("Promise<Users>", typeDecls); !ok || got != "[{ userId: 1, email: 'user@example.com', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', displayName: 'test', manager: {} }]" {
