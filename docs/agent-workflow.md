@@ -163,6 +163,20 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 这只改变测试草稿的生成来源，不改变闭环终止条件。Agent 仍然需要读取返回的 `test_file`，并立即进入下一步 `run_tests`。
 
+如果 `generate_tests` 返回 LLM provider 错误，Agent 应按错误文本中的 `provider_error kind=... action=...` 选择处理策略：
+
+| kind | action | Agent 策略 |
+| --- | --- | --- |
+| `llm_config_missing` | `configure_provider` | 不重试模型；提示用户配置 `TESTLOOP_LLM_PROVIDER_CMD`，或改用 `provider: "auto"` / `static`。 |
+| `llm_command_failed` | `fix_provider_command_or_retry` | 优先读取错误里的 stderr；如果像网络、限流或模型服务暂时失败，可以重试一次；如果像命令不存在、鉴权失败或脚本错误，提示用户修 provider。 |
+| `llm_empty_output` | `retry_model_or_fallback_static` | 可重试一次；仍为空时降级 static，并保留错误摘要。 |
+| `llm_json_error` | `retry_model_or_fallback_static` | 如果 provider 配置为 JSON 输出，先修 wrapper 或 prompt；Agent 自动流程可降级 static。 |
+| `llm_missing_code` | `retry_model_or_fallback_static` | 要求 provider 返回非空 `code` 字段；自动流程可降级 static。 |
+| `llm_output_cleaning_failed` | `retry_model_or_fallback_static` | 要求模型只输出测试代码；可重试一次，失败后降级 static。 |
+| `llm_output_validation_failed` | `adjust_prompt_or_fallback_static` | 说明模型输出不是目标语言测试；优先调整 prompt，自动流程可降级 static。 |
+
+自动化 Agent 不应无限重试 provider。建议同一任务最多重试一次 LLM provider；第二次仍失败时降级 static，继续执行 `run_tests`，并把 provider 错误作为上下文记录。
+
 ## 5. 重新运行并收敛
 
 生成测试后再次调用：
@@ -191,4 +205,5 @@ LLM provider 输出也必须走同样的路径：`generate_tests(provider=auto/l
 - 优先选择 `test_tasks[]` 中 `priority` 更高、`target` 更具体、`suggested_inputs` 更明确的任务。
 - `generate_tests` 的 static 输出是草稿；复杂业务断言应由 Agent 或 LLM provider 结合源码继续增强。
 - LLM provider 的产物不是最终结论；必须跑 `run_tests`，失败时使用 `repair_task` 限定修复范围。
+- provider 错误要按 `provider_error kind/action` 处理；不要对配置错误或格式错误做无上限重试。
 - 不要把整段日志直接塞给模型；优先使用 `run_tests` / `parse_results` 的结构化 JSON。
