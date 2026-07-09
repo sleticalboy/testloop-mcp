@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/sleticalboy/testloop-mcp/internal/generator"
 	"github.com/sleticalboy/testloop-mcp/types"
 )
 
@@ -986,6 +987,100 @@ export async function loadDirectoryBundleClient(api: { fetch(path: string): Prom
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
 	if !strings.Contains(logText, "ARGS=vitest run --verbose src/api.test.ts\n") {
+		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
+	}
+}
+
+func TestHandleGenerateTestsLLMProviderOutputFeedsRunTestsRepairLoop(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := writeTestFile(t, dir, filepath.Join("src", "sum.ts"), strings.Join([]string{
+		"export function add(a: number, b: number): number {",
+		"  return a + b",
+		"}",
+	}, "\n")+"\n")
+
+	providerPath := filepath.Join(t.TempDir(), "provider")
+	providerScript := `#!/usr/bin/env sh
+set -eu
+cat >/dev/null
+cat <<'EOF'
+{"code":"import { describe, it, expect } from 'vitest';\nimport { add } from './sum';\n\ndescribe('sum', () => {\n  it('adds values', () => {\n    const result = add(1, 2);\n\n    expect(result).toBe(3);\n  });\n});\n"}
+EOF
+`
+	if err := os.WriteFile(providerPath, []byte(providerScript), 0o755); err != nil {
+		t.Fatalf("write fake llm provider: %v", err)
+	}
+	t.Setenv(generator.EnvLLMProviderCommand, providerPath)
+
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:  source,
+		Framework: "vitest",
+		Provider:  "llm",
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, generateResult)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Provider != "llm-command" {
+		t.Fatalf("provider = %q, want llm-command", generated.Provider)
+	}
+	if generated.TestFile != filepath.Join(dir, "src", "sum.test.ts") {
+		t.Fatalf("test file = %q", generated.TestFile)
+	}
+	generatedCode := readTextFile(t, generated.TestFile)
+	for _, want := range []string{
+		"import { describe, it, expect } from 'vitest';",
+		"expect(result).toBe(3);",
+	} {
+		if !strings.Contains(generatedCode, want) {
+			t.Fatalf("generated LLM provider output missing %q:\n%s", want, generatedCode)
+		}
+	}
+
+	logPath := installFakeNpxRecorder(t, vitestFailureOutput())
+	runResult, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  generated.TestFile,
+		Framework:             "vitest",
+		IncludeFixSuggestions: true,
+		SourceCode:            source,
+		TestCode:              generated.TestFile,
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, runResult)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "vitest" || parsed.Status != "fail" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+	if len(parsed.FixSuggestions) != 1 {
+		t.Fatalf("fix suggestions len = %d, want 1: %+v", len(parsed.FixSuggestions), parsed.FixSuggestions)
+	}
+	suggestion := parsed.FixSuggestions[0]
+	if suggestion.Category != "expectation_mismatch" || suggestion.RepairTask == nil {
+		t.Fatalf("unexpected fix suggestion: %+v", suggestion)
+	}
+	if suggestion.RepairTask.ContextSnippet != "    expect(result).toBe(3);" {
+		t.Fatalf("context snippet = %q", suggestion.RepairTask.ContextSnippet)
+	}
+	wantCommand := "npx vitest run " + filepath.ToSlash(generated.TestFile)
+	if !equalStrings(suggestion.RepairTask.SuggestedCommands, []string{wantCommand}) {
+		t.Fatalf("suggested commands = %+v, want %q", suggestion.RepairTask.SuggestedCommands, wantCommand)
+	}
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }

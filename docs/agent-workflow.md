@@ -148,6 +148,21 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 `generate_tests` 会把任务写入 `context.coverage_task`，并优先使用任务里的 `test_file`、`test_name`、`suggested_inputs` 和 `assertion_focus` 收窄生成范围。
 
+如果项目已配置外部 LLM provider，可以把 `provider` 改为 `auto` 或 `llm`：
+
+```json
+{
+  "tool": "generate_tests",
+  "arguments": {
+    "file_path": "./src/sum.ts",
+    "framework": "vitest",
+    "provider": "auto"
+  }
+}
+```
+
+这只改变测试草稿的生成来源，不改变闭环终止条件。Agent 仍然需要读取返回的 `test_file`，并立即进入下一步 `run_tests`。
+
 ## 5. 重新运行并收敛
 
 生成测试后再次调用：
@@ -158,16 +173,22 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
   "arguments": {
     "path": "./demo",
     "framework": "go-test",
-    "coverage": true
+    "coverage": true,
+    "include_fix_suggestions": true,
+    "source_code": "./demo/calc.go",
+    "test_code": "./demo/calc_test.go"
   }
 }
 ```
 
-如果失败，Agent 应读取结构化 `failures[]`，必要时再调用 `fix_suggestions` 获取修复建议。闭环终止条件不是“生成了测试”，而是测试结果、失败结构和覆盖率任务都达到可接受状态。
+如果失败，Agent 应读取结构化 `failures[]` 和内联 `fix_suggestions[]`。未开启 `include_fix_suggestions` 或上下文不足时，再单独调用 `fix_suggestions` 获取修复建议。闭环终止条件不是“生成了测试”，而是测试结果、失败结构和覆盖率任务都达到可接受状态。
+
+LLM provider 输出也必须走同样的路径：`generate_tests(provider=auto/llm) -> run_tests(include_fix_suggestions=true) -> repair_task -> rerun`。当前回归测试已固定一个 Vitest dry-run 链路：fake LLM provider 生成测试文件，fake `npx vitest` 返回断言失败，`run_tests` 解析失败并内联 `repair_task`。
 
 ## Agent 策略
 
 - 先修真实失败，再补覆盖率缺口。
 - 优先选择 `test_tasks[]` 中 `priority` 更高、`target` 更具体、`suggested_inputs` 更明确的任务。
 - `generate_tests` 的 static 输出是草稿；复杂业务断言应由 Agent 或 LLM provider 结合源码继续增强。
+- LLM provider 的产物不是最终结论；必须跑 `run_tests`，失败时使用 `repair_task` 限定修复范围。
 - 不要把整段日志直接塞给模型；优先使用 `run_tests` / `parse_results` 的结构化 JSON。

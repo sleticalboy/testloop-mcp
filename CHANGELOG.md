@@ -9,6 +9,7 @@
 - 外部 LLM provider 输出会清洗常见 Markdown 代码围栏和前后解释性文本；如果输出不含可识别测试代码，会返回明确错误。
 - 外部 LLM provider 输出增加按目标语言的轻量测试代码校验，Go/Python/JS/TS/Rust/Java 会拒绝明显不是测试的代码片段。
 - 新增 `examples/llm-provider-prompt.md`、Ollama 模型命令包装和 OpenAI CLI 模型命令包装，降低外部 LLM provider 的真实模型接入成本。
+- 新增 LLM provider 生成结果进入 `run_tests include_fix_suggestions=true` 的 handler 回归测试，固定外部生成结果可进入失败解析和 repair task 闭环。
 
 ### Changed
 

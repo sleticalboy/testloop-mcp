@@ -179,3 +179,4 @@ TESTLOOP_OPENAI_MODEL=gpt-5.5 \
 - `static_code` 是可用回退结果，LLM provider 可以基于它做增强，而不是从零生成。
 - 当存在 `context.coverage_task` 时，provider 应只补充该任务对应的增量测试，避免覆盖或扩写成整文件测试套件。
 - `examples/model-ollama.sh` 和 `examples/model-openai-cli.sh` 是模型命令包装层，不直接处理 MCP provider JSON；它们只接收 prompt 并输出测试代码。
+- provider 生成成功只代表测试文件已写入；调用方应继续执行 `run_tests`，并在失败时使用 `include_fix_suggestions=true` 获取结构化修复任务。
