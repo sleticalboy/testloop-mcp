@@ -36,6 +36,7 @@ jobs:
           go test ./...
           sh test/install_script_test.sh
           sh test/release_assets_test.sh
+          sh test/llm_provider_example_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .

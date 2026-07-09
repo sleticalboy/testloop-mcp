@@ -84,6 +84,26 @@ export TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh"
 
 `examples/llm-provider.sh` 是一个最小示例：它会读取 stdin JSON，并直接返回 `static_code`。真实接入 OpenAI、Ollama、Claude 或内部模型时，可以在这个脚本里把 `context` 和 `static_code` 组装成 prompt，再把模型返回的测试代码写到 stdout。
 
+示例脚本还会消费 `payload_notes` 中的 `read candidate source files: ...` 提示：当候选文件存在于 `source_file` 同目录或子目录时，会读取这些文件并放入 prompt 的 `Imported Type Context` 小节。默认情况下 stdout 仍只返回 `static_code`，不会把 prompt 写入测试文件。
+
+调试 prompt：
+
+```bash
+TESTLOOP_LLM_PROVIDER_PROMPT_FILE=/tmp/testloop-prompt.md \
+  TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh" \
+  testloop-mcp
+```
+
+接入真实模型命令：
+
+```bash
+TESTLOOP_LLM_PROVIDER_MODEL_CMD="your-model-cli --generate-tests" \
+  TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh" \
+  testloop-mcp
+```
+
+`TESTLOOP_LLM_PROVIDER_MODEL_CMD` 会从 stdin 收到完整 prompt，并应在 stdout 输出最终测试代码。
+
 ## 设计约束
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
