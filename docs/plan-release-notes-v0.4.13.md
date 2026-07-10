@@ -8,10 +8,10 @@ testloop-mcp v0.4.13
 
 - [x] 创建 v0.4.13 发布说明草案。
 - [x] 确认 v0.4.12 之后的 `Unreleased` 范围主要是 LLM provider 接入质量、错误可观测性、Agent fallback 闭环和安装脚本 fallback 日志修正。
-- [ ] 更新 `main.go` MCP implementation version 到 `0.4.13`。
-- [ ] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.13 - 2026-07-10`。
-- [ ] 更新 README、安装文档和必要的版本引用。
-- [ ] 跑完整本地发布前验证。
+- [x] 更新 `main.go` MCP implementation version 到 `0.4.13`。
+- [x] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.13 - 2026-07-10`。
+- [x] 更新 README、安装文档和必要的版本引用。
+- [x] 跑完整本地发布前验证。
 - [ ] 推送 `v0.4.13` tag 并等待 Release Artifacts workflow 完成。
 - [ ] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
 - [ ] 发布 GitHub Release 正文。
@@ -82,12 +82,12 @@ v0.4.13 仍保持 LLM provider 是外部命令协议适配层：
 
 正式发布前还需要执行：
 
-- [ ] `go build -o /tmp/testloop-mcp-v0.4.13-prep .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.4.13-prep ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.4.13-prep --help`
-- [ ] `/tmp/testloop-testgen-v0.4.13-prep --help`
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.13-prep scripts/package-release-asset.sh v0.4.13 darwin_arm64 darwin arm64`
-- [ ] 校验 `/tmp/testloop-v0.4.13-prep/testloop-mcp_v0.4.13_darwin_arm64.tar.gz.sha256`
+- [x] `go build -o /tmp/testloop-mcp-v0.4.13-prep .`
+- [x] `go build -o /tmp/testloop-testgen-v0.4.13-prep ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.4.13-prep --help`
+- [x] `/tmp/testloop-testgen-v0.4.13-prep --help`
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.13-prep scripts/package-release-asset.sh v0.4.13 darwin_arm64 darwin arm64`
+- [x] 校验 `/tmp/testloop-v0.4.13-prep/testloop-mcp_v0.4.13_darwin_arm64.tar.gz.sha256`
 
 ## 发布备注
 

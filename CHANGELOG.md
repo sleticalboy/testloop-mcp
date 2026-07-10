@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.13 - 2026-07-10
+
 ### Added
 
 - JS/TS `payload_notes` 在遇到 imported type 时会追加 import 来源和候选源码文件提示，帮助 Agent/LLM provider 读取跨文件类型上下文，而不是误把保守 mock 当作完整 DTO。
