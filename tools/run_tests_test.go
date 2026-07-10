@@ -157,6 +157,53 @@ func TestNormalizeGoTestPathPrefixesRelativePackageDirs(t *testing.T) {
 	}
 }
 
+func TestGoTestCommandUsesModuleRootForAbsolutePackagePath(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/demo\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	pkg := filepath.Join(dir, "pkg")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatalf("mkdir pkg: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "calc_test.go"), []byte("package pkg\n"), 0o644); err != nil {
+		t.Fatalf("write go file: %v", err)
+	}
+
+	cmd := goTestCommand(context.Background(), pkg, true, true)
+	want := []string{"go", "test", "-json", "-v", "-cover", "./pkg"}
+	if !equalStrings(cmd.Args, want) {
+		t.Fatalf("args = %v, want %v", cmd.Args, want)
+	}
+	if cmd.Dir != dir {
+		t.Fatalf("dir = %s, want %s", cmd.Dir, dir)
+	}
+}
+
+func TestGoTestCommandUsesModuleRootForAbsoluteTestFilePath(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/demo\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	pkg := filepath.Join(dir, "pkg")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatalf("mkdir pkg: %v", err)
+	}
+	file := filepath.Join(pkg, "calc_test.go")
+	if err := os.WriteFile(file, []byte("package pkg\n"), 0o644); err != nil {
+		t.Fatalf("write go file: %v", err)
+	}
+
+	cmd := goTestCommand(context.Background(), file, false, false)
+	want := []string{"go", "test", "-json", "./pkg"}
+	if !equalStrings(cmd.Args, want) {
+		t.Fatalf("args = %v, want %v", cmd.Args, want)
+	}
+	if cmd.Dir != dir {
+		t.Fatalf("dir = %s, want %s", cmd.Dir, dir)
+	}
+}
+
 func TestFindProjectRootWalksParents(t *testing.T) {
 	dir := t.TempDir()
 	nested := filepath.Join(dir, "pkg", "calc")

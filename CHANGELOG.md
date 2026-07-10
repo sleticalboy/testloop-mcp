@@ -12,6 +12,7 @@
 - Go static generator 会识别 `time.Date(..., 0, 0, 0, 0, ...)` 这类 `time.Time` 日期边界返回值，生成 hour/min/sec/nsec 归零断言。
 - Go static generator 会利用 coverage task 的简单分支条件提示，例如 `a == 0` / `x > 3`，为可推导返回值的分支生成非 skipped 用例和精确期望值。
 - Go static generator 的分支输入推导扩展到字符串空值、布尔值以及 nil / 非 nil 指针；当源码参数名为 `name` / `skip` 时会避让测试表保留字段，避免生成重复字段。
+- `run_tests` 的 Go 执行路径会在收到 module 内绝对目录或绝对测试文件时自动切到 `go.mod` 根目录，并转换为相对包路径，避免 `directory ... outside main module` 失败。
 
 ## v0.4.13 - 2026-07-10
 

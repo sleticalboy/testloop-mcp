@@ -75,15 +75,8 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 
 	switch framework {
 	case "go-test":
-		args := []string{"test", "-json"}
-		if verbose {
-			args = append(args, "-v")
-		}
-		if coverage {
-			args = append(args, "-cover")
-		}
-		args = append(args, normalizeGoTestPath(path))
-		output, err = exec.CommandContext(ctx, "go", args...).CombinedOutput()
+		cmd := goTestCommand(ctx, path, verbose, coverage)
+		output, err = cmd.CombinedOutput()
 
 	case "jest", "vitest":
 		cmd := jsTestCommand(ctx, framework, path, verbose, coverage)
@@ -278,6 +271,45 @@ func normalizeGoTestPath(path string) string {
 		return normalized
 	}
 	return "." + string(filepath.Separator) + normalized
+}
+
+func goTestCommand(ctx context.Context, path string, verbose bool, coverage bool) *exec.Cmd {
+	args := []string{"test", "-json"}
+	if verbose {
+		args = append(args, "-v")
+	}
+	if coverage {
+		args = append(args, "-cover")
+	}
+
+	testPath := normalizeGoTestPath(path)
+	root := findProjectRoot(path, "go.mod")
+	if fileExists(filepath.Join(root, "go.mod")) {
+		if rel, ok := goRelativeTestPath(root, testPath); ok {
+			testPath = rel
+		}
+	}
+	args = append(args, testPath)
+
+	cmd := exec.CommandContext(ctx, "go", args...)
+	if fileExists(filepath.Join(root, "go.mod")) {
+		cmd.Dir = root
+	}
+	return cmd
+}
+
+func goRelativeTestPath(root string, testPath string) (string, bool) {
+	if !filepath.IsAbs(testPath) {
+		return testPath, true
+	}
+	rel, err := filepath.Rel(root, testPath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	if rel == "." {
+		return ".", true
+	}
+	return "./" + filepath.ToSlash(rel), true
 }
 
 func getProjectRoot(path string) string {
