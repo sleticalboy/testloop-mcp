@@ -311,6 +311,20 @@ func ActiveUser(user *User) string {
 	return "missing"
 }
 
+func ErrorMessage(err error) string {
+	if err != nil {
+		return "failed"
+	}
+	return "ok"
+}
+
+func NoError(err error) string {
+	if err == nil {
+		return "ok"
+	}
+	return "failed"
+}
+
 func SkipLabel(skip bool) string {
 	if skip == false {
 		return "run"
@@ -363,6 +377,20 @@ func SkipLabel(skip bool) string {
 			testName:  "TestActiveUserNonNilBranch",
 			condition: "user != nil",
 			wants:     []string{`user: &User{}`, `ret0: "present"`},
+		},
+		{
+			name:      "non nil error",
+			target:    "ErrorMessage",
+			testName:  "TestErrorMessageNonNilBranch",
+			condition: "err != nil",
+			wants:     []string{`"errors"`, `err:  errors.New("test")`, `ret0: "failed"`},
+		},
+		{
+			name:      "nil error",
+			target:    "NoError",
+			testName:  "TestNoErrorNilBranch",
+			condition: "err == nil",
+			wants:     []string{`err:  nil`, `ret0: "ok"`},
 		},
 		{
 			name:      "skip parameter",

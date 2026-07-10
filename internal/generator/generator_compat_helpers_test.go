@@ -189,6 +189,15 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	if got, ok := goBoundaryInputValue(goBoundary{Param: "user", Op: "!=", Value: "nil"}, "*User"); !ok || got != "&User{}" {
 		t.Fatalf("goBoundaryInputValue(user != nil) = %q, %v; want &User{} true", got, ok)
 	}
+	if got, ok := goBoundaryInputValue(goBoundary{Param: "err", Op: "==", Value: "nil"}, "error"); !ok || got != "nil" {
+		t.Fatalf("goBoundaryInputValue(err == nil) = %q, %v; want nil true", got, ok)
+	}
+	if got, ok := goBoundaryInputValue(goBoundary{Param: "err", Op: "!=", Value: "nil"}, "error"); !ok || got != `errors.New("test")` {
+		t.Fatalf("goBoundaryInputValue(err != nil) = %q, %v; want errors.New true", got, ok)
+	}
+	if !goSeedCaseUsesPackage(goSeedCase{Inputs: map[string]string{"err": `errors.New("test")`}}, "errors") {
+		t.Fatal("goSeedCaseUsesPackage did not detect errors input")
+	}
 	if got := goTestCaseFieldName("name"); got != "nameValue" {
 		t.Fatalf("goTestCaseFieldName(name) = %q, want nameValue", got)
 	}

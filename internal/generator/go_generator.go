@@ -232,13 +232,17 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		return "// 未发现需要生成测试的 exported 函数或接口", nil
 	}
 
-	// 检测是否需要 reflect
+	// 检测生成测试需要的额外依赖
 	needReflect := false
 	needTime := false
+	needErrors := false
 	for _, fn := range funcs {
 		seedCase, hasSeedCase := goSeedTestCase(fn, task)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
 			needTime = true
+		}
+		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
+			needErrors = true
 		}
 		if hasSeedCase && seedCase.Assert != goAssertExact {
 			continue
@@ -261,6 +265,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	buf.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
 	buf.WriteString("import (\n")
 	buf.WriteString("\t\"testing\"\n")
+	if needErrors {
+		buf.WriteString("\t\"errors\"\n")
+	}
 	if needTime {
 		buf.WriteString("\t\"time\"\n")
 	}
@@ -948,7 +955,7 @@ func goAlternateLiteralForType(value string, typ string) (string, bool) {
 
 func goNilLiteralForType(typ string) (string, bool) {
 	switch {
-	case typ == "any", typ == "interface{}",
+	case typ == "any", typ == "interface{}", typ == "error",
 		strings.HasPrefix(typ, "*"),
 		strings.HasPrefix(typ, "[]"),
 		strings.HasPrefix(typ, "map["),
@@ -967,6 +974,8 @@ func goNonNilLiteralForType(typ string) (string, bool) {
 		return "&" + strings.TrimPrefix(typ, "*") + "{}", true
 	case strings.HasPrefix(typ, "[]"), strings.HasPrefix(typ, "map["):
 		return typ + "{}", true
+	case typ == "error":
+		return `errors.New("test")`, true
 	case typ == "any", typ == "interface{}":
 		return "struct{}{}", true
 	default:
@@ -991,6 +1000,21 @@ func goNumericOffsetLiteral(value string, typ string, delta int) (string, bool) 
 		return "", false
 	}
 	return strconv.Itoa(next), true
+}
+
+func goSeedCaseUsesPackage(seed goSeedCase, pkg string) bool {
+	prefix := pkg + "."
+	for _, value := range seed.Inputs {
+		if strings.Contains(value, prefix) {
+			return true
+		}
+	}
+	for _, value := range seed.Outputs {
+		if strings.Contains(value, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func goTimeFormatLayout(expr string) (string, bool) {
