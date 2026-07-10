@@ -266,6 +266,58 @@ func GetCurrentDate() time.Time {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskAssertsTimeNowFormatReturn(t *testing.T) {
+	src := `package sample
+
+import "time"
+
+func GetNowDate() string {
+	return time.Now().Format("2006-01-02")
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "time.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:             "go-test-time-format",
+		Framework:      "go-test",
+		Target:         "GetNowDate",
+		LineRange:      "5-7",
+		GapType:        "return_path",
+		TestName:       "TestGetNowDate",
+		AssertionFocus: []string{"断言日期格式"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"\"time\"",
+		"func TestGetNowDate(t *testing.T)",
+		"\"coverage return path\"",
+		"skip:   false",
+		"layout: \"2006-01-02\"",
+		"got := GetNowDate()",
+		"if _, err := time.Parse(tt.layout, got); err != nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"_ = got",
+		"ret0 string",
+		"if got != tt.ret0",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsUsesGoCoverageTask(t *testing.T) {
 	src := `package sample
 

@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"strconv"
 	"strings"
 
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -229,8 +230,13 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 
 	// 检测是否需要 reflect
 	needReflect := false
+	needTime := false
 	for _, fn := range funcs {
-		if goCoverageSmokeCallable(fn, task) {
+		seedCase, hasSeedCase := goSeedTestCase(fn)
+		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
+			needTime = true
+		}
+		if !hasSeedCase && goCoverageSmokeCallable(fn, task) {
 			continue
 		}
 		for _, r := range fn.Returns {
@@ -248,6 +254,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	buf.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
 	buf.WriteString("import (\n")
 	buf.WriteString("\t\"testing\"\n")
+	if needTime {
+		buf.WriteString("\t\"time\"\n")
+	}
 	if needReflect {
 		buf.WriteString("\t\"reflect\"\n")
 	}
@@ -430,6 +439,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	sb.WriteString(fmt.Sprintf("func Test%s(t *testing.T) {\n", testName))
 	seedCase, hasSeedCase := goSeedTestCase(fn)
 	smokeCase := !hasSeedCase && goCoverageSmokeCallable(fn, task)
+	exactCase := hasSeedCase && seedCase.Assert == goAssertExact
+	expectedReturnFields := !smokeCase && (!hasSeedCase || exactCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -439,8 +450,13 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", p.Name, p.Type))
 	}
 	if !smokeCase {
-		for _, r := range fn.Returns {
-			sb.WriteString(fmt.Sprintf("\t\t%s %s\n", r.Name, r.Type))
+		if expectedReturnFields {
+			for _, r := range fn.Returns {
+				sb.WriteString(fmt.Sprintf("\t\t%s %s\n", r.Name, r.Type))
+			}
+		}
+		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
+			sb.WriteString("\t\tlayout string\n")
 		}
 	}
 	sb.WriteString("\t}\n\n")
@@ -454,8 +470,13 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, seedCase.Inputs[p.Name]))
 		}
-		for _, r := range fn.Returns {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
+		if exactCase {
+			for _, r := range fn.Returns {
+				sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
+			}
+		}
+		if seedCase.Assert == goAssertTimeFormat {
+			sb.WriteString(fmt.Sprintf("\t\t\tlayout: %q,\n", seedCase.TimeLayout))
 		}
 	} else if smokeCase {
 		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "smoke")))
@@ -518,6 +539,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	// 处理返回值
 	if smokeCase {
 		writeGoSmokeCall(&sb, fn, callExpr)
+	} else if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
+		sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
+		sb.WriteString("\t\t\tif _, err := time.Parse(tt.layout, got); err != nil {\n")
+		sb.WriteString("\t\t\t\tt.Errorf(\"got %q, want layout %q: %v\", got, tt.layout, err)\n")
+		sb.WriteString("\t\t\t}\n")
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -653,20 +679,39 @@ func needsDeepEqual(typ string) bool {
 			!strings.HasPrefix(typ, "func"))
 }
 
+type goAssertionKind string
+
+const (
+	goAssertExact      goAssertionKind = "exact"
+	goAssertTimeFormat goAssertionKind = "time_format"
+)
+
 type goSeedCase struct {
-	Inputs  map[string]string
-	Outputs map[string]string
+	Assert     goAssertionKind
+	Inputs     map[string]string
+	Outputs    map[string]string
+	TimeLayout string
 }
 
 func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
 	if fn.IsMethod || fn.IsVariadic || len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
 		return goSeedCase{}, false
 	}
+	if fn.Returns[0].Type == "string" && len(fn.Params) == 0 {
+		if layout, ok := goTimeFormatLayout(fn.ReturnExpr); ok {
+			return goSeedCase{
+				Assert:     goAssertTimeFormat,
+				Inputs:     map[string]string{},
+				Outputs:    map[string]string{},
+				TimeLayout: layout,
+			}, true
+		}
+	}
 	if !goTypeSupportsExactSeed(fn.Returns[0].Type) || fn.ReturnExpr == "" || !goReturnExprIsSafe(fn.ReturnExpr) {
 		return goSeedCase{}, false
 	}
 
-	seed := goSeedCase{Inputs: map[string]string{}, Outputs: map[string]string{}}
+	seed := goSeedCase{Assert: goAssertExact, Inputs: map[string]string{}, Outputs: map[string]string{}}
 	expr := fn.ReturnExpr
 	for i, p := range fn.Params {
 		if !goTypeSupportsExactSeed(p.Type) {
@@ -684,6 +729,20 @@ func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
 	}
 	seed.Outputs[fn.Returns[0].Name] = expr
 	return seed, true
+}
+
+func goTimeFormatLayout(expr string) (string, bool) {
+	expr = strings.TrimSpace(expr)
+	const prefix = "time.Now().Format("
+	if !strings.HasPrefix(expr, prefix) || !strings.HasSuffix(expr, ")") {
+		return "", false
+	}
+	quoted := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(expr, prefix), ")"))
+	layout, err := strconv.Unquote(quoted)
+	if err != nil || layout == "" {
+		return "", false
+	}
+	return layout, true
 }
 
 func singleReturnExpr(body *ast.BlockStmt) string {
@@ -799,6 +858,12 @@ func exprToString(expr ast.Expr) string {
 		return "(" + exprToString(v.X) + ")"
 	case *ast.SelectorExpr:
 		return exprToString(v.X) + "." + v.Sel.Name
+	case *ast.CallExpr:
+		args := make([]string, len(v.Args))
+		for i, arg := range v.Args {
+			args[i] = exprToString(arg)
+		}
+		return exprToString(v.Fun) + "(" + strings.Join(args, ", ") + ")"
 	case *ast.StarExpr:
 		return "*" + exprToString(v.X)
 	case *ast.ArrayType:
