@@ -18,6 +18,7 @@
 
 ### Changed
 
+- MCP `generate_tests` 的 LLM provider 失败会返回 `isError=true` 的结构化工具结果，并在 JSON / `structuredContent` 中提供 `provider_error.kind`、`provider_error.action`、`provider_error.provider` 和 `provider_error.message`；旧的 `provider_error kind=... action=...` 文本片段继续保留在 `error` 字段中。
 - `scripts/install.sh` 的 `go install` fallback 日志会根据实际落盘文件名输出安装路径，避免跨平台 dry run 下载失败时把当前主机二进制误报为 `.exe`。
 
 ## v0.4.12 - 2026-07-09

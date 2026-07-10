@@ -29,6 +29,45 @@ func resultText(t *testing.T, result *mcp.CallToolResult) string {
 	return text.Text
 }
 
+func assertGenerateTestsProviderError(t *testing.T, result *mcp.CallToolResult, structured any, wantKind, wantAction string) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("expected provider error tool result")
+	}
+	if !result.IsError {
+		t.Fatal("result.IsError = false, want true")
+	}
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal provider error result: %v", err)
+	}
+	if generated.Status != "error" {
+		t.Fatalf("status = %q, want error", generated.Status)
+	}
+	if generated.ProviderError == nil {
+		t.Fatalf("provider_error missing in result: %+v", generated)
+	}
+	if generated.ProviderError.Kind != wantKind || generated.ProviderError.Action != wantAction {
+		t.Fatalf("provider_error = %+v, want kind=%s action=%s", generated.ProviderError, wantKind, wantAction)
+	}
+	wantText := "provider_error kind=" + wantKind + " action=" + wantAction
+	if !strings.Contains(generated.Error, wantText) {
+		t.Fatalf("error text missing %q: %q", wantText, generated.Error)
+	}
+	structuredOutput, ok := structured.(types.GenerateTestsOutput)
+	if !ok {
+		t.Fatalf("structured output type = %T, want types.GenerateTestsOutput", structured)
+	}
+	if structuredOutput.ProviderError == nil ||
+		structuredOutput.ProviderError.Kind != wantKind ||
+		structuredOutput.ProviderError.Action != wantAction {
+		t.Fatalf("structured provider_error = %+v, want kind=%s action=%s", structuredOutput.ProviderError, wantKind, wantAction)
+	}
+	if result.StructuredContent == nil {
+		t.Fatal("result.StructuredContent is nil")
+	}
+}
+
 func findGeneratedTarget(targets []types.TestTarget, name string) *types.TestTarget {
 	for i := range targets {
 		if targets[i].Name == name {
@@ -660,16 +699,14 @@ func TestHandleGenerateTestsClassifiesLLMProviderConfigError(t *testing.T) {
 	dir := t.TempDir()
 	source := writeTestFile(t, dir, "calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n")
 
-	_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+	result, structured, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
 		FilePath: source,
 		Provider: "llm",
 	})
-	if err == nil {
-		t.Fatal("expected llm provider config error")
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned protocol error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "provider_error kind=llm_config_missing action=configure_provider") {
-		t.Fatalf("error missing provider classification: %v", err)
-	}
+	assertGenerateTestsProviderError(t, result, structured, "llm_config_missing", "configure_provider")
 }
 
 func TestHandleGenerateTestsClassifiesLLMProviderBadOutputs(t *testing.T) {
@@ -718,17 +755,14 @@ func TestHandleGenerateTestsClassifiesLLMProviderBadOutputs(t *testing.T) {
 			providerPath := writeFakeLLMProviderOutput(t, tt.output)
 			t.Setenv(generator.EnvLLMProviderCommand, providerPath)
 
-			_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+			result, structured, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
 				FilePath: source,
 				Provider: "llm",
 			})
-			if err == nil {
-				t.Fatal("expected llm provider output error")
+			if err != nil {
+				t.Fatalf("HandleGenerateTests returned protocol error: %v", err)
 			}
-			want := "provider_error kind=" + tt.wantKind + " action=" + tt.wantAction
-			if !strings.Contains(err.Error(), want) {
-				t.Fatalf("error missing provider classification %q: %v", want, err)
-			}
+			assertGenerateTestsProviderError(t, result, structured, tt.wantKind, tt.wantAction)
 		})
 	}
 }

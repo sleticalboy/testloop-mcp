@@ -163,7 +163,7 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 这只改变测试草稿的生成来源，不改变闭环终止条件。Agent 仍然需要读取返回的 `test_file`，并立即进入下一步 `run_tests`。
 
-如果 `generate_tests` 返回 LLM provider 错误，Agent 应按错误文本中的 `provider_error kind=... action=...` 选择处理策略：
+如果 `generate_tests` 返回 LLM provider 错误，Agent 应优先读取工具结果 JSON / `structuredContent` 中的 `provider_error.kind` 和 `provider_error.action` 选择处理策略。`error` 文本仍包含 `provider_error kind=... action=...`，只读文本的旧 Agent 可以继续作为 fallback 解析：
 
 | kind | action | Agent 策略 |
 | --- | --- | --- |

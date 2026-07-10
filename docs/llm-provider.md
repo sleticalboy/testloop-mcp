@@ -192,7 +192,25 @@ go run ./cmd/testgen -provider auto -provider-check
 
 `-provider-check` 不会调用模型，也不会校验模型输出内容。模型命令失败、stdout 为空、JSON 缺少 `code`、Markdown 清洗后没有测试代码、或语言级测试代码校验失败，会在实际 `generate_tests` / `testgen` 生成阶段返回错误。`testgen` 使用 LLM provider 失败时会提示先运行 `-provider-check` 排查基础配置。
 
-MCP `generate_tests` 在 provider 失败时会保留 error 路径，但错误文本包含稳定的 `provider_error kind=... action=...` 片段：
+MCP `generate_tests` 在 provider 失败时会返回 `isError=true` 的工具结果，而不是只给 Agent 一个协议级错误。文本内容和 `structuredContent` 都是 JSON 对象，形状如下：
+
+```json
+{
+  "status": "error",
+  "test_file": "src/sum.test.ts",
+  "generated_cases": 0,
+  "provider": "llm-command",
+  "error": "生成测试失败: provider_error kind=llm_output_validation_failed action=adjust_prompt_or_fallback_static: ...",
+  "provider_error": {
+    "kind": "llm_output_validation_failed",
+    "action": "adjust_prompt_or_fallback_static",
+    "provider": "llm-command",
+    "message": "llm-command: llm provider output did not look like typescript test code"
+  }
+}
+```
+
+`provider_error.kind` 和 `provider_error.action` 是稳定的机器可读字段；`error` 文本继续包含 `provider_error kind=... action=...` 片段，兼容只读文本的旧 Agent：
 
 | kind | action | 建议处理 |
 | --- | --- | --- |

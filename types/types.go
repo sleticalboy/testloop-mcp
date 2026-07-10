@@ -71,6 +71,17 @@ type GenerateTestsOutput struct {
 	Context        *TestGenerationContext `json:"context,omitempty"`
 	CoverageTask   *CoverageTestTask      `json:"coverage_task,omitempty"`
 	Provider       string                 `json:"provider,omitempty"`
+	Error          string                 `json:"error,omitempty"`
+	ProviderError  *ProviderErrorOutput   `json:"provider_error,omitempty"`
+}
+
+// ProviderErrorOutput describes an external test provider failure in a stable
+// shape that agents can consume without parsing localized error text.
+type ProviderErrorOutput struct {
+	Kind     string `json:"kind"`
+	Action   string `json:"action"`
+	Provider string `json:"provider,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 // TestGenerationContext describes source structure for semantic test generation.

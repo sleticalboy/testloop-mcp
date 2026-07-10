@@ -34,12 +34,18 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 
 	provider, err := generator.NewTestProvider(input.Provider)
 	if err != nil {
+		if result, out, ok := generateTestsProviderErrorResult(filePath, nil, input, err); ok {
+			return result, out, nil
+		}
 		return nil, nil, formatGenerateTestsError(err)
 	}
 
 	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask, Framework: input.Framework}
 	code, err := generator.GenerateTestsWithProviderOptions(ctx, filePath, provider, opts)
 	if err != nil {
+		if result, out, ok := generateTestsProviderErrorResult(filePath, provider, input, err); ok {
+			return result, out, nil
+		}
 		return nil, nil, formatGenerateTestsError(err)
 	}
 
@@ -69,6 +75,41 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+func generateTestsProviderErrorResult(filePath string, provider generator.TestProvider, input generateTestsInput, err error) (*mcp.CallToolResult, any, bool) {
+	providerErr, ok := generator.ProviderErrorInfo(err)
+	if !ok {
+		return nil, nil, false
+	}
+	action := providerErrorAction(providerErr.Kind)
+	message := formatGenerateTestsError(err).Error()
+	providerName := providerErr.Provider
+	if providerName == "" && provider != nil {
+		providerName = provider.Name()
+	}
+	out := types.GenerateTestsOutput{
+		Status:       "error",
+		TestFile:     generator.TestFileName(filePath),
+		CoverageTask: input.CoverageTask,
+		Provider:     providerName,
+		Error:        message,
+		ProviderError: &types.ProviderErrorOutput{
+			Kind:     string(providerErr.Kind),
+			Action:   action,
+			Provider: providerErr.Provider,
+			Message:  providerErr.Error(),
+		},
+	}
+	if input.CoverageTask != nil && strings.TrimSpace(input.CoverageTask.TestFile) != "" {
+		out.TestFile = input.CoverageTask.TestFile
+	}
+	resultJSON, _ := json.Marshal(out)
+	return &mcp.CallToolResult{
+		Content:           []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
+		StructuredContent: out,
+		IsError:           true,
+	}, out, true
 }
 
 func formatGenerateTestsError(err error) error {
