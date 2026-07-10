@@ -14,6 +14,7 @@
 - MCP `generate_tests` 的 LLM provider 失败错误新增 `provider_error kind=... action=...` 分类，方便 Agent 区分配置、命令执行、输出格式和语言校验问题。
 - Agent workflow 新增 LLM provider 错误策略表，明确哪些错误应重试模型、降级 static，或提示用户修 provider 配置。
 - 默认 LLM provider prompt 新增输出契约，要求模型只返回可直接写盘的完整测试文件，无法安全增强时回退静态草稿。
+- 新增 MCP handler 层的 LLM provider 坏输出回归测试，固定空输出、JSON 错误、缺少 `code`、解释文本和非测试代码的 `provider_error kind/action`。
 
 ### Changed
 

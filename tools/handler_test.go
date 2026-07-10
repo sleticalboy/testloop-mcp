@@ -672,30 +672,64 @@ func TestHandleGenerateTestsClassifiesLLMProviderConfigError(t *testing.T) {
 	}
 }
 
-func TestHandleGenerateTestsClassifiesLLMProviderValidationError(t *testing.T) {
-	dir := t.TempDir()
-	source := writeTestFile(t, dir, "calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n")
-	providerPath := filepath.Join(t.TempDir(), "provider")
-	providerScript := `#!/usr/bin/env sh
-cat >/dev/null
-cat <<'EOF'
-{"code":"package calc\nfunc Add(a, b int) int { return a + b }\n"}
-EOF
-`
-	if err := os.WriteFile(providerPath, []byte(providerScript), 0o755); err != nil {
-		t.Fatalf("write provider: %v", err)
+func TestHandleGenerateTestsClassifiesLLMProviderBadOutputs(t *testing.T) {
+	tests := []struct {
+		name       string
+		output     string
+		wantKind   string
+		wantAction string
+	}{
+		{
+			name:       "empty output",
+			output:     "",
+			wantKind:   "llm_empty_output",
+			wantAction: "retry_model_or_fallback_static",
+		},
+		{
+			name:       "json parse error",
+			output:     "{not-json",
+			wantKind:   "llm_json_error",
+			wantAction: "retry_model_or_fallback_static",
+		},
+		{
+			name:       "json missing code",
+			output:     `{"message":"no code today"}`,
+			wantKind:   "llm_missing_code",
+			wantAction: "retry_model_or_fallback_static",
+		},
+		{
+			name:       "explanation only",
+			output:     "I would test the add function by checking a simple happy path.",
+			wantKind:   "llm_output_cleaning_failed",
+			wantAction: "retry_model_or_fallback_static",
+		},
+		{
+			name:       "code but not test",
+			output:     `{"code":"package calc\nfunc Add(a, b int) int { return a + b }\n"}`,
+			wantKind:   "llm_output_validation_failed",
+			wantAction: "adjust_prompt_or_fallback_static",
+		},
 	}
-	t.Setenv(generator.EnvLLMProviderCommand, providerPath)
 
-	_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
-		FilePath: source,
-		Provider: "llm",
-	})
-	if err == nil {
-		t.Fatal("expected llm provider validation error")
-	}
-	if !strings.Contains(err.Error(), "provider_error kind=llm_output_validation_failed action=adjust_prompt_or_fallback_static") {
-		t.Fatalf("error missing provider classification: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			source := writeTestFile(t, dir, "calc.go", "package calc\nfunc Add(a, b int) int { return a + b }\n")
+			providerPath := writeFakeLLMProviderOutput(t, tt.output)
+			t.Setenv(generator.EnvLLMProviderCommand, providerPath)
+
+			_, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+				FilePath: source,
+				Provider: "llm",
+			})
+			if err == nil {
+				t.Fatal("expected llm provider output error")
+			}
+			want := "provider_error kind=" + tt.wantKind + " action=" + tt.wantAction
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("error missing provider classification %q: %v", want, err)
+			}
+		})
 	}
 }
 
@@ -2109,6 +2143,16 @@ func writeTestFile(t *testing.T, dir, rel, content string) string {
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+	return path
+}
+
+func writeFakeLLMProviderOutput(t *testing.T, output string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "provider")
+	script := "#!/usr/bin/env sh\nset -eu\ncat >/dev/null\ncat <<'EOF'\n" + output + "\nEOF\n"
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake llm provider: %v", err)
 	}
 	return path
 }
