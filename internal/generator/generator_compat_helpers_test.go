@@ -139,6 +139,7 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 		"Pair[int, string]":               "Pair[int, string]",
 		"make([]int, 0)":                  "make([]int, 0)",
 		`time.Now().Format("2006-01-02")`: `time.Now().Format("2006-01-02")`,
+		"time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())": "time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())",
 	}
 	for src, want := range exprs {
 		t.Run(src, func(t *testing.T) {
@@ -153,6 +154,12 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	}
 	if got := exprToString(&ast.Ellipsis{Elt: ast.NewIdent("string")}); got != "...string" {
 		t.Fatalf("exprToString(ellipsis) = %q", got)
+	}
+	if !goTimeDateZeroExpr("time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())") {
+		t.Fatal("expected time.Date expression with zero clock components to match")
+	}
+	if goTimeDateZeroExpr("time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())") {
+		t.Fatal("expected non-zero hour time.Date expression not to match")
 	}
 
 	cases := map[string]string{

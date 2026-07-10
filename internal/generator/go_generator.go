@@ -23,6 +23,7 @@ type funcInfo struct {
 	TypeParams   []string // 泛型类型参数名，如 T, K, V
 	IsVariadic   bool     // 是否有变参（...T）
 	ReturnExpr   string
+	FinalReturn  string
 }
 
 type paramInfo struct {
@@ -216,6 +217,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		}
 
 		info.ReturnExpr = singleReturnExpr(fn.Body)
+		info.FinalReturn = finalReturnExpr(fn.Body)
 
 		funcs = append(funcs, info)
 	}
@@ -235,6 +237,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		seedCase, hasSeedCase := goSeedTestCase(fn)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
 			needTime = true
+		}
+		if hasSeedCase && seedCase.Assert != goAssertExact {
+			continue
 		}
 		if !hasSeedCase && goCoverageSmokeCallable(fn, task) {
 			continue
@@ -544,6 +549,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString("\t\t\tif _, err := time.Parse(tt.layout, got); err != nil {\n")
 		sb.WriteString("\t\t\t\tt.Errorf(\"got %q, want layout %q: %v\", got, tt.layout, err)\n")
 		sb.WriteString("\t\t\t}\n")
+	} else if hasSeedCase && seedCase.Assert == goAssertTimeDateZero {
+		sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
+		sb.WriteString("\t\t\tif got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 || got.Nanosecond() != 0 {\n")
+		sb.WriteString("\t\t\t\tt.Errorf(\"got time component %02d:%02d:%02d.%09d, want date boundary\", got.Hour(), got.Minute(), got.Second(), got.Nanosecond())\n")
+		sb.WriteString("\t\t\t}\n")
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -682,8 +692,9 @@ func needsDeepEqual(typ string) bool {
 type goAssertionKind string
 
 const (
-	goAssertExact      goAssertionKind = "exact"
-	goAssertTimeFormat goAssertionKind = "time_format"
+	goAssertExact        goAssertionKind = "exact"
+	goAssertTimeFormat   goAssertionKind = "time_format"
+	goAssertTimeDateZero goAssertionKind = "time_date_zero"
 )
 
 type goSeedCase struct {
@@ -706,6 +717,13 @@ func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
 				TimeLayout: layout,
 			}, true
 		}
+	}
+	if fn.Returns[0].Type == "time.Time" && len(fn.Params) == 0 && goTimeDateZeroExpr(fn.FinalReturn) {
+		return goSeedCase{
+			Assert:  goAssertTimeDateZero,
+			Inputs:  map[string]string{},
+			Outputs: map[string]string{},
+		}, true
 	}
 	if !goTypeSupportsExactSeed(fn.Returns[0].Type) || fn.ReturnExpr == "" || !goReturnExprIsSafe(fn.ReturnExpr) {
 		return goSeedCase{}, false
@@ -745,11 +763,92 @@ func goTimeFormatLayout(expr string) (string, bool) {
 	return layout, true
 }
 
+func goTimeDateZeroExpr(expr string) bool {
+	expr = strings.TrimSpace(expr)
+	const prefix = "time.Date("
+	if !strings.HasPrefix(expr, prefix) || !strings.HasSuffix(expr, ")") {
+		return false
+	}
+	args := splitGoCallArgs(strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(expr, prefix), ")")))
+	if len(args) != 8 {
+		return false
+	}
+	for _, idx := range []int{3, 4, 5, 6} {
+		if strings.TrimSpace(args[idx]) != "0" {
+			return false
+		}
+	}
+	return true
+}
+
+func splitGoCallArgs(args string) []string {
+	if strings.TrimSpace(args) == "" {
+		return nil
+	}
+	var parts []string
+	var current strings.Builder
+	depth := 0
+	inString := false
+	escaped := false
+	for _, r := range args {
+		if inString {
+			current.WriteRune(r)
+			if escaped {
+				escaped = false
+				continue
+			}
+			if r == '\\' {
+				escaped = true
+				continue
+			}
+			if r == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch r {
+		case '"':
+			inString = true
+			current.WriteRune(r)
+		case '(', '[', '{':
+			depth++
+			current.WriteRune(r)
+		case ')', ']', '}':
+			if depth > 0 {
+				depth--
+			}
+			current.WriteRune(r)
+		case ',':
+			if depth == 0 {
+				parts = append(parts, strings.TrimSpace(current.String()))
+				current.Reset()
+				continue
+			}
+			current.WriteRune(r)
+		default:
+			current.WriteRune(r)
+		}
+	}
+	parts = append(parts, strings.TrimSpace(current.String()))
+	return parts
+}
+
 func singleReturnExpr(body *ast.BlockStmt) string {
 	if body == nil || len(body.List) != 1 {
 		return ""
 	}
 	ret, ok := body.List[0].(*ast.ReturnStmt)
+	if !ok || len(ret.Results) != 1 {
+		return ""
+	}
+	return exprToString(ret.Results[0])
+}
+
+func finalReturnExpr(body *ast.BlockStmt) string {
+	if body == nil || len(body.List) == 0 {
+		return ""
+	}
+	ret, ok := body.List[len(body.List)-1].(*ast.ReturnStmt)
 	if !ok || len(ret.Results) != 1 {
 		return ""
 	}

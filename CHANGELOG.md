@@ -9,6 +9,7 @@
 - Go `generate_tests` 写入已有测试文件时会合并追加新的 `Test*` 函数并复用 import，不再覆盖已有测试；遇到同名测试函数会返回明确错误。
 - Go `run_tests` 使用相对测试文件或目录时会归一化为 `./pkg` 形式，避免 `utils/time_test.go` 被执行成标准库导入路径 `utils`。
 - Go static generator 会识别 `time.Now().Format("layout")` 这类日期字符串返回值，生成 `time.Parse` 格式断言，不再退化成仅丢弃返回值的 smoke 测试。
+- Go static generator 会识别 `time.Date(..., 0, 0, 0, 0, ...)` 这类 `time.Time` 日期边界返回值，生成 hour/min/sec/nsec 归零断言。
 
 ## v0.4.13 - 2026-07-10
 
