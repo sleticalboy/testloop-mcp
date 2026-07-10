@@ -161,6 +161,28 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	if goTimeDateZeroExpr("time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())") {
 		t.Fatal("expected non-zero hour time.Date expression not to match")
 	}
+	branchFn := funcInfo{
+		Name:    "Add",
+		Params:  []paramInfo{{Name: "a", Type: "int"}, {Name: "b", Type: "int"}},
+		Returns: []paramInfo{{Name: "ret0", Type: "int"}},
+		Boundaries: []goBoundary{
+			{Param: "a", Op: "==", Value: "0", Condition: "a == 0", ReturnExpr: "b"},
+		},
+	}
+	seed, ok := goSeedTestCase(branchFn, &types.CoverageTestTask{
+		GapType:         "branch",
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+	})
+	if !ok || seed.Inputs["a"] != "0" || seed.Inputs["b"] != "2" || seed.Outputs["ret0"] != "2" {
+		t.Fatalf("branch seed = %+v, %v; want a=0 b=2 ret0=2", seed, ok)
+	}
+	greater, ok := goBoundaryInputValue(goBoundary{Param: "count", Op: ">", Value: "3"}, "int")
+	if !ok || greater != "4" {
+		t.Fatalf("goBoundaryInputValue(count > 3) = %q, %v; want 4 true", greater, ok)
+	}
+	if op, ok := invertGoBoundaryOperator("<"); !ok || op != ">" {
+		t.Fatalf("invertGoBoundaryOperator(<) = %q, %v; want > true", op, ok)
+	}
 
 	cases := map[string]string{
 		"branch":      "coverage branch gap",
@@ -233,13 +255,13 @@ func Pair() (int, int) {
 		t.Fatalf("singleReturnExpr(nil) = %q", got)
 	}
 
-	if _, ok := goSeedTestCase(funcInfo{Name: "Method", IsMethod: true}); ok {
+	if _, ok := goSeedTestCase(funcInfo{Name: "Method", IsMethod: true}, nil); ok {
 		t.Fatal("method should not get exact seed case")
 	}
-	if _, ok := goSeedTestCase(funcInfo{Name: "Variadic", IsVariadic: true}); ok {
+	if _, ok := goSeedTestCase(funcInfo{Name: "Variadic", IsVariadic: true}, nil); ok {
 		t.Fatal("variadic function should not get exact seed case")
 	}
-	if _, ok := goSeedTestCase(funcInfo{Name: "Err", Returns: []paramInfo{{Name: "err", Type: "error"}}}); ok {
+	if _, ok := goSeedTestCase(funcInfo{Name: "Err", Returns: []paramInfo{{Name: "err", Type: "error"}}}, nil); ok {
 		t.Fatal("error return should not get exact seed case")
 	}
 	if _, ok := goSeedTestCase(funcInfo{
@@ -247,14 +269,14 @@ func Pair() (int, int) {
 		Params:     []paramInfo{{Name: "items", Type: "[]int"}},
 		Returns:    []paramInfo{{Name: "ret0", Type: "[]int"}},
 		ReturnExpr: "items",
-	}); ok {
+	}, nil); ok {
 		t.Fatal("unsupported exact seed type should not get seed case")
 	}
 	if _, ok := goSeedTestCase(funcInfo{
 		Name:       "Unknown",
 		Returns:    []paramInfo{{Name: "ret0", Type: "int"}},
 		ReturnExpr: "missing + 1",
-	}); ok {
+	}, nil); ok {
 		t.Fatal("unknown identifiers should not get seed case")
 	}
 }

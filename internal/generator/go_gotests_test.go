@@ -215,6 +215,60 @@ func Sub(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesBranchSuggestedInputs(t *testing.T) {
+	src := `package sample
+
+func Add(a, b int) int {
+	if a == 0 {
+		return b
+	}
+	return a + b
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "calc.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch",
+		Framework:       "go-test",
+		Target:          "Add",
+		LineRange:       "4-4",
+		GapType:         "branch",
+		TestName:        "TestAddZeroBranch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestAddZeroBranch(t *testing.T)",
+		"\"coverage branch gap\"",
+		"skip: false",
+		"a:    0,",
+		"b:    2,",
+		"ret0: 2,",
+		"got := Add(tt.a, tt.b)",
+		"if got != tt.ret0",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"TODO: 填写有意义的输入",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesSmokeCaseForNoArgReturn(t *testing.T) {
 	src := `package sample
 

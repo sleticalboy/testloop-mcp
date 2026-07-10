@@ -24,6 +24,7 @@ type funcInfo struct {
 	IsVariadic   bool     // 是否有变参（...T）
 	ReturnExpr   string
 	FinalReturn  string
+	Boundaries   []goBoundary
 }
 
 type paramInfo struct {
@@ -218,6 +219,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 
 		info.ReturnExpr = singleReturnExpr(fn.Body)
 		info.FinalReturn = finalReturnExpr(fn.Body)
+		info.Boundaries = extractGoBoundaries(fn.Body)
 
 		funcs = append(funcs, info)
 	}
@@ -234,7 +236,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	needReflect := false
 	needTime := false
 	for _, fn := range funcs {
-		seedCase, hasSeedCase := goSeedTestCase(fn)
+		seedCase, hasSeedCase := goSeedTestCase(fn, task)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
 			needTime = true
 		}
@@ -442,7 +444,7 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString(fmt.Sprintf("// coverage task: %s\n", goCoverageTaskComment(task)))
 	}
 	sb.WriteString(fmt.Sprintf("func Test%s(t *testing.T) {\n", testName))
-	seedCase, hasSeedCase := goSeedTestCase(fn)
+	seedCase, hasSeedCase := goSeedTestCase(fn, task)
 	smokeCase := !hasSeedCase && goCoverageSmokeCallable(fn, task)
 	exactCase := hasSeedCase && seedCase.Assert == goAssertExact
 	expectedReturnFields := !smokeCase && (!hasSeedCase || exactCase)
@@ -704,9 +706,20 @@ type goSeedCase struct {
 	TimeLayout string
 }
 
-func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
+type goBoundary struct {
+	Param      string
+	Op         string
+	Value      string
+	Condition  string
+	ReturnExpr string
+}
+
+func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
 	if fn.IsMethod || fn.IsVariadic || len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
 		return goSeedCase{}, false
+	}
+	if seed, ok := goBranchSeedTestCase(fn, task); ok {
+		return seed, true
 	}
 	if fn.Returns[0].Type == "string" && len(fn.Params) == 0 {
 		if layout, ok := goTimeFormatLayout(fn.ReturnExpr); ok {
@@ -747,6 +760,194 @@ func goSeedTestCase(fn funcInfo) (goSeedCase, bool) {
 	}
 	seed.Outputs[fn.Returns[0].Name] = expr
 	return seed, true
+}
+
+func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || len(fn.Boundaries) == 0 || !goTypeSupportsExactSeed(fn.Returns[0].Type) {
+		return goSeedCase{}, false
+	}
+	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
+	if boundary == nil || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+		return goSeedCase{}, false
+	}
+
+	inputs := map[string]string{}
+	for i, p := range fn.Params {
+		value := goArgValue(p, i)
+		if p.Name == boundary.Param {
+			boundaryValue, ok := goBoundaryInputValue(*boundary, p.Type)
+			if !ok {
+				return goSeedCase{}, false
+			}
+			value = boundaryValue
+		}
+		inputs[p.Name] = value
+	}
+
+	expr := boundary.ReturnExpr
+	for _, p := range fn.Params {
+		expr = replaceIdentifier(expr, p.Name, inputs[p.Name])
+	}
+	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+		"true": true, "false": true, "nil": true,
+	}) {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert:  goAssertExact,
+		Inputs:  inputs,
+		Outputs: map[string]string{fn.Returns[0].Name: expr},
+	}, true
+}
+
+func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTestTask) *goBoundary {
+	hints := goCoverageTaskConditionHints(task)
+	for i := range boundaries {
+		for _, hint := range hints {
+			if goBoundaryMatchesHint(boundaries[i], hint) {
+				return &boundaries[i]
+			}
+		}
+	}
+	if task != nil && task.GapType == "branch" && len(boundaries) == 1 {
+		return &boundaries[0]
+	}
+	return nil
+}
+
+func goCoverageTaskConditionHints(task *types.CoverageTestTask) []string {
+	if task == nil {
+		return nil
+	}
+	var hints []string
+	for _, values := range [][]string{task.SuggestedInputs, task.MissingBranches, task.AssertionFocus} {
+		for _, value := range values {
+			if expr := firstBacktickExpr(value); expr != "" {
+				hints = append(hints, expr)
+				continue
+			}
+			if idx := strings.Index(value, ":"); idx >= 0 {
+				trimmed := strings.TrimSpace(value[idx+1:])
+				if trimmed != "" {
+					hints = append(hints, trimmed)
+				}
+			}
+		}
+	}
+	return hints
+}
+
+func firstBacktickExpr(s string) string {
+	start := strings.Index(s, "`")
+	if start < 0 {
+		return ""
+	}
+	end := strings.Index(s[start+1:], "`")
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(s[start+1 : start+1+end])
+}
+
+func goBoundaryMatchesHint(boundary goBoundary, hint string) bool {
+	hint = strings.TrimSpace(hint)
+	if hint == "" {
+		return false
+	}
+	if hint == boundary.Condition {
+		return true
+	}
+	compactHint := strings.Join(strings.Fields(hint), " ")
+	return compactHint == boundary.Condition ||
+		compactHint == strings.Join([]string{boundary.Param, boundary.Op, boundary.Value}, " ")
+}
+
+func goBoundaryInputValue(boundary goBoundary, typ string) (string, bool) {
+	value := strings.TrimSpace(boundary.Value)
+	switch boundary.Op {
+	case "==", ">=", "<=":
+		return goLiteralForType(value, typ)
+	case "!=":
+		return goAlternateLiteralForType(value, typ)
+	case ">":
+		return goNumericOffsetLiteral(value, typ, 1)
+	case "<":
+		return goNumericOffsetLiteral(value, typ, -1)
+	default:
+		return "", false
+	}
+}
+
+func goLiteralForType(value string, typ string) (string, bool) {
+	switch {
+	case typ == "string":
+		if strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"") {
+			return value, true
+		}
+		return strconv.Quote(value), true
+	case typ == "bool":
+		if value == "true" || value == "false" {
+			return value, true
+		}
+		return "", false
+	case strings.HasPrefix(typ, "int"), strings.HasPrefix(typ, "uint"):
+		if _, err := strconv.Atoi(value); err == nil {
+			return value, true
+		}
+		return "", false
+	case strings.HasPrefix(typ, "float"):
+		if _, err := strconv.ParseFloat(value, 64); err == nil {
+			return value, true
+		}
+		return "", false
+	default:
+		return "", false
+	}
+}
+
+func goAlternateLiteralForType(value string, typ string) (string, bool) {
+	switch {
+	case typ == "string":
+		lit, ok := goLiteralForType(value, typ)
+		if !ok {
+			return "", false
+		}
+		if lit == `""` {
+			return `"test"`, true
+		}
+		return `""`, true
+	case typ == "bool":
+		if value == "true" {
+			return "false", true
+		}
+		if value == "false" {
+			return "true", true
+		}
+		return "", false
+	case strings.HasPrefix(typ, "int"), strings.HasPrefix(typ, "uint"), strings.HasPrefix(typ, "float"):
+		return goNumericOffsetLiteral(value, typ, 1)
+	default:
+		return "", false
+	}
+}
+
+func goNumericOffsetLiteral(value string, typ string, delta int) (string, bool) {
+	if strings.HasPrefix(typ, "float") {
+		n, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return "", false
+		}
+		return strconv.FormatFloat(n+float64(delta), 'f', 1, 64), true
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return "", false
+	}
+	next := n + delta
+	if strings.HasPrefix(typ, "uint") && next < 0 {
+		return "", false
+	}
+	return strconv.Itoa(next), true
 }
 
 func goTimeFormatLayout(expr string) (string, bool) {
@@ -853,6 +1054,120 @@ func finalReturnExpr(body *ast.BlockStmt) string {
 		return ""
 	}
 	return exprToString(ret.Results[0])
+}
+
+func extractGoBoundaries(body *ast.BlockStmt) []goBoundary {
+	if body == nil {
+		return nil
+	}
+	var boundaries []goBoundary
+	for _, stmt := range body.List {
+		ifStmt, ok := stmt.(*ast.IfStmt)
+		if !ok || ifStmt.Body == nil {
+			continue
+		}
+		boundary, ok := goBoundaryFromIf(ifStmt)
+		if ok {
+			boundaries = append(boundaries, boundary)
+		}
+	}
+	return boundaries
+}
+
+func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
+	cond, ok := ifStmt.Cond.(*ast.BinaryExpr)
+	if !ok {
+		return goBoundary{}, false
+	}
+	param, op, value, ok := goBoundaryParamValue(cond)
+	if !ok {
+		return goBoundary{}, false
+	}
+	ret := firstGoReturnExpr(ifStmt.Body)
+	if ret == "" {
+		return goBoundary{}, false
+	}
+	return goBoundary{
+		Param:      param,
+		Op:         op,
+		Value:      value,
+		Condition:  strings.Join([]string{param, op, value}, " "),
+		ReturnExpr: ret,
+	}, true
+}
+
+func goBoundaryParamValue(cond *ast.BinaryExpr) (string, string, string, bool) {
+	op := cond.Op.String()
+	if !goBoundaryOperator(op) {
+		return "", "", "", false
+	}
+	if ident, ok := cond.X.(*ast.Ident); ok {
+		if value, ok := goBoundaryLiteral(cond.Y); ok {
+			return ident.Name, op, value, true
+		}
+	}
+	if ident, ok := cond.Y.(*ast.Ident); ok {
+		if value, ok := goBoundaryLiteral(cond.X); ok {
+			inverted, ok := invertGoBoundaryOperator(op)
+			if !ok {
+				return "", "", "", false
+			}
+			return ident.Name, inverted, value, true
+		}
+	}
+	return "", "", "", false
+}
+
+func goBoundaryOperator(op string) bool {
+	switch op {
+	case "==", "!=", ">", "<", ">=", "<=":
+		return true
+	default:
+		return false
+	}
+}
+
+func invertGoBoundaryOperator(op string) (string, bool) {
+	switch op {
+	case "==", "!=":
+		return op, true
+	case ">":
+		return "<", true
+	case "<":
+		return ">", true
+	case ">=":
+		return "<=", true
+	case "<=":
+		return ">=", true
+	default:
+		return "", false
+	}
+}
+
+func goBoundaryLiteral(expr ast.Expr) (string, bool) {
+	switch v := expr.(type) {
+	case *ast.BasicLit:
+		return v.Value, true
+	case *ast.Ident:
+		if v.Name == "true" || v.Name == "false" {
+			return v.Name, true
+		}
+	}
+	return "", false
+}
+
+func firstGoReturnExpr(body *ast.BlockStmt) string {
+	if body == nil {
+		return ""
+	}
+	for _, stmt := range body.List {
+		ret, ok := stmt.(*ast.ReturnStmt)
+		if !ok || len(ret.Results) != 1 {
+			continue
+		}
+		return exprToString(ret.Results[0])
+	}
+	return ""
 }
 
 func goTypeSupportsExactSeed(typ string) bool {

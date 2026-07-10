@@ -10,6 +10,7 @@
 - Go `run_tests` 使用相对测试文件或目录时会归一化为 `./pkg` 形式，避免 `utils/time_test.go` 被执行成标准库导入路径 `utils`。
 - Go static generator 会识别 `time.Now().Format("layout")` 这类日期字符串返回值，生成 `time.Parse` 格式断言，不再退化成仅丢弃返回值的 smoke 测试。
 - Go static generator 会识别 `time.Date(..., 0, 0, 0, 0, ...)` 这类 `time.Time` 日期边界返回值，生成 hour/min/sec/nsec 归零断言。
+- Go static generator 会利用 coverage task 的简单分支条件提示，例如 `a == 0` / `x > 3`，为可推导返回值的分支生成非 skipped 用例和精确期望值。
 
 ## v0.4.13 - 2026-07-10
 
