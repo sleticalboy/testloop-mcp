@@ -15,6 +15,7 @@
 - Agent workflow 新增 LLM provider 错误策略表，明确哪些错误应重试模型、降级 static，或提示用户修 provider 配置。
 - 默认 LLM provider prompt 新增输出契约，要求模型只返回可直接写盘的完整测试文件，无法安全增强时回退静态草稿。
 - 新增 MCP handler 层的 LLM provider 坏输出回归测试，固定空输出、JSON 错误、缺少 `code`、解释文本和非测试代码的 `provider_error kind/action`。
+- 新增结构化 `provider_error` 自动降级 static 并继续 `run_tests` 的 handler 闭环测试，固定 Agent fallback 序列可执行。
 
 ### Changed
 

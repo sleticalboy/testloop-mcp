@@ -767,6 +767,83 @@ func TestHandleGenerateTestsClassifiesLLMProviderBadOutputs(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsProviderErrorFallsBackToStaticAndRunTests(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := writeTestFile(t, dir, filepath.Join("src", "sum.ts"), "export function add(a: number, b: number): number { return a + b; }\n")
+
+	t.Setenv(generator.EnvLLMProviderCommand, writeFakeLLMProviderOutput(t, "I would test the add function with a simple happy path."))
+	llmResult, llmStructured, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:  source,
+		Framework: "vitest",
+		Provider:  "llm",
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned protocol error: %v", err)
+	}
+	assertGenerateTestsProviderError(t, llmResult, llmStructured, "llm_output_cleaning_failed", "retry_model_or_fallback_static")
+	llmOutput := llmStructured.(types.GenerateTestsOutput)
+	if _, err := os.Stat(llmOutput.TestFile); !os.IsNotExist(err) {
+		t.Fatalf("llm provider error should not write test file, stat error = %v", err)
+	}
+
+	staticResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:  source,
+		Framework: "vitest",
+		Provider:  "static",
+	})
+	if err != nil {
+		t.Fatalf("static fallback HandleGenerateTests returned error: %v", err)
+	}
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, staticResult)), &generated); err != nil {
+		t.Fatalf("unmarshal static fallback output: %v", err)
+	}
+	if generated.Status != "ok" || generated.Provider != "static" {
+		t.Fatalf("static fallback output = %+v, want ok static", generated)
+	}
+	if generated.TestFile != filepath.Join(dir, "src", "sum.test.ts") {
+		t.Fatalf("test file = %q, want src/sum.test.ts", generated.TestFile)
+	}
+
+	logPath := installFakeNpxContentChecker(t, []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { add } from './sum';",
+		"expect(result).toBe((1 + 2));",
+	}, strings.Join([]string{
+		" ✓ src/sum.test.ts (1 test)",
+		" Test Files  1 passed (1)",
+		"      Tests  1 passed (1)",
+	}, "\n"))
+	runResult, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  generated.TestFile,
+		Framework:             "vitest",
+		IncludeFixSuggestions: true,
+		SourceCode:            source,
+		TestCode:              generated.TestFile,
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, runResult)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "vitest" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
+		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
+	}
+}
+
 func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")

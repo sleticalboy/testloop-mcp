@@ -177,6 +177,21 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 自动化 Agent 不应无限重试 provider。建议同一任务最多重试一次 LLM provider；第二次仍失败时降级 static，继续执行 `run_tests`，并把 provider 错误作为上下文记录。
 
+自动降级时不要重新推断目标文件或测试框架，复用同一个 `file_path`、`framework` 和 `coverage_task`，只把 provider 改为 `static`：
+
+```json
+{
+  "tool": "generate_tests",
+  "arguments": {
+    "file_path": "./src/sum.ts",
+    "framework": "vitest",
+    "provider": "static"
+  }
+}
+```
+
+如果 static fallback 返回 `status: "ok"`，立即用返回的 `test_file` 进入 `run_tests`。这个降级闭环已有 handler 回归测试覆盖：fake LLM provider 返回解释文本，`generate_tests` 返回结构化 `provider_error.action=retry_model_or_fallback_static`，随后同一源文件降级 static 生成 Vitest 测试，并由 fake `npx vitest` 执行通过。
+
 ## 5. 重新运行并收敛
 
 生成测试后再次调用：
