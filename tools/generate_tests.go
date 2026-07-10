@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,9 +60,11 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil && filepath.Dir(testFile) != "." {
 		return nil, nil, fmt.Errorf("创建测试目录失败: %w", err)
 	}
-	if err := os.WriteFile(testFile, []byte(code), 0644); err != nil {
+	writtenCode, err := writeGeneratedTestFile(testFile, code, filepath.Ext(filePath))
+	if err != nil {
 		return nil, nil, fmt.Errorf("写入测试文件失败: %w", err)
 	}
+	code = writtenCode
 
 	genCtx := generator.BuildGenerationContextWithOptions(filePath, opts)
 	out := types.GenerateTestsOutput{
@@ -163,4 +169,173 @@ func countLinePrefixes(code string, prefixes ...string) int {
 		}
 	}
 	return count
+}
+
+func writeGeneratedTestFile(testFile string, code string, sourceExt string) (string, error) {
+	if sourceExt != ".go" {
+		if err := os.WriteFile(testFile, []byte(code), 0644); err != nil {
+			return "", err
+		}
+		return code, nil
+	}
+	merged, err := mergeGoGeneratedTestFile(testFile, code)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(testFile, []byte(merged), 0644); err != nil {
+		return "", err
+	}
+	return merged, nil
+}
+
+func mergeGoGeneratedTestFile(testFile string, generated string) (string, error) {
+	existing, err := os.ReadFile(testFile)
+	if os.IsNotExist(err) {
+		return generated, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(string(existing)) == "" {
+		return generated, nil
+	}
+
+	existingSet := token.NewFileSet()
+	existingFile, err := parser.ParseFile(existingSet, testFile, existing, parser.ParseComments)
+	if err != nil {
+		return "", fmt.Errorf("解析已有 Go 测试文件失败: %w", err)
+	}
+	generatedSet := token.NewFileSet()
+	generatedFile, err := parser.ParseFile(generatedSet, testFile+".generated", generated, parser.ParseComments)
+	if err != nil {
+		return "", fmt.Errorf("解析新生成 Go 测试代码失败: %w", err)
+	}
+	if existingFile.Name.Name != generatedFile.Name.Name {
+		return "", fmt.Errorf("Go 测试文件 package 不一致: existing=%s generated=%s", existingFile.Name.Name, generatedFile.Name.Name)
+	}
+
+	existingTests := goTestFuncNames(existingFile)
+	snippets, err := goGeneratedTestFuncSnippets(generatedSet, generatedFile, generated, existingTests)
+	if err != nil {
+		return "", err
+	}
+	if len(snippets) == 0 {
+		return "", fmt.Errorf("新生成 Go 测试代码中没有可追加的 Test 函数")
+	}
+
+	merged := string(existing)
+	missingImports := missingGoImports(existingFile, generatedFile)
+	if len(missingImports) > 0 {
+		merged, err = addGoImports(existingSet, existingFile, merged, missingImports)
+		if err != nil {
+			return "", err
+		}
+	}
+	merged = strings.TrimRight(merged, "\n") + "\n\n" + strings.Join(snippets, "\n\n") + "\n"
+
+	formatted, err := format.Source([]byte(merged))
+	if err != nil {
+		return merged, fmt.Errorf("格式化合并后的 Go 测试文件失败: %w", err)
+	}
+	return string(formatted), nil
+}
+
+func goTestFuncNames(file *ast.File) map[string]bool {
+	names := make(map[string]bool)
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name == nil || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		names[fn.Name.Name] = true
+	}
+	return names
+}
+
+func goGeneratedTestFuncSnippets(fset *token.FileSet, file *ast.File, generated string, existing map[string]bool) ([]string, error) {
+	var snippets []string
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name == nil || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if existing[fn.Name.Name] {
+			return nil, fmt.Errorf("Go 测试函数已存在: %s", fn.Name.Name)
+		}
+		start := fset.Position(fn.Pos()).Offset
+		if fn.Doc != nil {
+			start = fset.Position(fn.Doc.Pos()).Offset
+		}
+		end := fset.Position(fn.End()).Offset
+		if start < 0 || end > len(generated) || start >= end {
+			return nil, fmt.Errorf("无法定位新生成 Go 测试函数: %s", fn.Name.Name)
+		}
+		snippets = append(snippets, strings.TrimSpace(generated[start:end]))
+	}
+	return snippets, nil
+}
+
+func missingGoImports(existingFile, generatedFile *ast.File) []string {
+	existing := make(map[string]bool)
+	for _, imp := range existingFile.Imports {
+		existing[imp.Path.Value] = true
+	}
+	var missing []string
+	for _, imp := range generatedFile.Imports {
+		if !existing[imp.Path.Value] {
+			existing[imp.Path.Value] = true
+			missing = append(missing, imp.Path.Value)
+		}
+	}
+	return missing
+}
+
+func addGoImports(fset *token.FileSet, file *ast.File, source string, imports []string) (string, error) {
+	importDecl := firstGoImportDecl(file)
+	if importDecl == nil {
+		insertAt := fset.Position(file.Name.End()).Offset
+		return source[:insertAt] + "\n\n" + goImportBlock(imports) + source[insertAt:], nil
+	}
+	if importDecl.Lparen.IsValid() {
+		insertAt := fset.Position(importDecl.Rparen).Offset
+		return source[:insertAt] + goImportLines(imports) + source[insertAt:], nil
+	}
+
+	start := fset.Position(importDecl.Pos()).Offset
+	end := fset.Position(importDecl.End()).Offset
+	if start < 0 || end > len(source) || start >= end {
+		return "", fmt.Errorf("无法定位已有 Go import 声明")
+	}
+	allImports := make([]string, 0, len(importDecl.Specs)+len(imports))
+	for _, spec := range importDecl.Specs {
+		if importSpec, ok := spec.(*ast.ImportSpec); ok {
+			allImports = append(allImports, importSpec.Path.Value)
+		}
+	}
+	allImports = append(allImports, imports...)
+	return source[:start] + goImportBlock(allImports) + source[end:], nil
+}
+
+func firstGoImportDecl(file *ast.File) *ast.GenDecl {
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if ok && genDecl.Tok == token.IMPORT {
+			return genDecl
+		}
+	}
+	return nil
+}
+
+func goImportBlock(imports []string) string {
+	return "import (\n" + goImportLines(imports) + ")\n"
+}
+
+func goImportLines(imports []string) string {
+	var b strings.Builder
+	for _, imp := range imports {
+		b.WriteString("\t")
+		b.WriteString(imp)
+		b.WriteString("\n")
+	}
+	return b.String()
 }

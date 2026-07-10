@@ -136,6 +136,27 @@ func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {
 	}
 }
 
+func TestNormalizeGoTestPathPrefixesRelativePackageDirs(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.MkdirAll("pkg", 0o755); err != nil {
+		t.Fatalf("mkdir pkg: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join("pkg", "calc_test.go"), []byte("package pkg\n"), 0o644); err != nil {
+		t.Fatalf("write go file: %v", err)
+	}
+
+	if got := normalizeGoTestPath(filepath.Join("pkg", "calc_test.go")); got != "./pkg" {
+		t.Fatalf("normalizeGoTestPath(relative file) = %q, want ./pkg", got)
+	}
+	if got := normalizeGoTestPath("pkg"); got != "./pkg" {
+		t.Fatalf("normalizeGoTestPath(relative dir) = %q, want ./pkg", got)
+	}
+	if got := normalizeGoTestPath("./pkg"); got != "./pkg" {
+		t.Fatalf("normalizeGoTestPath(dot relative dir) = %q, want ./pkg", got)
+	}
+}
+
 func TestFindProjectRootWalksParents(t *testing.T) {
 	dir := t.TempDir()
 	nested := filepath.Join(dir, "pkg", "calc")

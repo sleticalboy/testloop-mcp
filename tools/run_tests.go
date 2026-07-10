@@ -267,10 +267,17 @@ func readOptionalText(path string) string {
 
 func normalizeGoTestPath(path string) string {
 	info, err := os.Stat(path)
-	if err != nil || info.IsDir() || filepath.Ext(path) != ".go" {
+	if err != nil {
 		return path
 	}
-	return filepath.Dir(path)
+	normalized := path
+	if !info.IsDir() && filepath.Ext(path) == ".go" {
+		normalized = filepath.Dir(path)
+	}
+	if filepath.IsAbs(normalized) || strings.HasPrefix(normalized, ".") {
+		return normalized
+	}
+	return "." + string(filepath.Separator) + normalized
 }
 
 func getProjectRoot(path string) string {

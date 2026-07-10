@@ -6,6 +6,8 @@
 
 - Go coverage task static generator 在遇到无参数、非方法、返回值可安全丢弃但无法推导精确期望值的函数时，会生成可执行的 smoke 测试而不是默认 skipped TODO；真实样例验证覆盖 `GetNowDate()` 这类日期/时间辅助函数。
 - Go coverprofile 解析会把当前 `go.mod` module 路径映射成本地源码路径，例如 `car-svc/utils/time.go` 会归一化为 `utils/time.go`，让 `parse_coverage.test_tasks[]` 可直接传给 `generate_tests`。
+- Go `generate_tests` 写入已有测试文件时会合并追加新的 `Test*` 函数并复用 import，不再覆盖已有测试；遇到同名测试函数会返回明确错误。
+- Go `run_tests` 使用相对测试文件或目录时会归一化为 `./pkg` 形式，避免 `utils/time_test.go` 被执行成标准库导入路径 `utils`。
 
 ## v0.4.13 - 2026-07-10
 
