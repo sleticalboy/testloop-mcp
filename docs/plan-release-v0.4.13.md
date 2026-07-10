@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.4.13 的发布准备记录。当前阶段已完成版本准备和本地发布前验证；尚未打 tag、尚未发布 GitHub Release，也尚未更新 Homebrew tap。
+这是 v0.4.13 的发布记录。当前阶段已完成版本准备、本地发布前验证、tag、GitHub Release、Release Artifacts、Post-Release Verify 和 Homebrew tap 发布核验。
 
 v0.4.13 发布重点见 [v0.4.13 发布说明草案](./plan-release-notes-v0.4.13.md)：本轮主要是 LLM provider 接入质量、输出校验、结构化 provider error、Agent static fallback 闭环，以及安装脚本 fallback 日志修正。
 
@@ -46,14 +46,14 @@ v0.4.13 发布重点见 [v0.4.13 发布说明草案](./plan-release-notes-v0.4.1
 - [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.4.13`。
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.4.13`。
 - [x] 重新运行完整验证：`go test ./...`、脚本语法检查、actionlint、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
-- [ ] 打 tag `v0.4.13` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.4.13` 验证 Release 资产，确认 10 个必需资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.4.13 发布说明。
-- [ ] 手动触发 Post-Release Verify 并确认五平台安装脚本 dry run 全部通过。
-- [ ] 更新 Homebrew tap 到 `0.4.13`，并通过 `brew fetch`、`brew audit --formula --strict`、`brew upgrade --formula`、`brew test`。
+- [x] 提交版本准备改动后确认远端 CI 通过：run `29087539959`。
+- [x] 打 tag `v0.4.13` 并推送，tag 指向 `cebb4832ef9a7b8a84dbbb71e19f2989c1c74599`。
+- [x] 等待 Release Artifacts workflow `29089692602` 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.4.13` 验证 Release 资产，确认 10 个必需资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.4.13 发布说明。
+- [x] 手动触发 Post-Release Verify run `29090486292`，五平台安装脚本 dry run 全部通过。
+- [x] 更新 Homebrew tap 到 `0.4.13`，tap commit `25b8018454c1b73cf259c08b13db06f59dcfc234`；并通过 `brew fetch`、`brew audit --formula --strict`、`brew upgrade --formula`、`brew test`。
 
 ## 当前结论
 
-v0.4.13 已完成本地版本准备和发布前验证，可以进入提交、远端 CI、tag、Release Artifacts、资产验证和 Homebrew tap 发布核验阶段。
+v0.4.13 已完成正式发布和发布后核验。Release 页面包含 10 个必需资产，Post-Release Verify 五平台安装 dry run 通过，Homebrew tap 已升级到 `0.4.13` 并通过本机 `brew test`。

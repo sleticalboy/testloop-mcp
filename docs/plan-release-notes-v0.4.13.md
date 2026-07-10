@@ -12,9 +12,9 @@ testloop-mcp v0.4.13
 - [x] 将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.13 - 2026-07-10`。
 - [x] 更新 README、安装文档和必要的版本引用。
 - [x] 跑完整本地发布前验证。
-- [ ] 推送 `v0.4.13` tag 并等待 Release Artifacts workflow 完成。
-- [ ] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
-- [ ] 发布 GitHub Release 正文。
+- [x] 推送 `v0.4.13` tag 并等待 Release Artifacts workflow `29089692602` 完成。
+- [x] 验证 Release 资产、checksum、安装脚本和 Homebrew tap。
+- [x] 发布 GitHub Release 正文。
 
 ## 摘要
 
@@ -91,7 +91,8 @@ v0.4.13 仍保持 LLM provider 是外部命令协议适配层：
 
 ## 发布备注
 
-- 这是 v0.4.13 的候选发布说明草案，不回写已经发布的 `docs/plan-release-notes-v0.4.12.md`。
+- 这是 v0.4.13 的正式发布说明记录，不回写已经发布的 `docs/plan-release-notes-v0.4.12.md`。
 - 本轮重点是 LLM provider 接入质量和 Agent 可恢复闭环，不改变默认 static provider 行为。
 - 结构化 `provider_error` 是向后兼容增强；只读文本的旧 Agent 仍可从 `error` 字段解析 `provider_error kind=... action=...`。
 - 本轮新增的 provider 示例和模型包装是接入参考，不代表 testloop-mcp 内置或绑定任何模型供应商。
+- 发布后验证：Release Artifacts run `29089692602`、`scripts/verify-release-assets.sh v0.4.13`、Post-Release Verify run `29090486292`、Homebrew tap commit `25b8018454c1b73cf259c08b13db06f59dcfc234` 均已通过。
