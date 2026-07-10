@@ -304,6 +304,13 @@ func UserName(user *User) string {
 	return user.Name
 }
 
+func ActiveUser(user *User) string {
+	if user != nil {
+		return "present"
+	}
+	return "missing"
+}
+
 func SkipLabel(skip bool) string {
 	if skip == false {
 		return "run"
@@ -349,6 +356,13 @@ func SkipLabel(skip bool) string {
 			testName:  "TestUserNameNilBranch",
 			condition: "user == nil",
 			wants:     []string{`user: nil`, `ret0: "missing"`},
+		},
+		{
+			name:      "non nil pointer",
+			target:    "ActiveUser",
+			testName:  "TestActiveUserNonNilBranch",
+			condition: "user != nil",
+			wants:     []string{`user: &User{}`, `ret0: "present"`},
 		},
 		{
 			name:      "skip parameter",
