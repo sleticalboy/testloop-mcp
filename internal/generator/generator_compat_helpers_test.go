@@ -183,6 +183,18 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	if op, ok := invertGoBoundaryOperator("<"); !ok || op != ">" {
 		t.Fatalf("invertGoBoundaryOperator(<) = %q, %v; want > true", op, ok)
 	}
+	if got, ok := goBoundaryInputValue(goBoundary{Param: "user", Op: "==", Value: "nil"}, "*User"); !ok || got != "nil" {
+		t.Fatalf("goBoundaryInputValue(user == nil) = %q, %v; want nil true", got, ok)
+	}
+	if got, ok := goBoundaryInputValue(goBoundary{Param: "user", Op: "!=", Value: "nil"}, "*User"); !ok || got != "&User{}" {
+		t.Fatalf("goBoundaryInputValue(user != nil) = %q, %v; want &User{} true", got, ok)
+	}
+	if got := goTestCaseFieldName("name"); got != "nameValue" {
+		t.Fatalf("goTestCaseFieldName(name) = %q, want nameValue", got)
+	}
+	if got := goTestCaseFieldName("skip"); got != "skipValue" {
+		t.Fatalf("goTestCaseFieldName(skip) = %q, want skipValue", got)
+	}
 
 	cases := map[string]string{
 		"branch":      "coverage branch gap",

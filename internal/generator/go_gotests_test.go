@@ -269,6 +269,130 @@ func Add(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesStringBoolAndNilBranchInputs(t *testing.T) {
+	src := `package sample
+
+type User struct {
+	Name string
+}
+
+func Label(name string) string {
+	if name == "" {
+		return "anonymous"
+	}
+	return name
+}
+
+func Normalize(name string) string {
+	if name != "" {
+		return name
+	}
+	return "anonymous"
+}
+
+func Toggle(enabled bool) string {
+	if enabled == false {
+		return "off"
+	}
+	return "on"
+}
+
+func UserName(user *User) string {
+	if user == nil {
+		return "missing"
+	}
+	return user.Name
+}
+
+func SkipLabel(skip bool) string {
+	if skip == false {
+		return "run"
+	}
+	return "skip"
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "branches.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name      string
+		target    string
+		testName  string
+		condition string
+		wants     []string
+	}{
+		{
+			name:      "empty string",
+			target:    "Label",
+			testName:  "TestLabelEmptyBranch",
+			condition: `name == ""`,
+			wants:     []string{`nameValue: ""`, `got := Label(tt.nameValue)`, `ret0:      "anonymous"`},
+		},
+		{
+			name:      "non empty string",
+			target:    "Normalize",
+			testName:  "TestNormalizeNonEmptyBranch",
+			condition: `name != ""`,
+			wants:     []string{`nameValue: "test"`, `got := Normalize(tt.nameValue)`, `ret0:      "test"`},
+		},
+		{
+			name:      "false bool",
+			target:    "Toggle",
+			testName:  "TestToggleFalseBranch",
+			condition: "enabled == false",
+			wants:     []string{`enabled: false`, `ret0:    "off"`},
+		},
+		{
+			name:      "nil pointer",
+			target:    "UserName",
+			testName:  "TestUserNameNilBranch",
+			condition: "user == nil",
+			wants:     []string{`user: nil`, `ret0: "missing"`},
+		},
+		{
+			name:      "skip parameter",
+			target:    "SkipLabel",
+			testName:  "TestSkipLabelFalseBranch",
+			condition: "skip == false",
+			wants:     []string{`skipValue: false`, `got := SkipLabel(tt.skipValue)`, `ret0:      "run"`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:              "go-test-branch-" + tt.target,
+				Framework:       "go-test",
+				Target:          tt.target,
+				LineRange:       "1-1",
+				GapType:         "branch",
+				TestName:        tt.testName,
+				SuggestedInputs: []string{"构造满足条件 `" + tt.condition + "` 的输入"},
+				AssertionFocus:  []string{"断言分支返回值"},
+			}
+
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range append([]string{
+				"func " + tt.testName + "(t *testing.T)",
+				"skip:",
+				"got := " + tt.target + "(",
+				"if got != tt.ret0",
+			}, tt.wants...) {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+				t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesSmokeCaseForNoArgReturn(t *testing.T) {
 	src := `package sample
 

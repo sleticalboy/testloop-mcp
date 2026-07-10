@@ -415,6 +415,15 @@ func genTableDrivenTest(fn funcInfo) string {
 	return genTableDrivenTestForTask(fn, nil)
 }
 
+func goTestCaseFieldName(name string) string {
+	switch name {
+	case "name", "skip":
+		return name + "Value"
+	default:
+		return name
+	}
+}
+
 func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
 
@@ -454,12 +463,12 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	sb.WriteString("\t\tname string\n")
 	sb.WriteString("\t\tskip bool\n")
 	for _, p := range fn.Params {
-		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", p.Name, p.Type))
+		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", goTestCaseFieldName(p.Name), p.Type))
 	}
 	if !smokeCase {
 		if expectedReturnFields {
 			for _, r := range fn.Returns {
-				sb.WriteString(fmt.Sprintf("\t\t%s %s\n", r.Name, r.Type))
+				sb.WriteString(fmt.Sprintf("\t\t%s %s\n", goTestCaseFieldName(r.Name), r.Type))
 			}
 		}
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
@@ -475,11 +484,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "simple")))
 		sb.WriteString("\t\t\tskip: false,\n")
 		for _, p := range fn.Params {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, seedCase.Inputs[p.Name]))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(p.Name), seedCase.Inputs[p.Name]))
 		}
 		if exactCase {
 			for _, r := range fn.Returns {
-				sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
+				sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(r.Name), seedCase.Outputs[r.Name]))
 			}
 		}
 		if seedCase.Assert == goAssertTimeFormat {
@@ -492,10 +501,10 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "todo")))
 		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
 		for _, p := range fn.Params {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", p.Name, zeroValue(p.Type)))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(p.Name), zeroValue(p.Type)))
 		}
 		for _, r := range fn.Returns {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, zeroValue(r.Type)))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(r.Name), zeroValue(r.Type)))
 		}
 	}
 	sb.WriteString("\t\t},\n")
@@ -511,7 +520,7 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	// 为通道类型参数添加 nil 检查，避免阻塞
 	for _, p := range fn.Params {
 		if strings.Contains(p.Type, "chan") {
-			sb.WriteString(fmt.Sprintf("\t\t\tif tt.%s == nil {\n\t\t\t\tt.Skip(\"%s is nil, fill in test data\")\n\t\t\t}\n", p.Name, p.Name))
+			sb.WriteString(fmt.Sprintf("\t\t\tif tt.%s == nil {\n\t\t\t\tt.Skip(\"%s is nil, fill in test data\")\n\t\t\t}\n", goTestCaseFieldName(p.Name), p.Name))
 		}
 	}
 
@@ -529,9 +538,9 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	args := make([]string, len(fn.Params))
 	for i, p := range fn.Params {
 		if p.Variadic {
-			args[i] = fmt.Sprintf("tt.%s...", p.Name)
+			args[i] = fmt.Sprintf("tt.%s...", goTestCaseFieldName(p.Name))
 		} else {
-			args[i] = fmt.Sprintf("tt.%s", p.Name)
+			args[i] = fmt.Sprintf("tt.%s", goTestCaseFieldName(p.Name))
 		}
 	}
 
@@ -567,11 +576,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		} else {
 			sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
 			if needsDeepEqual(fn.Returns[0].Type) {
-				sb.WriteString(fmt.Sprintf("\t\t\tif !reflect.DeepEqual(got, tt.%s) {\n", fn.Returns[0].Name))
+				sb.WriteString(fmt.Sprintf("\t\t\tif !reflect.DeepEqual(got, tt.%s) {\n", goTestCaseFieldName(fn.Returns[0].Name)))
 			} else {
-				sb.WriteString(fmt.Sprintf("\t\t\tif got != tt.%s {\n", fn.Returns[0].Name))
+				sb.WriteString(fmt.Sprintf("\t\t\tif got != tt.%s {\n", goTestCaseFieldName(fn.Returns[0].Name)))
 			}
-			sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"got %%v, want %%v\", got, tt.%s)\n", fn.Returns[0].Name))
+			sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"got %%v, want %%v\", got, tt.%s)\n", goTestCaseFieldName(fn.Returns[0].Name)))
 			sb.WriteString("\t\t\t}\n")
 		}
 	} else {
@@ -587,12 +596,12 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"unexpected error: %%v\", %s)\n", returnVars[i]))
 				sb.WriteString("\t\t\t}\n")
 			} else if needsDeepEqual(r.Type) {
-				sb.WriteString(fmt.Sprintf("\t\t\tif !reflect.DeepEqual(%s, tt.%s) {\n", returnVars[i], r.Name))
-				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"%s: got %%v, want %%v\", %s, tt.%s)\n", r.Name, returnVars[i], r.Name))
+				sb.WriteString(fmt.Sprintf("\t\t\tif !reflect.DeepEqual(%s, tt.%s) {\n", returnVars[i], goTestCaseFieldName(r.Name)))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"%s: got %%v, want %%v\", %s, tt.%s)\n", r.Name, returnVars[i], goTestCaseFieldName(r.Name)))
 				sb.WriteString("\t\t\t}\n")
 			} else {
-				sb.WriteString(fmt.Sprintf("\t\t\tif %s != tt.%s {\n", returnVars[i], r.Name))
-				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"%s: got %%v, want %%v\", %s, tt.%s)\n", r.Name, returnVars[i], r.Name))
+				sb.WriteString(fmt.Sprintf("\t\t\tif %s != tt.%s {\n", returnVars[i], goTestCaseFieldName(r.Name)))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"%s: got %%v, want %%v\", %s, tt.%s)\n", r.Name, returnVars[i], goTestCaseFieldName(r.Name)))
 				sb.WriteString("\t\t\t}\n")
 			}
 		}
@@ -879,6 +888,9 @@ func goBoundaryInputValue(boundary goBoundary, typ string) (string, bool) {
 }
 
 func goLiteralForType(value string, typ string) (string, bool) {
+	if value == "nil" {
+		return goNilLiteralForType(typ)
+	}
 	switch {
 	case typ == "string":
 		if strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"") {
@@ -906,6 +918,9 @@ func goLiteralForType(value string, typ string) (string, bool) {
 }
 
 func goAlternateLiteralForType(value string, typ string) (string, bool) {
+	if value == "nil" {
+		return goNonNilLiteralForType(typ)
+	}
 	switch {
 	case typ == "string":
 		lit, ok := goLiteralForType(value, typ)
@@ -926,6 +941,34 @@ func goAlternateLiteralForType(value string, typ string) (string, bool) {
 		return "", false
 	case strings.HasPrefix(typ, "int"), strings.HasPrefix(typ, "uint"), strings.HasPrefix(typ, "float"):
 		return goNumericOffsetLiteral(value, typ, 1)
+	default:
+		return "", false
+	}
+}
+
+func goNilLiteralForType(typ string) (string, bool) {
+	switch {
+	case typ == "any", typ == "interface{}",
+		strings.HasPrefix(typ, "*"),
+		strings.HasPrefix(typ, "[]"),
+		strings.HasPrefix(typ, "map["),
+		strings.HasPrefix(typ, "chan "),
+		strings.Contains(typ, "<-chan"),
+		strings.HasPrefix(typ, "func"):
+		return "nil", true
+	default:
+		return "", false
+	}
+}
+
+func goNonNilLiteralForType(typ string) (string, bool) {
+	switch {
+	case strings.HasPrefix(typ, "*"):
+		return "&" + strings.TrimPrefix(typ, "*") + "{}", true
+	case strings.HasPrefix(typ, "[]"), strings.HasPrefix(typ, "map["):
+		return typ + "{}", true
+	case typ == "any", typ == "interface{}":
+		return "struct{}{}", true
 	default:
 		return "", false
 	}
@@ -1149,7 +1192,7 @@ func goBoundaryLiteral(expr ast.Expr) (string, bool) {
 	case *ast.BasicLit:
 		return v.Value, true
 	case *ast.Ident:
-		if v.Name == "true" || v.Name == "false" {
+		if v.Name == "true" || v.Name == "false" || v.Name == "nil" {
 			return v.Name, true
 		}
 	}
