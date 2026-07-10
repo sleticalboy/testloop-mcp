@@ -13,6 +13,7 @@
 - `cmd/testgen` 新增 `-provider-check`，用于诊断 provider 模式、`TESTLOOP_LLM_PROVIDER_CMD` 和命令可执行性。
 - MCP `generate_tests` 的 LLM provider 失败错误新增 `provider_error kind=... action=...` 分类，方便 Agent 区分配置、命令执行、输出格式和语言校验问题。
 - Agent workflow 新增 LLM provider 错误策略表，明确哪些错误应重试模型、降级 static，或提示用户修 provider 配置。
+- 默认 LLM provider prompt 新增输出契约，要求模型只返回可直接写盘的完整测试文件，无法安全增强时回退静态草稿。
 
 ### Changed
 

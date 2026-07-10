@@ -82,6 +82,11 @@ if "uses static code" not in code:
 PY
 
 assert_contains "$prompt_file" "## Imported Type Context"
+assert_contains "$prompt_file" "## Output Contract"
+assert_contains "$prompt_file" "Return exactly one complete test file"
+assert_contains "$prompt_file" "If you cannot improve the static draft safely, return the static draft unchanged."
+assert_contains "$prompt_file" "Do not output JSON, prose, shell commands, pseudocode, TODO-only tests, or production code patches."
+assert_contains "$prompt_file" "The output will be rejected unless it looks like executable test code"
 assert_contains "$prompt_file" "### types.ts"
 assert_contains "$prompt_file" "export interface ExternalUser"
 assert_contains "$prompt_file" "userId: number;"
@@ -124,6 +129,9 @@ if "uses model output" not in code:
 PY
 
 assert_contains "$captured_model_prompt" "## Static Draft"
+assert_contains "$captured_model_prompt" "## Output Contract"
+assert_contains "$captured_model_prompt" "Return exactly one complete test file"
+assert_contains "$captured_model_prompt" "Do not include Markdown code fences"
 assert_contains "$captured_model_prompt" "export interface ExternalUser"
 
 printf '%s\n' 'prompt' | TESTLOOP_MODEL_DRY_RUN=1 sh "${repo_root}/examples/model-ollama.sh" > "${tmp_dir}/ollama-dry-run.out"

@@ -208,7 +208,9 @@ MCP `generate_tests` 在 provider 失败时会保留 error 路径，但错误文
 
 - MCP 请求不能直接传任意命令，命令只能由服务端环境变量配置，避免把 `generate_tests` 变成远程命令执行入口。
 - provider 应优先只输出测试代码；常见 Markdown 代码围栏会被清洗，但不要依赖模型输出长篇解释。
+- 默认 prompt 模板包含输出契约：模型应只返回一个可直接写盘的完整测试文件，不输出 JSON、解释、命令、伪代码或生产代码 patch。
 - `static_code` 是可用回退结果，LLM provider 可以基于它做增强，而不是从零生成。
+- 如果模型无法安全增强 `static_code`，应原样返回静态草稿，避免生成看似完整但不可执行的测试。
 - 当存在 `context.coverage_task` 时，provider 应只补充该任务对应的增量测试，避免覆盖或扩写成整文件测试套件。
 - `examples/model-ollama.sh` 和 `examples/model-openai-cli.sh` 是模型命令包装层，不直接处理 MCP provider JSON；它们只接收 prompt 并输出测试代码。
 - provider 生成成功只代表测试文件已写入；调用方应继续执行 `run_tests`，并在失败时使用 `include_fix_suggestions=true` 获取结构化修复任务。
