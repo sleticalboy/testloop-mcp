@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Go coverage task static generator 在遇到无参数、非方法、返回值可安全丢弃但无法推导精确期望值的函数时，会生成可执行的 smoke 测试而不是默认 skipped TODO；真实样例验证覆盖 `GetNowDate()` 这类日期/时间辅助函数。
+
 ## v0.4.13 - 2026-07-10
 
 ### Added

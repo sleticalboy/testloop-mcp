@@ -215,6 +215,54 @@ func Sub(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesSmokeCaseForNoArgReturn(t *testing.T) {
+	src := `package sample
+
+func GetNowDate() string {
+	return time.Now().Format("2006-01-02")
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "time.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:             "go-test-time",
+		Framework:      "go-test",
+		Target:         "GetNowDate",
+		LineRange:      "3-5",
+		GapType:        "return_path",
+		TestName:       "TestGetNowDate",
+		AssertionFocus: []string{"覆盖未执行返回路径"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestGetNowDate(t *testing.T)",
+		"name: \"coverage return path\"",
+		"skip: false",
+		"got := GetNowDate()",
+		"_ = got",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"TODO: 填写有意义的输入",
+		"ret0 string",
+		"if got != tt.ret0",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsUsesGoCoverageTask(t *testing.T) {
 	src := `package sample
 

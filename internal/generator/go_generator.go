@@ -425,6 +425,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString(fmt.Sprintf("// coverage task: %s\n", goCoverageTaskComment(task)))
 	}
 	sb.WriteString(fmt.Sprintf("func Test%s(t *testing.T) {\n", testName))
+	seedCase, hasSeedCase := goSeedTestCase(fn)
+	smokeCase := !hasSeedCase && goCoverageSmokeCallable(fn, task)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -433,13 +435,14 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	for _, p := range fn.Params {
 		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", p.Name, p.Type))
 	}
-	for _, r := range fn.Returns {
-		sb.WriteString(fmt.Sprintf("\t\t%s %s\n", r.Name, r.Type))
+	if !smokeCase {
+		for _, r := range fn.Returns {
+			sb.WriteString(fmt.Sprintf("\t\t%s %s\n", r.Name, r.Type))
+		}
 	}
 	sb.WriteString("\t}\n\n")
 
 	// 测试用例列表
-	seedCase, hasSeedCase := goSeedTestCase(fn)
 	sb.WriteString("\ttests := []testCase{\n")
 	sb.WriteString("\t\t{\n")
 	if hasSeedCase {
@@ -451,6 +454,9 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		for _, r := range fn.Returns {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", r.Name, seedCase.Outputs[r.Name]))
 		}
+	} else if smokeCase {
+		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "smoke")))
+		sb.WriteString("\t\t\tskip: false,\n")
 	} else {
 		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "todo")))
 		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
@@ -507,7 +513,9 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	}
 
 	// 处理返回值
-	if len(fn.Returns) == 0 {
+	if smokeCase {
+		writeGoSmokeCall(&sb, fn, callExpr)
+	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
 		if fn.Returns[0].Type == "error" {
@@ -554,6 +562,40 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	sb.WriteString("}\n\n")
 
 	return sb.String()
+}
+
+func goCoverageSmokeCallable(fn funcInfo, task *types.CoverageTestTask) bool {
+	if task == nil || fn.IsMethod || fn.IsVariadic || len(fn.Params) > 0 {
+		return false
+	}
+	for _, r := range fn.Returns {
+		if r.Type == "error" ||
+			strings.HasPrefix(r.Type, "chan ") ||
+			strings.Contains(r.Type, "<-chan") ||
+			strings.HasPrefix(r.Type, "func") {
+			return false
+		}
+	}
+	return true
+}
+
+func writeGoSmokeCall(sb *strings.Builder, fn funcInfo, callExpr string) {
+	switch len(fn.Returns) {
+	case 0:
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
+	case 1:
+		sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
+		sb.WriteString("\t\t\t_ = got\n")
+	default:
+		returnVars := make([]string, len(fn.Returns))
+		for i := range fn.Returns {
+			returnVars[i] = fmt.Sprintf("got%d", i)
+		}
+		sb.WriteString(fmt.Sprintf("\t\t\t%s := %s\n", strings.Join(returnVars, ", "), callExpr))
+		for _, name := range returnVars {
+			sb.WriteString(fmt.Sprintf("\t\t\t_ = %s\n", name))
+		}
+	}
 }
 
 func goCoverageTaskCaseName(task *types.CoverageTestTask, fallback string) string {
