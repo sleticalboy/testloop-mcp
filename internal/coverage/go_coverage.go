@@ -3,6 +3,8 @@ package coverage
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,6 +32,7 @@ func ParseGoCoverage(profileData string) (*types.CoverageReport, error) {
 
 	fileMap := make(map[string]*types.CoverageFile)
 	var totalStmts, coveredStmts int
+	modulePath := goCoverageModulePath()
 
 	modeLine := false
 	for scanner.Scan() {
@@ -52,6 +55,7 @@ func ParseGoCoverage(profileData string) (*types.CoverageReport, error) {
 		}
 
 		filePath := matches[1]
+		filePath = normalizeGoCoverageFilePath(filePath, modulePath)
 		startLine, _ := strconv.Atoi(matches[2])
 		endLine, _ := strconv.Atoi(matches[4])
 		numStmts, _ := strconv.Atoi(matches[6])
@@ -117,6 +121,64 @@ func ParseGoCoverage(profileData string) (*types.CoverageReport, error) {
 	report.Suggestions = GenerateSuggestions(report)
 	report.TestTasks = GenerateTestTasks(report)
 	return report, nil
+}
+
+func normalizeGoCoverageFilePath(path string, modulePath string) string {
+	if path == "" {
+		return path
+	}
+	if fileExists(path) {
+		return filepath.Clean(path)
+	}
+	clean := filepath.Clean(path)
+	if fileExists(clean) {
+		return clean
+	}
+	slash := filepath.ToSlash(clean)
+	modulePath = strings.Trim(filepath.ToSlash(modulePath), "/")
+	if modulePath != "" && strings.HasPrefix(slash, modulePath+"/") {
+		withoutModule := strings.TrimPrefix(slash, modulePath+"/")
+		candidate := filepath.FromSlash(withoutModule)
+		if fileExists(candidate) {
+			return filepath.Clean(candidate)
+		}
+	}
+	if sourcePath := resolveGoSourcePath(clean); sourcePath != "" {
+		return filepath.Clean(sourcePath)
+	}
+	return clean
+}
+
+func goCoverageModulePath() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		goMod := filepath.Join(dir, "go.mod")
+		data, err := os.ReadFile(goMod)
+		if err == nil {
+			return parseGoModulePath(string(data))
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+func parseGoModulePath(goMod string) string {
+	for _, line := range strings.Split(goMod, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "//") {
+			continue
+		}
+		if strings.HasPrefix(line, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		}
+	}
+	return ""
 }
 
 // computeFileStats 按 block 的行数近似计算文件级语句覆盖

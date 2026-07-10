@@ -218,8 +218,10 @@ func Sub(a, b int) int {
 func TestGenerateGoTestsForCoverageTaskUsesSmokeCaseForNoArgReturn(t *testing.T) {
 	src := `package sample
 
-func GetNowDate() string {
-	return time.Now().Format("2006-01-02")
+import "time"
+
+func GetCurrentDate() time.Time {
+	return time.Now()
 }
 `
 	srcPath := filepath.Join(t.TempDir(), "time.go")
@@ -229,10 +231,10 @@ func GetNowDate() string {
 	task := types.CoverageTestTask{
 		ID:             "go-test-time",
 		Framework:      "go-test",
-		Target:         "GetNowDate",
-		LineRange:      "3-5",
+		Target:         "GetCurrentDate",
+		LineRange:      "5-7",
 		GapType:        "return_path",
-		TestName:       "TestGetNowDate",
+		TestName:       "TestGetCurrentDate",
 		AssertionFocus: []string{"覆盖未执行返回路径"},
 	}
 
@@ -241,10 +243,10 @@ func GetNowDate() string {
 		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
 	}
 	for _, want := range []string{
-		"func TestGetNowDate(t *testing.T)",
+		"func TestGetCurrentDate(t *testing.T)",
 		"name: \"coverage return path\"",
 		"skip: false",
-		"got := GetNowDate()",
+		"got := GetCurrentDate()",
 		"_ = got",
 	} {
 		if !strings.Contains(code, want) {
@@ -255,6 +257,7 @@ func GetNowDate() string {
 		"skip: true",
 		"TODO: 填写有意义的输入",
 		"ret0 string",
+		"\"reflect\"",
 		"if got != tt.ret0",
 	} {
 		if strings.Contains(code, notWant) {

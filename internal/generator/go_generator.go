@@ -230,6 +230,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	// 检测是否需要 reflect
 	needReflect := false
 	for _, fn := range funcs {
+		if goCoverageSmokeCallable(fn, task) {
+			continue
+		}
 		for _, r := range fn.Returns {
 			if r.Type != "error" && needsDeepEqual(r.Type) {
 				needReflect = true

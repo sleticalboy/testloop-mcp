@@ -69,6 +69,50 @@ example.com/foo/baz.go:1.1,2.1 1 1
 	}
 }
 
+func TestParseGoCoverageMapsModulePathsToLocalFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module car-svc\n\ngo 1.23\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "utils"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `package utils
+
+func GetNowDate() string {
+	return "2026-07-10"
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "utils", "time.go"), []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	withWorkingDirectory(t, dir)
+
+	raw := `mode: set
+car-svc/utils/time.go:4.2,4.21 1 0
+`
+	report, err := ParseGoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseGoCoverage 失败: %v", err)
+	}
+	if len(report.Files) != 1 || report.Files[0].Path != filepath.Join("utils", "time.go") {
+		t.Fatalf("expected local coverage file path, got %+v", report.Files)
+	}
+	task := findCoverageTask(report.TestTasks, "GetNowDate")
+	if task == nil {
+		t.Fatalf("expected GetNowDate task, got %+v", report.TestTasks)
+	}
+	if task.File != filepath.Join("utils", "time.go") {
+		t.Fatalf("task file = %q, want utils/time.go", task.File)
+	}
+	if task.TestFile != filepath.Join("utils", "time_test.go") {
+		t.Fatalf("task test file = %q, want utils/time_test.go", task.TestFile)
+	}
+	if task.Command != "go test ./utils" {
+		t.Fatalf("task command = %q, want go test ./utils", task.Command)
+	}
+}
+
 func TestCoverageTaskGoldenOutputs(t *testing.T) {
 	tests := []struct {
 		name   string
