@@ -46,6 +46,7 @@ v0.4.14 候选重点是把 Go coverage task 从“能生成并跑通”推进到
   - `Ptr` 泛型指针返回路径。
   - `RemoteIP` fallback return/statement path。
   - `BeforeSave(*gorm.DB) error` 这类 receiver 字段变更方法，可断言 trim 和默认值填充。
+- 新增 `scripts/validate-go-coverage-top-tasks.sh` 开发辅助脚本，可对真实 Go 项目的前 N 个 coverage task 做隔离验证，并输出 JSONL 结果和 summary。
 
 ## 真实项目验证
 
@@ -78,6 +79,7 @@ v0.4.14 候选仍保持明确边界：
 - handler 测试固定 `validate_coverage_task` 的生成、执行、调整测试名、不可达分类和环境依赖分类。
 - generator 测试固定 Go 分支输入、HTTP/JSON/JWT/recover/trace/Ptr/RemoteIP/BeforeSave 等新增 seed 场景。
 - run_tests 测试固定 Go module 路径归一化和绝对路径执行。
+- opt-in 集成测试 `TestValidateGoCoverageTopTasks` 固定真实 Go 项目 top task 验证流程；默认未设置 `TESTLOOP_VALIDATE_GO_PROJECT_DIR` 时跳过，不影响常规 `go test ./...`。
 - roadmap 记录 laoxia top50 的阶段性指标，方便后续对比回归。
 
 ## 验证
@@ -88,6 +90,7 @@ v0.4.14 候选仍保持明确边界：
 - [x] `go test ./...`
 - [x] `git diff --check`
 - [x] laoxia server 隔离 top50：50/50 `passed`，45 个 `skipped=0`，剩余 5 个均为人工复核分类。
+- [x] `scripts/validate-go-coverage-top-tasks.sh /Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server 50`
 - [x] 远端 CI 通过：run `29155820565`。
 
 正式发布前至少需要重新执行：
