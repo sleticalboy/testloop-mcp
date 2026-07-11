@@ -268,6 +268,11 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		for alias, importPath := range goNeededTypeImports(fn, sourceImports) {
 			neededTypeImports[alias] = importPath
 		}
+		if seedCase, ok := goSeedTestCase(fn, task); ok {
+			for alias, importPath := range goNeededSeedImports(seedCase, sourceImports) {
+				neededTypeImports[alias] = importPath
+			}
+		}
 	}
 
 	var buf bytes.Buffer
@@ -484,7 +489,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	smokeCase := !hasSeedCase && goCoverageSmokeCallable(fn, task)
 	exactCase := hasSeedCase && seedCase.Assert == goAssertExact
 	errorPathCase := hasSeedCase && seedCase.Assert == goAssertErrorPath
-	expectedReturnFields := !smokeCase && (!hasSeedCase || exactCase || errorPathCase)
+	nonNilResultCase := hasSeedCase && seedCase.Assert == goAssertNonNilResult
+	expectedReturnFields := !smokeCase && !nonNilResultCase && (!hasSeedCase || exactCase || errorPathCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -615,6 +621,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString("\t\t\tif got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 || got.Nanosecond() != 0 {\n")
 		sb.WriteString("\t\t\t\tt.Errorf(\"got time component %02d:%02d:%02d.%09d, want date boundary\", got.Hour(), got.Minute(), got.Second(), got.Nanosecond())\n")
 		sb.WriteString("\t\t\t}\n")
+	} else if nonNilResultCase {
+		writeGoNonNilResultCall(&sb, fn, callExpr)
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -704,6 +712,32 @@ func goCoverageSmokeCallable(fn funcInfo, task *types.CoverageTestTask) bool {
 	return true
 }
 
+func writeGoNonNilResultCall(sb *strings.Builder, fn funcInfo, callExpr string) {
+	if len(fn.Returns) == 0 {
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
+		return
+	}
+	returnVars := make([]string, len(fn.Returns))
+	for i := range fn.Returns {
+		returnVars[i] = fmt.Sprintf("got%d", i)
+	}
+	sb.WriteString(fmt.Sprintf("\t\t\t%s := %s\n", strings.Join(returnVars, ", "), callExpr))
+	for i, r := range fn.Returns {
+		switch {
+		case r.Type == "error":
+			sb.WriteString(fmt.Sprintf("\t\t\tif %s != nil {\n", returnVars[i]))
+			sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"unexpected error: %%v\", %s)\n", returnVars[i]))
+			sb.WriteString("\t\t\t}\n")
+		case goTypeSupportsNil(r.Type):
+			sb.WriteString(fmt.Sprintf("\t\t\tif %s == nil {\n", returnVars[i]))
+			sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"%s is nil\")\n", r.Name))
+			sb.WriteString("\t\t\t}\n")
+		default:
+			sb.WriteString(fmt.Sprintf("\t\t\t_ = %s\n", returnVars[i]))
+		}
+	}
+}
+
 func writeGoSmokeCall(sb *strings.Builder, fn funcInfo, callExpr string) {
 	switch len(fn.Returns) {
 	case 0:
@@ -780,6 +814,7 @@ type goAssertionKind string
 const (
 	goAssertExact        goAssertionKind = "exact"
 	goAssertErrorPath    goAssertionKind = "error_path"
+	goAssertNonNilResult goAssertionKind = "non_nil_result"
 	goAssertTimeFormat   goAssertionKind = "time_format"
 	goAssertTimeDateZero goAssertionKind = "time_date_zero"
 )
@@ -808,6 +843,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 		return goSeedCase{}, false
 	}
 	if seed, ok := goAliasUtilitySeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goJWTSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if seed, ok := goJSONSeedTestCase(fn, task); ok {
@@ -906,6 +944,29 @@ func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSe
 	default:
 		return goSeedCase{}, false
 	}
+}
+
+func goJWTSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || fn.Name != "ParseToken" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 1 || fn.Params[0].Type != "string" || len(fn.Returns) != 2 {
+		return goSeedCase{}, false
+	}
+	if !strings.HasPrefix(fn.Returns[0].Type, "*") || fn.Returns[1].Type != "error" {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	if !strings.Contains(hints, "ok && tc.Valid") {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert: goAssertNonNilResult,
+		Inputs: map[string]string{
+			fn.Params[0].Name: `func() string { global.Config.Jwt.Key = "test-secret"; global.Config.Jwt.ExpireTime = 3600; token, _ := GenerateToken(1, "admin"); return token }()`,
+		},
+		Outputs: map[string]string{},
+	}, true
 }
 
 func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
@@ -1563,6 +1624,16 @@ func goSeedCaseUsesPackage(seed goSeedCase, pkg string) bool {
 		}
 	}
 	return false
+}
+
+func goNeededSeedImports(seed goSeedCase, sourceImports map[string]string) map[string]string {
+	needed := make(map[string]string)
+	for alias, importPath := range sourceImports {
+		if goSeedCaseUsesPackage(seed, alias) {
+			needed[alias] = importPath
+		}
+	}
+	return needed
 }
 
 func goTimeFormatLayout(expr string) (string, bool) {

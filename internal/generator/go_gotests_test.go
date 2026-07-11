@@ -469,6 +469,72 @@ func RemoteIP(r *http.Request, fallback string) string {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsParseTokenSuccessBranch(t *testing.T) {
+	src := `package sample
+
+import "car-svc/global"
+
+type AuthClaims struct {
+	UID  uint
+	Name string
+}
+
+func GenerateToken(id uint, name string) (string, error) {
+	return "", nil
+}
+
+func ParseToken(token string) (*AuthClaims, error) {
+	if claims, ok := any(&AuthClaims{}).(*AuthClaims); ok && token != "" {
+		return claims, nil
+	}
+	return nil, nil
+}
+
+func touchGlobal() {
+	_ = global.Config
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "jwt.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-jwt",
+		Framework:       "go-test",
+		Target:          "ParseToken",
+		LineRange:       "12-14",
+		GapType:         "branch",
+		TestName:        "TestParseTokenValid",
+		MissingBranches: []string{"未覆盖 if 分支: ok && tc.Valid"},
+		SuggestedInputs: []string{"构造满足条件 `ok && tc.Valid` 的输入"},
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"car-svc/global"`,
+		"func TestParseTokenValid(t *testing.T)",
+		"skip: false",
+		`token: func() string {`,
+		`global.Config.Jwt.Key = "test-secret"`,
+		`global.Config.Jwt.ExpireTime = 3600`,
+		`token, _ := GenerateToken(1, "admin")`,
+		"got0, got1 := ParseToken(tt.token)",
+		"if got0 == nil",
+		`if got1 != nil`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "ret0 *AuthClaims") {
+		t.Fatalf("expected non-skipped non-nil result test without pointer expected field:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskBuildsJSONErrorBranches(t *testing.T) {
 	src := `package sample
 
