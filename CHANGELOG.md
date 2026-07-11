@@ -2,9 +2,12 @@
 
 ## Unreleased
 
+## v0.4.14 - 2026-07-11
+
 ### Added
 
 - 新增 `validate_coverage_task` MCP 工具，可对单个 `parse_coverage.test_tasks[]` 执行 `generate_tests -> run_tests` 闭环，并返回 `passed` / `failed` / `generation_error`、建议动作、生成结果、测试结果和 provider/fix 反馈。
+- 新增 `scripts/validate-go-coverage-top-tasks.sh` 开发辅助脚本，可对真实 Go 项目的前 N 个 coverage task 做隔离验证，并输出 JSONL 结果和 summary。
 
 ### Changed
 

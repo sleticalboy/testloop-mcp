@@ -9,9 +9,9 @@ testloop-mcp v0.4.14
 - [x] 创建 v0.4.14 发布说明草案。
 - [x] 确认 v0.4.13 之后的 `Unreleased` 范围主要是 Go coverage task 闭环质量、真实项目验证和 skipped task 分类。
 - [x] 用 laoxia server 真实 Go 项目作为回归样本，完成 top50 隔离验证记录。
-- [ ] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.4.14`。
-- [ ] 正式版本准备时将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.14 - YYYY-MM-DD`。
-- [ ] 正式版本准备时更新 README、安装文档和必要的版本引用。
+- [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.4.14`。
+- [x] 正式版本准备时将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.14 - 2026-07-11`。
+- [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
 - [ ] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和安装脚本验证。
 
 ## 摘要
@@ -95,14 +95,14 @@ v0.4.14 候选仍保持明确边界：
 
 正式发布前至少需要重新执行：
 
-- [ ] `go test ./...`
-- [ ] `git diff --check`
-- [ ] `go build -o /tmp/testloop-mcp-v0.4.14-prep .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.4.14-prep ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.4.14-prep --help`
-- [ ] `/tmp/testloop-testgen-v0.4.14-prep --help`
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.14-prep scripts/package-release-asset.sh v0.4.14 darwin_arm64 darwin arm64`
-- [ ] 校验 `/tmp/testloop-v0.4.14-prep/testloop-mcp_v0.4.14_darwin_arm64.tar.gz.sha256`
+- [x] `go test ./...`
+- [x] `git diff --check`
+- [x] `go build -o /tmp/testloop-mcp-v0.4.14-prep .`
+- [x] `go build -o /tmp/testloop-testgen-v0.4.14-prep ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.4.14-prep --help`
+- [x] `/tmp/testloop-testgen-v0.4.14-prep --help`
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.14-prep scripts/package-release-asset.sh v0.4.14 darwin_arm64 darwin arm64`
+- [x] 校验 `/tmp/testloop-v0.4.14-prep/testloop-mcp_v0.4.14_darwin_arm64.tar.gz.sha256`
 - [ ] 推送 tag 后等待 Release Artifacts workflow 完成。
 - [ ] `scripts/verify-release-assets.sh v0.4.14`
 - [ ] Post-Release Verify 和 Homebrew tap 核验。
