@@ -198,6 +198,18 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 	if !goSeedCaseUsesPackage(goSeedCase{Inputs: map[string]string{"err": `errors.New("test")`}}, "errors") {
 		t.Fatal("goSeedCaseUsesPackage did not detect errors input")
 	}
+	if got, ok := goCompoundParamInputValue([]goBoundary{
+		{Param: "a", Op: ">", Value: "0"},
+		{Param: "a", Op: "<", Value: "10"},
+	}, "int"); !ok || got != "1" {
+		t.Fatalf("goCompoundParamInputValue(0<a<10) = %q, %v; want 1 true", got, ok)
+	}
+	if got, ok := goCompoundParamInputValue([]goBoundary{
+		{Param: "a", Op: ">", Value: "10"},
+		{Param: "a", Op: "<", Value: "5"},
+	}, "int"); ok || got != "" {
+		t.Fatalf("goCompoundParamInputValue(a>10 && a<5) = %q, %v; want empty false", got, ok)
+	}
 	if got := goTestCaseFieldName("name"); got != "nameValue" {
 		t.Fatalf("goTestCaseFieldName(name) = %q, want nameValue", got)
 	}

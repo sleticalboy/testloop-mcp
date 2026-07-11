@@ -534,6 +534,50 @@ func Score(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskSynthesizesRepeatedParamIntegerRange(t *testing.T) {
+	src := `package sample
+
+func InRange(a int) string {
+	if a > 0 && a < 10 {
+		return "inside"
+	}
+	return "outside"
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "range.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-InRange",
+		Framework:       "go-test",
+		Target:          "InRange",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		TestName:        "TestInRangeInsideBranch",
+		SuggestedInputs: []string{"构造满足条件 `a > 0 && a < 10` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestInRangeInsideBranch(t *testing.T)",
+		"skip: false",
+		"a:    1",
+		`ret0: "inside"`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "repeats parameter") {
+		t.Fatalf("did not expect fallback for supported integer range:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskExplainsOrCompoundBranchFallback(t *testing.T) {
 	src := `package sample
 

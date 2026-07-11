@@ -838,18 +838,20 @@ func goCompoundBranchSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase,
 	for i, p := range fn.Params {
 		inputs[p.Name] = goArgValue(p, i)
 	}
-	seen := map[string]bool{}
+	partsByParam := map[string][]goBoundary{}
 	for _, part := range boundary.Parts {
-		typ, ok := paramTypes[part.Param]
-		if !ok || seen[part.Param] {
+		if _, ok := paramTypes[part.Param]; !ok {
 			return goSeedCase{}, false
 		}
-		value, ok := goBoundaryInputValue(part, typ)
+		partsByParam[part.Param] = append(partsByParam[part.Param], part)
+	}
+	for param, parts := range partsByParam {
+		typ := paramTypes[param]
+		value, ok := goCompoundParamInputValue(parts, typ)
 		if !ok {
 			return goSeedCase{}, false
 		}
-		inputs[part.Param] = value
-		seen[part.Param] = true
+		inputs[param] = value
 	}
 
 	expr := boundary.ReturnExpr
@@ -924,20 +926,100 @@ func goCompoundBoundarySeedBlockReason(fn funcInfo, boundary goBoundary) string 
 		paramTypes[p.Name] = p.Type
 	}
 	seen := map[string]bool{}
+	partsByParam := map[string][]goBoundary{}
 	for _, part := range boundary.Parts {
 		typ, ok := paramTypes[part.Param]
 		if !ok {
 			return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q references unsupported subcondition %q.", boundary.Condition, part.Condition)
 		}
-		if seen[part.Param] {
-			return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q repeats parameter %q; repeated parameter synthesis is not supported yet.", boundary.Condition, part.Param)
-		}
 		if _, ok := goBoundaryInputValue(part, typ); !ok {
 			return fmt.Sprintf("Static generator cannot infer exact coverage case: subcondition %q does not map to a safe %s literal.", part.Condition, typ)
 		}
 		seen[part.Param] = true
+		partsByParam[part.Param] = append(partsByParam[part.Param], part)
+	}
+	for param, parts := range partsByParam {
+		if len(parts) < 2 {
+			continue
+		}
+		typ := paramTypes[param]
+		if _, ok := goCompoundParamInputValue(parts, typ); !ok {
+			return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q repeats parameter %q outside a supported integer range.", boundary.Condition, param)
+		}
 	}
 	return ""
+}
+
+func goCompoundParamInputValue(parts []goBoundary, typ string) (string, bool) {
+	if len(parts) == 0 {
+		return "", false
+	}
+	if len(parts) == 1 {
+		return goBoundaryInputValue(parts[0], typ)
+	}
+	if !(strings.HasPrefix(typ, "int") || strings.HasPrefix(typ, "uint")) {
+		return "", false
+	}
+	min, hasMin := 0, false
+	max, hasMax := 0, false
+	for _, part := range parts {
+		value, err := strconv.Atoi(strings.TrimSpace(part.Value))
+		if err != nil {
+			return "", false
+		}
+		switch part.Op {
+		case ">":
+			candidate := value + 1
+			if !hasMin || candidate > min {
+				min = candidate
+				hasMin = true
+			}
+		case ">=":
+			if !hasMin || value > min {
+				min = value
+				hasMin = true
+			}
+		case "<":
+			candidate := value - 1
+			if !hasMax || candidate < max {
+				max = candidate
+				hasMax = true
+			}
+		case "<=":
+			if !hasMax || value < max {
+				max = value
+				hasMax = true
+			}
+		case "==":
+			if hasMin && value < min {
+				return "", false
+			}
+			if hasMax && value > max {
+				return "", false
+			}
+			min, max = value, value
+			hasMin, hasMax = true, true
+		default:
+			return "", false
+		}
+	}
+	candidate := 0
+	switch {
+	case hasMin:
+		candidate = min
+	case hasMax:
+		candidate = max
+	}
+	if hasMin && candidate < min {
+		return "", false
+	}
+	if hasMax && candidate > max {
+		return "", false
+	}
+	if strings.HasPrefix(typ, "uint") && candidate < 0 {
+		return "", false
+	}
+	return strconv.Itoa(candidate), true
 }
 
 func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTestTask) *goBoundary {

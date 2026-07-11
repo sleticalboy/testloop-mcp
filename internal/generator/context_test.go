@@ -244,6 +244,47 @@ func Score(a, b int) int {
 	}
 }
 
+func TestBuildGenerationContextGoSupportedIntegerRangeCondition(t *testing.T) {
+	src := `package sample
+
+func InRange(a int) string {
+	if a > 0 && a < 10 {
+		return "inside"
+	}
+	return "outside"
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "range.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-InRange",
+		Framework:       "go-test",
+		Target:          "InRange",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		SuggestedInputs: []string{"构造满足条件 `a > 0 && a < 10` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	ctx := BuildGenerationContextWithOptions(srcPath, GenerateTestsOptions{CoverageTask: &task})
+	if ctx == nil || ctx.Language != "go" || ctx.Framework != "go-test" || ctx.CoverageTask == nil {
+		t.Fatalf("unexpected Go context: %+v", ctx)
+	}
+	target := findTarget(ctx.Targets, "InRange")
+	if target == nil {
+		t.Fatalf("InRange target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, target.Params, "a int")
+	assertContains(t, target.ReturnExpressions, `"inside"`)
+	assertContains(t, target.ReturnExpressions, `"outside"`)
+	assertContains(t, target.BoundaryCases, "a > 0 && a < 10")
+	if len(target.PayloadNotes) != 0 {
+		t.Fatalf("did not expect fallback notes for supported integer range: %+v", target.PayloadNotes)
+	}
+}
+
 func TestBuildGenerationContextReturnsNilForMissingOrEmptyTargets(t *testing.T) {
 	if ctx := BuildGenerationContext(filepath.Join(t.TempDir(), "missing.ts")); ctx != nil {
 		t.Fatalf("expected nil context for missing source, got %+v", ctx)
