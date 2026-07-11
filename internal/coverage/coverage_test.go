@@ -537,6 +537,63 @@ func (*Router) Count() int {
 	}
 }
 
+func TestParseGoCoverageMergesAdjacentDuplicateBranchTasks(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "calc.go")
+	src := `package calc
+
+func Classify(a int) int {
+	if a == 0 {
+		return 1
+	}
+	return 2
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `mode: set
+` + srcPath + `:4.2,5.11 1 0
+` + srcPath + `:5.3,6.3 1 0
+`
+	report, err := ParseGoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseGoCoverage 失败: %v", err)
+	}
+
+	var branchSuggestions []types.CoverageSuggestion
+	for _, suggestion := range report.Suggestions {
+		if suggestion.Function == "Classify" && suggestion.GapType == "branch" {
+			branchSuggestions = append(branchSuggestions, suggestion)
+		}
+	}
+	if len(branchSuggestions) != 1 {
+		t.Fatalf("expected one merged branch suggestion, got %+v", branchSuggestions)
+	}
+	suggestion := branchSuggestions[0]
+	if suggestion.LineRange != "4-6" {
+		t.Fatalf("expected merged line range 4-6, got %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, "未覆盖 if 分支: a == 0") {
+		t.Fatalf("expected branch condition, got %+v", suggestion.MissingBranches)
+	}
+	if got := intsCSV(suggestion.UncoveredLines); got != "4,5,6" {
+		t.Fatalf("expected merged uncovered lines 4,5,6, got %q", got)
+	}
+
+	task := findCoverageTask(report.TestTasks, "Classify")
+	if task == nil {
+		t.Fatalf("expected Classify task, got %+v", report.TestTasks)
+	}
+	if task.LineRange != "4-6" || task.GapType != "branch" {
+		t.Fatalf("expected merged branch task, got %+v", task)
+	}
+	if !containsString(task.AssertionFocus, "覆盖未执行行: 4,5,6") {
+		t.Fatalf("expected merged assertion focus, got %+v", task.AssertionFocus)
+	}
+}
+
 func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
 	for i := range suggestions {
 		if suggestions[i].Function == fn {

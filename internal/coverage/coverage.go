@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -86,7 +87,7 @@ func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestio
 		}
 	}
 
-	return suggestions
+	return mergeAdjacentCoverageSuggestions(suggestions)
 }
 
 func enrichSourceCoverageSuggestion(suggestion *types.CoverageSuggestion, block types.CoverageBlock, ranges []sourceRange) {
@@ -126,6 +127,163 @@ func lineRange(start int, end int) []int {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+type coverageSuggestionMergeKey struct {
+	File            string
+	Function        string
+	Kind            string
+	GapType         string
+	MissingBranches string
+}
+
+type indexedCoverageSuggestion struct {
+	Suggestion types.CoverageSuggestion
+	Start      int
+	End        int
+	Index      int
+}
+
+func mergeAdjacentCoverageSuggestions(suggestions []types.CoverageSuggestion) []types.CoverageSuggestion {
+	if len(suggestions) < 2 {
+		return suggestions
+	}
+	groups := make(map[coverageSuggestionMergeKey][]indexedCoverageSuggestion)
+	resultItems := make([]indexedCoverageSuggestion, 0, len(suggestions))
+	for i, suggestion := range suggestions {
+		start, end, ok := parseCoverageLineRange(suggestion.LineRange)
+		if !ok {
+			resultItems = append(resultItems, indexedCoverageSuggestion{
+				Suggestion: suggestion,
+				Index:      i,
+			})
+			continue
+		}
+		key := coverageSuggestionKey(suggestion)
+		groups[key] = append(groups[key], indexedCoverageSuggestion{
+			Suggestion: suggestion,
+			Start:      start,
+			End:        end,
+			Index:      i,
+		})
+	}
+	for _, group := range groups {
+		sort.SliceStable(group, func(i int, j int) bool {
+			if group[i].Start != group[j].Start {
+				return group[i].Start < group[j].Start
+			}
+			if group[i].End != group[j].End {
+				return group[i].End < group[j].End
+			}
+			return group[i].Index < group[j].Index
+		})
+		var mergedGroup []indexedCoverageSuggestion
+		for _, item := range group {
+			if len(mergedGroup) == 0 || !canMergeCoverageSuggestion(mergedGroup[len(mergedGroup)-1], item) {
+				mergedGroup = append(mergedGroup, item)
+				continue
+			}
+			mergedGroup[len(mergedGroup)-1] = mergeCoverageSuggestion(mergedGroup[len(mergedGroup)-1], item)
+		}
+		resultItems = append(resultItems, mergedGroup...)
+	}
+	sort.SliceStable(resultItems, func(i int, j int) bool {
+		return resultItems[i].Index < resultItems[j].Index
+	})
+	result := make([]types.CoverageSuggestion, 0, len(resultItems))
+	for _, item := range resultItems {
+		result = append(result, item.Suggestion)
+	}
+	return result
+}
+
+func coverageSuggestionKey(suggestion types.CoverageSuggestion) coverageSuggestionMergeKey {
+	return coverageSuggestionMergeKey{
+		File:            suggestion.File,
+		Function:        suggestion.Function,
+		Kind:            suggestion.Kind,
+		GapType:         suggestion.GapType,
+		MissingBranches: strings.Join(suggestion.MissingBranches, "\x00"),
+	}
+}
+
+func canMergeCoverageSuggestion(left indexedCoverageSuggestion, right indexedCoverageSuggestion) bool {
+	if coverageSuggestionKey(left.Suggestion) != coverageSuggestionKey(right.Suggestion) {
+		return false
+	}
+	return right.Start <= left.End+1
+}
+
+func mergeCoverageSuggestion(left indexedCoverageSuggestion, right indexedCoverageSuggestion) indexedCoverageSuggestion {
+	if right.End > left.End {
+		left.End = right.End
+	}
+	left.Suggestion.LineRange = fmt.Sprintf("%d-%d", left.Start, left.End)
+	left.Suggestion.UncoveredLines = mergeSortedInts(left.Suggestion.UncoveredLines, right.Suggestion.UncoveredLines)
+	left.Suggestion.SuggestedInputs = mergeStrings(left.Suggestion.SuggestedInputs, right.Suggestion.SuggestedInputs)
+	if right.Suggestion.Confidence > left.Suggestion.Confidence {
+		left.Suggestion.Confidence = right.Suggestion.Confidence
+	}
+	return left
+}
+
+func parseCoverageLineRange(value string) (int, int, bool) {
+	parts := strings.Split(value, "-")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	start, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, false
+	}
+	end, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, false
+	}
+	if start <= 0 || end <= 0 {
+		return 0, 0, false
+	}
+	if end < start {
+		end = start
+	}
+	return start, end, true
+}
+
+func mergeSortedInts(left []int, right []int) []int {
+	seen := make(map[int]bool, len(left)+len(right))
+	var values []int
+	for _, value := range left {
+		if !seen[value] {
+			seen[value] = true
+			values = append(values, value)
+		}
+	}
+	for _, value := range right {
+		if !seen[value] {
+			seen[value] = true
+			values = append(values, value)
+		}
+	}
+	sort.Ints(values)
+	return values
+}
+
+func mergeStrings(left []string, right []string) []string {
+	seen := make(map[string]bool, len(left)+len(right))
+	values := make([]string, 0, len(left)+len(right))
+	for _, value := range left {
+		if !seen[value] {
+			seen[value] = true
+			values = append(values, value)
+		}
+	}
+	for _, value := range right {
+		if !seen[value] {
+			seen[value] = true
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func suggestedGoInputs(params []string) []string {

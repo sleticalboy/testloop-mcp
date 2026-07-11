@@ -19,6 +19,7 @@
 - Go static generator 支持有限的 `&&` 复合条件输入合成；当每个子条件都是简单参数边界且返回表达式安全时，会生成非 skipped 精确用例。
 - Go static generator 支持简单整数范围条件，例如 `a > 0 && a < 10` 会合成范围内输入；无交集或非整数重复参数条件继续保守降级。
 - Go coverage task 的分支缺口改为基于 AST 抽取 `if` / `switch` / `return`，不再把函数签名、普通语句或 `if init` 误当作分支条件。
+- Coverage suggestion/test task 会合并同目标、同缺口类型、同分支条件且行段相邻或重叠的未覆盖 block，减少 Go coverprofile 拆块导致的重复任务。
 
 ## v0.4.13 - 2026-07-10
 
