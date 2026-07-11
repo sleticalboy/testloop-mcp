@@ -609,6 +609,143 @@ func FromJson(data []byte, dst any) error {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsAliasUtilityBranches(t *testing.T) {
+	src := `package sample
+
+import (
+	"strings"
+	"time"
+)
+
+func SliceMapper0[T any, U any](src []T, mapper func(T) U) []U {
+	dst := make([]U, 0, len(src))
+	filter := map[any]bool{}
+	for _, v := range src {
+		ret := mapper(v)
+		if filter[ret] {
+			continue
+		}
+		dst = append(dst, ret)
+		filter[ret] = true
+	}
+	return dst
+}
+
+func UserDurationOf(tpy uint8) time.Duration {
+	switch tpy {
+	case 1:
+		return time.Hour
+	case 2:
+		return time.Hour * 24
+	case 3:
+		return time.Hour * 24 * 30
+	case 4:
+		return time.Hour * 24 * 365
+	case 5:
+		return time.Hour * 24 * 365 * 99
+	default:
+		return time.Hour
+	}
+}
+
+func TrimSpaceSlice(s []string) []string {
+	var result []string
+	for _, v := range s {
+		if v = strings.TrimSpace(v); v != "" {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "alias.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		target   string
+		branch   string
+		testName string
+		want     []string
+		notWant  []string
+	}{
+		{
+			name:     "slice mapper duplicate",
+			target:   "SliceMapper0",
+			branch:   "filter[ret]",
+			testName: "TestSliceMapper0Duplicate",
+			want: []string{
+				"skip:   false",
+				"src:    []int{1, 1, 2}",
+				"mapper: func(i int) int { return i }",
+				"ret0:   []int{1, 2}",
+				"got := SliceMapper0[int, int](tt.src, tt.mapper)",
+				"if !reflect.DeepEqual(got, tt.ret0)",
+			},
+			notWant: []string{"skip:   true"},
+		},
+		{
+			name:     "user duration switch",
+			target:   "UserDurationOf",
+			branch:   "switch/case",
+			testName: "TestUserDurationOfCase",
+			want: []string{
+				"skip: false",
+				"tpy:  5",
+				"ret0: time.Hour * 24 * 365 * 99",
+				"got := UserDurationOf(tt.tpy)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "trim space non-empty",
+			target:   "TrimSpaceSlice",
+			branch:   `v != ""`,
+			testName: "TestTrimSpaceSliceNonEmpty",
+			want: []string{
+				"skip: false",
+				`s:    []string{" a ", " ", "b"}`,
+				`ret0: []string{"a", "b"}`,
+				"got := TrimSpaceSlice(tt.s)",
+				"if !reflect.DeepEqual(got, tt.ret0)",
+			},
+			notWant: []string{"skip: true"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:              "go-test-alias",
+				Framework:       "go-test",
+				Target:          tt.target,
+				LineRange:       "1-1",
+				GapType:         "branch",
+				TestName:        tt.testName,
+				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
+				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},
+				AssertionFocus:  []string{"断言工具函数分支返回值"},
+			}
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range append([]string{"func " + tt.testName + "(t *testing.T)"}, tt.want...) {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesStringBoolAndNilBranchInputs(t *testing.T) {
 	src := `package sample
 
