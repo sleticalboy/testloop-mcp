@@ -137,6 +137,82 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksUnreachableSkippedTask(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/remote\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "remote.go")
+	src := `package remote
+
+import (
+	"net/http"
+	"strings"
+)
+
+func RemoteIP(r *http.Request, fallback string) string {
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	if forwardedFor != "" {
+		parts := strings.Split(forwardedFor, ",")
+		partIndex := len(parts) - 1
+		if partIndex < 0 {
+			partIndex = 0
+		}
+		return parts[partIndex]
+	}
+	return fallback
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-unreachable",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "RemoteIP",
+		Kind:            "function",
+		LineRange:       "12-14",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: partIndex < 0"},
+		SuggestedInputs: []string{"构造满足条件 `partIndex < 0` 的输入"},
+		Goal:            "为 RemoteIP 补充测试，覆盖不可达行段",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "remote_test.go"),
+		TestName:        "TestRemoteIPPartIndex",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_unreachable" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Skipped == 0 {
+		t.Fatalf("expected skipped generated TODO test, got run result: %+v", out.RunResult)
+	}
+	if out.Metadata["unreachable"] != true {
+		t.Fatalf("expected unreachable metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["unreachable_reason"].(string)
+	if !strings.Contains(reason, "partIndex < 0") {
+		t.Fatalf("unexpected unreachable reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",

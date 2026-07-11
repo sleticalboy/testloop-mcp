@@ -8,6 +8,7 @@
 
 ### Changed
 
+- `validate_coverage_task` 会将疑似不可达的 skipped coverage task 标记为 `action: "manual_review_unreachable"`，并在 metadata 中返回 `unreachable` 与 `unreachable_reason`，避免 Agent 把不可达分支当普通 TODO 反复重试。
 - Go coverage task static generator 在遇到无参数、非方法、返回值可安全丢弃但无法推导精确期望值的函数时，会生成可执行的 smoke 测试而不是默认 skipped TODO；真实样例验证覆盖 `GetNowDate()` 这类日期/时间辅助函数。
 - Go coverprofile 解析会把当前 `go.mod` module 路径映射成本地源码路径，例如 `car-svc/utils/time.go` 会归一化为 `utils/time.go`，让 `parse_coverage.test_tasks[]` 可直接传给 `generate_tests`。
 - Go `generate_tests` 写入已有测试文件时会合并追加新的 `Test*` 函数并复用 import，不再覆盖已有测试；普通 Go 合并遇到同名测试函数会返回明确错误。

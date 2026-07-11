@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -62,18 +63,53 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		return coverageTaskValidationResult(out)
 	}
 
+	coverageTask := validationCoverageTask(input.CoverageTask, generated)
+	metadata := coverageTaskValidationMetadata(framework, generated, runResult, coverageTask)
+	action := coverageTaskValidationAction(runResult)
+	if metadata["unreachable"] == true {
+		action = "manual_review_unreachable"
+	}
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
-		Action:       coverageTaskValidationAction(runResult),
-		CoverageTask: validationCoverageTask(input.CoverageTask, generated),
+		Action:       action,
+		CoverageTask: coverageTask,
 		Generated:    generated,
 		RunResult:    runResult,
-		Metadata: map[string]any{
-			"test_file": generated.TestFile,
-			"framework": framework,
-		},
+		Metadata:     metadata,
 	}
 	return coverageTaskValidationResult(out)
+}
+
+func coverageTaskValidationMetadata(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) map[string]any {
+	metadata := map[string]any{
+		"framework": framework,
+	}
+	if generated != nil {
+		metadata["test_file"] = generated.TestFile
+	}
+	if reason := coverageTaskUnreachableReason(task, generated, result); reason != "" {
+		metadata["unreachable"] = true
+		metadata["unreachable_reason"] = reason
+	}
+	return metadata
+}
+
+func coverageTaskUnreachableReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
+		return ""
+	}
+	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
+		return ""
+	}
+	hintsList := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus))
+	hintsList = append(hintsList, task.MissingBranches...)
+	hintsList = append(hintsList, task.SuggestedInputs...)
+	hintsList = append(hintsList, task.AssertionFocus...)
+	hints := strings.Join(hintsList, " ")
+	if task.Target == "RemoteIP" && strings.Contains(hints, "partIndex < 0") {
+		return `branch "partIndex < 0" appears unreachable because partIndex is derived from a non-empty X-Forwarded-For parts slice`
+	}
+	return ""
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {
