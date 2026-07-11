@@ -202,7 +202,7 @@ func UserName(user *User) string {
 	assertContains(t, target.PayloadNotes, `Static generator cannot infer exact coverage case: branch "user != nil" returns "user.Name", which needs manual expected value review.`)
 }
 
-func TestBuildGenerationContextGoCompoundConditionNotes(t *testing.T) {
+func TestBuildGenerationContextGoAndCompoundCondition(t *testing.T) {
 	src := `package sample
 
 func Score(a, b int) int {
@@ -239,7 +239,9 @@ func Score(a, b int) int {
 	assertContains(t, target.ReturnExpressions, "1")
 	assertContains(t, target.ReturnExpressions, "0")
 	assertContains(t, target.BoundaryCases, "a > 0 && b > 0")
-	assertContains(t, target.PayloadNotes, `Static generator cannot infer exact coverage case: branch "a > 0 && b > 0" uses a compound condition; multi-parameter input synthesis is not supported yet.`)
+	if len(target.PayloadNotes) != 0 {
+		t.Fatalf("did not expect fallback notes for supported && compound condition: %+v", target.PayloadNotes)
+	}
 }
 
 func TestBuildGenerationContextReturnsNilForMissingOrEmptyTargets(t *testing.T) {

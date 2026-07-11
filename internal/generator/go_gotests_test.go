@@ -484,7 +484,7 @@ func UserName(user *User) string {
 	}
 }
 
-func TestGenerateGoTestsForCoverageTaskExplainsCompoundBranchFallback(t *testing.T) {
+func TestGenerateGoTestsForCoverageTaskSynthesizesAndCompoundBranch(t *testing.T) {
 	src := `package sample
 
 func Score(a, b int) int {
@@ -515,7 +515,57 @@ func Score(a, b int) int {
 	}
 	for _, want := range []string{
 		"func TestScorePositiveBranch(t *testing.T)",
-		`Static generator cannot infer exact coverage case: branch "a > 0 && b > 0" uses a compound condition; multi-parameter input synthesis is not supported yet.`,
+		"skip: false",
+		"a:    1",
+		"b:    1",
+		"ret0: 1",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"multi-parameter input synthesis is not supported yet",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskExplainsOrCompoundBranchFallback(t *testing.T) {
+	src := `package sample
+
+func Score(a, b int) int {
+	if a > 0 || b > 0 {
+		return 1
+	}
+	return 0
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "score.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-Score",
+		Framework:       "go-test",
+		Target:          "Score",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		TestName:        "TestScorePositiveBranch",
+		SuggestedInputs: []string{"构造满足条件 `a > 0 || b > 0` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestScorePositiveBranch(t *testing.T)",
+		`Static generator cannot infer exact coverage case: branch "a > 0 || b > 0" uses ||; only simple && compound input synthesis is supported.`,
 		"skip: true",
 		"a:    0",
 		"b:    0",
@@ -526,7 +576,7 @@ func Score(a, b int) int {
 		}
 	}
 	if strings.Contains(code, "skip: false") || strings.Contains(code, "ret0: 1") {
-		t.Fatalf("did not expect exact seed for compound branch:\n%s", code)
+		t.Fatalf("did not expect exact seed for || branch:\n%s", code)
 	}
 }
 

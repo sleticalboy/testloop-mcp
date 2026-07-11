@@ -732,6 +732,8 @@ type goBoundary struct {
 	Condition  string
 	ReturnExpr string
 	Compound   bool
+	CompoundOp string
+	Parts      []goBoundary
 }
 
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
@@ -787,8 +789,11 @@ func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase
 		return goSeedCase{}, false
 	}
 	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
-	if boundary == nil || boundary.Compound || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+	if boundary == nil || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
 		return goSeedCase{}, false
+	}
+	if boundary.Compound {
+		return goCompoundBranchSeedTestCase(fn, *boundary)
 	}
 
 	inputs := map[string]string{}
@@ -802,6 +807,49 @@ func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase
 			value = boundaryValue
 		}
 		inputs[p.Name] = value
+	}
+
+	expr := boundary.ReturnExpr
+	for _, p := range fn.Params {
+		expr = replaceIdentifier(expr, p.Name, inputs[p.Name])
+	}
+	if hasUnknownIdentifiers(stripQuotedLiterals(expr), map[string]bool{
+		"true": true, "false": true, "nil": true,
+	}) {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert:  goAssertExact,
+		Inputs:  inputs,
+		Outputs: map[string]string{fn.Returns[0].Name: expr},
+	}, true
+}
+
+func goCompoundBranchSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool) {
+	if boundary.CompoundOp != "&&" || len(boundary.Parts) == 0 {
+		return goSeedCase{}, false
+	}
+	paramTypes := map[string]string{}
+	for _, p := range fn.Params {
+		paramTypes[p.Name] = p.Type
+	}
+
+	inputs := map[string]string{}
+	for i, p := range fn.Params {
+		inputs[p.Name] = goArgValue(p, i)
+	}
+	seen := map[string]bool{}
+	for _, part := range boundary.Parts {
+		typ, ok := paramTypes[part.Param]
+		if !ok || seen[part.Param] {
+			return goSeedCase{}, false
+		}
+		value, ok := goBoundaryInputValue(part, typ)
+		if !ok {
+			return goSeedCase{}, false
+		}
+		inputs[part.Param] = value
+		seen[part.Param] = true
 	}
 
 	expr := boundary.ReturnExpr
@@ -841,14 +889,17 @@ func goCoverageTaskFallbackNotes(fn funcInfo, task *types.CoverageTestTask) []st
 	if boundary == nil {
 		return append(notes, "Static generator cannot infer exact coverage case: coverage hints do not match a detected simple branch.")
 	}
-	if boundary.Compound {
-		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q uses a compound condition; multi-parameter input synthesis is not supported yet.", boundary.Condition))
-	}
 	if boundary.ReturnExpr == "" {
 		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q has no single return expression.", boundary.Condition))
 	}
 	if !goReturnExprIsSafe(boundary.ReturnExpr) {
 		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q returns %q, which needs manual expected value review.", boundary.Condition, boundary.ReturnExpr))
+	}
+	if boundary.Compound {
+		if reason := goCompoundBoundarySeedBlockReason(fn, *boundary); reason != "" {
+			return append(notes, reason)
+		}
+		return notes
 	}
 	for _, p := range fn.Params {
 		if p.Name != boundary.Param {
@@ -859,6 +910,34 @@ func goCoverageTaskFallbackNotes(fn funcInfo, task *types.CoverageTestTask) []st
 		}
 	}
 	return notes
+}
+
+func goCompoundBoundarySeedBlockReason(fn funcInfo, boundary goBoundary) string {
+	if boundary.CompoundOp != "&&" {
+		return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q uses %s; only simple && compound input synthesis is supported.", boundary.Condition, boundary.CompoundOp)
+	}
+	if len(boundary.Parts) == 0 {
+		return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q has unsupported compound subconditions.", boundary.Condition)
+	}
+	paramTypes := map[string]string{}
+	for _, p := range fn.Params {
+		paramTypes[p.Name] = p.Type
+	}
+	seen := map[string]bool{}
+	for _, part := range boundary.Parts {
+		typ, ok := paramTypes[part.Param]
+		if !ok {
+			return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q references unsupported subcondition %q.", boundary.Condition, part.Condition)
+		}
+		if seen[part.Param] {
+			return fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q repeats parameter %q; repeated parameter synthesis is not supported yet.", boundary.Condition, part.Param)
+		}
+		if _, ok := goBoundaryInputValue(part, typ); !ok {
+			return fmt.Sprintf("Static generator cannot infer exact coverage case: subcondition %q does not map to a safe %s literal.", part.Condition, typ)
+		}
+		seen[part.Param] = true
+	}
+	return ""
 }
 
 func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTestTask) *goBoundary {
@@ -1197,10 +1276,17 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		return goBoundary{}, false
 	}
 	if binary.Op.String() == "&&" || binary.Op.String() == "||" {
+		compoundOp := binary.Op.String()
+		parts, ok := goCompoundBoundaryParts(binary, compoundOp)
+		if !ok {
+			parts = nil
+		}
 		return goBoundary{
 			Condition:  exprToString(binary),
 			ReturnExpr: ret,
 			Compound:   true,
+			CompoundOp: compoundOp,
+			Parts:      parts,
 		}, true
 	}
 	param, op, value, ok := goBoundaryParamValue(binary)
@@ -1214,6 +1300,35 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		Condition:  strings.Join([]string{param, op, value}, " "),
 		ReturnExpr: ret,
 	}, true
+}
+
+func goCompoundBoundaryParts(expr ast.Expr, op string) ([]goBoundary, bool) {
+	expr = unwrapGoParenExpr(expr)
+	binary, ok := expr.(*ast.BinaryExpr)
+	if !ok {
+		return nil, false
+	}
+	if binary.Op.String() == op {
+		left, ok := goCompoundBoundaryParts(binary.X, op)
+		if !ok {
+			return nil, false
+		}
+		right, ok := goCompoundBoundaryParts(binary.Y, op)
+		if !ok {
+			return nil, false
+		}
+		return append(left, right...), true
+	}
+	param, boundaryOp, value, ok := goBoundaryParamValue(binary)
+	if !ok {
+		return nil, false
+	}
+	return []goBoundary{{
+		Param:     param,
+		Op:        boundaryOp,
+		Value:     value,
+		Condition: strings.Join([]string{param, boundaryOp, value}, " "),
+	}}, true
 }
 
 func unwrapGoParenExpr(expr ast.Expr) ast.Expr {
