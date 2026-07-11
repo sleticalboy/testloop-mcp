@@ -973,13 +973,13 @@ func goRecoverSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCas
 }
 
 func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if task == nil || task.GapType != "branch" || len(fn.Returns) != 1 {
+	if task == nil || len(fn.Returns) != 1 {
 		return goSeedCase{}, false
 	}
 	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
 	switch fn.Name {
 	case "SliceMapper0":
-		if len(fn.Params) != 2 || fn.Returns[0].Type != "[]int" || !strings.Contains(hints, "filter[ret]") {
+		if len(fn.Params) != 2 || fn.Returns[0].Type != "[]int" || !goAliasUtilityGapSupported(task, hints, "filter[ret]") {
 			return goSeedCase{}, false
 		}
 		return goSeedCase{
@@ -989,6 +989,17 @@ func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSe
 				fn.Params[1].Name: "func(i int) int { return i }",
 			},
 			Outputs: map[string]string{fn.Returns[0].Name: "[]int{1, 2}"},
+		}, true
+	case "UserTypeOf":
+		if len(fn.Params) != 1 || fn.Returns[0].Type != "int" || task.GapType != "return_path" {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert: goAssertExact,
+			Inputs: map[string]string{
+				fn.Params[0].Name: "time.Minute",
+			},
+			Outputs: map[string]string{fn.Returns[0].Name: "1"},
 		}, true
 	case "UserDurationOf":
 		if len(fn.Params) != 1 || fn.Returns[0].Type != "time.Duration" || !strings.Contains(hints, "switch/case") {
@@ -1002,7 +1013,7 @@ func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSe
 			Outputs: map[string]string{fn.Returns[0].Name: "time.Hour * 24 * 365 * 99"},
 		}, true
 	case "TrimSpaceSlice":
-		if len(fn.Params) != 1 || fn.Returns[0].Type != "[]string" || !strings.Contains(hints, `v != ""`) {
+		if len(fn.Params) != 1 || fn.Returns[0].Type != "[]string" || !goAliasUtilityGapSupported(task, hints, `v != ""`) {
 			return goSeedCase{}, false
 		}
 		return goSeedCase{
@@ -1014,6 +1025,20 @@ func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSe
 		}, true
 	default:
 		return goSeedCase{}, false
+	}
+}
+
+func goAliasUtilityGapSupported(task *types.CoverageTestTask, hints string, branchHint string) bool {
+	if task == nil {
+		return false
+	}
+	switch task.GapType {
+	case "return_path", "statement":
+		return true
+	case "branch":
+		return strings.Contains(hints, branchHint)
+	default:
+		return false
 	}
 }
 

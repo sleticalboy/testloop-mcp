@@ -28,6 +28,7 @@
 - Go static generator 支持 `*http.Request` 字符串返回分支的常见输入合成，可为 `RemoteAddr`、`X-Forwarded-For`、`X-Real-IP` 和 RemoteAddr 解析错误生成可执行请求对象与精确断言。
 - Go static generator 支持常见 JSON/error 分支输入合成：`AsJson` marshal error、`FromJson` 非法 JSON、`FromJsonFile` 缺失文件路径会生成可执行断言。
 - Go static generator 支持部分工具函数分支输入合成：`SliceMapper0` 去重分支、`UserDurationOf` switch/case 和 `TrimSpaceSlice` 非空分支会生成可执行断言。
+- Go static generator 扩展工具函数 return/statement path 输入合成，覆盖 `SliceMapper0`、`TrimSpaceSlice` 和 `UserTypeOf` 的纯函数返回路径。
 - Go static generator 支持 `ParseToken` JWT 成功分支输入合成，可用同包 `GenerateToken` 与 `global.Config.Jwt` 构造有效 token，并断言 claims 非 nil、error 为 nil。
 - Go static generator 支持 `Recover` 的 panic/recover 分支输入合成，会用 `defer Recover(...); panic(...)` 覆盖 `recover() != nil` 路径。
 - Go static generator 支持 `GetJson` / `GetBytes` 这类 HTTP wrapper 的本地 `httptest` 输入合成，可覆盖 JSON 解析错误路径和 body 成功返回路径。

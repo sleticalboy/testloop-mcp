@@ -878,6 +878,13 @@ func UserDurationOf(tpy uint8) time.Duration {
 	}
 }
 
+func UserTypeOf(unit time.Duration) int {
+	if d := (unit.Abs() - time.Hour).Abs().Milliseconds(); d < 1000 {
+		return 1
+	}
+	return 1
+}
+
 func TrimSpaceSlice(s []string) []string {
 	var result []string
 	for _, v := range s {
@@ -896,6 +903,7 @@ func TrimSpaceSlice(s []string) []string {
 	tests := []struct {
 		name     string
 		target   string
+		gapType  string
 		branch   string
 		testName string
 		want     []string
@@ -904,6 +912,7 @@ func TrimSpaceSlice(s []string) []string {
 		{
 			name:     "slice mapper duplicate",
 			target:   "SliceMapper0",
+			gapType:  "branch",
 			branch:   "filter[ret]",
 			testName: "TestSliceMapper0Duplicate",
 			want: []string{
@@ -919,6 +928,7 @@ func TrimSpaceSlice(s []string) []string {
 		{
 			name:     "user duration switch",
 			target:   "UserDurationOf",
+			gapType:  "branch",
 			branch:   "switch/case",
 			testName: "TestUserDurationOfCase",
 			want: []string{
@@ -930,10 +940,80 @@ func TrimSpaceSlice(s []string) []string {
 			notWant: []string{"skip: true"},
 		},
 		{
+			name:     "user type default return",
+			target:   "UserTypeOf",
+			gapType:  "return_path",
+			testName: "TestUserTypeOfDefault",
+			want: []string{
+				"skip: false",
+				"unit: time.Minute",
+				"ret0: 1",
+				"got := UserTypeOf(tt.unit)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "slice mapper return",
+			target:   "SliceMapper0",
+			gapType:  "return_path",
+			testName: "TestSliceMapper0Return",
+			want: []string{
+				"skip:   false",
+				"src:    []int{1, 1, 2}",
+				"mapper: func(i int) int { return i }",
+				"ret0:   []int{1, 2}",
+				"got := SliceMapper0[int, int](tt.src, tt.mapper)",
+			},
+			notWant: []string{"skip:   true"},
+		},
+		{
+			name:     "slice mapper statement",
+			target:   "SliceMapper0",
+			gapType:  "statement",
+			testName: "TestSliceMapper0Statement",
+			want: []string{
+				"skip:   false",
+				"src:    []int{1, 1, 2}",
+				"mapper: func(i int) int { return i }",
+				"ret0:   []int{1, 2}",
+				"got := SliceMapper0[int, int](tt.src, tt.mapper)",
+			},
+			notWant: []string{"skip:   true"},
+		},
+		{
 			name:     "trim space non-empty",
 			target:   "TrimSpaceSlice",
+			gapType:  "branch",
 			branch:   `v != ""`,
 			testName: "TestTrimSpaceSliceNonEmpty",
+			want: []string{
+				"skip: false",
+				`s:    []string{" a ", " ", "b"}`,
+				`ret0: []string{"a", "b"}`,
+				"got := TrimSpaceSlice(tt.s)",
+				"if !reflect.DeepEqual(got, tt.ret0)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "trim space return",
+			target:   "TrimSpaceSlice",
+			gapType:  "return_path",
+			testName: "TestTrimSpaceSliceReturn",
+			want: []string{
+				"skip: false",
+				`s:    []string{" a ", " ", "b"}`,
+				`ret0: []string{"a", "b"}`,
+				"got := TrimSpaceSlice(tt.s)",
+				"if !reflect.DeepEqual(got, tt.ret0)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "trim space statement",
+			target:   "TrimSpaceSlice",
+			gapType:  "statement",
+			testName: "TestTrimSpaceSliceStatement",
 			want: []string{
 				"skip: false",
 				`s:    []string{" a ", " ", "b"}`,
@@ -952,7 +1032,7 @@ func TrimSpaceSlice(s []string) []string {
 				Framework:       "go-test",
 				Target:          tt.target,
 				LineRange:       "1-1",
-				GapType:         "branch",
+				GapType:         tt.gapType,
 				TestName:        tt.testName,
 				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
 				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},
