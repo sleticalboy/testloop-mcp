@@ -885,6 +885,10 @@ func UserTypeOf(unit time.Duration) int {
 	return 1
 }
 
+func Ptr[T any](v T) *T {
+	return &v
+}
+
 func TrimSpaceSlice(s []string) []string {
 	var result []string
 	for _, v := range s {
@@ -938,6 +942,22 @@ func TrimSpaceSlice(s []string) []string {
 				"got := UserDurationOf(tt.tpy)",
 			},
 			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "ptr return",
+			target:   "Ptr",
+			gapType:  "return_path",
+			testName: "TestPtrReturn",
+			want: []string{
+				"skip: false",
+				"v:    1",
+				"got := Ptr[int](tt.v)",
+				"if got == nil",
+				`got nil pointer`,
+				"if *got != tt.v",
+				"got %v, want %v",
+			},
+			notWant: []string{"skip: true", "ret0 *int", "got != tt.ret0"},
 		},
 		{
 			name:     "user type default return",
