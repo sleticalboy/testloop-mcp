@@ -15,6 +15,7 @@
 - Go static generator 支持 `err == nil` / `err != nil` 分支输入；非 nil error 会生成 `errors.New("test")` 并自动加入 `errors` import。
 - `run_tests` 的 Go 执行路径会在收到 module 内绝对目录或绝对测试文件时自动切到 `go.mod` 根目录，并转换为相对包路径，避免 `directory ... outside main module` 失败。
 - Go coverage task 在无法安全生成精确断言时，会在 TODO case 和 `context.targets[].payload_notes` 中说明保守降级原因，并为 Go context 暴露参数、返回表达式和分支条件。
+- Go context 会保留 `a > 0 && b > 0` / `a > 0 || b > 0` 这类复合分支条件原文，并在 coverage task 降级说明中标注当前不支持多参数输入合成。
 
 ## v0.4.13 - 2026-07-10
 

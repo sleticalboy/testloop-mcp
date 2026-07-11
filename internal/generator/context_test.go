@@ -202,6 +202,46 @@ func UserName(user *User) string {
 	assertContains(t, target.PayloadNotes, `Static generator cannot infer exact coverage case: branch "user != nil" returns "user.Name", which needs manual expected value review.`)
 }
 
+func TestBuildGenerationContextGoCompoundConditionNotes(t *testing.T) {
+	src := `package sample
+
+func Score(a, b int) int {
+	if a > 0 && b > 0 {
+		return 1
+	}
+	return 0
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "score.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-Score",
+		Framework:       "go-test",
+		Target:          "Score",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		SuggestedInputs: []string{"构造满足条件 `a > 0 && b > 0` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	ctx := BuildGenerationContextWithOptions(srcPath, GenerateTestsOptions{CoverageTask: &task})
+	if ctx == nil || ctx.Language != "go" || ctx.Framework != "go-test" || ctx.CoverageTask == nil {
+		t.Fatalf("unexpected Go context: %+v", ctx)
+	}
+	target := findTarget(ctx.Targets, "Score")
+	if target == nil {
+		t.Fatalf("Score target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, target.Params, "a int")
+	assertContains(t, target.Params, "b int")
+	assertContains(t, target.ReturnExpressions, "1")
+	assertContains(t, target.ReturnExpressions, "0")
+	assertContains(t, target.BoundaryCases, "a > 0 && b > 0")
+	assertContains(t, target.PayloadNotes, `Static generator cannot infer exact coverage case: branch "a > 0 && b > 0" uses a compound condition; multi-parameter input synthesis is not supported yet.`)
+}
+
 func TestBuildGenerationContextReturnsNilForMissingOrEmptyTargets(t *testing.T) {
 	if ctx := BuildGenerationContext(filepath.Join(t.TempDir(), "missing.ts")); ctx != nil {
 		t.Fatalf("expected nil context for missing source, got %+v", ctx)

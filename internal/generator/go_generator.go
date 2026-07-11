@@ -731,6 +731,7 @@ type goBoundary struct {
 	Value      string
 	Condition  string
 	ReturnExpr string
+	Compound   bool
 }
 
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
@@ -786,7 +787,7 @@ func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase
 		return goSeedCase{}, false
 	}
 	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
-	if boundary == nil || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+	if boundary == nil || boundary.Compound || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
 		return goSeedCase{}, false
 	}
 
@@ -839,6 +840,9 @@ func goCoverageTaskFallbackNotes(fn funcInfo, task *types.CoverageTestTask) []st
 	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
 	if boundary == nil {
 		return append(notes, "Static generator cannot infer exact coverage case: coverage hints do not match a detected simple branch.")
+	}
+	if boundary.Compound {
+		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q uses a compound condition; multi-parameter input synthesis is not supported yet.", boundary.Condition))
 	}
 	if boundary.ReturnExpr == "" {
 		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q has no single return expression.", boundary.Condition))
@@ -1183,16 +1187,24 @@ func extractGoBoundaries(body *ast.BlockStmt) []goBoundary {
 }
 
 func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
-	cond, ok := ifStmt.Cond.(*ast.BinaryExpr)
-	if !ok {
-		return goBoundary{}, false
-	}
-	param, op, value, ok := goBoundaryParamValue(cond)
+	cond := unwrapGoParenExpr(ifStmt.Cond)
+	binary, ok := cond.(*ast.BinaryExpr)
 	if !ok {
 		return goBoundary{}, false
 	}
 	ret := firstGoReturnExpr(ifStmt.Body)
 	if ret == "" {
+		return goBoundary{}, false
+	}
+	if binary.Op.String() == "&&" || binary.Op.String() == "||" {
+		return goBoundary{
+			Condition:  exprToString(binary),
+			ReturnExpr: ret,
+			Compound:   true,
+		}, true
+	}
+	param, op, value, ok := goBoundaryParamValue(binary)
+	if !ok {
 		return goBoundary{}, false
 	}
 	return goBoundary{
@@ -1202,6 +1214,16 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		Condition:  strings.Join([]string{param, op, value}, " "),
 		ReturnExpr: ret,
 	}, true
+}
+
+func unwrapGoParenExpr(expr ast.Expr) ast.Expr {
+	for {
+		paren, ok := expr.(*ast.ParenExpr)
+		if !ok {
+			return expr
+		}
+		expr = paren.X
+	}
 }
 
 func goBoundaryParamValue(cond *ast.BinaryExpr) (string, string, string, bool) {
