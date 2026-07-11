@@ -37,6 +37,7 @@
 - Go static generator 支持 `TraceTransport.RoundTrip` 慢请求分支输入合成，可用本地 `httptest.Server` 和负 `SlowThreshold` 稳定覆盖 defer 中的 slow branch。
 - Go static generator 支持 `Ptr` 这类泛型指针返回路径断言，会检查返回指针非 nil 且 `*got` 等于输入值，避免把指针地址当作期望值比较。
 - Go static generator 支持 `RemoteIP` 的剩余 return/statement path：可临时覆盖同包 `ipLookups` 触发 fallback 返回路径，并用 RemoteAddr 输入覆盖入口语句块。
+- Go static generator 支持 `BeforeSave(*gorm.DB) error` 这类 receiver mutation 方法的字段归一化/默认值断言，可为 laoxia 模型的 `User`、`Role`、`Menu`、`DictItem` 等方法生成非 skipped 测试。
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
 - Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
 - Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。

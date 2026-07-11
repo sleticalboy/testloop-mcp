@@ -28,6 +28,7 @@ type funcInfo struct {
 	FinalReturn  string
 	Boundaries   []goBoundary
 	PackageVars  map[string]bool
+	Mutations    []goReceiverMutation
 }
 
 type paramInfo struct {
@@ -234,6 +235,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		info.FinalReturn = finalReturnExpr(fn.Body)
 		info.Boundaries = extractGoBoundaries(fn.Body)
 		info.PackageVars = packageVars
+		if info.IsMethod {
+			info.Mutations = extractGoReceiverMutations(fn.Body, info.Receiver)
+		}
 
 		funcs = append(funcs, info)
 	}
@@ -514,7 +518,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	nonNilResultCase := hasSeedCase && seedCase.Assert == goAssertNonNilResult
 	pointerValueCase := hasSeedCase && seedCase.Assert == goAssertPointerValue
 	recoverPanicCase := hasSeedCase && seedCase.Assert == goAssertRecoverPanic
-	expectedReturnFields := !smokeCase && !nonNilResultCase && !pointerValueCase && !recoverPanicCase && (!hasSeedCase || exactCase || errorPathCase)
+	receiverMutationCase := hasSeedCase && seedCase.Assert == goAssertReceiverMutation
+	expectedReturnFields := !smokeCase && !nonNilResultCase && !pointerValueCase && !recoverPanicCase && !receiverMutationCase && (!hasSeedCase || exactCase || errorPathCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -660,6 +665,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		writeGoPointerValueCall(&sb, fn, callExpr)
 	} else if recoverPanicCase {
 		writeGoRecoverPanicCall(&sb, callExpr)
+	} else if receiverMutationCase {
+		writeGoReceiverMutationCall(&sb, fn, callExpr, seedCase)
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -797,6 +804,22 @@ func writeGoRecoverPanicCall(sb *strings.Builder, callExpr string) {
 	sb.WriteString("\t\t\t}()\n")
 }
 
+func writeGoReceiverMutationCall(sb *strings.Builder, fn funcInfo, callExpr string, seed goSeedCase) {
+	if goReturnsOnlyError(fn) {
+		sb.WriteString(fmt.Sprintf("\t\t\terr := %s\n", callExpr))
+		sb.WriteString("\t\t\tif err != nil {\n")
+		sb.WriteString("\t\t\t\tt.Errorf(\"unexpected error: %v\", err)\n")
+		sb.WriteString("\t\t\t}\n")
+	} else if len(fn.Returns) == 0 {
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
+	} else {
+		writeGoSmokeCall(sb, fn, callExpr)
+	}
+	for _, line := range seed.PostAssert {
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", line))
+	}
+}
+
 func writeGoHTTPServerSetup(sb *strings.Builder, fn funcInfo, body string) {
 	urlField := ""
 	for _, p := range fn.Params {
@@ -889,13 +912,14 @@ func needsDeepEqual(typ string) bool {
 type goAssertionKind string
 
 const (
-	goAssertExact        goAssertionKind = "exact"
-	goAssertErrorPath    goAssertionKind = "error_path"
-	goAssertNonNilResult goAssertionKind = "non_nil_result"
-	goAssertPointerValue goAssertionKind = "pointer_value"
-	goAssertRecoverPanic goAssertionKind = "recover_panic"
-	goAssertTimeFormat   goAssertionKind = "time_format"
-	goAssertTimeDateZero goAssertionKind = "time_date_zero"
+	goAssertExact            goAssertionKind = "exact"
+	goAssertErrorPath        goAssertionKind = "error_path"
+	goAssertNonNilResult     goAssertionKind = "non_nil_result"
+	goAssertPointerValue     goAssertionKind = "pointer_value"
+	goAssertRecoverPanic     goAssertionKind = "recover_panic"
+	goAssertReceiverMutation goAssertionKind = "receiver_mutation"
+	goAssertTimeFormat       goAssertionKind = "time_format"
+	goAssertTimeDateZero     goAssertionKind = "time_date_zero"
 )
 
 type goSeedCase struct {
@@ -903,6 +927,7 @@ type goSeedCase struct {
 	Inputs         map[string]string
 	Outputs        map[string]string
 	Setup          []string
+	PostAssert     []string
 	TimeLayout     string
 	HTTPServerBody string
 }
@@ -919,8 +944,17 @@ type goBoundary struct {
 	Parts       []goBoundary
 }
 
+type goReceiverMutation struct {
+	Field    string
+	Input    string
+	Expected string
+}
+
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
 	if seed, ok := goTraceTransportSeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goBeforeSaveSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if fn.IsMethod {
@@ -1157,6 +1191,43 @@ func goTraceTransportSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (go
 			"\tt.Fatalf(\"new request: %v\", reqErr)",
 			`}`,
 		},
+	}, true
+}
+
+func goBeforeSaveSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || !fn.IsMethod || fn.Name != "BeforeSave" || !goReturnsOnlyError(fn) {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 1 || fn.Params[0].Type != "*gorm.DB" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Mutations) == 0 {
+		return goSeedCase{}, false
+	}
+
+	receiverVar := goTestReceiverVar(fn)
+	setup := make([]string, 0, len(fn.Mutations))
+	postAssert := make([]string, 0, len(fn.Mutations)*3)
+	for _, mutation := range fn.Mutations {
+		input := mutation.Input
+		if input == "" {
+			input = " " + mutation.Expected + " "
+		}
+		setup = append(setup, fmt.Sprintf("%s.%s = %q", receiverVar, mutation.Field, input))
+		postAssert = append(postAssert,
+			fmt.Sprintf("if %s.%s != %q {", receiverVar, mutation.Field, mutation.Expected),
+			fmt.Sprintf("\tt.Errorf(\"%s = %%q, want %%q\", %s.%s, %q)", mutation.Field, receiverVar, mutation.Field, mutation.Expected),
+			"}",
+		)
+	}
+	return goSeedCase{
+		Assert: goAssertReceiverMutation,
+		Inputs: map[string]string{
+			fn.Params[0].Name: "nil",
+		},
+		Outputs:    map[string]string{},
+		Setup:      setup,
+		PostAssert: postAssert,
 	}, true
 }
 
@@ -1939,6 +2010,11 @@ func goSeedCaseUsesPackage(seed goSeedCase, pkg string) bool {
 			return true
 		}
 	}
+	for _, line := range seed.PostAssert {
+		if strings.Contains(line, prefix) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -2074,6 +2150,168 @@ func extractGoBoundaries(body *ast.BlockStmt) []goBoundary {
 		}
 	}
 	return boundaries
+}
+
+func extractGoReceiverMutations(body *ast.BlockStmt, receiver string) []goReceiverMutation {
+	if body == nil || receiver == "" {
+		return nil
+	}
+	var mutations []goReceiverMutation
+	byField := map[string]int{}
+	addMutation := func(mutation goReceiverMutation) {
+		if mutation.Field == "" || mutation.Expected == "" {
+			return
+		}
+		if idx, ok := byField[mutation.Field]; ok {
+			if mutation.Input != "" {
+				mutations[idx].Input = mutation.Input
+			}
+			mutations[idx].Expected = mutation.Expected
+			return
+		}
+		byField[mutation.Field] = len(mutations)
+		mutations = append(mutations, mutation)
+	}
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch stmt := n.(type) {
+		case *ast.AssignStmt:
+			for i, lhs := range stmt.Lhs {
+				if i >= len(stmt.Rhs) {
+					continue
+				}
+				field, ok := goReceiverFieldSelector(lhs, receiver)
+				if !ok || !goTrimSpaceReceiverField(stmt.Rhs[i], receiver, field) {
+					continue
+				}
+				addMutation(goReceiverMutation{
+					Field:    field,
+					Expected: goDefaultReceiverMutationValue(field),
+				})
+			}
+		case *ast.IfStmt:
+			field, ok := goReceiverEmptyStringCondition(stmt.Cond, receiver)
+			if !ok || stmt.Body == nil {
+				return true
+			}
+			for _, bodyStmt := range stmt.Body.List {
+				assign, ok := bodyStmt.(*ast.AssignStmt)
+				if !ok {
+					continue
+				}
+				for i, lhs := range assign.Lhs {
+					if i >= len(assign.Rhs) {
+						continue
+					}
+					assignedField, ok := goReceiverFieldSelector(lhs, receiver)
+					if !ok || assignedField != field {
+						continue
+					}
+					value, ok := goStringLiteralValue(assign.Rhs[i])
+					if !ok || value == "" {
+						continue
+					}
+					addMutation(goReceiverMutation{Field: field, Input: " ", Expected: value})
+				}
+			}
+		}
+		return true
+	})
+	return mutations
+}
+
+func goReceiverFieldSelector(expr ast.Expr, receiver string) (string, bool) {
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	ident, ok := selector.X.(*ast.Ident)
+	if !ok || ident.Name != receiver {
+		return "", false
+	}
+	return selector.Sel.Name, true
+}
+
+func goTrimSpaceReceiverField(expr ast.Expr, receiver string, field string) bool {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return false
+	}
+	fun, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || fun.Sel.Name != "TrimSpace" {
+		return false
+	}
+	pkg, ok := fun.X.(*ast.Ident)
+	if !ok || pkg.Name != "strings" {
+		return false
+	}
+	argField, ok := goReceiverFieldSelector(call.Args[0], receiver)
+	return ok && argField == field
+}
+
+func goReceiverEmptyStringCondition(expr ast.Expr, receiver string) (string, bool) {
+	binary, ok := expr.(*ast.BinaryExpr)
+	if !ok || binary.Op != token.EQL {
+		return "", false
+	}
+	if field, ok := goReceiverFieldSelector(binary.X, receiver); ok && goStringLiteralIs(binary.Y, "") {
+		return field, true
+	}
+	if field, ok := goReceiverFieldSelector(binary.Y, receiver); ok && goStringLiteralIs(binary.X, "") {
+		return field, true
+	}
+	return "", false
+}
+
+func goStringLiteralIs(expr ast.Expr, want string) bool {
+	value, ok := goStringLiteralValue(expr)
+	return ok && value == want
+}
+
+func goStringLiteralValue(expr ast.Expr) (string, bool) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return "", false
+	}
+	value, err := strconv.Unquote(lit.Value)
+	if err != nil {
+		return "", false
+	}
+	return value, true
+}
+
+func goDefaultReceiverMutationValue(field string) string {
+	switch field {
+	case "UUID":
+		return "uuid-1"
+	case "NickName":
+		return "Admin"
+	case "Phone":
+		return "13800000000"
+	case "Email":
+		return "admin@example.com"
+	case "IP":
+		return "127.0.0.1"
+	case "Path":
+		return "/test"
+	case "Component":
+		return "test/index"
+	case "Permission":
+		return "system:test:list"
+	case "Key":
+		return "site.name"
+	case "Value":
+		return "enabled"
+	case "Tag":
+		return "success"
+	case "Code":
+		return "admin"
+	case "Name", "Title", "Label":
+		return "Admin"
+	case "Desc":
+		return "desc"
+	default:
+		return strings.ToLower(field)
+	}
 }
 
 func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {

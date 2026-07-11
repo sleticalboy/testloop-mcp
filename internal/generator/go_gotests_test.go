@@ -1733,6 +1733,142 @@ func GetCurrentDate() time.Time {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskAssertsBeforeSaveDefaultBranch(t *testing.T) {
+	src := `package sample
+
+import (
+	"strings"
+
+	"gorm.io/gorm"
+)
+
+type Role struct {
+	Code string
+	Name string
+	Desc string
+	DataScope string
+}
+
+func (r *Role) BeforeSave(tx *gorm.DB) error {
+	r.Code = strings.TrimSpace(r.Code)
+	r.Name = strings.TrimSpace(r.Name)
+	r.Desc = strings.TrimSpace(r.Desc)
+	r.DataScope = strings.TrimSpace(r.DataScope)
+	if r.DataScope == "" {
+		r.DataScope = "self"
+	}
+	return nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "role.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-role-before-save",
+		Framework:       "go-test",
+		Target:          "Role.BeforeSave",
+		LineRange:       "17-19",
+		GapType:         "branch",
+		TestName:        "TestRoleBeforeSave",
+		MissingBranches: []string{"未覆盖 if 分支: r.DataScope == \"\""},
+		SuggestedInputs: []string{"构造满足条件 `r.DataScope == \"\"` 的输入"},
+		AssertionFocus:  []string{"断言默认 DataScope"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"gorm.io/gorm"`,
+		"func TestRoleBeforeSave(t *testing.T)",
+		"tx   *gorm.DB",
+		"skip: false",
+		"r := &Role{}",
+		`r.Code = " admin "`,
+		`r.DataScope = " "`,
+		"err := r.BeforeSave(tt.tx)",
+		`if r.DataScope != "self" {`,
+		`t.Errorf("DataScope = %q, want %q", r.DataScope, "self")`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"TODO: 填写有意义的输入",
+		"ret0 error",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskAssertsBeforeSaveTrimOnly(t *testing.T) {
+	src := `package sample
+
+import (
+	"strings"
+
+	"gorm.io/gorm"
+)
+
+type User struct {
+	UUID string
+	NickName string
+	Phone string
+	Email string
+}
+
+func (u *User) BeforeSave(tx *gorm.DB) error {
+	u.UUID = strings.TrimSpace(u.UUID)
+	u.NickName = strings.TrimSpace(u.NickName)
+	u.Phone = strings.TrimSpace(u.Phone)
+	u.Email = strings.TrimSpace(u.Email)
+	return nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "user.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:             "go-test-user-before-save",
+		Framework:      "go-test",
+		Target:         "User.BeforeSave",
+		LineRange:      "15-20",
+		GapType:        "error_path",
+		TestName:       "TestUserBeforeSave",
+		AssertionFocus: []string{"断言返回 nil error 并裁剪字符串字段"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestUserBeforeSave(t *testing.T)",
+		`name: "coverage error path"`,
+		"skip: false",
+		"u := &User{}",
+		`u.UUID = " uuid-1 "`,
+		`u.NickName = " Admin "`,
+		"err := u.BeforeSave(tt.tx)",
+		`if u.Email != "admin@example.com" {`,
+		`t.Errorf("Email = %q, want %q", u.Email, "admin@example.com")`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "ret0 error") {
+		t.Fatalf("BeforeSave trim-only task should be executable without return fixture:\n%s", code)
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsUsesGoCoverageTask(t *testing.T) {
 	src := `package sample
 
