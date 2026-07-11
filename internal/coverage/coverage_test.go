@@ -438,6 +438,105 @@ func (Calculator) Divide(a, b int) int {
 	}
 }
 
+func TestParseGoCoverageUsesASTForBranchConditions(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "server.go")
+	src := `package server
+
+func StartHttp(cancel func()) int {
+	server := makeServer()
+	if err := server.Start(); err != nil {
+		return 1
+	}
+	return 0
+}
+
+func makeServer() service {
+	return service{}
+}
+
+type service struct{}
+
+func (service) Start() error {
+	return nil
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `mode: set
+` + srcPath + `:3.1,5.33 2 0
+`
+	report, err := ParseGoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseGoCoverage 失败: %v", err)
+	}
+
+	suggestion := findCoverageSuggestion(report.Suggestions, "StartHttp")
+	if suggestion == nil {
+		t.Fatalf("expected StartHttp suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.GapType != "branch" {
+		t.Fatalf("expected branch gap type, got %+v", suggestion)
+	}
+	if !containsString(suggestion.MissingBranches, "未覆盖 if 分支: err != nil") {
+		t.Fatalf("expected AST condition without init statement, got %+v", suggestion.MissingBranches)
+	}
+	if containsString(suggestion.SuggestedInputs, "构造满足条件 `func StartHttp(cancel func()) int` 的输入") {
+		t.Fatalf("function signature leaked into branch input hints: %+v", suggestion.SuggestedInputs)
+	}
+}
+
+func TestParseGoCoverageDoesNotTreatPlainStatementsAsBranches(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "router.go")
+	src := `package router
+
+func Setup() int {
+	router := newRouter()
+	router.GET("/ping", ping)
+	return router.Count()
+}
+
+func newRouter() *Router {
+	return &Router{}
+}
+
+func ping() {}
+
+type Router struct{}
+
+func (*Router) GET(string, func()) {}
+
+func (*Router) Count() int {
+	return 1
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := `mode: set
+` + srcPath + `:4.2,5.27 2 0
+`
+	report, err := ParseGoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseGoCoverage 失败: %v", err)
+	}
+
+	suggestion := findCoverageSuggestion(report.Suggestions, "Setup")
+	if suggestion == nil {
+		t.Fatalf("expected Setup suggestion, got %+v", report.Suggestions)
+	}
+	if suggestion.GapType == "branch" {
+		t.Fatalf("plain setup statements should not be branches: %+v", suggestion)
+	}
+	if len(suggestion.MissingBranches) > 0 && strings.Contains(strings.Join(suggestion.MissingBranches, "\n"), "未覆盖 if 分支") {
+		t.Fatalf("unexpected if branch detail for plain statements: %+v", suggestion.MissingBranches)
+	}
+}
+
 func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
 	for i := range suggestions {
 		if suggestions[i].Function == fn {
