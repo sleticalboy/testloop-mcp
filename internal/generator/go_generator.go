@@ -536,7 +536,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		for _, note := range goCoverageTaskFallbackNotes(fn, task) {
 			sb.WriteString(fmt.Sprintf("\t\t\t// %s\n", note))
 		}
-		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
+		if fn.Name == "init" {
+			sb.WriteString("\t\t\tskip: false,\n")
+		} else {
+			sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
+		}
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(p.Name), zeroValue(p.Type)))
 		}
@@ -561,13 +565,22 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		}
 	}
 
+	if fn.Name == "init" {
+		sb.WriteString("\t\t\tt.Skip(\"init functions cannot be called directly; review package initialization manually\")\n")
+		sb.WriteString("\t\t})\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString("}\n\n")
+		return sb.String()
+	}
+
 	// 创建接收者实例（如果是方法）
+	receiverVar := goTestReceiverVar(fn)
 	if fn.IsMethod {
 		recvType := fn.ReceiverType
 		if strings.HasPrefix(recvType, "*") {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s := &%s{}\n", fn.Receiver, recvType[1:]))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s := &%s{}\n", receiverVar, recvType[1:]))
 		} else {
-			sb.WriteString(fmt.Sprintf("\t\t\t%s := %s{}\n", fn.Receiver, recvType))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s := %s{}\n", receiverVar, recvType))
 		}
 	}
 
@@ -584,7 +597,7 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	// 构建调用表达式
 	callExpr := ""
 	if fn.IsMethod {
-		callExpr = fmt.Sprintf("%s.%s%s(%s)", fn.Receiver, fn.Name, typeArgs, strings.Join(args, ", "))
+		callExpr = fmt.Sprintf("%s.%s%s(%s)", receiverVar, fn.Name, typeArgs, strings.Join(args, ", "))
 	} else {
 		callExpr = fmt.Sprintf("%s%s(%s)", fn.Name, typeArgs, strings.Join(args, ", "))
 	}
@@ -661,8 +674,23 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	return sb.String()
 }
 
+func goTestReceiverVar(fn funcInfo) string {
+	if !fn.IsMethod {
+		return ""
+	}
+	switch strings.TrimSpace(fn.Receiver) {
+	case "", "t", "tt":
+		return "receiver"
+	default:
+		return fn.Receiver
+	}
+}
+
 func goCoverageSmokeCallable(fn funcInfo, task *types.CoverageTestTask) bool {
 	if task == nil || fn.IsMethod || fn.IsVariadic || len(fn.Params) > 0 {
+		return false
+	}
+	if fn.Name == "init" {
 		return false
 	}
 	for _, r := range fn.Returns {

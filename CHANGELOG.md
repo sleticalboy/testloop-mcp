@@ -31,6 +31,8 @@
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
 - Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
 - Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。
+- Go static generator 在方法测试中会避让 `t` / `tt` 等测试模板保留名，避免源码 receiver 名与 `*testing.T` 参数冲突导致生成测试无法编译。
+- Go `init` coverage task 会生成明确的人工复核 skip，不再直接写出不可调用的 `init()` 调用；`validate_coverage_task` 会将这类结果标记为 `manual_review_unreachable`。
 - Go coverage task 的分支缺口改为基于 AST 抽取 `if` / `switch` / `return`，不再把函数签名、普通语句或 `if init` 误当作分支条件。
 - Coverage suggestion/test task 会合并同目标、同缺口类型、同分支条件且行段相邻或重叠的未覆盖 block，减少 Go coverprofile 拆块导致的重复任务。
 - Coverage task 排序新增路径环境成本启发式，优先暴露 `utils` / helper / parser 等低依赖任务，并降低 controller、router、service、middleware、db/cache 等高初始化成本任务的优先级。
@@ -38,6 +40,7 @@
 ### Fixed
 
 - 修复真实 Go 项目中已有测试函数与 coverage task 推荐 `test_name` 重名时 `validate_coverage_task` 返回 `generation_error` 的问题；laoxia `GetRaw` 样本已验证为 `passed/ready`。
+- 修复 laoxia top50 扩窗验证中 `TraceTransport.RoundTrip` 因 receiver 名为 `t` 造成的编译失败；同轮验证中 `init` 任务改为人工复核后，top50 达到 50/50 `passed`。
 
 ## v0.4.13 - 2026-07-10
 

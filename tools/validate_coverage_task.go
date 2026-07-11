@@ -98,6 +98,9 @@ func coverageTaskUnreachableReason(task *types.CoverageTestTask, generated *type
 	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
 		return ""
 	}
+	if task.Target == "init" && strings.Contains(generated.Preview, `t.Skip("init functions cannot be called directly; review package initialization manually")`) {
+		return "Go init functions cannot be called directly from tests; review package initialization side effects manually"
+	}
 	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
 		return ""
 	}

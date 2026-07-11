@@ -213,6 +213,67 @@ func RemoteIP(r *http.Request, fallback string) string {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksInitAsManualReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/app\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "main.go")
+	src := `package app
+
+var initialized bool
+
+func init() {
+	initialized = true
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-init",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "init",
+		Kind:            "function",
+		LineRange:       "5-5",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: err != nil"},
+		Goal:            "复核 init 初始化路径",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "main_test.go"),
+		TestName:        "TestInit",
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_unreachable" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Skipped == 0 {
+		t.Fatalf("expected skipped init review test, got run result: %+v", out.RunResult)
+	}
+	reason, _ := out.Metadata["unreachable_reason"].(string)
+	if !strings.Contains(reason, "init functions cannot be called directly") {
+		t.Fatalf("unexpected init manual-review reason: %q", reason)
+	}
+	if out.Generated == nil || strings.Contains(out.Generated.Preview, "\t\t\tinit()\n") {
+		t.Fatalf("generated init task should not call init directly: %+v", out.Generated)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",

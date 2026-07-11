@@ -396,6 +396,56 @@ func TestGoTableDrivenTestBranches(t *testing.T) {
 	}
 }
 
+func TestGoMethodReceiverAvoidsTestingTShadow(t *testing.T) {
+	code := genTableDrivenTestForTask(funcInfo{
+		Name:         "RoundTrip",
+		IsMethod:     true,
+		Receiver:     "t",
+		ReceiverType: "*TraceTransport",
+		Params: []paramInfo{
+			{Name: "req", Type: "*http.Request"},
+		},
+		Returns: []paramInfo{
+			{Name: "ret0", Type: "*http.Response"},
+			{Name: "ret1", Type: "error"},
+		},
+	}, &types.CoverageTestTask{
+		ID:        "go-test-roundtrip",
+		Target:    "TraceTransport.RoundTrip",
+		GapType:   "branch",
+		LineRange: "40-46",
+	})
+	for _, want := range []string{
+		"receiver := &TraceTransport{}",
+		"got0, got1 := receiver.RoundTrip(tt.req)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in method test:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "t := &TraceTransport{}") {
+		t.Fatalf("receiver should not shadow testing.T parameter:\n%s", code)
+	}
+}
+
+func TestGoInitCoverageTaskDoesNotCallInit(t *testing.T) {
+	code := genTableDrivenTestForTask(funcInfo{Name: "init"}, &types.CoverageTestTask{
+		ID:        "go-test-init",
+		Target:    "init",
+		GapType:   "branch",
+		LineRange: "15-20",
+	})
+	if !strings.Contains(code, `t.Skip("init functions cannot be called directly; review package initialization manually")`) {
+		t.Fatalf("expected init manual-review skip:\n%s", code)
+	}
+	if !strings.Contains(code, "skip: false") {
+		t.Fatalf("expected init case to reach manual-review skip:\n%s", code)
+	}
+	if strings.Contains(code, "\t\t\tinit()\n") {
+		t.Fatalf("init function should not be called directly:\n%s", code)
+	}
+}
+
 func TestGoFunctionTargetMatching(t *testing.T) {
 	if !goFuncMatchesTarget(funcInfo{Name: "Add"}, "Add") {
 		t.Fatal("function name should match target")
