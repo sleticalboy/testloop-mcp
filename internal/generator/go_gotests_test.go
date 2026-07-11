@@ -535,6 +535,54 @@ func touchGlobal() {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsRecoverPanicBranch(t *testing.T) {
+	src := `package sample
+
+func Recover(cleanups ...func()) {
+	for _, cleanup := range cleanups {
+		cleanup()
+	}
+	if p := recover(); p != nil {
+		_ = p
+	}
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "recover.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-recover",
+		Framework:       "go-test",
+		Target:          "Recover",
+		LineRange:       "6-8",
+		GapType:         "branch",
+		TestName:        "TestRecoverPanic",
+		MissingBranches: []string{"未覆盖 if 分支: p != nil"},
+		SuggestedInputs: []string{"构造满足条件 `p != nil` 的输入"},
+		AssertionFocus:  []string{"断言 recover 分支不会继续 panic"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestRecoverPanic(t *testing.T)",
+		"skip:     false",
+		"cleanups: []func(){func() {}}",
+		"defer Recover(tt.cleanups...)",
+		`panic("test panic")`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip:     true") {
+		t.Fatalf("expected non-skipped recover panic test:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskBuildsJSONErrorBranches(t *testing.T) {
 	src := `package sample
 

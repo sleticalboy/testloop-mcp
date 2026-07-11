@@ -490,7 +490,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	exactCase := hasSeedCase && seedCase.Assert == goAssertExact
 	errorPathCase := hasSeedCase && seedCase.Assert == goAssertErrorPath
 	nonNilResultCase := hasSeedCase && seedCase.Assert == goAssertNonNilResult
-	expectedReturnFields := !smokeCase && !nonNilResultCase && (!hasSeedCase || exactCase || errorPathCase)
+	recoverPanicCase := hasSeedCase && seedCase.Assert == goAssertRecoverPanic
+	expectedReturnFields := !smokeCase && !nonNilResultCase && !recoverPanicCase && (!hasSeedCase || exactCase || errorPathCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -623,6 +624,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString("\t\t\t}\n")
 	} else if nonNilResultCase {
 		writeGoNonNilResultCall(&sb, fn, callExpr)
+	} else if recoverPanicCase {
+		writeGoRecoverPanicCall(&sb, callExpr)
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -738,6 +741,13 @@ func writeGoNonNilResultCall(sb *strings.Builder, fn funcInfo, callExpr string) 
 	}
 }
 
+func writeGoRecoverPanicCall(sb *strings.Builder, callExpr string) {
+	sb.WriteString("\t\t\tfunc() {\n")
+	sb.WriteString(fmt.Sprintf("\t\t\t\tdefer %s\n", callExpr))
+	sb.WriteString("\t\t\t\tpanic(\"test panic\")\n")
+	sb.WriteString("\t\t\t}()\n")
+}
+
 func writeGoSmokeCall(sb *strings.Builder, fn funcInfo, callExpr string) {
 	switch len(fn.Returns) {
 	case 0:
@@ -815,6 +825,7 @@ const (
 	goAssertExact        goAssertionKind = "exact"
 	goAssertErrorPath    goAssertionKind = "error_path"
 	goAssertNonNilResult goAssertionKind = "non_nil_result"
+	goAssertRecoverPanic goAssertionKind = "recover_panic"
 	goAssertTimeFormat   goAssertionKind = "time_format"
 	goAssertTimeDateZero goAssertionKind = "time_date_zero"
 )
@@ -839,7 +850,13 @@ type goBoundary struct {
 }
 
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if fn.IsMethod || fn.IsVariadic {
+	if fn.IsMethod {
+		return goSeedCase{}, false
+	}
+	if seed, ok := goRecoverSeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if fn.IsVariadic {
 		return goSeedCase{}, false
 	}
 	if seed, ok := goAliasUtilitySeedTestCase(fn, task); ok {
@@ -899,6 +916,26 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	}
 	seed.Outputs[fn.Returns[0].Name] = expr
 	return seed, true
+}
+
+func goRecoverSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || fn.Name != "Recover" {
+		return goSeedCase{}, false
+	}
+	if !fn.IsVariadic || len(fn.Params) != 1 || fn.Params[0].Type != "[]func()" {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	if !strings.Contains(hints, "p != nil") {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert: goAssertRecoverPanic,
+		Inputs: map[string]string{
+			fn.Params[0].Name: "[]func(){func() {}}",
+		},
+		Outputs: map[string]string{},
+	}, true
 }
 
 func goAliasUtilitySeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {

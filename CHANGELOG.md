@@ -29,6 +29,7 @@
 - Go static generator 支持常见 JSON/error 分支输入合成：`AsJson` marshal error、`FromJson` 非法 JSON、`FromJsonFile` 缺失文件路径会生成可执行断言。
 - Go static generator 支持部分工具函数分支输入合成：`SliceMapper0` 去重分支、`UserDurationOf` switch/case 和 `TrimSpaceSlice` 非空分支会生成可执行断言。
 - Go static generator 支持 `ParseToken` JWT 成功分支输入合成，可用同包 `GenerateToken` 与 `global.Config.Jwt` 构造有效 token，并断言 claims 非 nil、error 为 nil。
+- Go static generator 支持 `Recover` 的 panic/recover 分支输入合成，会用 `defer Recover(...); panic(...)` 覆盖 `recover() != nil` 路径。
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
 - Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
 - Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。
