@@ -239,11 +239,15 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	needReflect := false
 	needTime := false
 	needErrors := false
+	needHTTPServer := false
 	neededTypeImports := make(map[string]string)
 	for _, fn := range funcs {
 		seedCase, hasSeedCase := goSeedTestCase(fn, task)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
 			needTime = true
+		}
+		if hasSeedCase && seedCase.HTTPServerBody != "" {
+			needHTTPServer = true
 		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
 			needErrors = true
@@ -287,6 +291,10 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	}
 	if needReflect {
 		imports["reflect"] = true
+	}
+	if needHTTPServer {
+		imports["net/http"] = true
+		imports["net/http/httptest"] = true
 	}
 	for _, importPath := range neededTypeImports {
 		imports[importPath] = true
@@ -609,6 +617,10 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		callExpr = fmt.Sprintf("%s%s(%s)", fn.Name, typeArgs, strings.Join(args, ", "))
 	}
 
+	if hasSeedCase && seedCase.HTTPServerBody != "" {
+		writeGoHTTPServerSetup(&sb, fn, seedCase.HTTPServerBody)
+	}
+
 	// 处理返回值
 	if smokeCase {
 		writeGoSmokeCall(&sb, fn, callExpr)
@@ -748,6 +760,24 @@ func writeGoRecoverPanicCall(sb *strings.Builder, callExpr string) {
 	sb.WriteString("\t\t\t}()\n")
 }
 
+func writeGoHTTPServerSetup(sb *strings.Builder, fn funcInfo, body string) {
+	urlField := ""
+	for _, p := range fn.Params {
+		if p.Type == "string" && goURLLikeParamName(p.Name) {
+			urlField = goTestCaseFieldName(p.Name)
+			break
+		}
+	}
+	if urlField == "" {
+		return
+	}
+	sb.WriteString("\t\t\tsrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n")
+	sb.WriteString(fmt.Sprintf("\t\t\t\t_, _ = w.Write([]byte(%q))\n", body))
+	sb.WriteString("\t\t\t}))\n")
+	sb.WriteString("\t\t\tdefer srv.Close()\n")
+	sb.WriteString(fmt.Sprintf("\t\t\ttt.%s = srv.URL\n", urlField))
+}
+
 func writeGoSmokeCall(sb *strings.Builder, fn funcInfo, callExpr string) {
 	switch len(fn.Returns) {
 	case 0:
@@ -831,10 +861,11 @@ const (
 )
 
 type goSeedCase struct {
-	Assert     goAssertionKind
-	Inputs     map[string]string
-	Outputs    map[string]string
-	TimeLayout string
+	Assert         goAssertionKind
+	Inputs         map[string]string
+	Outputs        map[string]string
+	TimeLayout     string
+	HTTPServerBody string
 }
 
 type goBoundary struct {
@@ -863,6 +894,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 		return seed, true
 	}
 	if seed, ok := goJWTSeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goHTTPWrapperSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if seed, ok := goJSONSeedTestCase(fn, task); ok {
@@ -1004,6 +1038,63 @@ func goJWTSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, b
 		},
 		Outputs: map[string]string{},
 	}, true
+}
+
+func goHTTPWrapperSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil {
+		return goSeedCase{}, false
+	}
+	switch fn.Name {
+	case "GetJson":
+		if task.GapType != "error_path" || !goReturnsOnlyError(fn) {
+			return goSeedCase{}, false
+		}
+		inputs := map[string]string{}
+		for i, p := range fn.Params {
+			switch {
+			case p.Type == "string" && goURLLikeParamName(p.Name):
+				inputs[p.Name] = `""`
+			case p.Type == "string":
+				inputs[p.Name] = `"test"`
+			case p.Type == "any" || p.Type == "interface{}":
+				inputs[p.Name] = "&map[string]any{}"
+			default:
+				inputs[p.Name] = goArgValue(p, i)
+			}
+		}
+		return goSeedCase{
+			Assert:         goAssertErrorPath,
+			Inputs:         inputs,
+			Outputs:        map[string]string{},
+			HTTPServerBody: "{",
+		}, true
+	case "GetBytes":
+		if task.GapType != "return_path" || len(fn.Returns) != 2 || fn.Returns[0].Type != "[]byte" || fn.Returns[1].Type != "error" {
+			return goSeedCase{}, false
+		}
+		inputs := map[string]string{}
+		for i, p := range fn.Params {
+			switch {
+			case p.Type == "string" && goURLLikeParamName(p.Name):
+				inputs[p.Name] = `""`
+			case p.Type == "string":
+				inputs[p.Name] = `"test"`
+			default:
+				inputs[p.Name] = goArgValue(p, i)
+			}
+		}
+		return goSeedCase{
+			Assert: goAssertExact,
+			Inputs: inputs,
+			Outputs: map[string]string{
+				fn.Returns[0].Name: `[]byte("test-body")`,
+				fn.Returns[1].Name: "nil",
+			},
+			HTTPServerBody: "test-body",
+		}, true
+	default:
+		return goSeedCase{}, false
+	}
 }
 
 func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {

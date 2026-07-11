@@ -332,6 +332,122 @@ func GetBytes(api, tag string) ([]byte, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsHTTPWrapperServerCases(t *testing.T) {
+	src := `package sample
+
+import (
+	"io"
+	"net/http"
+)
+
+func GetJson(api, tag string, v any) error {
+	resp, err := http.Get(api)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if string(body) == "{" {
+		return errJSON
+	}
+	return nil
+}
+
+func GetBytes(api, tag string) ([]byte, error) {
+	resp, err := http.Get(api)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "http.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		target   string
+		gapType  string
+		testName string
+		want     []string
+		notWant  []string
+	}{
+		{
+			name:     "get json invalid server body",
+			target:   "GetJson",
+			gapType:  "error_path",
+			testName: "TestGetJsonInvalidBody",
+			want: []string{
+				`"net/http"`,
+				`"net/http/httptest"`,
+				"skip: false",
+				"v:    &map[string]any{}",
+				"srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {",
+				`_, _ = w.Write([]byte("{"))`,
+				"tt.api = srv.URL",
+				"err := GetJson(tt.api, tt.tag, tt.v)",
+				"if err == nil",
+				`expected error, got nil`,
+			},
+			notWant: []string{"skip: true", "unexpected error"},
+		},
+		{
+			name:     "get bytes server body",
+			target:   "GetBytes",
+			gapType:  "return_path",
+			testName: "TestGetBytesBody",
+			want: []string{
+				`"net/http"`,
+				`"net/http/httptest"`,
+				`"reflect"`,
+				"skip: false",
+				`ret0: []byte("test-body")`,
+				`ret1: nil`,
+				`_, _ = w.Write([]byte("test-body"))`,
+				"tt.api = srv.URL",
+				"got0, got1 := GetBytes(tt.api, tt.tag)",
+				"if !reflect.DeepEqual(got0, tt.ret0)",
+				"if got1 != nil",
+			},
+			notWant: []string{"skip: true", "expected error, got nil"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:             "go-test-http-wrapper",
+				Framework:      "go-test",
+				Target:         tt.target,
+				LineRange:      "1-1",
+				GapType:        tt.gapType,
+				TestName:       tt.testName,
+				AssertionFocus: []string{"覆盖 HTTP wrapper path"},
+			}
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range append([]string{"func " + tt.testName + "(t *testing.T)"}, tt.want...) {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskBuildsHTTPRequestBranches(t *testing.T) {
 	src := `package sample
 
