@@ -80,6 +80,63 @@ func Add(a, b int) int {
 	}
 }
 
+func TestHandleValidateCoverageTaskReturnsAdjustedCoverageTaskName(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	testFile := filepath.Join(dir, "calc_test.go")
+	existing := `package calc
+
+import "testing"
+
+func TestAdd(t *testing.T) {
+	if Add(1, 2) != 3 {
+		t.Fatal("unexpected Add result")
+	}
+}
+`
+	if err := os.WriteFile(testFile, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write existing test: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "go-test-1",
+		Framework: "go-test",
+		File:      source,
+		Target:    "Add",
+		Kind:      "function",
+		LineRange: "2-2",
+		TestFile:  testFile,
+		TestName:  "TestAdd",
+		Command:   "go test ./...",
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.CoverageTask == nil || out.CoverageTask.TestName != "TestAddCoverage2_2" {
+		t.Fatalf("validation coverage task test_name = %+v, want adjusted name", out.CoverageTask)
+	}
+	if out.Generated == nil || out.Generated.CoverageTask == nil || out.Generated.CoverageTask.TestName != out.CoverageTask.TestName {
+		t.Fatalf("generated coverage task was not aligned with validation output: %+v", out.Generated)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",

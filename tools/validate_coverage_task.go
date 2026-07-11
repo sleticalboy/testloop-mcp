@@ -42,7 +42,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		out := types.CoverageTaskValidationOutput{
 			Status:        "generation_error",
 			Action:        coverageTaskGenerationAction(generated),
-			CoverageTask:  input.CoverageTask,
+			CoverageTask:  validationCoverageTask(input.CoverageTask, generated),
 			Generated:     generated,
 			Error:         generated.Error,
 			ProviderError: generated.ProviderError,
@@ -55,7 +55,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		out := types.CoverageTaskValidationOutput{
 			Status:       "run_error",
 			Action:       "inspect_test_runner",
-			CoverageTask: input.CoverageTask,
+			CoverageTask: validationCoverageTask(input.CoverageTask, generated),
 			Generated:    generated,
 			Error:        err.Error(),
 		}
@@ -65,7 +65,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
 		Action:       coverageTaskValidationAction(runResult),
-		CoverageTask: input.CoverageTask,
+		CoverageTask: validationCoverageTask(input.CoverageTask, generated),
 		Generated:    generated,
 		RunResult:    runResult,
 		Metadata: map[string]any{
@@ -74,6 +74,13 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		},
 	}
 	return coverageTaskValidationResult(out)
+}
+
+func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {
+	if generated != nil && generated.CoverageTask != nil {
+		return generated.CoverageTask
+	}
+	return input
 }
 
 func validateCoverageTaskGenerate(ctx context.Context, input validateCoverageTaskInput, framework string) (*types.GenerateTestsOutput, error) {

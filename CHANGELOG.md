@@ -10,7 +10,8 @@
 
 - Go coverage task static generator 在遇到无参数、非方法、返回值可安全丢弃但无法推导精确期望值的函数时，会生成可执行的 smoke 测试而不是默认 skipped TODO；真实样例验证覆盖 `GetNowDate()` 这类日期/时间辅助函数。
 - Go coverprofile 解析会把当前 `go.mod` module 路径映射成本地源码路径，例如 `car-svc/utils/time.go` 会归一化为 `utils/time.go`，让 `parse_coverage.test_tasks[]` 可直接传给 `generate_tests`。
-- Go `generate_tests` 写入已有测试文件时会合并追加新的 `Test*` 函数并复用 import，不再覆盖已有测试；遇到同名测试函数会返回明确错误。
+- Go `generate_tests` 写入已有测试文件时会合并追加新的 `Test*` 函数并复用 import，不再覆盖已有测试；普通 Go 合并遇到同名测试函数会返回明确错误。
+- Go coverage task 写入已有测试文件时，如果任务推荐的 `test_name` 已存在，会基于覆盖率行段或 task id 自动追加稳定后缀，例如 `TestGetRawCoverage204_207`，避免重复任务卡在生成阶段。
 - Go `run_tests` 使用相对测试文件或目录时会归一化为 `./pkg` 形式，避免 `utils/time_test.go` 被执行成标准库导入路径 `utils`。
 - Go static generator 会识别 `time.Now().Format("layout")` 这类日期字符串返回值，生成 `time.Parse` 格式断言，不再退化成仅丢弃返回值的 smoke 测试。
 - Go static generator 会识别 `time.Date(..., 0, 0, 0, 0, ...)` 这类 `time.Time` 日期边界返回值，生成 hour/min/sec/nsec 归零断言。
@@ -28,6 +29,10 @@
 - Go coverage task 的分支缺口改为基于 AST 抽取 `if` / `switch` / `return`，不再把函数签名、普通语句或 `if init` 误当作分支条件。
 - Coverage suggestion/test task 会合并同目标、同缺口类型、同分支条件且行段相邻或重叠的未覆盖 block，减少 Go coverprofile 拆块导致的重复任务。
 - Coverage task 排序新增路径环境成本启发式，优先暴露 `utils` / helper / parser 等低依赖任务，并降低 controller、router、service、middleware、db/cache 等高初始化成本任务的优先级。
+
+### Fixed
+
+- 修复真实 Go 项目中已有测试函数与 coverage task 推荐 `test_name` 重名时 `validate_coverage_task` 返回 `generation_error` 的问题；laoxia `GetRaw` 样本已验证为 `passed/ready`。
 
 ## v0.4.13 - 2026-07-10
 

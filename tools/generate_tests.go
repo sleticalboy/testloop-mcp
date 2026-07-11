@@ -36,6 +36,13 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, fmt.Errorf("文件不存在: %w", err)
 	}
 
+	testFile := targetTestFile(filePath, input.CoverageTask)
+	coverageTask, err := coverageTaskForGeneration(filePath, testFile, input.CoverageTask)
+	if err != nil {
+		return nil, nil, err
+	}
+	input.CoverageTask = coverageTask
+
 	provider, err := generator.NewTestProvider(input.Provider)
 	if err != nil {
 		if result, out, ok := generateTestsProviderErrorResult(filePath, nil, input, err); ok {
@@ -53,10 +60,6 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, formatGenerateTestsError(err)
 	}
 
-	testFile := generator.TestFileName(filePath)
-	if input.CoverageTask != nil && strings.TrimSpace(input.CoverageTask.TestFile) != "" {
-		testFile = input.CoverageTask.TestFile
-	}
 	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil && filepath.Dir(testFile) != "." {
 		return nil, nil, fmt.Errorf("创建测试目录失败: %w", err)
 	}
@@ -81,6 +84,113 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
 	}, nil, nil
+}
+
+func targetTestFile(filePath string, task *types.CoverageTestTask) string {
+	testFile := generator.TestFileName(filePath)
+	if task != nil && strings.TrimSpace(task.TestFile) != "" {
+		return task.TestFile
+	}
+	return testFile
+}
+
+func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTestTask) (*types.CoverageTestTask, error) {
+	if task == nil || filepath.Ext(filePath) != ".go" || strings.TrimSpace(task.TestName) == "" {
+		return task, nil
+	}
+	existing, err := existingGoTestNames(testFile)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(task.TestName)
+	if !existing[name] {
+		return task, nil
+	}
+	adjusted := *task
+	adjusted.TestName = uniqueGoCoverageTaskTestName(name, &adjusted, existing)
+	return &adjusted, nil
+}
+
+func existingGoTestNames(testFile string) (map[string]bool, error) {
+	existing := make(map[string]bool)
+	content, err := os.ReadFile(testFile)
+	if os.IsNotExist(err) {
+		return existing, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("读取已有 Go 测试文件失败: %w", err)
+	}
+	if strings.TrimSpace(string(content)) == "" {
+		return existing, nil
+	}
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, testFile, content, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("解析已有 Go 测试文件失败: %w", err)
+	}
+	return goTestFuncNames(file), nil
+}
+
+func uniqueGoCoverageTaskTestName(base string, task *types.CoverageTestTask, existing map[string]bool) string {
+	for _, suffix := range goCoverageTaskTestNameSuffixes(task) {
+		candidate := base + suffix
+		if !existing[candidate] {
+			return candidate
+		}
+	}
+	for i := 2; ; i++ {
+		candidate := fmt.Sprintf("%sCoverage%d", base, i)
+		if !existing[candidate] {
+			return candidate
+		}
+	}
+}
+
+func goCoverageTaskTestNameSuffixes(task *types.CoverageTestTask) []string {
+	var suffixes []string
+	if lineRange := goLineRangeSuffix(task.LineRange); lineRange != "" {
+		suffixes = append(suffixes, "Coverage"+lineRange)
+	}
+	if id := goCamelSuffix(task.ID); id != "" {
+		suffixes = append(suffixes, "Coverage"+id)
+	}
+	suffixes = append(suffixes, "Coverage")
+	return suffixes
+}
+
+func goLineRangeSuffix(value string) string {
+	var b strings.Builder
+	lastUnderscore := false
+	for _, r := range strings.TrimSpace(value) {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore && b.Len() > 0 {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
+}
+
+func goCamelSuffix(value string) string {
+	parts := strings.FieldsFunc(strings.TrimSpace(value), func(r rune) bool {
+		return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+	})
+	var b strings.Builder
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		runes := []rune(part)
+		if runes[0] >= 'a' && runes[0] <= 'z' {
+			runes[0] -= 'a' - 'A'
+		}
+		b.WriteString(string(runes))
+	}
+	return b.String()
 }
 
 func generateTestsProviderErrorResult(filePath string, provider generator.TestProvider, input generateTestsInput, err error) (*mcp.CallToolResult, any, bool) {
