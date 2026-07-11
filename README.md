@@ -232,7 +232,7 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 **返回：** `{ status, action, coverage_task, generated, run_result, error, provider_error, metadata }`
 
-`status` 为 `passed` 时，说明生成的测试已经通过当前测试命令；`failed` 表示生成成功但测试未通过，Agent 应读取 `run_result.failures[]` 和 `run_result.fix_suggestions[]`；`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
+`status` 为 `passed` 时，说明生成的测试已经通过当前测试命令；`action=ready` 表示可以进入下一个任务，`action=manual_review_unreachable` 表示目标分支疑似不可达，`action=manual_review_environment` 表示目标错误路径依赖 OS、硬件或第三方库内部错误，通常需要人工复核或依赖注入后再补。`failed` 表示生成成功但测试未通过，Agent 应读取 `run_result.failures[]` 和 `run_result.fix_suggestions[]`；`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
 
 ---
 
