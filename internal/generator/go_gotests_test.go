@@ -778,12 +778,14 @@ func FromJson(data []byte, dst any) error {
 	}
 
 	tests := []struct {
-		name     string
-		target   string
-		branch   string
-		testName string
-		want     []string
-		notWant  []string
+		name           string
+		target         string
+		gapType        string
+		branch         string
+		testName       string
+		assertionFocus []string
+		want           []string
+		notWant        []string
 	}{
 		{
 			name:     "as json slice marshal error",
@@ -841,20 +843,52 @@ func FromJson(data []byte, dst any) error {
 			},
 			notWant: []string{"skip: true", "unexpected error"},
 		},
+		{
+			name:     "from json file success path",
+			target:   "FromJsonFile",
+			gapType:  "error_path",
+			testName: "TestFromJsonFileSuccess",
+			assertionFocus: []string{
+				"断言未覆盖返回路径的具体结果",
+				"未覆盖返回路径",
+				"覆盖未执行行: 39",
+			},
+			want: []string{
+				`"os"`,
+				"skip: false",
+				`path: ""`,
+				"dst:  &map[string]any{}",
+				`if tt.path == ""`,
+				`tt.path = t.TempDir() + "/input.json"`,
+				`os.WriteFile(tt.path, []byte(` + "`" + `{"ok":true}` + "`" + `), 0644)`,
+				"err := FromJsonFile(tt.path, tt.dst)",
+				"if err != nil",
+				`unexpected error`,
+			},
+			notWant: []string{"skip: true", "expected error, got nil"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			gapType := tt.gapType
+			if gapType == "" {
+				gapType = "branch"
+			}
+			assertionFocus := tt.assertionFocus
+			if len(assertionFocus) == 0 {
+				assertionFocus = []string{"断言 JSON error path"}
+			}
 			task := types.CoverageTestTask{
 				ID:              "go-test-json",
 				Framework:       "go-test",
 				Target:          tt.target,
 				LineRange:       "1-1",
-				GapType:         "branch",
+				GapType:         gapType,
 				TestName:        tt.testName,
 				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
 				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},
-				AssertionFocus:  []string{"断言 JSON error path"},
+				AssertionFocus:  assertionFocus,
 			}
 			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
 			if err != nil {

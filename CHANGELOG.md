@@ -27,6 +27,7 @@
 - Go static generator 支持 URL/API 字符串参数触发的 `err != nil` 分支；对 `error` 或 `(..., error)` 返回值会生成非法 URL 输入、断言 error 非 nil，并对非 error 返回值做 nil/简单值断言。
 - Go static generator 支持 `*http.Request` 字符串返回分支的常见输入合成，可为 `RemoteAddr`、`X-Forwarded-For`、`X-Real-IP` 和 RemoteAddr 解析错误生成可执行请求对象与精确断言。
 - Go static generator 支持常见 JSON/error 分支输入合成：`AsJson` marshal error、`FromJson` 非法 JSON、`FromJsonFile` 缺失文件路径会生成可执行断言。
+- Go static generator 支持 `FromJsonFile` 成功返回路径输入合成，会写入临时 JSON 文件并断言返回 error 为 nil。
 - Go static generator 支持部分工具函数分支输入合成：`SliceMapper0` 去重分支、`UserDurationOf` switch/case 和 `TrimSpaceSlice` 非空分支会生成可执行断言。
 - Go static generator 扩展工具函数 return/statement path 输入合成，覆盖 `SliceMapper0`、`TrimSpaceSlice` 和 `UserTypeOf` 的纯函数返回路径。
 - Go static generator 支持 `ParseToken` JWT 成功分支输入合成，可用同包 `GenerateToken` 与 `global.Config.Jwt` 构造有效 token，并断言 claims 非 nil、error 为 nil。

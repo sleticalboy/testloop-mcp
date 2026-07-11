@@ -1178,12 +1178,15 @@ func goHTTPWrapperSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSee
 }
 
 func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if task == nil || task.GapType != "branch" || len(fn.Returns) == 0 {
+	if task == nil || len(fn.Returns) == 0 {
 		return goSeedCase{}, false
 	}
 	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
 	switch fn.Name {
 	case "AsJson":
+		if task.GapType != "branch" {
+			return goSeedCase{}, false
+		}
 		if len(fn.Params) != 1 || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
 			return goSeedCase{}, false
 		}
@@ -1201,6 +1204,9 @@ func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, 
 			Outputs: map[string]string{fn.Returns[0].Name: output},
 		}, true
 	case "FromJson":
+		if task.GapType != "branch" {
+			return goSeedCase{}, false
+		}
 		if !goReturnsOnlyError(fn) || !strings.Contains(hints, "err != nil") {
 			return goSeedCase{}, false
 		}
@@ -1217,7 +1223,36 @@ func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, 
 		}
 		return goSeedCase{Assert: goAssertErrorPath, Inputs: inputs, Outputs: map[string]string{}}, true
 	case "FromJsonFile":
-		if !goReturnsOnlyError(fn) || !strings.Contains(hints, "err != nil") {
+		if !goReturnsOnlyError(fn) {
+			return goSeedCase{}, false
+		}
+		if goTaskLooksLikeSuccessReturnPath(task) {
+			inputs := map[string]string{}
+			for i, p := range fn.Params {
+				switch {
+				case p.Type == "string" && strings.EqualFold(p.Name, "path"):
+					inputs[p.Name] = `""`
+				case p.Type == "any" || p.Type == "interface{}":
+					inputs[p.Name] = "&map[string]any{}"
+				default:
+					inputs[p.Name] = goArgValue(p, i)
+				}
+			}
+			return goSeedCase{
+				Assert:  goAssertExact,
+				Inputs:  inputs,
+				Outputs: map[string]string{fn.Returns[0].Name: "nil"},
+				Setup: []string{
+					`if tt.path == "" {`,
+					"\ttt.path = t.TempDir() + \"/input.json\"",
+					"\tif err := os.WriteFile(tt.path, []byte(`" + `{"ok":true}` + "`), 0644); err != nil {",
+					"\t\tt.Fatalf(\"write json fixture: %v\", err)",
+					"\t}",
+					`}`,
+				},
+			}, true
+		}
+		if !strings.Contains(hints, "err != nil") {
 			return goSeedCase{}, false
 		}
 		inputs := map[string]string{}
@@ -1310,6 +1345,21 @@ func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSee
 		Outputs: map[string]string{fn.Returns[0].Name: expected},
 		Setup:   setup,
 	}, true
+}
+
+func goTaskLooksLikeSuccessReturnPath(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	if task.GapType == "return_path" {
+		return true
+	}
+	parts := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus))
+	parts = append(parts, task.MissingBranches...)
+	parts = append(parts, task.SuggestedInputs...)
+	parts = append(parts, task.AssertionFocus...)
+	hints := strings.Join(parts, " ")
+	return strings.Contains(hints, "返回路径") && !strings.Contains(hints, "err != nil")
 }
 
 func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
@@ -1841,6 +1891,11 @@ func goSeedCaseUsesPackage(seed goSeedCase, pkg string) bool {
 	}
 	for _, value := range seed.Outputs {
 		if strings.Contains(value, prefix) {
+			return true
+		}
+	}
+	for _, line := range seed.Setup {
+		if strings.Contains(line, prefix) {
 			return true
 		}
 	}
