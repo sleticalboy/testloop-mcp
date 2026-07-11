@@ -23,6 +23,7 @@
 - Go context 会保留 `a > 0 && b > 0` / `a > 0 || b > 0` 这类复合分支条件原文，并在 coverage task 降级说明中标注当前不支持多参数输入合成。
 - Go static generator 支持有限的 `&&` 复合条件输入合成；当每个子条件都是简单参数边界且返回表达式安全时，会生成非 skipped 精确用例。
 - Go static generator 支持简单整数范围条件，例如 `a > 0 && a < 10` 会合成范围内输入；无交集或非整数重复参数条件继续保守降级。
+- Go static generator 支持 URL/API 字符串参数触发的 `err != nil` 分支；对 `error` 或 `(..., error)` 返回值会生成非法 URL 输入、断言 error 非 nil，并对非 error 返回值做 nil/简单值断言。
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
 - Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
 - Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。

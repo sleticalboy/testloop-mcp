@@ -269,6 +269,69 @@ func Add(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesURLInputForMultiReturnErrorPath(t *testing.T) {
+	src := `package sample
+
+import (
+	"io"
+	"net/http"
+)
+
+func GetBytes(api, tag string) ([]byte, error) {
+	resp, err := http.Get(api)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "http.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-error-path",
+		Framework:       "go-test",
+		Target:          "GetBytes",
+		LineRange:       "7-9",
+		GapType:         "branch",
+		TestName:        "TestGetBytesErrorPath",
+		MissingBranches: []string{"未覆盖 if 分支: err != nil"},
+		SuggestedInputs: []string{"构造满足条件 `err != nil` 的输入", "设置 api 覆盖未执行分支"},
+		AssertionFocus:  []string{"断言错误路径返回 nil bytes 和非 nil error"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestGetBytesErrorPath(t *testing.T)",
+		`"reflect"`,
+		"skip: false",
+		`api:  "://invalid-url"`,
+		`ret0: nil`,
+		"got0, got1 := GetBytes(tt.api, tt.tag)",
+		"if !reflect.DeepEqual(got0, tt.ret0)",
+		"if got1 == nil",
+		`expected error, got nil`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"TODO: 填写有意义的输入",
+		"unexpected error",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesStringBoolAndNilBranchInputs(t *testing.T) {
 	src := `package sample
 

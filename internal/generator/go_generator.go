@@ -248,7 +248,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
 			needErrors = true
 		}
-		if hasSeedCase && seedCase.Assert != goAssertExact {
+		if hasSeedCase && seedCase.Assert != goAssertExact && seedCase.Assert != goAssertErrorPath {
 			continue
 		}
 		if !hasSeedCase && goCoverageSmokeCallable(fn, task) {
@@ -483,7 +483,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	seedCase, hasSeedCase := goSeedTestCase(fn, task)
 	smokeCase := !hasSeedCase && goCoverageSmokeCallable(fn, task)
 	exactCase := hasSeedCase && seedCase.Assert == goAssertExact
-	expectedReturnFields := !smokeCase && (!hasSeedCase || exactCase)
+	errorPathCase := hasSeedCase && seedCase.Assert == goAssertErrorPath
+	expectedReturnFields := !smokeCase && (!hasSeedCase || exactCase || errorPathCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -495,6 +496,9 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	if !smokeCase {
 		if expectedReturnFields {
 			for _, r := range fn.Returns {
+				if errorPathCase && r.Type == "error" {
+					continue
+				}
 				sb.WriteString(fmt.Sprintf("\t\t%s %s\n", goTestCaseFieldName(r.Name), r.Type))
 			}
 		}
@@ -513,8 +517,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(p.Name), seedCase.Inputs[p.Name]))
 		}
-		if exactCase {
+		if exactCase || errorPathCase {
 			for _, r := range fn.Returns {
+				if errorPathCase && r.Type == "error" {
+					continue
+				}
 				sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(r.Name), seedCase.Outputs[r.Name]))
 			}
 		}
@@ -600,8 +607,13 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	} else if len(fn.Returns) == 1 {
 		if fn.Returns[0].Type == "error" {
 			sb.WriteString(fmt.Sprintf("\t\t\terr := %s\n", callExpr))
-			sb.WriteString("\t\t\tif err != nil {\n")
-			sb.WriteString("\t\t\t\tt.Errorf(\"unexpected error: %v\", err)\n")
+			if errorPathCase {
+				sb.WriteString("\t\t\tif err == nil {\n")
+				sb.WriteString("\t\t\t\tt.Errorf(\"expected error, got nil\")\n")
+			} else {
+				sb.WriteString("\t\t\tif err != nil {\n")
+				sb.WriteString("\t\t\t\tt.Errorf(\"unexpected error: %v\", err)\n")
+			}
 			sb.WriteString("\t\t\t}\n")
 		} else {
 			sb.WriteString(fmt.Sprintf("\t\t\tgot := %s\n", callExpr))
@@ -622,8 +634,13 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 
 		for i, r := range fn.Returns {
 			if r.Type == "error" {
-				sb.WriteString(fmt.Sprintf("\t\t\tif %s != nil {\n", returnVars[i]))
-				sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"unexpected error: %%v\", %s)\n", returnVars[i]))
+				if errorPathCase {
+					sb.WriteString(fmt.Sprintf("\t\t\tif %s == nil {\n", returnVars[i]))
+					sb.WriteString("\t\t\t\tt.Errorf(\"expected error, got nil\")\n")
+				} else {
+					sb.WriteString(fmt.Sprintf("\t\t\tif %s != nil {\n", returnVars[i]))
+					sb.WriteString(fmt.Sprintf("\t\t\t\tt.Errorf(\"unexpected error: %%v\", %s)\n", returnVars[i]))
+				}
 				sb.WriteString("\t\t\t}\n")
 			} else if needsDeepEqual(r.Type) {
 				sb.WriteString(fmt.Sprintf("\t\t\tif !reflect.DeepEqual(%s, tt.%s) {\n", returnVars[i], goTestCaseFieldName(r.Name)))
@@ -734,6 +751,7 @@ type goAssertionKind string
 
 const (
 	goAssertExact        goAssertionKind = "exact"
+	goAssertErrorPath    goAssertionKind = "error_path"
 	goAssertTimeFormat   goAssertionKind = "time_format"
 	goAssertTimeDateZero goAssertionKind = "time_date_zero"
 )
@@ -746,22 +764,26 @@ type goSeedCase struct {
 }
 
 type goBoundary struct {
-	Param      string
-	Op         string
-	Value      string
-	Condition  string
-	ReturnExpr string
-	Compound   bool
-	CompoundOp string
-	Parts      []goBoundary
+	Param       string
+	Op          string
+	Value       string
+	Condition   string
+	ReturnExpr  string
+	ReturnExprs []string
+	Compound    bool
+	CompoundOp  string
+	Parts       []goBoundary
 }
 
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if fn.IsMethod || fn.IsVariadic || len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
+	if fn.IsMethod || fn.IsVariadic {
 		return goSeedCase{}, false
 	}
 	if seed, ok := goBranchSeedTestCase(fn, task); ok {
 		return seed, true
+	}
+	if len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
+		return goSeedCase{}, false
 	}
 	if fn.Returns[0].Type == "string" && len(fn.Params) == 0 {
 		if layout, ok := goTimeFormatLayout(fn.ReturnExpr); ok {
@@ -805,15 +827,24 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 }
 
 func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if task == nil || task.GapType != "branch" || len(fn.Boundaries) == 0 || !goTypeSupportsExactSeed(fn.Returns[0].Type) {
+	if task == nil || task.GapType != "branch" || len(fn.Boundaries) == 0 || len(fn.Returns) == 0 {
 		return goSeedCase{}, false
 	}
 	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
-	if boundary == nil || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+	if boundary == nil {
 		return goSeedCase{}, false
 	}
 	if boundary.Compound {
+		if len(fn.Returns) != 1 || !goTypeSupportsExactSeed(fn.Returns[0].Type) || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+			return goSeedCase{}, false
+		}
 		return goCompoundBranchSeedTestCase(fn, *boundary)
+	}
+	if seed, ok := goErrorPathSeedTestCase(fn, *boundary); ok {
+		return seed, true
+	}
+	if len(fn.Returns) != 1 || !goTypeSupportsExactSeed(fn.Returns[0].Type) || boundary.ReturnExpr == "" || !goReturnExprIsSafe(boundary.ReturnExpr) {
+		return goSeedCase{}, false
 	}
 
 	inputs := map[string]string{}
@@ -843,6 +874,89 @@ func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase
 		Inputs:  inputs,
 		Outputs: map[string]string{fn.Returns[0].Name: expr},
 	}, true
+}
+
+func goErrorPathSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool) {
+	if len(boundary.ReturnExprs) != len(fn.Returns) || !goErrorBoundaryReturnsError(fn, boundary) {
+		return goSeedCase{}, false
+	}
+	inputs, ok := goErrorPathInputs(fn, boundary)
+	if !ok {
+		return goSeedCase{}, false
+	}
+	outputs := map[string]string{}
+	for i, r := range fn.Returns {
+		if r.Type == "error" {
+			continue
+		}
+		expr := boundary.ReturnExprs[i]
+		if !goReturnExprAssignableAsExpected(expr, r.Type) {
+			return goSeedCase{}, false
+		}
+		outputs[r.Name] = expr
+	}
+	return goSeedCase{
+		Assert:  goAssertErrorPath,
+		Inputs:  inputs,
+		Outputs: outputs,
+	}, true
+}
+
+func goErrorBoundaryReturnsError(fn funcInfo, boundary goBoundary) bool {
+	if boundary.Param != "err" || boundary.Op != "!=" || boundary.Value != "nil" {
+		return false
+	}
+	for i, r := range fn.Returns {
+		expr := boundary.ReturnExprs[i]
+		if r.Type == "error" {
+			if expr == "nil" || expr == "" || !goReturnExprIsSafe(expr) {
+				return false
+			}
+			continue
+		}
+		if expr == "" || !goReturnExprIsSafe(expr) {
+			return false
+		}
+	}
+	return true
+}
+
+func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, bool) {
+	inputs := map[string]string{}
+	for i, p := range fn.Params {
+		inputs[p.Name] = goArgValue(p, i)
+	}
+	if boundary.Param != "err" {
+		if _, ok := inputs[boundary.Param]; !ok {
+			return nil, false
+		}
+		return inputs, true
+	}
+	for _, p := range fn.Params {
+		if p.Type != "string" || !goURLLikeParamName(p.Name) {
+			continue
+		}
+		inputs[p.Name] = "\"://invalid-url\""
+		return inputs, true
+	}
+	return nil, false
+}
+
+func goURLLikeParamName(name string) bool {
+	compact := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", ""))
+	switch compact {
+	case "api", "url", "uri", "endpoint", "requesturl", "href":
+		return true
+	default:
+		return false
+	}
+}
+
+func goReturnExprAssignableAsExpected(expr, typ string) bool {
+	if expr == "nil" {
+		return goTypeSupportsNil(typ)
+	}
+	return goTypeSupportsExactSeed(typ) && goReturnExprIsSafe(expr)
 }
 
 func goCompoundBranchSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool) {
@@ -1373,9 +1487,13 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 	if !ok {
 		return goBoundary{}, false
 	}
-	ret := firstGoReturnExpr(ifStmt.Body)
-	if ret == "" {
+	retExprs := firstGoReturnExprs(ifStmt.Body)
+	if len(retExprs) == 0 {
 		return goBoundary{}, false
+	}
+	ret := ""
+	if len(retExprs) == 1 {
+		ret = retExprs[0]
 	}
 	if binary.Op.String() == "&&" || binary.Op.String() == "||" {
 		compoundOp := binary.Op.String()
@@ -1384,11 +1502,12 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 			parts = nil
 		}
 		return goBoundary{
-			Condition:  exprToString(binary),
-			ReturnExpr: ret,
-			Compound:   true,
-			CompoundOp: compoundOp,
-			Parts:      parts,
+			Condition:   exprToString(binary),
+			ReturnExpr:  ret,
+			ReturnExprs: retExprs,
+			Compound:    true,
+			CompoundOp:  compoundOp,
+			Parts:       parts,
 		}, true
 	}
 	param, op, value, ok := goBoundaryParamValue(binary)
@@ -1396,11 +1515,12 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		return goBoundary{}, false
 	}
 	return goBoundary{
-		Param:      param,
-		Op:         op,
-		Value:      value,
-		Condition:  strings.Join([]string{param, op, value}, " "),
-		ReturnExpr: ret,
+		Param:       param,
+		Op:          op,
+		Value:       value,
+		Condition:   strings.Join([]string{param, op, value}, " "),
+		ReturnExpr:  ret,
+		ReturnExprs: retExprs,
 	}, true
 }
 
@@ -1504,17 +1624,29 @@ func goBoundaryLiteral(expr ast.Expr) (string, bool) {
 }
 
 func firstGoReturnExpr(body *ast.BlockStmt) string {
-	if body == nil {
+	exprs := firstGoReturnExprs(body)
+	if len(exprs) != 1 {
 		return ""
+	}
+	return exprs[0]
+}
+
+func firstGoReturnExprs(body *ast.BlockStmt) []string {
+	if body == nil {
+		return nil
 	}
 	for _, stmt := range body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
-		if !ok || len(ret.Results) != 1 {
+		if !ok || len(ret.Results) == 0 {
 			continue
 		}
-		return exprToString(ret.Results[0])
+		exprs := make([]string, 0, len(ret.Results))
+		for _, result := range ret.Results {
+			exprs = append(exprs, exprToString(result))
+		}
+		return exprs
 	}
-	return ""
+	return nil
 }
 
 func goTypeSupportsExactSeed(typ string) bool {
@@ -1523,6 +1655,18 @@ func goTypeSupportsExactSeed(typ string) bool {
 		strings.HasPrefix(typ, "float") ||
 		typ == "string" ||
 		typ == "bool"
+}
+
+func goTypeSupportsNil(typ string) bool {
+	return typ == "any" ||
+		typ == "interface{}" ||
+		typ == "error" ||
+		strings.HasPrefix(typ, "*") ||
+		strings.HasPrefix(typ, "[]") ||
+		strings.HasPrefix(typ, "map[") ||
+		strings.HasPrefix(typ, "chan ") ||
+		strings.Contains(typ, "<-chan") ||
+		strings.HasPrefix(typ, "func")
 }
 
 func goReturnExprIsSafe(expr string) bool {
