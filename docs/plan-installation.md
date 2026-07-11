@@ -24,7 +24,7 @@
 - Release：https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.4.14
 - CI run：`29157660797`
 - Release Artifacts run：`29157722825`
-- Post-Release Verify run：`29157901152` queued，尚未完成
+- Post-Release Verify run：`29157901152`
 - Homebrew tap commit：`6394533b9f999bd2125efab6ace6f3c1e81da180`
 
 `v0.4.14` Release 已包含：
@@ -45,7 +45,7 @@
 - [x] 远端 CI passed
 - [x] Release Artifacts run `29157722825` passed
 - [x] `scripts/verify-release-assets.sh v0.4.14` 验证 release 页面包含 10 个必需资产
-- [ ] 手动触发 `Post-Release Verify` workflow `29157901152`，当前仍 queued，尚未拿到 GitHub runner
+- [x] 手动触发 `Post-Release Verify` workflow `29157901152`，五平台安装脚本 dry run 全部通过
 - [x] `brew fetch sleticalboy/tap/testloop-mcp`
 - [x] `brew audit --formula --strict sleticalboy/tap/testloop-mcp`
 - [x] `brew upgrade sleticalboy/tap/testloop-mcp`
@@ -70,7 +70,7 @@
 | `v0.4.11` | JS/TS 静态生成质量增强，补强复杂 TypeScript DTO payload 和 handler 闭环检查 | Release run `28995989142`；Homebrew tap 升级到 `0.4.11` 并通过 `brew test` |
 | `v0.4.12` | JS/TS 同文件简单泛型 DTO 展开，payload 回退原因贯通到工具输出和 LLM provider 输入 | Release run `29022581976`；Post-Release Verify run `29025114403`；Homebrew tap 升级到 `0.4.12` 并通过 `brew test` |
 | `v0.4.13` | LLM provider 接入质量增强，补齐默认 prompt、输出清洗、结构化 `provider_error` 和 Agent static fallback 闭环 | Release run `29089692602`；Post-Release Verify run `29090486292`；Homebrew tap 升级到 `0.4.13` 并通过 `brew test` |
-| `v0.4.14` | Go coverage task 闭环质量增强，补齐 `validate_coverage_task`、skipped task 分类和 laoxia top50 隔离验证 | Release run `29157722825`；Post-Release Verify run `29157901152` queued；Homebrew tap 升级到 `0.4.14` 并通过 `brew test` |
+| `v0.4.14` | Go coverage task 闭环质量增强，补齐 `validate_coverage_task`、skipped task 分类和 laoxia top50 隔离验证 | Release run `29157722825`；Post-Release Verify run `29157901152`；Homebrew tap 升级到 `0.4.14` 并通过 `brew test` |
 
 ## 发布维护流程
 

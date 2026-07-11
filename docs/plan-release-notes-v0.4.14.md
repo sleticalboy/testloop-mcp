@@ -13,7 +13,7 @@ testloop-mcp v0.4.14
 - [x] 正式版本准备时将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.14 - 2026-07-11`。
 - [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
 - [x] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和 Homebrew 安装链路验证。
-- [ ] Post-Release Verify run `29157901152` 已触发但仍 queued，尚未完成五平台安装脚本 dry run。
+- [x] Post-Release Verify run `29157901152` 已完成，五平台安装脚本 dry run 全部通过。
 
 ## 摘要
 
@@ -107,7 +107,7 @@ v0.4.14 候选仍保持明确边界：
 - [x] 推送 tag 后等待 Release Artifacts workflow 完成：run `29157722825` passed。
 - [x] `scripts/verify-release-assets.sh v0.4.14`
 - [x] Homebrew tap 核验：tap commit `6394533b9f999bd2125efab6ace6f3c1e81da180`，`brew fetch`、`brew audit --formula --strict`、`brew upgrade --formula`、`brew test` 均通过。
-- [ ] Post-Release Verify run `29157901152` 仍 queued，首个 `ubuntu-latest` job 尚未拿到 runner。
+- [x] Post-Release Verify run `29157901152` passed，资产清单和五平台安装脚本 dry run 全部通过。
 
 ## 发布备注
 
