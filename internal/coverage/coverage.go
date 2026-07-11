@@ -520,6 +520,10 @@ func coverageTaskPriority(suggestion types.CoverageSuggestion, testFile string) 
 		score += 6
 		reasons = append(reasons, "已有推荐测试文件")
 	}
+	if adjustment, reason := coverageTaskExecutionCostAdjustment(suggestion.File); adjustment != 0 {
+		score += adjustment
+		reasons = append(reasons, reason)
+	}
 	score += int(suggestion.Confidence * 10)
 	if suggestion.Confidence > 0 {
 		reasons = append(reasons, fmt.Sprintf("置信度 %.2f", suggestion.Confidence))
@@ -528,6 +532,95 @@ func coverageTaskPriority(suggestion types.CoverageSuggestion, testFile string) 
 		score = 0
 	}
 	return score, strings.Join(reasons, "；")
+}
+
+func coverageTaskExecutionCostAdjustment(file string) (int, string) {
+	dirs := pathDirectorySegments(file)
+	if hasAnySegment(dirs, highSetupCostPathSegments()...) {
+		return -35, "路径疑似依赖 HTTP、数据库、中间件或外部服务，自动补测成本较高"
+	}
+	segments := pathSegments(file)
+	if hasAnySegment(segments, lowSetupCostPathSegments()...) {
+		return 18, "路径疑似低依赖工具或纯辅助代码，优先自动补测"
+	}
+	return 0, ""
+}
+
+func pathSegments(file string) []string {
+	slash := filepath.ToSlash(strings.ToLower(file))
+	parts := strings.FieldsFunc(slash, func(r rune) bool {
+		return r == '/' || r == '\\' || r == '-' || r == '_' || r == '.'
+	})
+	segments := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			segments = append(segments, part)
+		}
+	}
+	return segments
+}
+
+func pathDirectorySegments(file string) []string {
+	dir := filepath.Dir(filepath.ToSlash(file))
+	if dir == "." || dir == "" {
+		return nil
+	}
+	return pathSegments(dir)
+}
+
+func hasAnySegment(segments []string, values ...string) bool {
+	for _, segment := range segments {
+		for _, value := range values {
+			if segment == value {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func highSetupCostPathSegments() []string {
+	return []string{
+		"cache",
+		"captcha",
+		"cmd",
+		"config",
+		"controller",
+		"controllers",
+		"database",
+		"db",
+		"distlock",
+		"docs",
+		"email",
+		"global",
+		"initialize",
+		"middleware",
+		"migration",
+		"migrations",
+		"redis",
+		"router",
+		"routes",
+		"server",
+		"service",
+		"services",
+	}
+}
+
+func lowSetupCostPathSegments() []string {
+	return []string{
+		"date",
+		"format",
+		"formatter",
+		"helper",
+		"helpers",
+		"math",
+		"parser",
+		"strings",
+		"time",
+		"util",
+		"utils",
+		"validator",
+	}
 }
 
 func sortCoverageTasks(tasks []types.CoverageTestTask) {

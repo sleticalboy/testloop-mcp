@@ -594,6 +594,53 @@ func Classify(a int) int {
 	}
 }
 
+func TestCoverageTaskPriorityPrefersLowSetupCostTasks(t *testing.T) {
+	if adjustment, reason := coverageTaskExecutionCostAdjustment(filepath.Join("src", "service.py")); adjustment != 0 || reason != "" {
+		t.Fatalf("service.py filename should not be treated as high setup cost, got %d %q", adjustment, reason)
+	}
+
+	report := &types.CoverageReport{
+		Framework: "go-test",
+		Suggestions: []types.CoverageSuggestion{
+			{
+				File:            filepath.Join("controller", "api", "v1", "admin.go"),
+				Function:        "AdminController.Login",
+				Kind:            "method",
+				LineRange:       "80-90",
+				GapType:         "branch",
+				MissingBranches: []string{"未覆盖 if 分支: err != nil"},
+				UncoveredLines:  []int{80, 81, 82},
+				SuggestedInputs: []string{"构造满足条件 `err != nil` 的输入"},
+				Confidence:      0.95,
+			},
+			{
+				File:            filepath.Join("utils", "time.go"),
+				Function:        "GetCurrentDate",
+				Kind:            "function",
+				LineRange:       "12-12",
+				GapType:         "return_path",
+				UncoveredLines:  []int{12},
+				SuggestedInputs: []string{"设置 layout 覆盖未执行分支"},
+				Confidence:      0.95,
+			},
+		},
+	}
+
+	tasks := GenerateTestTasks(report)
+	if len(tasks) != 2 {
+		t.Fatalf("expected 2 tasks, got %+v", tasks)
+	}
+	if tasks[0].Target != "GetCurrentDate" {
+		t.Fatalf("expected low setup cost utils task first, got %+v", tasks)
+	}
+	if !strings.Contains(tasks[0].PriorityReason, "低依赖工具或纯辅助代码") {
+		t.Fatalf("expected low setup cost priority reason, got %q", tasks[0].PriorityReason)
+	}
+	if !strings.Contains(tasks[1].PriorityReason, "自动补测成本较高") {
+		t.Fatalf("expected high setup cost priority reason, got %q", tasks[1].PriorityReason)
+	}
+}
+
 func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
 	for i := range suggestions {
 		if suggestions[i].Function == fn {
