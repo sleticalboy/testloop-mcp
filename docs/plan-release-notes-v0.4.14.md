@@ -1,4 +1,4 @@
-# v0.4.14 发布说明草案
+# v0.4.14 发布说明
 
 ## 标题
 
@@ -12,7 +12,8 @@ testloop-mcp v0.4.14
 - [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.4.14`。
 - [x] 正式版本准备时将 `CHANGELOG.md` 的 Unreleased 内容收敛为 `v0.4.14 - 2026-07-11`。
 - [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
-- [ ] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和安装脚本验证。
+- [x] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和 Homebrew 安装链路验证。
+- [ ] Post-Release Verify run `29157901152` 已触发但仍 queued，尚未完成五平台安装脚本 dry run。
 
 ## 摘要
 
@@ -103,13 +104,14 @@ v0.4.14 候选仍保持明确边界：
 - [x] `/tmp/testloop-testgen-v0.4.14-prep --help`
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.4.14-prep scripts/package-release-asset.sh v0.4.14 darwin_arm64 darwin arm64`
 - [x] 校验 `/tmp/testloop-v0.4.14-prep/testloop-mcp_v0.4.14_darwin_arm64.tar.gz.sha256`
-- [ ] 推送 tag 后等待 Release Artifacts workflow 完成。
-- [ ] `scripts/verify-release-assets.sh v0.4.14`
-- [ ] Post-Release Verify 和 Homebrew tap 核验。
+- [x] 推送 tag 后等待 Release Artifacts workflow 完成：run `29157722825` passed。
+- [x] `scripts/verify-release-assets.sh v0.4.14`
+- [x] Homebrew tap 核验：tap commit `6394533b9f999bd2125efab6ace6f3c1e81da180`，`brew fetch`、`brew audit --formula --strict`、`brew upgrade --formula`、`brew test` 均通过。
+- [ ] Post-Release Verify run `29157901152` 仍 queued，首个 `ubuntu-latest` job 尚未拿到 runner。
 
 ## 发布备注
 
-- 这是 post-v0.4.13 的候选发布资料，不回写已经发布的 `docs/plan-release-notes-v0.4.13.md`。
+- 这是 post-v0.4.13 的正式发布资料，不回写已经发布的 `docs/plan-release-notes-v0.4.13.md`。
 - 本轮重点是 Go coverage task 的真实项目闭环质量，不改变默认 provider 策略。
 - `validate_coverage_task` 的 action 分类是给 AI Agent 的执行信号：`ready` 可继续吸收测试，`manual_review_unreachable` / `manual_review_environment` 应进入人工复核或源码可测性改造。
-- 正式发布前需要再决定是否把 laoxia top50 隔离验证沉淀为开发脚本，而不是只保留一次性验证记录。
+- laoxia top50 隔离验证已沉淀为 `scripts/validate-go-coverage-top-tasks.sh` 和 opt-in 集成测试，后续可继续扩展更多真实项目样本。
