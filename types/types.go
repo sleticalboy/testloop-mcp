@@ -75,6 +75,19 @@ type GenerateTestsOutput struct {
 	ProviderError  *ProviderErrorOutput   `json:"provider_error,omitempty"`
 }
 
+// CoverageTaskValidationOutput describes the generate -> run validation loop
+// for a single coverage-driven test task.
+type CoverageTaskValidationOutput struct {
+	Status        string               `json:"status"`
+	Action        string               `json:"action"`
+	CoverageTask  *CoverageTestTask    `json:"coverage_task,omitempty"`
+	Generated     *GenerateTestsOutput `json:"generated,omitempty"`
+	RunResult     *TestResult          `json:"run_result,omitempty"`
+	Error         string               `json:"error,omitempty"`
+	ProviderError *ProviderErrorOutput `json:"provider_error,omitempty"`
+	Metadata      map[string]any       `json:"metadata,omitempty"`
+}
+
 // ProviderErrorOutput describes an external test provider failure in a stable
 // shape that agents can consume without parsing localized error text.
 type ProviderErrorOutput struct {

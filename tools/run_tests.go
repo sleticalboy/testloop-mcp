@@ -41,6 +41,10 @@ func Register(s *mcp.Server) {
 		&mcp.Tool{Name: "generate_tests", Description: "根据指定源文件生成测试代码，支持 Go/Rust/Java/JavaScript/TypeScript/Python，可选静态或 LLM provider。"},
 		HandleGenerateTests,
 	)
+	mcp.AddTool[validateCoverageTaskInput, any](s,
+		&mcp.Tool{Name: "validate_coverage_task", Description: "对单个 coverage task 执行 generate_tests -> run_tests 闭环，返回生成是否可运行、失败原因和下一步动作。"},
+		HandleValidateCoverageTask,
+	)
 	mcp.AddTool[fixSuggestionsInput, any](s,
 		&mcp.Tool{Name: "fix_suggestions", Description: "根据测试失败信息和源代码，生成结构化修复建议（供 AI 消费）。"},
 		HandleFixSuggestions,

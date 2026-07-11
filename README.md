@@ -25,7 +25,8 @@ AI IDE (Claude Code / Cursor / Copilot)
         ├── run_tests         → 执行测试框架命令 → 结构化结果
         ├── parse_results     → 解析测试输出 → 提取失败详情
         ├── fix_suggestions   → 失败信息 + 源码 → 修复建议
-        └── parse_coverage    → 覆盖率数据 → 报告 + 改进建议
+        ├── parse_coverage    → 覆盖率数据 → 报告 + 改进建议
+        └── validate_coverage_task → 覆盖率任务 → 生成 + 执行 + 反馈
         │
         ▼
   本地项目（Go / Rust / Java / Node.js / Python）
@@ -211,8 +212,27 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 1. 用 `run_tests` 或生态命令生成覆盖率报告。
 2. 调用 `parse_coverage` 获取 `test_tasks`，每个任务包含目标、缺口类型、推荐测试文件、测试名、建议输入和断言重点。
-3. 取单个 `test_tasks[]` 作为 `generate_tests.coverage_task` 传入，生成面向该缺口的增量测试草稿。
-4. 调用 `run_tests` 重新执行测试，必要时把失败交给 `parse_results` / `fix_suggestions` 继续闭环。
+3. 优先取单个 `test_tasks[]` 调用 `validate_coverage_task`，让工具自动执行 `generate_tests -> run_tests` 并返回 `passed` / `failed` / `generation_error`、建议动作和失败修复摘要。
+4. 需要手动控制 provider 或调试生成内容时，也可以把同一个任务作为 `generate_tests.coverage_task` 传入，再调用 `run_tests` 重新执行测试，必要时把失败交给 `parse_results` / `fix_suggestions` 继续闭环。
+
+---
+
+### `validate_coverage_task`
+
+对单个覆盖率任务执行生成后验证闭环。工具会先调用 `generate_tests` 写入任务推荐的测试文件，再调用 `run_tests` 执行该测试文件；测试失败时默认开启 `include_fix_suggestions`，把失败原因和修复任务一起返回。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `file_path` | string | ✅ | 源文件路径 |
+| `coverage_task` | object | ✅ | `parse_coverage.test_tasks[]` 中的单个任务 |
+| `framework` | string | — | 测试框架，默认使用 `coverage_task.framework` 或自动检测 |
+| `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
+| `coverage` | bool | — | 执行测试时是否收集覆盖率，默认 `false` |
+| `include_fix_suggestions` | bool | — | 测试失败时是否附带 `fix_suggestions[]`，默认 `true` |
+
+**返回：** `{ status, action, coverage_task, generated, run_result, error, provider_error, metadata }`
+
+`status` 为 `passed` 时，说明生成的测试已经通过当前测试命令；`failed` 表示生成成功但测试未通过，Agent 应读取 `run_result.failures[]` 和 `run_result.fix_suggestions[]`；`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
 
 ---
 
@@ -329,7 +349,7 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 ```
 testloop-mcp/
-├── main.go                          # MCP server 入口，注册 5 个工具
+├── main.go                          # MCP server 入口，注册 MCP 工具
 ├── go.mod                           # github.com/sleticalboy/testloop-mcp, go 1.25
 ├── types/
 │   └── types.go                     # 所有共享类型定义
@@ -338,7 +358,8 @@ testloop-mcp/
 │   ├── generate_tests.go            # generate_tests 工具
 │   ├── parse_results.go             # parse_results 工具
 │   ├── fix_suggestions.go           # fix_suggestions 工具
-│   └── parse_coverage.go            # parse_coverage 工具
+│   ├── parse_coverage.go            # parse_coverage 工具
+│   └── validate_coverage_task.go    # validate_coverage_task 工具
 ├── internal/
 │   ├── generator/
 │   │   ├── generator.go              # 多语言静态生成分发入口

@@ -116,7 +116,48 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 返回里的 `test_tasks[]` 是面向 Agent 的增量测试计划，包含目标函数、未覆盖行、建议测试文件、测试函数名、断言重点和建议输入。
 
-## 4. 按覆盖率任务生成增量测试
+## 4. 验证单个覆盖率任务
+
+推荐优先用 `validate_coverage_task` 处理单个 `test_tasks[]`。它会把 `generate_tests -> run_tests` 合成一次工具调用，并返回生成结果、测试结果和下一步动作：
+
+```json
+{
+  "tool": "validate_coverage_task",
+  "arguments": {
+    "file_path": "./demo/calc.go",
+    "provider": "static",
+    "coverage": true,
+    "coverage_task": {
+      "id": "go-test-1",
+      "framework": "go-test",
+      "file": "./demo/calc.go",
+      "target": "Divide",
+      "kind": "function",
+      "line_range": "17-19",
+      "gap_type": "error_path",
+      "suggested_inputs": ["b == 0"],
+      "goal": "为 Divide 补充测试，覆盖除零错误路径",
+      "command": "go test ./demo",
+      "test_file": "./demo/calc_test.go",
+      "test_name": "TestDivideCoverageTask",
+      "assertion_focus": ["断言除零错误返回"],
+      "confidence": 0.9
+    }
+  }
+}
+```
+
+返回中的 `status` 和 `action` 是 Agent 的主入口：
+
+- `passed` / `ready`：生成的测试已经跑通，可以进入下一个 coverage task 或重新统计覆盖率。
+- `failed` / `apply_fix_suggestions`：生成成功但测试失败，优先读取 `run_result.fix_suggestions[].repair_task`。
+- `failed` / `repair_generated_test`：生成成功但没有足够修复摘要，读取 `run_result.failures[]` 后修测试或实现。
+- `generation_error`：测试未生成，读取 `provider_error.action` 或 `error`，必要时降级 `provider: "static"`。
+- `run_error`：测试执行入口异常，先修命令、框架或项目环境。
+
+`validate_coverage_task` 默认在测试失败时开启 `include_fix_suggestions`。如果 Agent 需要调试 provider 输出、分步审查生成内容，仍可使用下面的手动路径。
+
+## 5. 手动按覆盖率任务生成增量测试
 
 取 `parse_coverage` 返回的一个 `test_tasks[]` 项，作为 `generate_tests.coverage_task` 传入：
 
@@ -192,7 +233,7 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 
 如果 static fallback 返回 `status: "ok"`，立即用返回的 `test_file` 进入 `run_tests`。这个降级闭环已有 handler 回归测试覆盖：fake LLM provider 返回解释文本，`generate_tests` 返回结构化 `provider_error.action=retry_model_or_fallback_static`，随后同一源文件降级 static 生成 Vitest 测试，并由 fake `npx vitest` 执行通过。
 
-## 5. 重新运行并收敛
+## 6. 重新运行并收敛
 
 生成测试后再次调用：
 

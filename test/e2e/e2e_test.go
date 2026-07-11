@@ -126,7 +126,7 @@ func writeExecutable(t *testing.T, path string, content string) {
 	}
 }
 
-// TestE2E_ListTools 验证 tools/list 返回全部 5 个工具
+// TestE2E_ListTools 验证 tools/list 返回全部 MCP 工具
 func TestE2E_ListTools(t *testing.T) {
 	session := startServer(t)
 	defer session.Close()
@@ -137,11 +137,12 @@ func TestE2E_ListTools(t *testing.T) {
 	}
 
 	expectedTools := map[string]bool{
-		"generate_tests":  false,
-		"run_tests":       false,
-		"parse_results":   false,
-		"fix_suggestions": false,
-		"parse_coverage":  false,
+		"generate_tests":         false,
+		"run_tests":              false,
+		"parse_results":          false,
+		"fix_suggestions":        false,
+		"parse_coverage":         false,
+		"validate_coverage_task": false,
 	}
 
 	for _, tool := range result.Tools {

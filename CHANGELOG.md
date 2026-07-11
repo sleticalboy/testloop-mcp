@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `validate_coverage_task` MCP 工具，可对单个 `parse_coverage.test_tasks[]` 执行 `generate_tests -> run_tests` 闭环，并返回 `passed` / `failed` / `generation_error`、建议动作、生成结果、测试结果和 provider/fix 反馈。
+
 ### Changed
 
 - Go coverage task static generator 在遇到无参数、非方法、返回值可安全丢弃但无法推导精确期望值的函数时，会生成可执行的 smoke 测试而不是默认 skipped TODO；真实样例验证覆盖 `GetNowDate()` 这类日期/时间辅助函数。
