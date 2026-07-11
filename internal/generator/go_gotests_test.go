@@ -332,6 +332,143 @@ func GetBytes(api, tag string) ([]byte, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsHTTPRequestBranches(t *testing.T) {
+	src := `package sample
+
+import (
+	"net"
+	"net/http"
+	"strings"
+)
+
+func RemoteIP(r *http.Request, fallback string) string {
+	realIP := r.Header.Get("X-Real-IP")
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	for _, lookup := range strings.Split("X-Forwarded-For,X-Real-IP,RemoteAddr", ",") {
+		if lookup == "RemoteAddr" {
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				return r.RemoteAddr
+			}
+			return ip
+		}
+		if lookup == "X-Forwarded-For" && forwardedFor != "" {
+			parts := strings.Split(forwardedFor, ",")
+			for i, p := range parts {
+				parts[i] = strings.TrimSpace(p)
+			}
+			partIndex := len(parts) - 1
+			if partIndex < 0 {
+				partIndex = 0
+			}
+			partIndex = 0
+			return parts[partIndex]
+		}
+		if lookup == "X-Real-IP" && realIP != "" {
+			return realIP
+		}
+	}
+	return fallback
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "http.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		branch   string
+		want     []string
+		notWant  []string
+		testName string
+	}{
+		{
+			name:     "forwarded for",
+			branch:   `lookup == "X-Forwarded-For" && forwardedFor != ""`,
+			testName: "TestRemoteIPForwardedFor",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{"X-Forwarded-For": []string{"198.51.100.1, 198.51.100.2"}}, RemoteAddr: "203.0.113.9:1234"}`,
+				`ret0:     "198.51.100.1"`,
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true"},
+		},
+		{
+			name:     "real ip",
+			branch:   `lookup == "X-Real-IP" && realIP != ""`,
+			testName: "TestRemoteIPRealIP",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{"X-Real-Ip": []string{"198.51.100.10"}}, RemoteAddr: "203.0.113.9:1234"}`,
+				`ret0:     "198.51.100.10"`,
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true"},
+		},
+		{
+			name:     "remote addr",
+			branch:   `lookup == "RemoteAddr"`,
+			testName: "TestRemoteIPRemoteAddr",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`,
+				`ret0:     "203.0.113.9"`,
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true"},
+		},
+		{
+			name:     "remote addr parse error",
+			branch:   `err != nil`,
+			testName: "TestRemoteIPRemoteAddrError",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{}, RemoteAddr: "bad-remote-addr"}`,
+				`ret0:     "bad-remote-addr"`,
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true"},
+		},
+		{
+			name:     "unreachable part index",
+			branch:   `partIndex < 0`,
+			testName: "TestRemoteIPPartIndex",
+			want: []string{
+				`Static generator cannot infer exact coverage case: no simple if boundary was detected.`,
+				"skip:     true",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:              "go-test-remote-ip",
+				Framework:       "go-test",
+				Target:          "RemoteIP",
+				LineRange:       "10-10",
+				GapType:         "branch",
+				TestName:        tt.testName,
+				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
+				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},
+				AssertionFocus:  []string{"断言分支返回值"},
+			}
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range append([]string{`"net/http"`, "func " + tt.testName + "(t *testing.T)"}, tt.want...) {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesStringBoolAndNilBranchInputs(t *testing.T) {
 	src := `package sample
 

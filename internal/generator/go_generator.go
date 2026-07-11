@@ -779,6 +779,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if fn.IsMethod || fn.IsVariadic {
 		return goSeedCase{}, false
 	}
+	if seed, ok := goHTTPRequestSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if seed, ok := goBranchSeedTestCase(fn, task); ok {
 		return seed, true
 	}
@@ -824,6 +827,64 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	}
 	seed.Outputs[fn.Returns[0].Name] = expr
 	return seed, true
+}
+
+func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
+		return goSeedCase{}, false
+	}
+	requestParam := ""
+	for _, p := range fn.Params {
+		if p.Type == "*http.Request" {
+			requestParam = p.Name
+			break
+		}
+	}
+	if requestParam == "" {
+		return goSeedCase{}, false
+	}
+
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	if strings.Contains(hints, "partIndex < 0") {
+		return goSeedCase{}, false
+	}
+
+	requestExpr := ""
+	expected := ""
+	switch {
+	case strings.Contains(hints, "X-Forwarded-For"):
+		requestExpr = `&http.Request{Header: http.Header{"X-Forwarded-For": []string{"198.51.100.1, 198.51.100.2"}}, RemoteAddr: "203.0.113.9:1234"}`
+		expected = `"198.51.100.1"`
+	case strings.Contains(hints, "X-Real-IP"):
+		requestExpr = `&http.Request{Header: http.Header{"X-Real-Ip": []string{"198.51.100.10"}}, RemoteAddr: "203.0.113.9:1234"}`
+		expected = `"198.51.100.10"`
+	case strings.Contains(hints, "err != nil"):
+		requestExpr = `&http.Request{Header: http.Header{}, RemoteAddr: "bad-remote-addr"}`
+		expected = `"bad-remote-addr"`
+	case strings.Contains(hints, "RemoteAddr"):
+		requestExpr = `&http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`
+		expected = `"203.0.113.9"`
+	default:
+		return goSeedCase{}, false
+	}
+
+	inputs := map[string]string{}
+	for i, p := range fn.Params {
+		if p.Name == requestParam {
+			inputs[p.Name] = requestExpr
+			continue
+		}
+		if p.Type == "string" && strings.EqualFold(p.Name, "fallback") {
+			inputs[p.Name] = `"fallback"`
+			continue
+		}
+		inputs[p.Name] = goArgValue(p, i)
+	}
+	return goSeedCase{
+		Assert:  goAssertExact,
+		Inputs:  inputs,
+		Outputs: map[string]string{fn.Returns[0].Name: expected},
+	}, true
 }
 
 func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
