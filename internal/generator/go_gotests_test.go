@@ -457,10 +457,12 @@ import (
 	"strings"
 )
 
+var ipLookups = strings.Split("X-Forwarded-For,X-Real-IP,RemoteAddr", ",")
+
 func RemoteIP(r *http.Request, fallback string) string {
 	realIP := r.Header.Get("X-Real-IP")
 	forwardedFor := r.Header.Get("X-Forwarded-For")
-	for _, lookup := range strings.Split("X-Forwarded-For,X-Real-IP,RemoteAddr", ",") {
+	for _, lookup := range ipLookups {
 		if lookup == "RemoteAddr" {
 			ip, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
@@ -494,6 +496,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 
 	tests := []struct {
 		name     string
+		gapType  string
 		branch   string
 		want     []string
 		notWant  []string
@@ -501,6 +504,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 	}{
 		{
 			name:     "forwarded for",
+			gapType:  "branch",
 			branch:   `lookup == "X-Forwarded-For" && forwardedFor != ""`,
 			testName: "TestRemoteIPForwardedFor",
 			want: []string{
@@ -512,6 +516,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 		},
 		{
 			name:     "real ip",
+			gapType:  "branch",
 			branch:   `lookup == "X-Real-IP" && realIP != ""`,
 			testName: "TestRemoteIPRealIP",
 			want: []string{
@@ -523,6 +528,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 		},
 		{
 			name:     "remote addr",
+			gapType:  "branch",
 			branch:   `lookup == "RemoteAddr"`,
 			testName: "TestRemoteIPRemoteAddr",
 			want: []string{
@@ -534,6 +540,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 		},
 		{
 			name:     "remote addr parse error",
+			gapType:  "branch",
 			branch:   `err != nil`,
 			testName: "TestRemoteIPRemoteAddrError",
 			want: []string{
@@ -545,12 +552,40 @@ func RemoteIP(r *http.Request, fallback string) string {
 		},
 		{
 			name:     "unreachable part index",
+			gapType:  "branch",
 			branch:   `partIndex < 0`,
 			testName: "TestRemoteIPPartIndex",
 			want: []string{
 				`Static generator cannot infer exact coverage case: no simple if boundary was detected.`,
 				"skip:     true",
 			},
+		},
+		{
+			name:     "fallback return path",
+			gapType:  "return_path",
+			testName: "TestRemoteIPFallback",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`,
+				`fallback: "fallback"`,
+				`ret0:     "fallback"`,
+				"oldIPLookups := ipLookups",
+				`ipLookups = []string{"Unknown"}`,
+				"t.Cleanup(func() { ipLookups = oldIPLookups })",
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true"},
+		},
+		{
+			name:     "entry statement",
+			gapType:  "statement",
+			testName: "TestRemoteIPEntry",
+			want: []string{
+				`r:        &http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`,
+				`fallback: "fallback"`,
+				`ret0:     "203.0.113.9"`,
+				"skip:     false",
+			},
+			notWant: []string{"skip:     true", "oldIPLookups := ipLookups"},
 		},
 	}
 
@@ -561,7 +596,7 @@ func RemoteIP(r *http.Request, fallback string) string {
 				Framework:       "go-test",
 				Target:          "RemoteIP",
 				LineRange:       "10-10",
-				GapType:         "branch",
+				GapType:         tt.gapType,
 				TestName:        tt.testName,
 				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
 				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},

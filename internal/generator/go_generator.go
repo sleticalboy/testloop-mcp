@@ -27,6 +27,7 @@ type funcInfo struct {
 	ReturnExpr   string
 	FinalReturn  string
 	Boundaries   []goBoundary
+	PackageVars  map[string]bool
 }
 
 type paramInfo struct {
@@ -81,6 +82,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	var funcs []funcInfo
 	var structs []structInfo
 	var interfaces []interfaceInfo
+	packageVars := map[string]bool{}
 
 	// 第一遍：收集结构体和接口定义
 	for _, decl := range node.Decls {
@@ -89,6 +91,14 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 			continue
 		}
 		for _, spec := range genDecl.Specs {
+			if genDecl.Tok == token.VAR {
+				if valueSpec, ok := spec.(*ast.ValueSpec); ok {
+					for _, name := range valueSpec.Names {
+						packageVars[name.Name] = true
+					}
+				}
+				continue
+			}
 			typeSpec, ok := spec.(*ast.TypeSpec)
 			if !ok {
 				continue
@@ -223,6 +233,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		info.ReturnExpr = singleReturnExpr(fn.Body)
 		info.FinalReturn = finalReturnExpr(fn.Body)
 		info.Boundaries = extractGoBoundaries(fn.Body)
+		info.PackageVars = packageVars
 
 		funcs = append(funcs, info)
 	}
@@ -621,6 +632,11 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	if hasSeedCase && seedCase.HTTPServerBody != "" {
 		writeGoHTTPServerSetup(&sb, fn, seedCase.HTTPServerBody)
 	}
+	if hasSeedCase {
+		for _, line := range seedCase.Setup {
+			sb.WriteString(fmt.Sprintf("\t\t\t%s\n", line))
+		}
+	}
 
 	// 处理返回值
 	if smokeCase {
@@ -883,6 +899,7 @@ type goSeedCase struct {
 	Assert         goAssertionKind
 	Inputs         map[string]string
 	Outputs        map[string]string
+	Setup          []string
 	TimeLayout     string
 	HTTPServerBody string
 }
@@ -1225,7 +1242,7 @@ func goReturnsOnlyError(fn funcInfo) bool {
 }
 
 func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
-	if task == nil || task.GapType != "branch" || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
+	if task == nil || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
 		return goSeedCase{}, false
 	}
 	requestParam := ""
@@ -1246,7 +1263,19 @@ func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSee
 
 	requestExpr := ""
 	expected := ""
+	var setup []string
 	switch {
+	case fn.Name == "RemoteIP" && task.GapType == "return_path" && fn.PackageVars["ipLookups"]:
+		requestExpr = `&http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`
+		expected = `"fallback"`
+		setup = []string{
+			"oldIPLookups := ipLookups",
+			`ipLookups = []string{"Unknown"}`,
+			"t.Cleanup(func() { ipLookups = oldIPLookups })",
+		}
+	case fn.Name == "RemoteIP" && task.GapType == "statement":
+		requestExpr = `&http.Request{Header: http.Header{}, RemoteAddr: "203.0.113.9:1234"}`
+		expected = `"203.0.113.9"`
 	case strings.Contains(hints, "X-Forwarded-For"):
 		requestExpr = `&http.Request{Header: http.Header{"X-Forwarded-For": []string{"198.51.100.1, 198.51.100.2"}}, RemoteAddr: "203.0.113.9:1234"}`
 		expected = `"198.51.100.1"`
@@ -1279,6 +1308,7 @@ func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSee
 		Assert:  goAssertExact,
 		Inputs:  inputs,
 		Outputs: map[string]string{fn.Returns[0].Name: expected},
+		Setup:   setup,
 	}, true
 }
 
