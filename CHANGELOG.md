@@ -33,6 +33,7 @@
 - Go static generator 支持 `ParseToken` JWT 成功分支输入合成，可用同包 `GenerateToken` 与 `global.Config.Jwt` 构造有效 token，并断言 claims 非 nil、error 为 nil。
 - Go static generator 支持 `Recover` 的 panic/recover 分支输入合成，会用 `defer Recover(...); panic(...)` 覆盖 `recover() != nil` 路径。
 - Go static generator 支持 `GetJson` / `GetBytes` 这类 HTTP wrapper 的本地 `httptest` 输入合成，可覆盖 JSON 解析错误路径和 body 成功返回路径。
+- Go static generator 支持 `TraceTransport.RoundTrip` 慢请求分支输入合成，可用本地 `httptest.Server` 和负 `SlowThreshold` 稳定覆盖 defer 中的 slow branch。
 - Go static generator 支持 `Ptr` 这类泛型指针返回路径断言，会检查返回指针非 nil 且 `*got` 等于输入值，避免把指针地址当作期望值比较。
 - Go static generator 支持 `RemoteIP` 的剩余 return/statement path：可临时覆盖同包 `ipLookups` 触发 fallback 返回路径，并用 RemoteAddr 输入覆盖入口语句块。
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。

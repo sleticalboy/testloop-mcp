@@ -448,6 +448,83 @@ func GetBytes(api, tag string) ([]byte, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsTraceTransportSlowBranch(t *testing.T) {
+	src := `package sample
+
+import (
+	"net/http"
+	"net/http/httptrace"
+	"strings"
+	"time"
+)
+
+type TraceTransport struct {
+	Transport     http.RoundTripper
+	SlowThreshold time.Duration
+}
+
+func (t *TraceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	requestStart := time.Now()
+	defer func() {
+		totalCost := time.Since(requestStart)
+		if totalCost > t.SlowThreshold {
+			_ = strings.Split(req.URL.String(), "?")[0]
+		}
+	}()
+	trace := &httptrace.ClientTrace{}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	return t.Transport.RoundTrip(req)
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "http.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-trace-transport",
+		Framework:       "go-test",
+		Target:          "TraceTransport.RoundTrip",
+		LineRange:       "17-19",
+		GapType:         "branch",
+		TestName:        "TestTraceTransportRoundTrip",
+		MissingBranches: []string{"未覆盖 if 分支: totalCost > t.SlowThreshold"},
+		SuggestedInputs: []string{"构造满足条件 `totalCost > t.SlowThreshold` 的输入"},
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"net/http"`,
+		`"net/http/httptest"`,
+		`"time"`,
+		"func TestTraceTransportRoundTrip(t *testing.T)",
+		"skip: false",
+		"req:  nil",
+		"srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {",
+		"time.Sleep(time.Millisecond)",
+		"w.WriteHeader(http.StatusNoContent)",
+		"t.Cleanup(srv.Close)",
+		"receiver.Transport = http.DefaultTransport",
+		"receiver.SlowThreshold = -time.Nanosecond",
+		`tt.req, reqErr = http.NewRequest(http.MethodGet, srv.URL+"?token=secret", nil)`,
+		"got0, got1 := receiver.RoundTrip(tt.req)",
+		"if got0 == nil",
+		"if got1 != nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{"skip: true", "ret0 *http.Response", "got0 != tt.ret0"} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskBuildsHTTPRequestBranches(t *testing.T) {
 	src := `package sample
 

@@ -260,6 +260,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		if hasSeedCase && seedCase.HTTPServerBody != "" {
 			needHTTPServer = true
 		}
+		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "httptest") {
+			needHTTPServer = true
+		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
 			needErrors = true
 		}
@@ -917,6 +920,9 @@ type goBoundary struct {
 }
 
 func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if seed, ok := goTraceTransportSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if fn.IsMethod {
 		return goSeedCase{}, false
 	}
@@ -1117,6 +1123,40 @@ func goJWTSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, b
 			fn.Params[0].Name: `func() string { global.Config.Jwt.Key = "test-secret"; global.Config.Jwt.ExpireTime = 3600; token, _ := GenerateToken(1, "admin"); return token }()`,
 		},
 		Outputs: map[string]string{},
+	}, true
+}
+
+func goTraceTransportSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || !fn.IsMethod || fn.Name != "RoundTrip" || strings.TrimPrefix(fn.ReceiverType, "*") != "TraceTransport" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 1 || fn.Params[0].Type != "*http.Request" || len(fn.Returns) != 2 || fn.Returns[0].Type != "*http.Response" || fn.Returns[1].Type != "error" {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	if !strings.Contains(hints, "totalCost > t.SlowThreshold") {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert: goAssertNonNilResult,
+		Inputs: map[string]string{
+			fn.Params[0].Name: "nil",
+		},
+		Outputs: map[string]string{},
+		Setup: []string{
+			`srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {`,
+			"\ttime.Sleep(time.Millisecond)",
+			"\tw.WriteHeader(http.StatusNoContent)",
+			`}))`,
+			`t.Cleanup(srv.Close)`,
+			`receiver.Transport = http.DefaultTransport`,
+			`receiver.SlowThreshold = -time.Nanosecond`,
+			`var reqErr error`,
+			`tt.req, reqErr = http.NewRequest(http.MethodGet, srv.URL+"?token=secret", nil)`,
+			`if reqErr != nil {`,
+			"\tt.Fatalf(\"new request: %v\", reqErr)",
+			`}`,
+		},
 	}, true
 }
 
