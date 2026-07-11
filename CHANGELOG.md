@@ -25,6 +25,7 @@
 - Go static generator 支持简单整数范围条件，例如 `a > 0 && a < 10` 会合成范围内输入；无交集或非整数重复参数条件继续保守降级。
 - Go static generator 支持 URL/API 字符串参数触发的 `err != nil` 分支；对 `error` 或 `(..., error)` 返回值会生成非法 URL 输入、断言 error 非 nil，并对非 error 返回值做 nil/简单值断言。
 - Go static generator 支持 `*http.Request` 字符串返回分支的常见输入合成，可为 `RemoteAddr`、`X-Forwarded-For`、`X-Real-IP` 和 RemoteAddr 解析错误生成可执行请求对象与精确断言。
+- Go static generator 支持常见 JSON/error 分支输入合成：`AsJson` marshal error、`FromJson` 非法 JSON、`FromJsonFile` 缺失文件路径会生成可执行断言。
 - Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
 - Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
 - Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。

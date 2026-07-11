@@ -779,6 +779,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if fn.IsMethod || fn.IsVariadic {
 		return goSeedCase{}, false
 	}
+	if seed, ok := goJSONSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if seed, ok := goHTTPRequestSeedTestCase(fn, task); ok {
 		return seed, true
 	}
@@ -827,6 +830,70 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	}
 	seed.Outputs[fn.Returns[0].Name] = expr
 	return seed, true
+}
+
+func goJSONSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || len(fn.Returns) == 0 {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	switch fn.Name {
+	case "AsJson":
+		if len(fn.Params) != 1 || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
+			return goSeedCase{}, false
+		}
+		input := "func() {}"
+		output := `"{}"`
+		if strings.Contains(hints, "reflect.Array") || strings.Contains(hints, "reflect.Slice") {
+			input = "[]func(){func() {}}"
+			output = `"[]"`
+		} else if !strings.Contains(hints, "err != nil") {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert:  goAssertExact,
+			Inputs:  map[string]string{fn.Params[0].Name: input},
+			Outputs: map[string]string{fn.Returns[0].Name: output},
+		}, true
+	case "FromJson":
+		if !goReturnsOnlyError(fn) || !strings.Contains(hints, "err != nil") {
+			return goSeedCase{}, false
+		}
+		inputs := map[string]string{}
+		for i, p := range fn.Params {
+			switch {
+			case p.Type == "[]byte" && strings.EqualFold(p.Name, "data"):
+				inputs[p.Name] = `[]byte("{")`
+			case p.Type == "any" || p.Type == "interface{}":
+				inputs[p.Name] = "&map[string]any{}"
+			default:
+				inputs[p.Name] = goArgValue(p, i)
+			}
+		}
+		return goSeedCase{Assert: goAssertErrorPath, Inputs: inputs, Outputs: map[string]string{}}, true
+	case "FromJsonFile":
+		if !goReturnsOnlyError(fn) || !strings.Contains(hints, "err != nil") {
+			return goSeedCase{}, false
+		}
+		inputs := map[string]string{}
+		for i, p := range fn.Params {
+			switch {
+			case p.Type == "string" && strings.EqualFold(p.Name, "path"):
+				inputs[p.Name] = `"testdata/does-not-exist.json"`
+			case p.Type == "any" || p.Type == "interface{}":
+				inputs[p.Name] = "&map[string]any{}"
+			default:
+				inputs[p.Name] = goArgValue(p, i)
+			}
+		}
+		return goSeedCase{Assert: goAssertErrorPath, Inputs: inputs, Outputs: map[string]string{}}, true
+	default:
+		return goSeedCase{}, false
+	}
+}
+
+func goReturnsOnlyError(fn funcInfo) bool {
+	return len(fn.Returns) == 1 && fn.Returns[0].Type == "error"
 }
 
 func goHTTPRequestSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {

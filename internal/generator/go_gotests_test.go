@@ -469,6 +469,146 @@ func RemoteIP(r *http.Request, fallback string) string {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskBuildsJSONErrorBranches(t *testing.T) {
+	src := `package sample
+
+import (
+	"encoding/json"
+	"os"
+	"reflect"
+)
+
+func AsJson(src any) string {
+	if src == nil {
+		return ""
+	}
+	data, err := json.Marshal(&src)
+	if err != nil {
+		if tp := reflect.TypeOf(src); tp.Kind() == reflect.Array || tp.Kind() == reflect.Slice {
+			return "[]"
+		}
+		return "{}"
+	}
+	return string(data)
+}
+
+func FromJsonFile(path string, dst any) error {
+	buf, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return FromJson(buf, dst)
+}
+
+func FromJson(data []byte, dst any) error {
+	if err := json.Unmarshal(data, dst); err != nil {
+		return err
+	}
+	return nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "json.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		target   string
+		branch   string
+		testName string
+		want     []string
+		notWant  []string
+	}{
+		{
+			name:     "as json slice marshal error",
+			target:   "AsJson",
+			branch:   `tp.Kind() == reflect.Array || tp.Kind() == reflect.Slice`,
+			testName: "TestAsJsonSliceError",
+			want: []string{
+				"skip: false",
+				"src:  []func(){func() {}}",
+				`ret0: "[]"`,
+				"got := AsJson(tt.src)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "as json object marshal error",
+			target:   "AsJson",
+			branch:   `err != nil`,
+			testName: "TestAsJsonObjectError",
+			want: []string{
+				"skip: false",
+				"src:  func() {}",
+				`ret0: "{}"`,
+				"got := AsJson(tt.src)",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name:     "from json invalid data",
+			target:   "FromJson",
+			branch:   `err != nil`,
+			testName: "TestFromJsonError",
+			want: []string{
+				"skip: false",
+				`data: []byte("{")`,
+				"dst:  &map[string]any{}",
+				"err := FromJson(tt.data, tt.dst)",
+				"if err == nil",
+				`expected error, got nil`,
+			},
+			notWant: []string{"skip: true", "unexpected error"},
+		},
+		{
+			name:     "from json file missing path",
+			target:   "FromJsonFile",
+			branch:   `err != nil`,
+			testName: "TestFromJsonFileError",
+			want: []string{
+				"skip: false",
+				`path: "testdata/does-not-exist.json"`,
+				"dst:  &map[string]any{}",
+				"err := FromJsonFile(tt.path, tt.dst)",
+				"if err == nil",
+				`expected error, got nil`,
+			},
+			notWant: []string{"skip: true", "unexpected error"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:              "go-test-json",
+				Framework:       "go-test",
+				Target:          tt.target,
+				LineRange:       "1-1",
+				GapType:         "branch",
+				TestName:        tt.testName,
+				MissingBranches: []string{"未覆盖 if 分支: " + tt.branch},
+				SuggestedInputs: []string{"构造满足条件 `" + tt.branch + "` 的输入"},
+				AssertionFocus:  []string{"断言 JSON error path"},
+			}
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range append([]string{"func " + tt.testName + "(t *testing.T)"}, tt.want...) {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesStringBoolAndNilBranchInputs(t *testing.T) {
 	src := `package sample
 
