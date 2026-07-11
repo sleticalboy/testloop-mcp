@@ -7,6 +7,8 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -74,6 +76,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	}
 
 	pkgName := node.Name.Name
+	sourceImports := goImportAliases(node)
 
 	var funcs []funcInfo
 	var structs []structInfo
@@ -236,6 +239,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	needReflect := false
 	needTime := false
 	needErrors := false
+	neededTypeImports := make(map[string]string)
 	for _, fn := range funcs {
 		seedCase, hasSeedCase := goSeedTestCase(fn, task)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
@@ -260,19 +264,35 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 			break
 		}
 	}
+	for _, fn := range funcs {
+		for alias, importPath := range goNeededTypeImports(fn, sourceImports) {
+			neededTypeImports[alias] = importPath
+		}
+	}
 
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("package %s\n\n", pkgName))
 	buf.WriteString("import (\n")
-	buf.WriteString("\t\"testing\"\n")
+	imports := map[string]bool{"testing": true}
 	if needErrors {
-		buf.WriteString("\t\"errors\"\n")
+		imports["errors"] = true
 	}
 	if needTime {
-		buf.WriteString("\t\"time\"\n")
+		imports["time"] = true
 	}
 	if needReflect {
-		buf.WriteString("\t\"reflect\"\n")
+		imports["reflect"] = true
+	}
+	for _, importPath := range neededTypeImports {
+		imports[importPath] = true
+	}
+	importList := make([]string, 0, len(imports))
+	for importPath := range imports {
+		importList = append(importList, importPath)
+	}
+	sort.Strings(importList)
+	for _, importPath := range importList {
+		buf.WriteString(fmt.Sprintf("\t%q\n", importPath))
 	}
 	buf.WriteString(")\n\n")
 
@@ -1581,7 +1601,46 @@ func zeroValue(typ string) string {
 	case strings.Contains(typ, "<-chan"):
 		return "nil"
 	default:
-		return fmt.Sprintf("%s{}", typ)
+		return fmt.Sprintf("*new(%s)", typ)
+	}
+}
+
+func goImportAliases(file *ast.File) map[string]string {
+	aliases := make(map[string]string)
+	for _, spec := range file.Imports {
+		importPath, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || importPath == "" {
+			continue
+		}
+		if spec.Name != nil {
+			name := spec.Name.Name
+			if name == "." || name == "_" {
+				continue
+			}
+			aliases[name] = importPath
+			continue
+		}
+		aliases[path.Base(importPath)] = importPath
+	}
+	return aliases
+}
+
+func goNeededTypeImports(fn funcInfo, sourceImports map[string]string) map[string]string {
+	needed := make(map[string]string)
+	for _, p := range fn.Params {
+		addGoTypeImport(needed, sourceImports, p.Type)
+	}
+	for _, r := range fn.Returns {
+		addGoTypeImport(needed, sourceImports, r.Type)
+	}
+	return needed
+}
+
+func addGoTypeImport(needed map[string]string, sourceImports map[string]string, typ string) {
+	for alias, importPath := range sourceImports {
+		if strings.Contains(typ, alias+".") {
+			needed[alias] = importPath
+		}
 	}
 }
 
@@ -1623,7 +1682,7 @@ func exprToString(expr ast.Expr) string {
 	case *ast.InterfaceType:
 		return "any"
 	case *ast.FuncType:
-		return "func()"
+		return goFuncTypeString(v)
 	case *ast.Ellipsis:
 		// 变参 ...T 在参数列表中单独处理，这里返回底层类型
 		return "..." + exprToString(v.Elt)
@@ -1640,4 +1699,46 @@ func exprToString(expr ast.Expr) string {
 	default:
 		return "any"
 	}
+}
+
+func goFuncTypeString(fn *ast.FuncType) string {
+	params := goFieldListTypes(fn.Params)
+	results := goFieldListTypes(fn.Results)
+	var b strings.Builder
+	b.WriteString("func(")
+	b.WriteString(strings.Join(params, ", "))
+	b.WriteString(")")
+	switch len(results) {
+	case 0:
+	case 1:
+		b.WriteString(" ")
+		b.WriteString(results[0])
+	default:
+		b.WriteString(" (")
+		b.WriteString(strings.Join(results, ", "))
+		b.WriteString(")")
+	}
+	return b.String()
+}
+
+func goFieldListTypes(fields *ast.FieldList) []string {
+	if fields == nil {
+		return nil
+	}
+	var values []string
+	for _, field := range fields.List {
+		typ := exprToString(field.Type)
+		if len(field.Names) == 0 {
+			values = append(values, typ)
+			continue
+		}
+		for _, name := range field.Names {
+			if name.Name == "" {
+				values = append(values, typ)
+				continue
+			}
+			values = append(values, name.Name+" "+typ)
+		}
+	}
+	return values
 }

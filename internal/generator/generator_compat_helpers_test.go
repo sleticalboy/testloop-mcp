@@ -88,7 +88,8 @@ func TestGoGeneratorTypeAndValueHelpers(t *testing.T) {
 		"map[string]int": "nil",
 		"func()":         "nil",
 		"<-chan string":  "nil",
-		"CustomResponse": "CustomResponse{}",
+		"CustomResponse": "*new(CustomResponse)",
+		"time.Duration":  "*new(time.Duration)",
 	}
 	for typ, want := range zeroValues {
 		t.Run("zero_"+typ, func(t *testing.T) {
@@ -135,6 +136,8 @@ func TestGoGeneratorExpressionHelpers(t *testing.T) {
 		"<-chan string":                   "<-chan string",
 		"interface{}":                     "any",
 		"func()":                          "func()",
+		"func(int) int":                   "func(int) int",
+		"func(i int) string":              "func(i int) string",
 		"Box[int]":                        "Box[int]",
 		"Pair[int, string]":               "Pair[int, string]",
 		"make([]int, 0)":                  "make([]int, 0)",

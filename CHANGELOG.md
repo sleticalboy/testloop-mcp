@@ -22,6 +22,9 @@
 - Go context 会保留 `a > 0 && b > 0` / `a > 0 || b > 0` 这类复合分支条件原文，并在 coverage task 降级说明中标注当前不支持多参数输入合成。
 - Go static generator 支持有限的 `&&` 复合条件输入合成；当每个子条件都是简单参数边界且返回表达式安全时，会生成非 skipped 精确用例。
 - Go static generator 支持简单整数范围条件，例如 `a > 0 && a < 10` 会合成范围内输入；无交集或非整数重复参数条件继续保守降级。
+- Go static generator 会保留函数类型参数的完整签名，例如 `func(int) int` 不再退化为 `func()`。
+- Go static generator 会根据源码参数/返回类型中的 selector 自动补测试文件 import，例如 `*http.Request` 会引入 `net/http`。
+- Go static generator 对未知命名类型的零值改用 `*new(Type)`，避免 `time.Duration{}` 这类命名标量类型导致生成测试编译失败。
 - Go coverage task 的分支缺口改为基于 AST 抽取 `if` / `switch` / `return`，不再把函数签名、普通语句或 `if init` 误当作分支条件。
 - Coverage suggestion/test task 会合并同目标、同缺口类型、同分支条件且行段相邻或重叠的未覆盖 block，减少 Go coverprofile 拆块导致的重复任务。
 - Coverage task 排序新增路径环境成本启发式，优先暴露 `utils` / helper / parser 等低依赖任务，并降低 controller、router、service、middleware、db/cache 等高初始化成本任务的优先级。

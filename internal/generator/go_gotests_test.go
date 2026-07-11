@@ -813,6 +813,88 @@ func Sub(a, b int) int {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskPreservesFunctionParamType(t *testing.T) {
+	src := `package sample
+
+func Map(values []int, mapper func(int) int) []int {
+	out := make([]int, 0, len(values))
+	for _, value := range values {
+		out = append(out, mapper(value))
+	}
+	return out
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "map.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "go-test-map",
+		Framework: "go-test",
+		Target:    "Map",
+		LineRange: "5-7",
+		GapType:   "branch",
+		TestName:  "TestMap",
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"mapper func(int) int",
+		"mapper: nil",
+		"Map(tt.values, tt.mapper)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "mapper func()") {
+		t.Fatalf("function parameter type lost signature:\n%s", code)
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskImportsSelectorParamPackage(t *testing.T) {
+	src := `package sample
+
+import "net/http"
+
+func RemoteIP(r *http.Request, fallback string) string {
+	if r == nil {
+		return fallback
+	}
+	return r.RemoteAddr
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "http.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "go-test-http",
+		Framework: "go-test",
+		Target:    "RemoteIP",
+		LineRange: "5-7",
+		GapType:   "branch",
+		TestName:  "TestRemoteIP",
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"\"net/http\"",
+		"r        *http.Request",
+		"RemoteIP(tt.r, tt.fallback)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
 func writeTempGoSource(t *testing.T) string {
 	t.Helper()
 
