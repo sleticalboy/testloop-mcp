@@ -1,9 +1,13 @@
 package generator
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -18,6 +22,8 @@ func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	var ctx *types.TestGenerationContext
 	switch ext {
+	case ".go":
+		ctx = buildGoGenerationContext(srcPath, opts)
 	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
 		ctx = buildJSGenerationContext(srcPath, ext)
 	case ".py":
@@ -66,6 +72,167 @@ func languageNameForPath(srcPath string) string {
 	default:
 		return ""
 	}
+}
+
+func buildGoGenerationContext(srcPath string, opts GenerateTestsOptions) *types.TestGenerationContext {
+	fs := token.NewFileSet()
+	node, err := parser.ParseFile(fs, srcPath, nil, parser.ParseComments)
+	if err != nil {
+		return nil
+	}
+
+	ctx := &types.TestGenerationContext{
+		Language:   "go",
+		Framework:  "go-test",
+		SourceFile: srcPath,
+		Imports:    goContextImports(node),
+	}
+	if opts.CoverageTask != nil && opts.CoverageTask.Framework != "" {
+		ctx.Framework = opts.CoverageTask.Framework
+	}
+
+	for _, decl := range node.Decls {
+		fnDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || strings.HasPrefix(fnDecl.Name.Name, "Test") {
+			continue
+		}
+		fn := goFuncInfoFromDecl(fnDecl)
+		ctx.Targets = append(ctx.Targets, goTarget(fn, opts.CoverageTask))
+	}
+	if len(ctx.Targets) == 0 {
+		return nil
+	}
+	return ctx
+}
+
+func goContextImports(node *ast.File) []string {
+	if node == nil {
+		return nil
+	}
+	imports := make([]string, 0, len(node.Imports))
+	for _, spec := range node.Imports {
+		if spec.Path != nil {
+			imports = append(imports, spec.Path.Value)
+		}
+	}
+	return imports
+}
+
+func goFuncInfoFromDecl(fn *ast.FuncDecl) funcInfo {
+	info := funcInfo{Name: fn.Name.Name}
+	if fn.Recv != nil {
+		info.IsMethod = true
+		for _, field := range fn.Recv.List {
+			recvType := exprToString(field.Type)
+			info.ReceiverType = recvType
+			for _, name := range field.Names {
+				info.Receiver = name.Name
+			}
+		}
+	}
+	if fn.Type.Params != nil {
+		for _, p := range fn.Type.Params.List {
+			typ := exprToString(p.Type)
+			if ell, ok := p.Type.(*ast.Ellipsis); ok {
+				typ = "[]" + exprToString(ell.Elt)
+			}
+			for _, name := range p.Names {
+				info.Params = append(info.Params, paramInfo{Name: name.Name, Type: typ})
+			}
+		}
+	}
+	if fn.Type.Results != nil {
+		for i, r := range fn.Type.Results.List {
+			typ := exprToString(r.Type)
+			name := "ret" + strconv.Itoa(i)
+			if len(r.Names) > 0 {
+				name = r.Names[0].Name
+			}
+			info.Returns = append(info.Returns, paramInfo{Name: name, Type: typ})
+		}
+	}
+	info.ReturnExpr = singleReturnExpr(fn.Body)
+	info.FinalReturn = finalReturnExpr(fn.Body)
+	info.Boundaries = extractGoBoundaries(fn.Body)
+	return info
+}
+
+func goTarget(fn funcInfo, task *types.CoverageTestTask) types.TestTarget {
+	kind := "function"
+	className := ""
+	if fn.IsMethod {
+		kind = "method"
+		className = strings.TrimPrefix(fn.ReceiverType, "*")
+	}
+	target := types.TestTarget{
+		Name:              fn.Name,
+		Kind:              kind,
+		ClassName:         className,
+		Params:            goContextParams(fn.Params),
+		ReturnType:        goContextReturnType(fn.Returns),
+		ReturnExpressions: goContextReturnExpressions(fn),
+		BoundaryCases:     goContextBoundaryCases(fn.Boundaries),
+	}
+	if task != nil && goFuncMatchesTarget(fn, strings.TrimSpace(task.Target)) {
+		target.PayloadNotes = goCoverageTaskFallbackNotes(fn, task)
+	}
+	if target.ReturnType == "" {
+		target.ReturnType = "unknown"
+	}
+	return target
+}
+
+func goContextParams(params []paramInfo) []string {
+	out := make([]string, 0, len(params))
+	for _, p := range params {
+		if p.Type == "" {
+			out = append(out, p.Name)
+			continue
+		}
+		out = append(out, strings.TrimSpace(p.Name+" "+p.Type))
+	}
+	return out
+}
+
+func goContextReturnType(returns []paramInfo) string {
+	if len(returns) == 0 {
+		return ""
+	}
+	types := make([]string, 0, len(returns))
+	for _, r := range returns {
+		types = append(types, r.Type)
+	}
+	return strings.Join(types, ", ")
+}
+
+func goContextReturnExpressions(fn funcInfo) []string {
+	var expressions []string
+	seen := map[string]bool{}
+	for _, expr := range append([]string{fn.ReturnExpr, fn.FinalReturn}, goBoundaryReturnExpressions(fn.Boundaries)...) {
+		expr = strings.TrimSpace(expr)
+		if expr == "" || seen[expr] {
+			continue
+		}
+		seen[expr] = true
+		expressions = append(expressions, expr)
+	}
+	return expressions
+}
+
+func goBoundaryReturnExpressions(boundaries []goBoundary) []string {
+	expressions := make([]string, 0, len(boundaries))
+	for _, boundary := range boundaries {
+		expressions = append(expressions, boundary.ReturnExpr)
+	}
+	return expressions
+}
+
+func goContextBoundaryCases(boundaries []goBoundary) []string {
+	cases := make([]string, 0, len(boundaries))
+	for _, boundary := range boundaries {
+		cases = append(cases, boundary.Condition)
+	}
+	return cases
 }
 
 func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext {

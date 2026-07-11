@@ -506,6 +506,9 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		sb.WriteString("\t\t\tskip: false,\n")
 	} else {
 		sb.WriteString(fmt.Sprintf("\t\t\tname: %q,\n", goCoverageTaskCaseName(task, "todo")))
+		for _, note := range goCoverageTaskFallbackNotes(fn, task) {
+			sb.WriteString(fmt.Sprintf("\t\t\t// %s\n", note))
+		}
 		sb.WriteString("\t\t\tskip: true, // TODO: 填写有意义的输入和期望值后改为 false\n")
 		for _, p := range fn.Params {
 			sb.WriteString(fmt.Sprintf("\t\t\t%s: %s,\n", goTestCaseFieldName(p.Name), zeroValue(p.Type)))
@@ -814,6 +817,44 @@ func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase
 		Inputs:  inputs,
 		Outputs: map[string]string{fn.Returns[0].Name: expr},
 	}, true
+}
+
+func goCoverageTaskFallbackNotes(fn funcInfo, task *types.CoverageTestTask) []string {
+	if task == nil {
+		return nil
+	}
+	var notes []string
+	if task.GapType != "branch" {
+		return notes
+	}
+	if len(fn.Returns) != 1 {
+		return append(notes, "Static generator cannot infer exact coverage case: target does not have exactly one return value.")
+	}
+	if !goTypeSupportsExactSeed(fn.Returns[0].Type) {
+		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: return type %s is outside exact seed support.", fn.Returns[0].Type))
+	}
+	if len(fn.Boundaries) == 0 {
+		return append(notes, "Static generator cannot infer exact coverage case: no simple if boundary was detected.")
+	}
+	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
+	if boundary == nil {
+		return append(notes, "Static generator cannot infer exact coverage case: coverage hints do not match a detected simple branch.")
+	}
+	if boundary.ReturnExpr == "" {
+		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q has no single return expression.", boundary.Condition))
+	}
+	if !goReturnExprIsSafe(boundary.ReturnExpr) {
+		return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: branch %q returns %q, which needs manual expected value review.", boundary.Condition, boundary.ReturnExpr))
+	}
+	for _, p := range fn.Params {
+		if p.Name != boundary.Param {
+			continue
+		}
+		if _, ok := goBoundaryInputValue(*boundary, p.Type); !ok {
+			return append(notes, fmt.Sprintf("Static generator cannot infer exact coverage case: boundary %q does not map to a safe %s literal.", boundary.Condition, p.Type))
+		}
+	}
+	return notes
 }
 
 func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTestTask) *goBoundary {

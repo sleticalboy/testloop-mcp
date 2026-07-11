@@ -159,6 +159,49 @@ func TestBuildGenerationContextCoverageTaskForStaticLanguages(t *testing.T) {
 	}
 }
 
+func TestBuildGenerationContextGoCoverageFallbackNotes(t *testing.T) {
+	src := `package sample
+
+type User struct {
+	Name string
+}
+
+func UserName(user *User) string {
+	if user != nil {
+		return user.Name
+	}
+	return "missing"
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "user.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-UserName",
+		Framework:       "go-test",
+		Target:          "UserName",
+		LineRange:       "8-10",
+		GapType:         "branch",
+		SuggestedInputs: []string{"构造满足条件 `user != nil` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	ctx := BuildGenerationContextWithOptions(srcPath, GenerateTestsOptions{CoverageTask: &task})
+	if ctx == nil || ctx.Language != "go" || ctx.Framework != "go-test" || ctx.CoverageTask == nil {
+		t.Fatalf("unexpected Go context: %+v", ctx)
+	}
+	target := findTarget(ctx.Targets, "UserName")
+	if target == nil {
+		t.Fatalf("UserName target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, target.Params, "user *User")
+	assertContains(t, target.ReturnExpressions, "user.Name")
+	assertContains(t, target.ReturnExpressions, `"missing"`)
+	assertContains(t, target.BoundaryCases, "user != nil")
+	assertContains(t, target.PayloadNotes, `Static generator cannot infer exact coverage case: branch "user != nil" returns "user.Name", which needs manual expected value review.`)
+}
+
 func TestBuildGenerationContextReturnsNilForMissingOrEmptyTargets(t *testing.T) {
 	if ctx := BuildGenerationContext(filepath.Join(t.TempDir(), "missing.ts")); ctx != nil {
 		t.Fatalf("expected nil context for missing source, got %+v", ctx)

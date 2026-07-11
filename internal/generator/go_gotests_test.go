@@ -435,6 +435,55 @@ func SkipLabel(skip bool) string {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskExplainsUnsafeBranchFallback(t *testing.T) {
+	src := `package sample
+
+type User struct {
+	Name string
+}
+
+func UserName(user *User) string {
+	if user != nil {
+		return user.Name
+	}
+	return "missing"
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "user.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-branch-UserName",
+		Framework:       "go-test",
+		Target:          "UserName",
+		LineRange:       "8-10",
+		GapType:         "branch",
+		TestName:        "TestUserNameNonNilBranch",
+		SuggestedInputs: []string{"构造满足条件 `user != nil` 的输入"},
+		AssertionFocus:  []string{"断言分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestUserNameNonNilBranch(t *testing.T)",
+		`Static generator cannot infer exact coverage case: branch "user != nil" returns "user.Name", which needs manual expected value review.`,
+		"skip: true",
+		"user: nil",
+		`ret0: ""`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "user: &User{}") || strings.Contains(code, `ret0: "test"`) {
+		t.Fatalf("did not expect unsafe exact seed in generated code:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskUsesSmokeCaseForNoArgReturn(t *testing.T) {
 	src := `package sample
 
