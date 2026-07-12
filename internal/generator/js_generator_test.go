@@ -3226,6 +3226,21 @@ func TestJSCoverageTaskCodexExecRunArgsUsesBranchSpecificAssertions(t *testing.T
 	}, []string{
 		"child.emit('error', new Error('spawn failed'))",
 	})
+
+	task.LineRange = "224-224"
+	task.TestName = "covers yielded stdout line"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"child.stdout.write('ready\\n');",
+		"const output = [];",
+		"for await (const line of instance.run({ input: 'hi' })) {",
+		"output.push(line);",
+		"expect(output).toEqual(['ready']);",
+	}, []string{
+		"Array.fromAsync",
+		"child.emit('error', new Error('spawn failed'))",
+		"rejects.toThrow('spawn failed')",
+	})
 }
 
 func TestJSFuncCoverageTaskFindCodexPathUsesPublicConstructorOrManualReview(t *testing.T) {

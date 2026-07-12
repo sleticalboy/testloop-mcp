@@ -1192,7 +1192,9 @@ type jsCodexExecRunArgsScenario struct {
 	instanceSetup string
 	runArgs       string
 	childSetup    []string
+	stdoutWrites  []string
 	expectError   string
+	collectOutput bool
 	assertions    []string
 }
 
@@ -1320,6 +1322,13 @@ func jsCodexExecRunArgsScenarioForTask(task *types.CoverageTestTask) (jsCodexExe
 		scenario.assertions = []string{
 			"expect(child.killed).toBe(true);",
 		}
+	case strings.HasPrefix(lineRange, "224"):
+		scenario.stdoutWrites = []string{"child.stdout.write('ready\\n');"}
+		scenario.collectOutput = true
+		scenario.assertions = []string{
+			"expect(output).toEqual(['ready']);",
+			"expect(spawnMock).toHaveBeenCalled();",
+		}
 	default:
 		return jsCodexExecRunArgsScenario{}, false
 	}
@@ -1343,6 +1352,9 @@ func genJSCodexExecRunArgsCoverageTask(method jsFuncInfo, task *types.CoverageTe
 	sb.WriteString("      spawnMock.mockReturnValue(child);\n")
 	if scenario.expectError == "" {
 		sb.WriteString("      setImmediate(() => {\n")
+		for _, line := range scenario.stdoutWrites {
+			sb.WriteString("        " + line + "\n")
+		}
 		sb.WriteString("        child.stdout.end();\n")
 		sb.WriteString("        child.stderr.end();\n")
 		sb.WriteString("        child.emit('exit', 0, null);\n")
@@ -1351,6 +1363,11 @@ func genJSCodexExecRunArgsCoverageTask(method jsFuncInfo, task *types.CoverageTe
 	sb.WriteString("      " + scenario.instanceSetup + "\n")
 	if scenario.expectError != "" {
 		sb.WriteString(fmt.Sprintf("      await expect(consumeTestloopCodexExec(instance.run(%s))).rejects.toThrow('%s');\n", scenario.runArgs, strings.ReplaceAll(scenario.expectError, "'", "\\'")))
+	} else if scenario.collectOutput {
+		sb.WriteString("      const output = [];\n")
+		sb.WriteString(fmt.Sprintf("      for await (const line of instance.run(%s)) {\n", scenario.runArgs))
+		sb.WriteString("        output.push(line);\n")
+		sb.WriteString("      }\n")
 	} else {
 		sb.WriteString(fmt.Sprintf("      await consumeTestloopCodexExec(instance.run(%s));\n", scenario.runArgs))
 	}
