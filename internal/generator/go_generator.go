@@ -1531,16 +1531,9 @@ func goErrorPathSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool
 	if !ok {
 		return goSeedCase{}, false
 	}
-	outputs := map[string]string{}
-	for i, r := range fn.Returns {
-		if r.Type == "error" {
-			continue
-		}
-		expr := boundary.ReturnExprs[i]
-		if !goReturnExprAssignableAsExpected(expr, r.Type) {
-			return goSeedCase{}, false
-		}
-		outputs[r.Name] = expr
+	outputs, ok := goErrorPathOutputs(fn, boundary)
+	if !ok {
+		return goSeedCase{}, false
 	}
 	return goSeedCase{
 		Assert:  goAssertErrorPath,
@@ -1550,22 +1543,27 @@ func goErrorPathSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool
 }
 
 func goErrorBoundaryReturnsError(fn funcInfo, boundary goBoundary) bool {
-	if boundary.Param != "err" || boundary.Op != "!=" || boundary.Value != "nil" {
+	if len(boundary.ReturnExprs) != len(fn.Returns) {
 		return false
 	}
+	hasErrorReturn := false
 	for i, r := range fn.Returns {
 		expr := boundary.ReturnExprs[i]
 		if r.Type == "error" {
-			if expr == "nil" || expr == "" || !goReturnExprIsSafe(expr) {
+			hasErrorReturn = true
+			if expr == "nil" || strings.TrimSpace(expr) == "" {
 				return false
 			}
+			continue
+		}
+		if goReturnExprIsZeroValue(expr, r.Type) {
 			continue
 		}
 		if expr == "" || !goReturnExprIsSafe(expr) {
 			return false
 		}
 	}
-	return true
+	return hasErrorReturn
 }
 
 func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, bool) {
@@ -1574,10 +1572,21 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		inputs[p.Name] = goArgValue(p, i)
 	}
 	if boundary.Param != "err" {
-		if _, ok := inputs[boundary.Param]; !ok {
-			return nil, false
+		for _, p := range fn.Params {
+			if p.Name != boundary.Param {
+				continue
+			}
+			value, ok := goBoundaryInputValue(boundary, p.Type)
+			if !ok {
+				return nil, false
+			}
+			inputs[p.Name] = value
+			return inputs, true
 		}
-		return inputs, true
+		return nil, false
+	}
+	if boundary.Op != "!=" || boundary.Value != "nil" {
+		return nil, false
 	}
 	for _, p := range fn.Params {
 		if p.Type != "string" || !goURLLikeParamName(p.Name) {
@@ -1587,6 +1596,54 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		return inputs, true
 	}
 	return nil, false
+}
+
+func goReturnExprIsZeroValue(expr, typ string) bool {
+	expr = strings.TrimSpace(expr)
+	if expr == "" {
+		return false
+	}
+	if expr == zeroValue(typ) {
+		return true
+	}
+	if expr == "nil" {
+		return goTypeSupportsNil(typ)
+	}
+	if strings.TrimPrefix(typ, "*")+"{}" == expr {
+		return true
+	}
+	switch typ {
+	case "string":
+		return expr == `""`
+	case "bool":
+		return expr == "false"
+	case "error":
+		return expr == "nil"
+	default:
+		if strings.HasPrefix(typ, "int") || strings.HasPrefix(typ, "uint") || strings.HasPrefix(typ, "float") {
+			return expr == "0"
+		}
+		return false
+	}
+}
+
+func goErrorPathOutputs(fn funcInfo, boundary goBoundary) (map[string]string, bool) {
+	outputs := map[string]string{}
+	for i, r := range fn.Returns {
+		if r.Type == "error" {
+			continue
+		}
+		expr := boundary.ReturnExprs[i]
+		switch {
+		case goReturnExprIsZeroValue(expr, r.Type):
+			outputs[r.Name] = zeroValue(r.Type)
+		case goReturnExprAssignableAsExpected(expr, r.Type):
+			outputs[r.Name] = expr
+		default:
+			return nil, false
+		}
+	}
+	return outputs, true
 }
 
 func goURLLikeParamName(name string) bool {
@@ -2641,6 +2698,11 @@ func exprToString(expr ast.Expr) string {
 			args[i] = exprToString(arg)
 		}
 		return exprToString(v.Fun) + "(" + strings.Join(args, ", ") + ")"
+	case *ast.CompositeLit:
+		if len(v.Elts) == 0 {
+			return exprToString(v.Type) + "{}"
+		}
+		return "any"
 	case *ast.StarExpr:
 		return "*" + exprToString(v.X)
 	case *ast.ArrayType:

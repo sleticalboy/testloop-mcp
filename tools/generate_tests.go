@@ -98,7 +98,7 @@ func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTe
 	if task == nil || filepath.Ext(filePath) != ".go" || strings.TrimSpace(task.TestName) == "" {
 		return task, nil
 	}
-	existing, err := existingGoTestNames(testFile)
+	existing, err := existingGoPackageTestNames(testFile)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +109,25 @@ func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTe
 	adjusted := *task
 	adjusted.TestName = uniqueGoCoverageTaskTestName(name, &adjusted, existing)
 	return &adjusted, nil
+}
+
+func existingGoPackageTestNames(testFile string) (map[string]bool, error) {
+	existing := make(map[string]bool)
+	pattern := filepath.Join(filepath.Dir(testFile), "*_test.go")
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("查找已有 Go 测试文件失败: %w", err)
+	}
+	for _, file := range files {
+		names, err := existingGoTestNames(file)
+		if err != nil {
+			return nil, err
+		}
+		for name := range names {
+			existing[name] = true
+		}
+	}
+	return existing, nil
 }
 
 func existingGoTestNames(testFile string) (map[string]bool, error) {

@@ -1388,6 +1388,61 @@ func SkipLabel(skip bool) string {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesStringGuardForMultiReturnErrorPath(t *testing.T) {
+	src := `package sample
+
+import "fmt"
+
+type Status struct {
+	SocketPath string
+}
+
+func QueryStatus(socketPath string) (Status, error) {
+	if socketPath == "" {
+		return Status{}, fmt.Errorf("socket path is required")
+	}
+	return Status{SocketPath: socketPath}, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status",
+		Framework:       "go-test",
+		Target:          "QueryStatus",
+		LineRange:       "10-12",
+		GapType:         "branch",
+		TestName:        "TestQueryStatus",
+		MissingBranches: []string{`未覆盖 if 分支: socketPath == ""`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`socketPath == \"\"`" + ` 的输入`},
+		AssertionFocus:  []string{"断言错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"reflect"`,
+		"func TestQueryStatus(t *testing.T)",
+		"skip:       false",
+		`socketPath: ""`,
+		"ret0:       *new(Status)",
+		"got0, got1 := QueryStatus(tt.socketPath)",
+		"if got1 == nil",
+		"if !reflect.DeepEqual(got0, tt.ret0)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+		t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskExplainsUnsafeBranchFallback(t *testing.T) {
 	src := `package sample
 

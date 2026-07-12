@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Go coverage task 写入测试文件前会扫描同包所有 `*_test.go`，当任务推荐的 `test_name` 已在其它测试文件中存在时，也会自动追加稳定后缀，避免生成后 `go test` 因包级 `Test*` 重名构建失败。
+- Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil。
+- Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
+
 ## v0.4.14 - 2026-07-11
 
 ### Added

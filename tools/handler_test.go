@@ -1668,6 +1668,59 @@ func TestHandleGenerateTestsRenamesDuplicateGoCoverageTaskFunction(t *testing.T)
 	}
 }
 
+func TestHandleGenerateTestsRenamesDuplicateGoCoverageTaskFunctionAcrossPackageFiles(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	existingTestFile := filepath.Join(dir, "existing_test.go")
+	existing := `package calc
+
+import "testing"
+
+func TestAddCoverageTask(t *testing.T) {
+	if Add(1, 2) != 3 {
+		t.Fatal("unexpected Add result")
+	}
+}
+`
+	if err := os.WriteFile(existingTestFile, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write existing test: %v", err)
+	}
+	testFile := filepath.Join(dir, "calc_task_test.go")
+	task := &types.CoverageTestTask{
+		ID:        "go-calc-add",
+		Framework: "go-test",
+		File:      source,
+		Target:    "Add",
+		Kind:      "function",
+		LineRange: "2-2",
+		TestFile:  testFile,
+		TestName:  "TestAddCoverageTask",
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	generated := assertGeneratedCoverageTaskOutput(t, result, task, "TestAddCoverageTaskCoverage2_2")
+	if generated.CoverageTask.TestName != "TestAddCoverageTaskCoverage2_2" {
+		t.Fatalf("coverage task test_name = %q, want adjusted suffix", generated.CoverageTask.TestName)
+	}
+	content, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("read generated test file: %v", err)
+	}
+	if text := string(content); !strings.Contains(text, "func TestAddCoverageTaskCoverage2_2") {
+		t.Fatalf("generated Go test file missing adjusted function:\n%s", text)
+	}
+}
+
 func TestWriteGeneratedTestFileRejectsDuplicateGoTestFunction(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "calc_test.go")
