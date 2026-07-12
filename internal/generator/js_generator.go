@@ -611,15 +611,16 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	for _, method := range cls.Methods {
 		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
-		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, nil)
+		overrides := jsClassCoverageTaskInputOverrides(method, task)
+		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, overrides)
 
 		sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 		sb.WriteString(fmt.Sprintf("    it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(method.IsAsync)))
 		if comment := coverageTaskComment(task); comment != "" {
 			sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
 		}
-		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
-		if method.Analysis.Throws || task.GapType == "error_path" {
+		sb.WriteString(fmt.Sprintf("      const instance = %s;\n", jsClassInstanceForCoverageTask(cls, method, task)))
+		if jsCoverageTaskWantsErrorAssertion(method, task) {
 			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
 			sb.WriteString("    });\n\n")
 			sb.WriteString("  });\n\n")
@@ -637,6 +638,74 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTestTask) bool {
+	if task != nil && taskTargetMatches(task.Target, method.ClassName, method.Name) {
+		return task.GapType == "error_path"
+	}
+	return method.Analysis.Throws
+}
+
+func jsClassInstanceForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask) string {
+	options := jsClassCoverageTaskConstructorOptions(method, task)
+	if len(options) == 0 {
+		return fmt.Sprintf("new %s()", cls.Name)
+	}
+	return fmt.Sprintf("new %s({ %s })", cls.Name, strings.Join(options, ", "))
+}
+
+func jsClassCoverageTaskConstructorOptions(method jsFuncInfo, task *types.CoverageTestTask) []string {
+	if task == nil || task.GapType != "error_path" {
+		return nil
+	}
+	body := method.Body
+	var options []string
+	if strings.Contains(body, "depth > this.maxPasses") {
+		options = append(options, "maxPasses: 0")
+	}
+	if strings.Contains(body, "fallbackValue === undefined") && strings.Contains(body, "this.strict") {
+		options = append(options, "strict: true")
+	}
+	return options
+}
+
+func jsClassCoverageTaskInputOverrides(method jsFuncInfo, task *types.CoverageTestTask) map[string]string {
+	overrides := map[string]string{}
+	if task == nil {
+		return overrides
+	}
+	body := method.Body
+	if task.GapType == "error_path" && strings.Contains(body, "fallbackValue === undefined") && strings.Contains(body, "this.strict") {
+		jsSetParamOverride(method.Params, overrides, 0, "{ MISSING: null }")
+		jsSetParamOverride(method.Params, overrides, 1, "{}")
+	}
+	if task.GapType == "error_path" && strings.Contains(body, "depth > this.maxPasses") {
+		jsSetNamedParamOverride(method.Params, overrides, "str", "'${MISSING}'")
+		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
+		jsSetNamedParamOverride(method.Params, overrides, "depth", "1")
+	}
+	if task.GapType == "return_path" && strings.Contains(body, "placeholders.length === 0") {
+		jsSetNamedParamOverride(method.Params, overrides, "str", "'plain'")
+		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
+		jsSetNamedParamOverride(method.Params, overrides, "depth", "0")
+	}
+	return overrides
+}
+
+func jsSetParamOverride(params []jsParamInfo, overrides map[string]string, index int, value string) {
+	if index >= 0 && index < len(params) {
+		overrides[params[index].Name] = value
+	}
+}
+
+func jsSetNamedParamOverride(params []jsParamInfo, overrides map[string]string, name string, value string) {
+	for _, param := range params {
+		if param.Name == name {
+			overrides[param.Name] = value
+			return
+		}
+	}
 }
 
 func genJSResultAssertion(a jsFuncAnalysis, indent string) string {

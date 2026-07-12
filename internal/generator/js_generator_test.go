@@ -1574,6 +1574,140 @@ module.exports = { Widget };
 			},
 			forbidden: []string{"describe('save'", "to.equal(", "require('chai')", "caughtError"},
 		},
+		{
+			name:     "vitest class strict fallback error path",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  constructor(options = {}) {
+    this.strict = options.strict !== false
+  }
+
+  async _resolveEnvObject(envConfig, baseContext) {
+    const resolved = {}
+    for (const [key, value] of Object.entries(envConfig)) {
+      if (value === null || value === '') {
+        const fallbackValue = baseContext[key]
+        if (fallbackValue === undefined && this.strict) {
+          throw new Error('missing variable')
+        }
+        resolved[key] = fallbackValue || ''
+      }
+    }
+    return resolved
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-env-strict-1",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveEnvObject",
+				LineRange:       "11-11",
+				GapType:         "error_path",
+				TestName:        "covers EnvResolver strict fallback",
+				SuggestedInputs: []string{"设置 envConfig 覆盖未执行分支", "设置 baseContext 覆盖未执行分支"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { EnvResolver } from './env-resolver';",
+				"const instance = new EnvResolver({ strict: true });",
+				"await expect(instance._resolveEnvObject({ MISSING: null }, {})).rejects.toThrow();",
+			},
+			forbidden: []string{"_resolveEnvObject({}, 'test')"},
+		},
+		{
+			name:     "vitest class max passes error path",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  constructor(options = {}) {
+    this.maxPasses = options.maxPasses || 10
+  }
+
+  async _resolveStringWithPlaceholders(str, context, depth = 0) {
+    if (depth > this.maxPasses) {
+      throw new Error('Max placeholder resolution depth exceeded')
+    }
+    if (typeof str !== 'string' || !str.includes('${')) {
+      return str
+    }
+    return str
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-env-depth-1",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveStringWithPlaceholders",
+				LineRange:       "8-8",
+				GapType:         "error_path",
+				TestName:        "covers EnvResolver max passes",
+				SuggestedInputs: []string{"设置 str 覆盖未执行分支", "设置 context 覆盖未执行分支", "设置 depth 覆盖未执行分支"},
+			},
+			wants: []string{
+				"const instance = new EnvResolver({ maxPasses: 0 });",
+				"await expect(instance._resolveStringWithPlaceholders('${MISSING}', {}, 1)).rejects.toThrow();",
+			},
+			forbidden: []string{"_resolveStringWithPlaceholders(undefined, 'test', undefined)"},
+		},
+		{
+			name:     "vitest class placeholder plain return path",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  async _resolveStringWithPlaceholders(str, context, depth = 0) {
+    if (depth > 10) {
+      throw new Error('too deep')
+    }
+    const placeholders = []
+    if (placeholders.length === 0) {
+      return str
+    }
+    return context.value
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-env-return-1",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveStringWithPlaceholders",
+				LineRange:       "8-8",
+				GapType:         "return_path",
+				TestName:        "covers EnvResolver placeholder return",
+				SuggestedInputs: []string{"设置 str 覆盖未执行分支", "设置 context 覆盖未执行分支", "设置 depth 覆盖未执行分支"},
+			},
+			wants: []string{
+				"const instance = new EnvResolver();",
+				"const result = await instance._resolveStringWithPlaceholders('plain', {}, 0);",
+				"expect(result).toBeDefined();",
+			},
+			forbidden: []string{"rejects.toThrow()", "_resolveStringWithPlaceholders(undefined, 'test', undefined)"},
+		},
+		{
+			name:     "vitest class return path ignores other throw branches",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  async _resolveFieldUniversal(fieldValue, context, fieldType) {
+    if (fieldType === 'bad') {
+      throw new Error('bad field')
+    }
+    return fieldValue
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-env-field-return-1",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveFieldUniversal",
+				LineRange:       "6-6",
+				GapType:         "return_path",
+				TestName:        "covers EnvResolver field fallback",
+				SuggestedInputs: []string{"设置 fieldValue 覆盖未执行分支", "设置 context 覆盖未执行分支", "设置 fieldType 覆盖未执行分支"},
+			},
+			wants: []string{
+				"const instance = new EnvResolver();",
+				"const result = await instance._resolveFieldUniversal('test', 'test', 'test');",
+				"expect(result).toBe(('test'));",
+			},
+			forbidden: []string{"rejects.toThrow()", "to.equal(", "require('chai')"},
+		},
 	}
 
 	for _, tt := range tests {
