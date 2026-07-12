@@ -292,7 +292,29 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 		cls.Methods = append(cls.Methods, method)
 	}
 
+	cls.PrivateEntries = jsPrivateEntryCandidates(cls)
 	return cls
+}
+
+func jsPrivateEntryCandidates(cls jsClassInfo) map[string][]string {
+	entries := map[string][]string{}
+	for _, privateMethod := range cls.Methods {
+		if !strings.HasPrefix(privateMethod.Name, "#") {
+			continue
+		}
+		for _, method := range cls.Methods {
+			if strings.HasPrefix(method.Name, "#") {
+				continue
+			}
+			if strings.Contains(method.Body, privateMethod.Name) {
+				entries[privateMethod.Name] = append(entries[privateMethod.Name], cls.Name+"."+method.Name)
+			}
+		}
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	return entries
 }
 
 // jsExtractBody 提取函数体文本

@@ -114,6 +114,9 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskPrivateMethodReason(task, generated, result); reason != "" {
 		metadata["private_method"] = true
 		metadata["private_reason"] = reason
+		if candidates := coverageTaskPrivatePublicEntries(generated); len(candidates) > 0 {
+			metadata["public_entry_candidates"] = candidates
+		}
 	}
 	return metadata
 }
@@ -213,17 +216,50 @@ func coverageTaskDatabaseReason(task *types.CoverageTestTask, generated *types.G
 }
 
 func coverageTaskPrivateMethodReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
-	if task == nil || generated == nil || result == nil || result.Status != "fail" {
+	if task == nil || generated == nil || result == nil {
 		return ""
 	}
 	target := strings.TrimSpace(task.Target)
 	if !strings.Contains(target, ".#") && !strings.Contains(generated.Preview, "instance.#") {
 		return ""
 	}
+	if strings.Contains(generated.Preview, "manual_review_private:") && result.Status == "pass" {
+		return fmt.Sprintf("%s is a JavaScript private method; cover it through a public entry point or review manually instead of calling it directly", target)
+	}
+	if result.Status != "fail" {
+		return ""
+	}
 	if !strings.Contains(result.RawOutput, "Private field") && !strings.Contains(result.RawOutput, "private field") {
 		return ""
 	}
 	return fmt.Sprintf("%s is a JavaScript private method; generate a public-entry test or review manually instead of calling it directly", target)
+}
+
+func coverageTaskPrivatePublicEntries(generated *types.GenerateTestsOutput) []string {
+	if generated == nil {
+		return nil
+	}
+	const marker = "public_entry_candidates:"
+	for _, line := range strings.Split(generated.Preview, "\n") {
+		idx := strings.Index(line, marker)
+		if idx < 0 {
+			continue
+		}
+		raw := strings.TrimSpace(line[idx+len(marker):])
+		if raw == "" || strings.HasPrefix(raw, "none detected") {
+			return nil
+		}
+		parts := strings.Split(raw, ",")
+		entries := make([]string, 0, len(parts))
+		for _, part := range parts {
+			entry := strings.TrimSpace(part)
+			if entry != "" {
+				entries = append(entries, entry)
+			}
+		}
+		return entries
+	}
+	return nil
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {

@@ -15,10 +15,12 @@
 - `run_tests` 不再为 Vitest 追加已被 Vitest 3 拒绝的 `--verbose` 参数，并会把 Vitest/Jest 命令级错误解析为失败而不是误判通过。
 - JS/Vitest coverage task 在项目已有 `tests/` 目录且源码位于 `src/` 下时，会把生成测试写入 `tests/` 镜像路径，并按测试文件位置生成相对 import，避免被真实项目的 Vitest `include` 配置排除。
 - JS class method coverage task 支持从 `this.strict`、`this.maxPasses` 和 placeholder 返回分支推导实例构造参数与方法入参，并避免 return-path 因方法体存在其他 `throw` 分支而误生成错误断言。
-- `validate_coverage_task` 会将直接调用 JavaScript `#private` method 导致的语法失败标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
+- JS class coverage task 遇到 JavaScript `#private` method 时不再生成非法的 `instance.#method()` 外部调用，而是生成 `it.skip` 的 manual-review 草稿，并在 metadata 中返回可检测到的公共入口候选。
+- `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。
 - JS class coverage task 支持默认导出实例，例如 `class Logger` + `export default logger` 会生成 `import logger from ...` 并通过实例调用方法，避免错误生成不可导出的 `new Logger()`。
 - JS coverage task 对 `error` / `err` 参数会生成普通 `Error` 对象，并把 `new ErrorLike(...)` 返回路径识别为 object，减少错误包装 helper 的无效边界输入。
+- Jest/Vitest parser 支持 Vitest 3 的 `Tests  1 skipped (1)` 摘要和 `↓` skipped 结果行，确保 validation summary 能准确统计 manual-review 草稿。
 - Go 测试文件写入会对新建文件和合并文件统一执行 import 整理，避免 coverage task 只生成单个目标测试时保留未使用 import 导致构建失败。
 - Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
 - Go static generator 支持泛型 helper 的 `return &param`、nil 指针返回零值和非 nil 指针解引用返回路径，例如 `anyPtr[T]` / `derefAny[T]` 会生成真实指针值或返回值断言。

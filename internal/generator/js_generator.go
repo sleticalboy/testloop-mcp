@@ -58,6 +58,7 @@ type jsClassInfo struct {
 	IsExported        bool
 	IsDefault         bool
 	DefaultInstance   string
+	PrivateEntries    map[string][]string
 	ConstructorParams []jsParamInfo
 	Methods           []jsFuncInfo
 }
@@ -217,6 +218,7 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 				IsExported:        cls.IsExported,
 				IsDefault:         cls.IsDefault,
 				DefaultInstance:   cls.DefaultInstance,
+				PrivateEntries:    cls.PrivateEntries,
 				ConstructorParams: cls.ConstructorParams,
 				Methods:           methods,
 			})
@@ -625,6 +627,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", cls.Name))
 	for _, method := range cls.Methods {
 		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
+		if strings.HasPrefix(method.Name, "#") {
+			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName))
+			continue
+		}
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
 		overrides := jsClassCoverageTaskInputOverrides(method, task)
 		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, overrides)
@@ -653,6 +659,32 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func genJSPrivateMethodManualReviewTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	entries := jsPrivateEntryCandidatesForMethod(cls, method.Name)
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("      // manual_review_private: %s.%s is a JavaScript private method and cannot be called from external tests.\n", cls.Name, method.Name))
+	if len(entries) > 0 {
+		sb.WriteString(fmt.Sprintf("      // public_entry_candidates: %s\n", strings.Join(entries, ", ")))
+	} else {
+		sb.WriteString("      // public_entry_candidates: none detected; add a public entry point or review manually.\n")
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func jsPrivateEntryCandidatesForMethod(cls jsClassInfo, privateName string) []string {
+	if cls.PrivateEntries == nil {
+		return nil
+	}
+	return cls.PrivateEntries[privateName]
 }
 
 func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTestTask) bool {

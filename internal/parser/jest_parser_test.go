@@ -51,6 +51,38 @@ Tests:       1 passed, 1 skipped`
 	}
 }
 
+func TestParseJestTestVitestSkippedSummary(t *testing.T) {
+	output := ` RUN  v3.2.4 /tmp/project
+
+ ↓ tests/config.test.js (1 test | 1 skipped)
+
+ Test Files  1 skipped (1)
+      Tests  1 skipped (1)`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 1 || result.Passed != 0 || result.Skipped != 1 || result.Failed != 0 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
+func TestParseJestTestCountsSkippedResultLinesWithoutSummary(t *testing.T) {
+	output := `PASS  ./sum.test.js
+  ↓ covers private method`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 1 || result.Skipped != 1 {
+		t.Fatalf("Unexpected counts: total=%d skipped=%d", result.Total, result.Skipped)
+	}
+}
+
 func TestParseJestTestSummarySkipsMalformedParts(t *testing.T) {
 	output := `PASS  ./sum.test.js
   ✓ adds 1 + 2 to equal 3

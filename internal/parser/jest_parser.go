@@ -36,6 +36,8 @@ func ParseJestTest(output string) types.TestResult {
 	for _, line := range lines {
 		if strings.Contains(line, "Tests:") {
 			parseTestSummary(line, &result)
+		} else if strings.Contains(line, "Tests") {
+			parseVitestTestSummary(line, &result)
 		}
 	}
 
@@ -58,6 +60,9 @@ func ParseJestTest(output string) types.TestResult {
 				result.Total++
 				result.Failed++
 				result.Status = "fail"
+			} else if strings.HasPrefix(trimmed, "↓") {
+				result.Total++
+				result.Skipped++
 			}
 		}
 	}
@@ -162,11 +167,32 @@ func parseTestSummary(line string, result *types.TestResult) {
 }
 
 var (
+	vitestTestSummaryRe = regexp.MustCompile(`^\s*Tests\s+(\d+)\s+(passed|failed|skipped)`)
 	jestLocationParenRe = regexp.MustCompile(`\(([^():]+(?:/[^():]+)*):(\d+):(\d+)\)`)
 	jestLocationAtRe    = regexp.MustCompile(`^\s*at\s+([^():]+(?:/[^():]+)*):(\d+):(\d+)`)
 	vitestLocationRe    = regexp.MustCompile(`^[\s❯]*([^():]+(?:/[^():]+)*):(\d+):(\d+)`)
 	jestCodeFrameRe     = regexp.MustCompile(`^\s*>\s*(\d+)\s*\|`)
 )
+
+func parseVitestTestSummary(line string, result *types.TestResult) {
+	match := vitestTestSummaryRe.FindStringSubmatch(line)
+	if len(match) != 3 {
+		return
+	}
+	count, _ := strconv.Atoi(match[1])
+	switch match[2] {
+	case "passed":
+		result.Passed = count
+	case "failed":
+		result.Failed = count
+		result.Status = "fail"
+	case "skipped":
+		result.Skipped = count
+	}
+	if result.Total == 0 {
+		result.Total = result.Passed + result.Failed + result.Skipped
+	}
+}
 
 func parseJestFailures(lines []string) []types.TestFailure {
 	var failures []types.TestFailure

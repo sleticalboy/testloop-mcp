@@ -1828,6 +1828,40 @@ export default logger
 			},
 			forbidden: []string{"import { Logger }", "new Logger({})", "setLogLevel(undefined)"},
 		},
+		{
+			name:     "vitest class private method manual review",
+			fileName: "config.js",
+			source: `export class ConfigManager {
+  #diffConfigs(oldServers, newServers) {
+    if (!newServers.old) {
+      return true
+    }
+    return false
+  }
+
+  loadConfig() {
+    return this.#diffConfigs({ old: {} }, {})
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-private-diff-1",
+				Framework:       "vitest",
+				Target:          "ConfigManager.#diffConfigs",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers ConfigManager private diff",
+				SuggestedInputs: []string{"构造满足条件 `!newServers[name]` 的输入"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			wants: []string{
+				"import { ConfigManager } from './config';",
+				"it.skip('covers ConfigManager private diff'",
+				"manual_review_private: ConfigManager.#diffConfigs is a JavaScript private method",
+				"public_entry_candidates: ConfigManager.loadConfig",
+			},
+			forbidden: []string{"instance.#diffConfigs", "const result ="},
+		},
 	}
 
 	for _, tt := range tests {

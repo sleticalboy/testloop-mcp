@@ -516,6 +516,10 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
     }
     return false
   }
+
+  loadConfig() {
+    return this.#diffConfigs({ old: { command: 'node' } }, {})
+  }
 }
 `
 	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
@@ -524,11 +528,10 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	installFakeNpx(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
-		" FAIL  config.test.js [ config.test.js ]",
-		"SyntaxError: Private field '#diffConfigs' must be declared in an enclosing class",
+		" ↓ config.test.js (1 test | 1 skipped)",
 		"",
-		" Test Files  1 failed (1)",
-		"      Tests  no tests",
+		" Test Files  1 skipped (1)",
+		"      Tests  1 skipped (1)",
 	}, "\n"))
 	task := types.CoverageTestTask{
 		ID:              "vitest-private-1",
@@ -563,8 +566,11 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
 		t.Fatalf("unmarshal validation output: %v", err)
 	}
-	if out.Status != "failed" || out.Action != "manual_review_private" {
+	if out.Status != "passed" || out.Action != "manual_review_private" {
 		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Status != "pass" {
+		t.Fatalf("expected passing private review test run, got %+v", out.RunResult)
 	}
 	if out.Metadata["private_method"] != true {
 		t.Fatalf("expected private method metadata, got %+v", out.Metadata)
@@ -573,8 +579,14 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	if !strings.Contains(reason, "ConfigManager.#diffConfigs") || !strings.Contains(reason, "private method") {
 		t.Fatalf("unexpected private reason: %q", reason)
 	}
-	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "instance.#diffConfigs") {
-		t.Fatalf("expected generated private method call, got %+v", out.Generated)
+	entries, ok := out.Metadata["public_entry_candidates"].([]any)
+	if !ok || len(entries) != 1 || entries[0] != "ConfigManager.loadConfig" {
+		t.Fatalf("unexpected public entry candidates: %+v", out.Metadata["public_entry_candidates"])
+	}
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_private: ConfigManager.#diffConfigs") ||
+		!strings.Contains(out.Generated.Preview, "public_entry_candidates: ConfigManager.loadConfig") ||
+		strings.Contains(out.Generated.Preview, "instance.#diffConfigs") {
+		t.Fatalf("expected generated private method review skip, got %+v", out.Generated)
 	}
 }
 
