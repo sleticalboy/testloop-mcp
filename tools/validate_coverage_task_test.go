@@ -665,6 +665,77 @@ export default class CacheFacade {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksTypeOnlyTSFileAsNoRuntimeManualReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "events.ts")
+	src := `export type ThreadStartedEvent = {
+  type: "thread.started";
+  thread_id: string;
+};
+
+export type ThreadEvent = ThreadStartedEvent;
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeNpx(t, strings.Join([]string{
+		" RUN  v3.2.4 " + dir,
+		"",
+		" ↓ events.test.ts (1 test | 1 skipped)",
+		"",
+		" Test Files  1 skipped (1)",
+		"      Tests  1 skipped (1)",
+	}, "\n"))
+	task := types.CoverageTestTask{
+		ID:             "vitest-no-runtime-1",
+		Framework:      "vitest",
+		File:           source,
+		Target:         "events.ts",
+		Kind:           "file_level",
+		LineRange:      "entire file",
+		GapType:        "no_runtime",
+		Goal:           "确认 events.ts 是 TypeScript 纯类型文件，没有可直接执行的运行时代码覆盖任务",
+		Command:        "npx vitest run events.ts",
+		TestFile:       filepath.Join(dir, "events.test.ts"),
+		TestName:       "marks type-only module as no runtime coverage",
+		AssertionFocus: []string{"通过消费方运行时测试或类型检查验证"},
+		Confidence:     0.9,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_no_runtime" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.Metadata["no_runtime"] != true {
+		t.Fatalf("expected no runtime metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["no_runtime_reason"].(string)
+	if !strings.Contains(reason, "events.ts") || !strings.Contains(reason, "no runtime JavaScript statements") {
+		t.Fatalf("unexpected no runtime reason: %q", reason)
+	}
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_no_runtime:") ||
+		strings.Contains(out.Generated.Preview, "manual_review_internal:") {
+		t.Fatalf("expected generated no-runtime review skip, got %+v", out.Generated)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",

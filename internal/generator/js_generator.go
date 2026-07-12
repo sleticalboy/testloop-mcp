@@ -142,6 +142,9 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		funcs, classes = filterJSTargetsForCoverageTask(funcs, classes, task)
 	}
 
+	if coverageMode && jsCoverageTaskFileLevelTarget(srcPath, task) {
+		return genJSFileLevelManualReviewTask(srcPath, source, task), nil
+	}
 	if len(funcs) == 0 && len(classes) == 0 {
 		return "// 未发现需要生成测试的函数或类", nil
 	}
@@ -149,9 +152,6 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	moduleName := stripExt(baseName(srcPath))
 	testPath := generatorTestPath(srcPath, task)
 	moduleImportPath := jsSourceModuleImportPath(srcPath, testPath)
-	if coverageMode && jsCoverageTaskFileLevelTarget(srcPath, task) {
-		return genJSFileLevelManualReviewTask(task), nil
-	}
 
 	var buf strings.Builder
 
@@ -271,7 +271,7 @@ func jsCoverageTaskFileLevelTarget(srcPath string, task *types.CoverageTestTask)
 	return strings.EqualFold(lineRange, "entire file")
 }
 
-func genJSFileLevelManualReviewTask(task *types.CoverageTestTask) string {
+func genJSFileLevelManualReviewTask(srcPath string, source []byte, task *types.CoverageTestTask) string {
 	testName := jsCoverageTaskTestName(task, "covers file-level coverage gap")
 	target := "file"
 	if task != nil && strings.TrimSpace(task.Target) != "" {
@@ -283,11 +283,28 @@ func genJSFileLevelManualReviewTask(task *types.CoverageTestTask) string {
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
-	sb.WriteString("    // manual_review_internal: file-level coverage task cannot be mapped to one exported public entry without importing internal helpers.\n")
-	sb.WriteString("    // split_into_targets: exported class methods, exported functions, or explicit public-entry tasks\n")
+	if jsSourceHasTypesButNoRuntimeTargets(srcPath, source) {
+		sb.WriteString("    // manual_review_no_runtime: this TypeScript module only exports types/interfaces, so coverage cannot add runtime line coverage.\n")
+		sb.WriteString("    // split_into_targets: validate through consumers that construct these event/item shapes or add compile-time type tests.\n")
+	} else {
+		sb.WriteString("    // manual_review_internal: file-level coverage task cannot be mapped to one exported public entry without importing internal helpers.\n")
+		sb.WriteString("    // split_into_targets: exported class methods, exported functions, or explicit public-entry tasks\n")
+	}
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
+}
+
+func jsSourceHasTypesButNoRuntimeTargets(srcPath string, source []byte) bool {
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	if ext != ".ts" && ext != ".tsx" {
+		return false
+	}
+	funcs, classes, _ := parseJSWithTreeSitter(source, ext)
+	if len(funcs) > 0 || len(classes) > 0 {
+		return false
+	}
+	return len(extractJSTypes(string(source))) > 0
 }
 
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----

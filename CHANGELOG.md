@@ -38,6 +38,8 @@
 - JS/TS coverage task 针对 `Thread.run` 这类消费 event stream 的错误路径，会让 `CodexExec` mock 产出 `turn.failed` 事件，从而稳定覆盖 reject 分支。
 - JS/TS coverage task 支持 `createOutputSchemaFile` 的非法 schema 和写文件失败 cleanup 分支，使用 `node:fs` / `@jest/globals` 动态 import 的 spy 触发 `writeFile` reject 并断言 `rm` cleanup。
 - JS/TS class coverage task 对 `Codex` 包装类会生成 `codexPathOverride`，避免 `resumeThread` 这类纯包装方法测试在构造阶段触发 native CLI package lookup。
+- JS/TS coverage task 遇到 TypeScript 纯类型文件时会生成 `manual_review_no_runtime` 草稿，明确这类文件没有可执行运行时代码，应通过消费方测试或类型检查验证，而不是继续按覆盖率缺口生成伪单测。
+- JS/TS generation context 对 type-only TS 文件会保留 `types` 信息；JS 真实项目验证脚本在文件过滤命中源码但 coverage report 没有任务时，会合成 no-runtime 文件级任务，并优先写入项目已有 `tests/` 目录以适配 Jest/Vitest `testMatch/include`。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

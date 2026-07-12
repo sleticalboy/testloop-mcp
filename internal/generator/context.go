@@ -99,7 +99,7 @@ func buildGoGenerationContext(srcPath string, opts GenerateTestsOptions) *types.
 		fn := goFuncInfoFromDecl(fs, fnDecl)
 		ctx.Targets = append(ctx.Targets, goTarget(fn, opts.CoverageTask))
 	}
-	if len(ctx.Targets) == 0 {
+	if len(ctx.Targets) == 0 && len(ctx.Types) == 0 {
 		return nil
 	}
 	return ctx
@@ -262,7 +262,7 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 		}
 	}
 
-	if len(ctx.Targets) == 0 {
+	if len(ctx.Targets) == 0 && len(ctx.Types) == 0 {
 		return nil
 	}
 	return ctx

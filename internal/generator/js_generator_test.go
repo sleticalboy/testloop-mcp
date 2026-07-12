@@ -2808,6 +2808,43 @@ export class CodexExec {
 	})
 }
 
+func TestGenerateJSCoverageTaskTypeOnlyFileLevelUsesNoRuntimeManualReview(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "events.ts")
+	src := `export type ThreadStartedEvent = {
+  type: "thread.started";
+  thread_id: string;
+};
+
+export type ThreadEvent = ThreadStartedEvent;
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "jest-no-runtime",
+		Framework: "jest",
+		Target:    "events.ts",
+		Kind:      "file_level",
+		LineRange: "entire file",
+		GapType:   "no_runtime",
+		TestName:  "marks type-only module as no runtime coverage",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"describe('events.ts'",
+		"it.skip('marks type-only module as no runtime coverage'",
+		"manual_review_no_runtime: this TypeScript module only exports types/interfaces",
+		"split_into_targets: validate through consumers that construct these event/item shapes or add compile-time type tests",
+	}, []string{
+		"未发现需要生成测试的函数或类",
+		"manual_review_internal:",
+		"import { ThreadStartedEvent",
+	})
+}
+
 func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
 	tests := map[string]string{
 		"number":    "number",

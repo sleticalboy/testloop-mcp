@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sleticalboy/testloop-mcp/internal/generator"
 	"github.com/sleticalboy/testloop-mcp/types"
 )
 
@@ -46,7 +47,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	}
 
 	report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")))
-	tasks := filterJSCoverageTasks(report.TestTasks, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
+	tasks := jsCoverageTasksForValidationFilter(report, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
 	if len(tasks) < limit {
 		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
@@ -106,6 +107,48 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	t.Logf("summary=%s", summaryJSON)
 	if len(failures) > 0 {
 		t.Fatalf("validation failures:\n%s", strings.Join(failures, "\n"))
+	}
+}
+
+func TestSynthesizeJSTypeOnlyFileLevelTasks(t *testing.T) {
+	projectRoot := t.TempDir()
+	srcDir := filepath.Join(projectRoot, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("create src dir: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(projectRoot, "tests"), 0o755); err != nil {
+		t.Fatalf("create tests dir: %v", err)
+	}
+	typeOnly := filepath.Join(srcDir, "events.ts")
+	if err := os.WriteFile(typeOnly, []byte(`export type ThreadStartedEvent = {
+  type: "thread.started";
+  thread_id: string;
+};
+`), 0o644); err != nil {
+		t.Fatalf("write type-only source: %v", err)
+	}
+	runtime := filepath.Join(srcDir, "codex.ts")
+	if err := os.WriteFile(runtime, []byte(`export function startThread() {
+  return {};
+}
+`), 0o644); err != nil {
+		t.Fatalf("write runtime source: %v", err)
+	}
+
+	tasks := synthesizeJSTypeOnlyFileLevelTasks("jest", projectRoot, "src/events.ts")
+	if len(tasks) != 1 {
+		t.Fatalf("synthesizeJSTypeOnlyFileLevelTasks() got %d tasks, want 1: %+v", len(tasks), tasks)
+	}
+	task := tasks[0]
+	if task.Target != "events.ts" || task.GapType != "no_runtime" || task.LineRange != "entire file" {
+		t.Fatalf("unexpected synthesized task: %+v", task)
+	}
+	if task.TestFile != filepath.Join(projectRoot, "tests", "events.test.ts") {
+		t.Fatalf("unexpected test file: %q", task.TestFile)
+	}
+
+	if got := synthesizeJSTypeOnlyFileLevelTasks("jest", projectRoot, "src/codex.ts"); len(got) != 0 {
+		t.Fatalf("runtime file should not synthesize no-runtime task: %+v", got)
 	}
 }
 
@@ -190,6 +233,94 @@ func filterJSCoverageTasks(tasks []types.CoverageTestTask, filter string) []type
 		}
 	}
 	return filtered
+}
+
+func jsCoverageTasksForValidationFilter(report types.CoverageReport, projectRoot string, filter string) []types.CoverageTestTask {
+	tasks := filterJSCoverageTasks(report.TestTasks, filter)
+	if len(tasks) > 0 || strings.TrimSpace(filter) == "" {
+		return tasks
+	}
+	return synthesizeJSTypeOnlyFileLevelTasks(report.Framework, projectRoot, filter)
+}
+
+func synthesizeJSTypeOnlyFileLevelTasks(framework string, projectRoot string, filter string) []types.CoverageTestTask {
+	filter = filepath.ToSlash(strings.TrimSpace(filter))
+	if filter == "" {
+		return nil
+	}
+	var tasks []types.CoverageTestTask
+	_ = filepath.WalkDir(projectRoot, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".ts" && ext != ".tsx" {
+			return nil
+		}
+		rel, relErr := filepath.Rel(projectRoot, path)
+		if relErr != nil {
+			return nil
+		}
+		slashPath := filepath.ToSlash(path)
+		slashRel := filepath.ToSlash(rel)
+		if !strings.Contains(slashPath, filter) && !strings.Contains(slashRel, filter) {
+			return nil
+		}
+		ctx := generator.BuildGenerationContext(path)
+		if ctx == nil || len(ctx.Targets) > 0 || len(ctx.Types) == 0 {
+			return nil
+		}
+		target := filepath.Base(path)
+		task := types.CoverageTestTask{
+			ID:             fmt.Sprintf("%s-no-runtime-%d", sanitizeJSValidationTaskID(framework), len(tasks)+1),
+			Framework:      framework,
+			File:           path,
+			Target:         target,
+			Kind:           "file_level",
+			LineRange:      "entire file",
+			GapType:        "no_runtime",
+			Goal:           fmt.Sprintf("确认 %s 是 TypeScript 纯类型文件，没有可直接执行的运行时代码覆盖任务", target),
+			Command:        jsValidationCoverageTaskCommand(framework, path),
+			TestFile:       jsValidationTestFileForSource(projectRoot, path),
+			TestName:       "marks type-only module as no runtime coverage",
+			AssertionFocus: []string{"纯类型声明不会出现在 JavaScript coverage-final.json 中；应通过消费方运行时测试或类型检查验证"},
+			Priority:       90,
+			PriorityReason: "file filter matched a TypeScript type-only module that coverage data omits",
+			Confidence:     0.9,
+		}
+		tasks = append(tasks, task)
+		return nil
+	})
+	return tasks
+}
+
+func sanitizeJSValidationTaskID(framework string) string {
+	framework = strings.TrimSpace(framework)
+	if framework == "" {
+		framework = "js"
+	}
+	return strings.NewReplacer(" ", "-", "_", "-", ".", "-").Replace(framework)
+}
+
+func jsValidationTestFileForSource(projectRoot string, sourcePath string) string {
+	ext := filepath.Ext(sourcePath)
+	name := strings.TrimSuffix(filepath.Base(sourcePath), ext) + ".test" + ext
+	testsDir := filepath.Join(projectRoot, "tests")
+	if info, err := os.Stat(testsDir); err == nil && info.IsDir() {
+		return filepath.Join(testsDir, name)
+	}
+	return generator.TestFileName(sourcePath)
+}
+
+func jsValidationCoverageTaskCommand(framework string, file string) string {
+	switch framework {
+	case "jest":
+		return "npx jest " + filepath.ToSlash(file)
+	case "mocha":
+		return "npx mocha " + filepath.ToSlash(file)
+	default:
+		return "npx vitest run " + filepath.ToSlash(file)
+	}
 }
 
 func rewriteJSValidationPath(baselineRoot string, taskRoot string, value string) string {

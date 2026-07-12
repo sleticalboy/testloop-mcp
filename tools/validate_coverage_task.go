@@ -78,6 +78,8 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "manual_review_private"
 	} else if metadata["internal_symbol"] == true {
 		action = "manual_review_internal"
+	} else if metadata["no_runtime"] == true {
+		action = "manual_review_no_runtime"
 	}
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
@@ -123,6 +125,10 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskInternalSymbolReason(task, generated, result); reason != "" {
 		metadata["internal_symbol"] = true
 		metadata["internal_reason"] = reason
+	}
+	if reason := coverageTaskNoRuntimeReason(task, generated, result); reason != "" {
+		metadata["no_runtime"] = true
+		metadata["no_runtime_reason"] = reason
 	}
 	return metadata
 }
@@ -280,6 +286,20 @@ func coverageTaskInternalSymbolReason(task *types.CoverageTestTask, generated *t
 		target = "target"
 	}
 	return fmt.Sprintf("%s is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually", target)
+}
+
+func coverageTaskNoRuntimeReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil {
+		return ""
+	}
+	if !strings.Contains(generated.Preview, "manual_review_no_runtime:") || result.Status != "pass" {
+		return ""
+	}
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = "file"
+	}
+	return fmt.Sprintf("%s has no runtime JavaScript statements to execute; cover behavior through runtime consumers or type-checking instead of generating a unit test for the type-only module", target)
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {
