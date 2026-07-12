@@ -70,6 +70,8 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "manual_review_unreachable"
 	} else if metadata["environment_dependent"] == true {
 		action = "manual_review_environment"
+	} else if metadata["protocol_dependent"] == true {
+		action = "manual_review_protocol"
 	}
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
@@ -96,6 +98,10 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskEnvironmentReason(task, generated, result); reason != "" {
 		metadata["environment_dependent"] = true
 		metadata["environment_reason"] = reason
+	}
+	if reason := coverageTaskProtocolReason(task, generated, result); reason != "" {
+		metadata["protocol_dependent"] = true
+		metadata["protocol_reason"] = reason
 	}
 	return metadata
 }
@@ -148,6 +154,29 @@ func coverageTaskEnvironmentReason(task *types.CoverageTestTask, generated *type
 		}
 	}
 	return ""
+}
+
+func coverageTaskProtocolReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
+		return ""
+	}
+	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
+		return ""
+	}
+	hintsList := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus))
+	hintsList = append(hintsList, task.MissingBranches...)
+	hintsList = append(hintsList, task.SuggestedInputs...)
+	hintsList = append(hintsList, task.AssertionFocus...)
+	hints := strings.Join(hintsList, " ")
+	if !strings.Contains(hints, "err != nil") {
+		return ""
+	}
+	switch task.Target {
+	case "RunClient", "QueryStatus", "SendControl":
+		return fmt.Sprintf("%s protocol error branch depends on socket write or streaming I/O failure; generate a deterministic fake connection or review manually instead of relying on connection timing", task.Target)
+	default:
+		return ""
+	}
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {

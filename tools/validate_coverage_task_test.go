@@ -344,6 +344,87 @@ func InitCPU() (c Cpu, err error) {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksSocketWriteErrorAsProtocolReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/protocol\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "client.go")
+	src := `package protocol
+
+import (
+	"encoding/json"
+	"net"
+)
+
+type BindRequest struct {
+	Control string ` + "`json:\"control\"`" + `
+}
+
+type Status struct{}
+
+func QueryStatus(socketPath string) (Status, error) {
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		return Status{}, err
+	}
+	bind, _ := json.Marshal(BindRequest{Control: "status"})
+	if _, err := conn.Write(append(bind, '\n')); err != nil {
+		return Status{}, err
+	}
+	return Status{}, nil
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status-write",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "QueryStatus",
+		Kind:            "function",
+		LineRange:       "19-21",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: err != nil"},
+		SuggestedInputs: []string{"构造满足条件 `err != nil` 的输入"},
+		Goal:            "为 QueryStatus 补充 socket 写入错误分支",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "client_test.go"),
+		TestName:        "TestQueryStatusWriteError",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_protocol" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Skipped == 0 {
+		t.Fatalf("expected skipped generated TODO test, got run result: %+v", out.RunResult)
+	}
+	if out.Metadata["protocol_dependent"] != true {
+		t.Fatalf("expected protocol metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["protocol_reason"].(string)
+	if !strings.Contains(reason, "QueryStatus") || !strings.Contains(reason, "socket write") {
+		t.Fatalf("unexpected protocol reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",
