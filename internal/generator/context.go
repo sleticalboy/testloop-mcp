@@ -96,7 +96,7 @@ func buildGoGenerationContext(srcPath string, opts GenerateTestsOptions) *types.
 		if !ok || strings.HasPrefix(fnDecl.Name.Name, "Test") {
 			continue
 		}
-		fn := goFuncInfoFromDecl(fnDecl)
+		fn := goFuncInfoFromDecl(fs, fnDecl)
 		ctx.Targets = append(ctx.Targets, goTarget(fn, opts.CoverageTask))
 	}
 	if len(ctx.Targets) == 0 {
@@ -118,7 +118,7 @@ func goContextImports(node *ast.File) []string {
 	return imports
 }
 
-func goFuncInfoFromDecl(fn *ast.FuncDecl) funcInfo {
+func goFuncInfoFromDecl(fs *token.FileSet, fn *ast.FuncDecl) funcInfo {
 	info := funcInfo{Name: fn.Name.Name}
 	if fn.Recv != nil {
 		info.IsMethod = true
@@ -153,7 +153,7 @@ func goFuncInfoFromDecl(fn *ast.FuncDecl) funcInfo {
 	}
 	info.ReturnExpr = singleReturnExpr(fn.Body)
 	info.FinalReturn = finalReturnExpr(fn.Body)
-	info.Boundaries = extractGoBoundaries(fn.Body)
+	info.Boundaries = extractGoBoundaries(fs, fn.Body)
 	return info
 }
 

@@ -1503,6 +1503,109 @@ func SendControl(socketPath, control string, opts ...ControlOptions) (ControlRes
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesMissingSocketForNetDialErrorPath(t *testing.T) {
+	src := `package sample
+
+import "net"
+
+type Status struct {
+	SocketPath string
+}
+
+func QueryStatus(socketPath string) (Status, error) {
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		return Status{}, err
+	}
+	defer conn.Close()
+	return Status{SocketPath: socketPath}, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status",
+		Framework:       "go-test",
+		Target:          "QueryStatus",
+		LineRange:       "10-12",
+		GapType:         "branch",
+		TestName:        "TestQueryStatus",
+		MissingBranches: []string{`未覆盖 if 分支: err != nil`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`err != nil`" + ` 的输入`},
+		AssertionFocus:  []string{"断言错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"path/filepath"`,
+		"skip:       false",
+		`socketPath: filepath.Join(t.TempDir(), "missing.sock")`,
+		"got0, got1 := QueryStatus(tt.socketPath)",
+		"if got1 == nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+		t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskDisambiguatesRepeatedErrBranchesByLineRange(t *testing.T) {
+	src := `package sample
+
+import "net"
+
+type Status struct {
+	SocketPath string
+}
+
+func QueryStatus(socketPath string) (Status, error) {
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		return Status{}, err
+	}
+	_, err = conn.Write([]byte("status\n"))
+	if err != nil {
+		return Status{}, err
+	}
+	return Status{SocketPath: socketPath}, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status-write",
+		Framework:       "go-test",
+		Target:          "QueryStatus",
+		LineRange:       "14-16",
+		GapType:         "branch",
+		TestName:        "TestQueryStatusWriteError",
+		MissingBranches: []string{`未覆盖 if 分支: err != nil`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`err != nil`" + ` 的输入`},
+		AssertionFocus:  []string{"断言写入错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "skip:       true") {
+		t.Fatalf("expected unsupported write error branch to stay skipped:\n%s", code)
+	}
+	if strings.Contains(code, "filepath.Join") || strings.Contains(code, `"path/filepath"`) {
+		t.Fatalf("did not expect net.Dial missing socket seed for write branch:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskExplainsUnsafeBranchFallback(t *testing.T) {
 	src := `package sample
 

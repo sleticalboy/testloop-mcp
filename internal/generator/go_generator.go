@@ -233,7 +233,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 
 		info.ReturnExpr = singleReturnExpr(fn.Body)
 		info.FinalReturn = finalReturnExpr(fn.Body)
-		info.Boundaries = extractGoBoundaries(fn.Body)
+		info.Boundaries = extractGoBoundaries(fs, fn.Body)
 		info.PackageVars = packageVars
 		if info.IsMethod {
 			info.Mutations = extractGoReceiverMutations(fn.Body, info.Receiver)
@@ -254,6 +254,7 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	needReflect := false
 	needTime := false
 	needErrors := false
+	needFilepath := false
 	needHTTPServer := false
 	neededTypeImports := make(map[string]string)
 	for _, fn := range funcs {
@@ -269,6 +270,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
 			needErrors = true
+		}
+		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "filepath") {
+			needFilepath = true
 		}
 		if hasSeedCase && seedCase.Assert != goAssertExact && seedCase.Assert != goAssertErrorPath {
 			continue
@@ -303,6 +307,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	imports := map[string]bool{"testing": true}
 	if needErrors {
 		imports["errors"] = true
+	}
+	if needFilepath {
+		imports["path/filepath"] = true
 	}
 	if needTime {
 		imports["time"] = true
@@ -937,6 +944,9 @@ type goBoundary struct {
 	Op          string
 	Value       string
 	Condition   string
+	ErrSource   string
+	StartLine   int
+	EndLine     int
 	ReturnExpr  string
 	ReturnExprs []string
 	Compound    bool
@@ -1595,6 +1605,15 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		inputs[p.Name] = "\"://invalid-url\""
 		return inputs, true
 	}
+	if boundary.ErrSource == "net.Dial" {
+		for _, p := range fn.Params {
+			if p.Type != "string" || !goSocketPathParamName(p.Name) {
+				continue
+			}
+			inputs[p.Name] = `filepath.Join(t.TempDir(), "missing.sock")`
+			return inputs, true
+		}
+	}
 	return nil, false
 }
 
@@ -1650,6 +1669,16 @@ func goURLLikeParamName(name string) bool {
 	compact := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", ""))
 	switch compact {
 	case "api", "url", "uri", "endpoint", "requesturl", "href":
+		return true
+	default:
+		return false
+	}
+}
+
+func goSocketPathParamName(name string) bool {
+	compact := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", ""))
+	switch compact {
+	case "socketpath", "sockpath", "unixsocket", "unixsocketpath":
 		return true
 	default:
 		return false
@@ -1862,6 +1891,33 @@ func goCompoundParamInputValue(parts []goBoundary, typ string) (string, bool) {
 
 func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTestTask) *goBoundary {
 	hints := goCoverageTaskConditionHints(task)
+	start, end, hasRange := goCoverageTaskLineRange(task)
+	if hasRange {
+		for i := range boundaries {
+			if !goBoundaryOverlapsLines(boundaries[i], start, end) {
+				continue
+			}
+			for _, hint := range hints {
+				if goBoundaryMatchesHint(boundaries[i], hint) {
+					return &boundaries[i]
+				}
+			}
+		}
+		var ranged *goBoundary
+		for i := range boundaries {
+			if !goBoundaryOverlapsLines(boundaries[i], start, end) {
+				continue
+			}
+			if ranged != nil {
+				ranged = nil
+				break
+			}
+			ranged = &boundaries[i]
+		}
+		if ranged != nil && task != nil && task.GapType == "branch" {
+			return ranged
+		}
+	}
 	for i := range boundaries {
 		for _, hint := range hints {
 			if goBoundaryMatchesHint(boundaries[i], hint) {
@@ -1873,6 +1929,49 @@ func goBoundaryForCoverageTask(boundaries []goBoundary, task *types.CoverageTest
 		return &boundaries[0]
 	}
 	return nil
+}
+
+func goCoverageTaskLineRange(task *types.CoverageTestTask) (int, int, bool) {
+	if task == nil {
+		return 0, 0, false
+	}
+	value := strings.TrimSpace(task.LineRange)
+	if value == "" || value == "entire file" {
+		return 0, 0, false
+	}
+	parts := strings.Split(value, "-")
+	if len(parts) == 1 {
+		line, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+		if err != nil || line <= 0 {
+			return 0, 0, false
+		}
+		return line, line, true
+	}
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, false
+	}
+	end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, false
+	}
+	if start <= 0 || end <= 0 {
+		return 0, 0, false
+	}
+	if end < start {
+		end = start
+	}
+	return start, end, true
+}
+
+func goBoundaryOverlapsLines(boundary goBoundary, start int, end int) bool {
+	if boundary.StartLine <= 0 || boundary.EndLine <= 0 {
+		return false
+	}
+	return boundary.StartLine <= end && start <= boundary.EndLine
 }
 
 func goCoverageTaskConditionHints(task *types.CoverageTestTask) []string {
@@ -2191,21 +2290,33 @@ func finalReturnExpr(body *ast.BlockStmt) string {
 	return exprToString(ret.Results[0])
 }
 
-func extractGoBoundaries(body *ast.BlockStmt) []goBoundary {
+func extractGoBoundaries(fset *token.FileSet, body *ast.BlockStmt) []goBoundary {
 	if body == nil {
 		return nil
 	}
 	var boundaries []goBoundary
-	for _, stmt := range body.List {
-		ifStmt, ok := stmt.(*ast.IfStmt)
-		if !ok || ifStmt.Body == nil {
-			continue
+	var walk func(*ast.BlockStmt)
+	walk = func(block *ast.BlockStmt) {
+		if block == nil {
+			return
 		}
-		boundary, ok := goBoundaryFromIf(ifStmt)
-		if ok {
-			boundaries = append(boundaries, boundary)
+		var previous ast.Stmt
+		for _, stmt := range block.List {
+			ifStmt, ok := stmt.(*ast.IfStmt)
+			if ok && ifStmt.Body != nil {
+				boundary, ok := goBoundaryFromIf(fset, ifStmt, previous)
+				if ok {
+					boundaries = append(boundaries, boundary)
+				}
+				walk(ifStmt.Body)
+				if elseBlock, ok := ifStmt.Else.(*ast.BlockStmt); ok {
+					walk(elseBlock)
+				}
+			}
+			previous = stmt
 		}
 	}
+	walk(body)
 	return boundaries
 }
 
@@ -2371,7 +2482,7 @@ func goDefaultReceiverMutationValue(field string) string {
 	}
 }
 
-func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
+func goBoundaryFromIf(fset *token.FileSet, ifStmt *ast.IfStmt, previous ast.Stmt) (goBoundary, bool) {
 	cond := unwrapGoParenExpr(ifStmt.Cond)
 	binary, ok := cond.(*ast.BinaryExpr)
 	if !ok {
@@ -2385,6 +2496,11 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 	if len(retExprs) == 1 {
 		ret = retExprs[0]
 	}
+	startLine, endLine := goNodeLineRange(fset, ifStmt)
+	errSource := goErrSourceFromStmt(ifStmt.Init)
+	if errSource == "" {
+		errSource = goErrSourceFromStmt(previous)
+	}
 	if binary.Op.String() == "&&" || binary.Op.String() == "||" {
 		compoundOp := binary.Op.String()
 		parts, ok := goCompoundBoundaryParts(binary, compoundOp)
@@ -2393,6 +2509,9 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		}
 		return goBoundary{
 			Condition:   exprToString(binary),
+			ErrSource:   errSource,
+			StartLine:   startLine,
+			EndLine:     endLine,
 			ReturnExpr:  ret,
 			ReturnExprs: retExprs,
 			Compound:    true,
@@ -2409,9 +2528,55 @@ func goBoundaryFromIf(ifStmt *ast.IfStmt) (goBoundary, bool) {
 		Op:          op,
 		Value:       value,
 		Condition:   strings.Join([]string{param, op, value}, " "),
+		ErrSource:   errSource,
+		StartLine:   startLine,
+		EndLine:     endLine,
 		ReturnExpr:  ret,
 		ReturnExprs: retExprs,
 	}, true
+}
+
+func goNodeLineRange(fset *token.FileSet, node ast.Node) (int, int) {
+	if fset == nil || node == nil {
+		return 0, 0
+	}
+	start := fset.Position(node.Pos()).Line
+	end := fset.Position(node.End()).Line
+	return start, end
+}
+
+func goErrSourceFromStmt(stmt ast.Stmt) string {
+	switch v := stmt.(type) {
+	case *ast.AssignStmt:
+		for _, rhs := range v.Rhs {
+			if source := goErrSourceFromExpr(rhs); source != "" {
+				return source
+			}
+		}
+	case *ast.ExprStmt:
+		return goErrSourceFromExpr(v.X)
+	}
+	return ""
+}
+
+func goErrSourceFromExpr(expr ast.Expr) string {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+	name := exprToString(call.Fun)
+	switch {
+	case name == "net.Dial":
+		return "net.Dial"
+	case strings.HasSuffix(name, ".Write"):
+		return "Write"
+	case strings.HasSuffix(name, ".ReadBytes"):
+		return "ReadBytes"
+	case name == "json.Unmarshal":
+		return "json.Unmarshal"
+	default:
+		return ""
+	}
 }
 
 func goCompoundBoundaryParts(expr ast.Expr, op string) ([]goBoundary, bool) {
