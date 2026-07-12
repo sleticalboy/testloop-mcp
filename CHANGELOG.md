@@ -10,6 +10,7 @@
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。
 - Go static generator 支持 Unix socket JSON 响应分支输入合成，可覆盖 daemon client 的默认错误响应和 invalid status 复合分支。
 - `validate_coverage_task` 会将静态生成器无法稳定构造的 socket write / streaming I/O 错误分支标记为 `manual_review_protocol`，避免继续以普通 `ready` skipped TODO 暴露给 Agent。
+- `validate_coverage_task` 会将静态生成器无法安全构造的 GORM/数据库错误分支标记为 `manual_review_database`，避免在项目没有测试数据库策略时继续以普通 `ready` skipped TODO 暴露给 Agent。
 - Go 测试文件写入会对新建文件和合并文件统一执行 import 整理，避免 coverage task 只生成单个目标测试时保留未使用 import 导致构建失败。
 - Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
 - Go static generator 支持泛型 helper 的 `return &param`、nil 指针返回零值和非 nil 指针解引用返回路径，例如 `anyPtr[T]` / `derefAny[T]` 会生成真实指针值或返回值断言。

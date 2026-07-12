@@ -72,6 +72,8 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "manual_review_environment"
 	} else if metadata["protocol_dependent"] == true {
 		action = "manual_review_protocol"
+	} else if metadata["database_dependent"] == true {
+		action = "manual_review_database"
 	}
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
@@ -102,6 +104,10 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskProtocolReason(task, generated, result); reason != "" {
 		metadata["protocol_dependent"] = true
 		metadata["protocol_reason"] = reason
+	}
+	if reason := coverageTaskDatabaseReason(task, generated, result); reason != "" {
+		metadata["database_dependent"] = true
+		metadata["database_reason"] = reason
 	}
 	return metadata
 }
@@ -177,6 +183,27 @@ func coverageTaskProtocolReason(task *types.CoverageTestTask, generated *types.G
 	default:
 		return ""
 	}
+}
+
+func coverageTaskDatabaseReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
+		return ""
+	}
+	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
+		return ""
+	}
+	hintsList := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus))
+	hintsList = append(hintsList, task.MissingBranches...)
+	hintsList = append(hintsList, task.SuggestedInputs...)
+	hintsList = append(hintsList, task.AssertionFocus...)
+	hints := strings.Join(hintsList, " ")
+	if !strings.Contains(hints, "err != nil") && !strings.Contains(hints, "Error != nil") && !strings.Contains(hints, "RowsAffected") && !strings.Contains(hints, "gorm") {
+		return ""
+	}
+	if strings.Contains(task.Target, "Repo.") || strings.Contains(generated.Preview, "*Repo") || strings.Contains(task.File, "/repo/") || strings.Contains(task.File, "\\repo\\") {
+		return fmt.Sprintf("%s database branch depends on GORM DB behavior; generate a deterministic test database or inject a fake repository/DB instead of adding third-party test dependencies implicitly", task.Target)
+	}
+	return ""
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {

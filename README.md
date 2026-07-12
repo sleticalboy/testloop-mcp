@@ -188,7 +188,7 @@ command = "/absolute/path/to/testloop-mcp"
 
 **返回：** `{ status, test_file, generated_cases, preview, context, coverage_task, provider, error, provider_error }`
 
-传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。Go 任务会优先把可静态构造的分支、返回路径、错误路径和接收者字段变更转成非 skipped 断言；无法稳定构造的系统资源错误路径会交给 `validate_coverage_task` 标记为人工复核。JS/TS 普通生成和 coverage task 都会按框架选择 Jest/Vitest 的 `expect(...).toBe(...)` / `toEqual(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` / `to.deep.equal(...)` 风格；ESM/TS Vitest 生成会显式导入 `describe` / `it` / `expect`，CommonJS 仍沿用 runner 注入的全局 API；TS/TSX 源文件在最近的 `tsconfig.json` 使用 `module` 或 `moduleResolution` 为 `node16` / `nodenext` 时，会用 `./module.js` 形式导入源模块，其他 ESM 场景保持 `./module`；未显式传 `framework` 时会复用自动检测结果。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
+传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。Go 任务会优先把可静态构造的分支、返回路径、错误路径和接收者字段变更转成非 skipped 断言；无法稳定构造的系统资源、协议 I/O 或数据库/GORM 分支会交给 `validate_coverage_task` 标记为人工复核。JS/TS 普通生成和 coverage task 都会按框架选择 Jest/Vitest 的 `expect(...).toBe(...)` / `toEqual(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` / `to.deep.equal(...)` 风格；ESM/TS Vitest 生成会显式导入 `describe` / `it` / `expect`，CommonJS 仍沿用 runner 注入的全局 API；TS/TSX 源文件在最近的 `tsconfig.json` 使用 `module` 或 `moduleResolution` 为 `node16` / `nodenext` 时，会用 `./module.js` 形式导入源模块，其他 ESM 场景保持 `./module`；未显式传 `framework` 时会复用自动检测结果。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
 
 普通生成的 JS/TS 测试文件默认写在源文件同目录，例如 `src/sum.ts` → `src/sum.test.ts`、`lib/calc.js` → `lib/calc.test.js`。`run_tests` 会从 `package.json` 所在目录执行，并把生成文件转成相对项目根的参数；覆盖率任务仍优先使用 `coverage_task.test_file` 推荐路径。
 
@@ -232,7 +232,7 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 **返回：** `{ status, action, coverage_task, generated, run_result, error, provider_error, metadata }`
 
-`status` 为 `passed` 时，说明生成的测试已经通过当前测试命令；`action=ready` 表示可以进入下一个任务，`action=manual_review_unreachable` 表示目标分支疑似不可达，`action=manual_review_environment` 表示目标错误路径依赖 OS、硬件或第三方库内部错误，通常需要人工复核或依赖注入后再补。`failed` 表示生成成功但测试未通过，Agent 应读取 `run_result.failures[]` 和 `run_result.fix_suggestions[]`；`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
+`status` 为 `passed` 时，说明生成的测试已经通过当前测试命令；`action=ready` 表示可以进入下一个任务，`action=manual_review_unreachable` 表示目标分支疑似不可达，`action=manual_review_environment` 表示目标错误路径依赖 OS、硬件或第三方库内部错误，`action=manual_review_protocol` 表示目标依赖 socket write/streaming I/O 等协议时序错误，`action=manual_review_database` 表示目标依赖 GORM/数据库行为且当前项目没有安全的静态测试数据库策略，通常需要人工复核、依赖注入或显式测试数据库方案后再补。`failed` 表示生成成功但测试未通过，Agent 应读取 `run_result.failures[]` 和 `run_result.fix_suggestions[]`；`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
 
 ---
 

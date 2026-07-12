@@ -425,6 +425,82 @@ func QueryStatus(socketPath string) (Status, error) {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksRepoDBBranchAsDatabaseReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/repo\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "repo.go")
+	src := `package repo
+
+import "errors"
+
+type CigaretteRepo struct{}
+
+func (r *CigaretteRepo) query(userID int64) error {
+	return nil
+}
+
+func (r *CigaretteRepo) ListByUserID(userID int64) ([]int, error) {
+	err := r.query(userID)
+	if err != nil {
+		return nil, err
+	}
+	return []int{1}, nil
+}
+
+var _ = errors.New
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-repo-db",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "CigaretteRepo.ListByUserID",
+		Kind:            "method",
+		LineRange:       "12-14",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: result.Error != nil"},
+		SuggestedInputs: []string{"构造满足条件 `result.Error != nil` 的输入"},
+		Goal:            "为 CigaretteRepo.ListByUserID 补充数据库错误分支",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "repo_test.go"),
+		TestName:        "TestCigaretteRepoListByUserID",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_database" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Skipped == 0 {
+		t.Fatalf("expected skipped generated TODO test, got run result: %+v", out.RunResult)
+	}
+	if out.Metadata["database_dependent"] != true {
+		t.Fatalf("expected database metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["database_reason"].(string)
+	if !strings.Contains(reason, "CigaretteRepo.ListByUserID") || !strings.Contains(reason, "GORM DB behavior") {
+		t.Fatalf("unexpected database reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",
