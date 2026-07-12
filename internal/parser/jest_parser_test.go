@@ -246,3 +246,28 @@ Received: 4
 		t.Errorf("Expected location src/sum.test.ts:8:18, got %s:%d:%d", failure.File, failure.Line, failure.Column)
 	}
 }
+
+func TestParseVitestCommandError(t *testing.T) {
+	output := strings.Join([]string{
+		"file:///project/node_modules/vitest/dist/chunks/cac.js:404",
+		"          throw new CACError(`Unknown option`)",
+		"                ^",
+		"",
+		"CACError: Unknown option `--verbose`",
+		"    at Command.checkUnknownOptions (cac.js:404:17)",
+		"",
+		"Node.js v20.20.1",
+	}, "\n")
+
+	result := ParseTestOutput(output, "vitest")
+
+	if result.Framework != "vitest" || result.Status != "fail" || result.Total != 1 || result.Failed != 1 {
+		t.Fatalf("unexpected command error result: %+v", result)
+	}
+	if len(result.Failures) != 1 || result.Failures[0].TestName != "test command" {
+		t.Fatalf("unexpected failures: %+v", result.Failures)
+	}
+	if !strings.Contains(result.Failures[0].Error, "Unknown option") {
+		t.Fatalf("unexpected command error summary: %+v", result.Failures[0])
+	}
+}

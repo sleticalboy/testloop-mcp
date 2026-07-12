@@ -386,16 +386,51 @@ func coverageTaskTestFile(framework string, file string) string {
 		if strings.Contains(base, ".test") || strings.Contains(base, ".spec") {
 			return file
 		}
-		return base + ".test" + ext
+		return jsCoverageTestFile(file, ".test")
 	case "mocha":
 		if strings.Contains(base, ".test") || strings.Contains(base, ".spec") {
 			return file
 		}
-		return base + ".spec" + ext
+		return jsCoverageTestFile(file, ".spec")
 	case "pytest":
 		return pytestCoverageTestFile(file)
 	}
 	return ""
+}
+
+func jsCoverageTestFile(file string, suffix string) string {
+	ext := filepath.Ext(file)
+	base := strings.TrimSuffix(filepath.Base(file), ext)
+	root := findCoverageProjectRoot(file, "package.json")
+	if root != "" {
+		testsDir := filepath.Join(root, "tests")
+		if info, err := os.Stat(testsDir); err == nil && info.IsDir() {
+			if rel, err := filepath.Rel(root, file); err == nil {
+				slash := filepath.ToSlash(rel)
+				if strings.HasPrefix(slash, "src/") {
+					withoutSrc := strings.TrimPrefix(slash, "src/")
+					dir := filepath.Dir(filepath.FromSlash(withoutSrc))
+					return filepath.Join(testsDir, dir, base+suffix+ext)
+				}
+			}
+		}
+	}
+	sourceBase := strings.TrimSuffix(file, ext)
+	return sourceBase + suffix + ext
+}
+
+func findCoverageProjectRoot(path string, marker string) string {
+	dir := filepath.Dir(path)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func pytestCoverageTestFile(file string) string {

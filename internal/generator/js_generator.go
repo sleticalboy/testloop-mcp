@@ -138,7 +138,8 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	}
 
 	moduleName := stripExt(baseName(srcPath))
-	moduleImportPath := jsSourceModuleImportPath(srcPath)
+	testPath := generatorTestPath(srcPath, task)
+	moduleImportPath := jsSourceModuleImportPath(srcPath, testPath)
 
 	var buf strings.Builder
 
@@ -2456,10 +2457,24 @@ func stripExt(filename string) string {
 	return filename
 }
 
-func jsSourceModuleImportPath(srcPath string) string {
-	moduleName := stripExt(baseName(srcPath))
-	importPath := "./" + moduleName
+func generatorTestPath(srcPath string, task *types.CoverageTestTask) string {
+	if task != nil && strings.TrimSpace(task.TestFile) != "" {
+		return task.TestFile
+	}
+	return TestFileName(srcPath)
+}
+
+func jsSourceModuleImportPath(srcPath string, testPath string) string {
 	ext := strings.ToLower(filepath.Ext(srcPath))
+	sourceWithoutExt := strings.TrimSuffix(srcPath, filepath.Ext(srcPath))
+	rel, err := filepath.Rel(filepath.Dir(testPath), sourceWithoutExt)
+	if err != nil {
+		rel = stripExt(baseName(srcPath))
+	}
+	importPath := filepath.ToSlash(rel)
+	if !strings.HasPrefix(importPath, ".") {
+		importPath = "./" + importPath
+	}
 	if (ext == ".ts" || ext == ".tsx") && jsUsesNodeNextResolution(srcPath) {
 		return importPath + ".js"
 	}

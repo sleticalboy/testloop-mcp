@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -64,8 +65,61 @@ func ParseJestTest(output string) types.TestResult {
 	if result.Failed > 0 {
 		result.Status = "fail"
 	}
+	if result.Total == 0 && result.Passed == 0 && result.Failed == 0 && looksLikeJestCommandError(output) {
+		result.Status = "fail"
+		result.Failed = 1
+		result.Total = 1
+		result.Failures = []types.TestFailure{{
+			TestName: "test command",
+			Error:    summarizeCommandError(output),
+		}}
+	}
 
 	return result
+}
+
+func looksLikeJestCommandError(output string) bool {
+	trimmed := strings.TrimSpace(output)
+	if trimmed == "" {
+		return false
+	}
+	commandErrors := []string{
+		"CACError:",
+		"Unknown option",
+		"No test files found",
+		"Cannot find module",
+		"SyntaxError:",
+		"TypeError:",
+		"ReferenceError:",
+		"Transform failed",
+		"failed to load config",
+	}
+	for _, marker := range commandErrors {
+		if strings.Contains(trimmed, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func summarizeCommandError(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(trimmed, "Error:") || strings.Contains(trimmed, "CACError:") || strings.Contains(trimmed, "Unknown option") || strings.Contains(trimmed, "No test files found") {
+			return trimmed
+		}
+	}
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "at ") || strings.HasPrefix(trimmed, "Node.js ") {
+			continue
+		}
+		return trimmed
+	}
+	return "test command failed"
 }
 
 func parseTestSummary(line string, result *types.TestResult) {
@@ -208,12 +262,20 @@ func consumeJestFailureLine(line string, failure *types.TestFailure) {
 func parseJestLocation(line string) (string, int, int) {
 	for _, re := range []*regexp.Regexp{jestLocationParenRe, jestLocationAtRe, vitestLocationRe} {
 		if matches := re.FindStringSubmatch(line); len(matches) == 4 {
+			if !looksLikeJestLocationPath(matches[1]) {
+				continue
+			}
 			lineNo, _ := strconv.Atoi(matches[2])
 			column, _ := strconv.Atoi(matches[3])
 			return matches[1], lineNo, column
 		}
 	}
 	return "", 0, 0
+}
+
+func looksLikeJestLocationPath(path string) bool {
+	path = strings.TrimSpace(path)
+	return path != "" && (strings.Contains(path, "/") || strings.Contains(path, "\\") || filepath.Ext(path) != "")
 }
 
 func summarizeJestFailure(lines []string) string {

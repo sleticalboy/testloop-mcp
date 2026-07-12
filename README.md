@@ -436,6 +436,24 @@ docker compose down                    # 停止
 - **传输层：** stdio（JSON-RPC over stdin/stdout）+ Streamable HTTP（`--transport http`）
 - **部署：** GitHub Release 二进制 + Docker 多阶段构建（alpine 基础镜像，~8MB 二进制）
 
+## 真实项目验证脚本
+
+仓库提供 opt-in 脚本，用于把真实项目的覆盖率缺口批量送入 `validate_coverage_task`，复用 `coverage_task -> generate_tests -> run_tests` 闭环。Go 项目可使用：
+
+```bash
+scripts/validate-go-coverage-top-tasks.sh /path/to/go/project 20 /tmp/testloop-go-top20.jsonl
+```
+
+JS/Vitest/Jest/Mocha 项目可使用：
+
+```bash
+TESTLOOP_VALIDATE_JS_TEST_ARGS='tests/env-resolver.test.js tests/config.test.js' \
+TESTLOOP_VALIDATE_JS_FILE_FILTER='src/utils/' \
+scripts/validate-js-coverage-top-tasks.sh /path/to/js/project vitest 10 /tmp/testloop-js-top10.jsonl
+```
+
+JS 脚本会读取 Istanbul `coverage/coverage-final.json`；如果项目覆盖率阈值导致 baseline coverage 命令非零退出，但覆盖率 JSON 已生成，脚本仍会继续解析并验证任务。
+
 ## Roadmap
 
 当前版本已经覆盖 stdio / Streamable HTTP MCP 服务、多语言测试生成、测试执行、失败解析、修复建议、覆盖率解析、Docker 部署和 GitHub Release / Homebrew 分发。

@@ -11,6 +11,9 @@
 - Go static generator 支持 Unix socket JSON 响应分支输入合成，可覆盖 daemon client 的默认错误响应和 invalid status 复合分支。
 - `validate_coverage_task` 会将静态生成器无法稳定构造的 socket write / streaming I/O 错误分支标记为 `manual_review_protocol`，避免继续以普通 `ready` skipped TODO 暴露给 Agent。
 - `validate_coverage_task` 会将静态生成器无法安全构造的 GORM/数据库错误分支标记为 `manual_review_database`，避免在项目没有测试数据库策略时继续以普通 `ready` skipped TODO 暴露给 Agent。
+- 新增 JS/Vitest 真实项目 top coverage task 验证脚本，支持测试子集参数和文件过滤，用于复用 `coverage_task -> generate_tests -> run_tests` 样本回归。
+- `run_tests` 不再为 Vitest 追加已被 Vitest 3 拒绝的 `--verbose` 参数，并会把 Vitest/Jest 命令级错误解析为失败而不是误判通过。
+- JS/Vitest coverage task 在项目已有 `tests/` 目录且源码位于 `src/` 下时，会把生成测试写入 `tests/` 镜像路径，并按测试文件位置生成相对 import，避免被真实项目的 Vitest `include` 配置排除。
 - Go 测试文件写入会对新建文件和合并文件统一执行 import 整理，避免 coverage task 只生成单个目标测试时保留未使用 import 导致构建失败。
 - Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
 - Go static generator 支持泛型 helper 的 `return &param`、nil 指针返回零值和非 nil 指针解引用返回路径，例如 `anyPtr[T]` / `derefAny[T]` 会生成真实指针值或返回值断言。

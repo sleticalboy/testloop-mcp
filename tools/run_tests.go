@@ -189,6 +189,9 @@ func jsTestArgs(framework, path, root string, verbose, coverage bool) []string {
 	if verbose {
 		if framework == "mocha" {
 			args = append(args, "--reporter", "spec")
+		} else if framework == "vitest" {
+			// Vitest 3 rejects --verbose as an unknown option; the default reporter
+			// still exposes enough detail for parser/fix-suggestion extraction.
 		} else {
 			args = append(args, "--verbose")
 		}

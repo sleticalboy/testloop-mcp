@@ -839,7 +839,7 @@ func TestHandleGenerateTestsProviderErrorFallsBackToStaticAndRunTests(t *testing
 	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
-	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
+	if !strings.Contains(logText, "ARGS=vitest run src/sum.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }
@@ -1007,7 +1007,7 @@ func TestHandleGenerateTestsOutputRunsWithDetectedJavaScriptFramework(t *testing
 				"import { add } from './sum';",
 				"expect(result).toBe((1 + 2));",
 			},
-			wantArgs: "vitest run --verbose src/sum.test.ts",
+			wantArgs: "vitest run src/sum.test.ts",
 			output: strings.Join([]string{
 				" ✓ src/sum.test.ts (1 test)",
 				" Test Files  1 passed (1)",
@@ -1175,7 +1175,7 @@ export async function loadDirectoryBundleClient(api: { fetch(path: string): Prom
 	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
-	if !strings.Contains(logText, "ARGS=vitest run --verbose src/api.test.ts\n") {
+	if !strings.Contains(logText, "ARGS=vitest run src/api.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }
@@ -1269,7 +1269,7 @@ EOF
 	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
-	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
+	if !strings.Contains(logText, "ARGS=vitest run src/sum.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }
@@ -1340,7 +1340,7 @@ func TestHandleGenerateCoverageTaskComplexVitestOutputIsRunnerChecked(t *testing
 	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
-	if !strings.Contains(logText, "ARGS=vitest run --verbose src/api.test.ts\n") {
+	if !strings.Contains(logText, "ARGS=vitest run src/api.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }
@@ -1449,7 +1449,7 @@ func TestHandleGenerateCoverageTaskVitestESMOutputRunsWithDetectedFramework(t *t
 	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
 		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
 	}
-	if !strings.Contains(logText, "ARGS=vitest run --verbose src/sum.test.ts\n") {
+	if !strings.Contains(logText, "ARGS=vitest run src/sum.test.ts\n") {
 		t.Fatalf("fake npx args log = %q, want Vitest args", logText)
 	}
 }

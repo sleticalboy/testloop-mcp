@@ -671,7 +671,7 @@ func TestHandleRunTestsJSUsesPackageRootAndRelativePath(t *testing.T) {
 			dir:       writeTempVitestPackage(t),
 			framework: "vitest",
 			output:    vitestFailureOutput(),
-			wantArgs:  "vitest run --verbose src/sum.test.ts",
+			wantArgs:  "vitest run src/sum.test.ts",
 		},
 		{
 			name:      "mocha",
@@ -735,7 +735,7 @@ func TestHandleRunTestsJSCoverageUsesPackageRootAndRelativePath(t *testing.T) {
 			dir:       writeTempVitestPackage(t),
 			framework: "vitest",
 			output:    vitestFailureOutput(),
-			wantArgs:  "vitest run --verbose --coverage src/sum.test.ts",
+			wantArgs:  "vitest run --coverage src/sum.test.ts",
 		},
 		{
 			name:      "mocha",
