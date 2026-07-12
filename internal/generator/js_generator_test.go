@@ -748,7 +748,9 @@ function test(name: string) { return name; }
 const destructured = ({ id } = {}) => id;
 class Widget {
   constructor(name: string) {}
+  public get id(): string | null { return null; }
   static(value: string) { return value; }
+  private async loadSecret(input: string): Promise<string> { return input; }
   render(props?: Record<string, unknown>): { ok: boolean } { return props; }
 }
 `)
@@ -780,6 +782,9 @@ class Widget {
 		typedFn.Params[3].Name != "...items" || typedFn.Params[3].IsRest {
 		t.Fatalf("unexpected typed params: %+v", typedFn.Params)
 	}
+	if typedFn.Params[0].TypeExpr != "string" || typedFn.Params[1].TypeExpr != "number" || typedFn.Params[3].TypeExpr != "string[]" {
+		t.Fatalf("unexpected typed param type expressions: %+v", typedFn.Params)
+	}
 	if typedFn.Analysis.ReturnTypeExpr != "Promise<Array<{ id: number; name: string }>>" {
 		t.Fatalf("typed return type = %q", typedFn.Analysis.ReturnTypeExpr)
 	}
@@ -790,14 +795,23 @@ class Widget {
 	if len(classes) != 1 || classes[0].Name != "Widget" {
 		t.Fatalf("classes = %+v, want Widget", classes)
 	}
-	if len(classes[0].Methods) != 1 || classes[0].Methods[0].Name != "render" {
+	if len(classes[0].Methods) != 3 || classes[0].Methods[0].Name != "id" || classes[0].Methods[1].Name != "loadSecret" || classes[0].Methods[2].Name != "render" {
 		t.Fatalf("constructor and keyword method should be skipped, got methods: %+v", classes[0].Methods)
 	}
-	if len(classes[0].Methods[0].Params) != 1 || classes[0].Methods[0].Params[0].Name != "props" || !classes[0].Methods[0].Params[0].HasDefault {
-		t.Fatalf("unexpected render params: %+v", classes[0].Methods[0].Params)
+	if !classes[0].Methods[0].Analysis.IsGetter {
+		t.Fatalf("getter flag should be set, got %+v", classes[0].Methods[0])
 	}
-	if classes[0].Methods[0].Analysis.ReturnTypeExpr != "{ ok: boolean }" {
-		t.Fatalf("render return type = %q", classes[0].Methods[0].Analysis.ReturnTypeExpr)
+	if !classes[0].Methods[1].IsPrivate || !classes[0].Methods[1].IsAsync {
+		t.Fatalf("private method flags should be set conservatively, got %+v", classes[0].Methods[1])
+	}
+	if len(classes[0].Methods[2].Params) != 1 || classes[0].Methods[2].Params[0].Name != "props" || !classes[0].Methods[2].Params[0].HasDefault {
+		t.Fatalf("unexpected render params: %+v", classes[0].Methods[2].Params)
+	}
+	if classes[0].Methods[2].Params[0].TypeExpr != "Record<string, unknown>" {
+		t.Fatalf("render param type = %q", classes[0].Methods[2].Params[0].TypeExpr)
+	}
+	if classes[0].Methods[2].Analysis.ReturnTypeExpr != "{ ok: boolean }" {
+		t.Fatalf("render return type = %q", classes[0].Methods[2].Analysis.ReturnTypeExpr)
 	}
 }
 
@@ -3221,6 +3235,123 @@ export class CodexExec {
 	}, []string{
 		"import { CodexExec } from './exec';",
 		"instance.run([])",
+	})
+}
+
+func TestJSCoverageTaskThreadPrivateAndTypedArgs(t *testing.T) {
+	cls := jsClassInfo{
+		Name:       "Thread",
+		IsExported: true,
+		ConstructorParams: []jsParamInfo{
+			{Name: "exec", TypeExpr: "CodexExec"},
+			{Name: "options", TypeExpr: "CodexOptions"},
+			{Name: "threadOptions", TypeExpr: "ThreadOptions"},
+			{Name: "id", TypeExpr: "string | null", HasDefault: true},
+		},
+		PrivateEntries: map[string][]string{
+			"runStreamedInternal": {"Thread.runStreamed", "Thread.run"},
+		},
+		Methods: []jsFuncInfo{
+			{
+				Name:      "runStreamedInternal",
+				IsAsync:   true,
+				IsMethod:  true,
+				IsPrivate: true,
+				ClassName: "Thread",
+				Params: []jsParamInfo{
+					{Name: "input", TypeExpr: "Input"},
+					{Name: "turnOptions", TypeExpr: "TurnOptions", HasDefault: true},
+				},
+			},
+			{
+				Name:      "run",
+				IsAsync:   true,
+				IsMethod:  true,
+				ClassName: "Thread",
+				Params: []jsParamInfo{
+					{Name: "input", TypeExpr: "Input"},
+					{Name: "turnOptions", TypeExpr: "TurnOptions", HasDefault: true},
+				},
+				Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"},
+			},
+			{
+				Name:      "id",
+				IsMethod:  true,
+				ClassName: "Thread",
+				Analysis:  jsFuncAnalysis{HasReturn: true, ReturnType: "null", IsGetter: true},
+			},
+		},
+	}
+
+	privateTask := types.CoverageTestTask{
+		ID:        "jest-thread-private",
+		Framework: "jest",
+		Target:    "Thread.runStreamedInternal",
+		LineRange: "104-106",
+		GapType:   "branch",
+		TestName:  "covers thread started branch",
+	}
+	code := genJSClassTestForCoverageTask(cls, &privateTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"it.skip('covers thread started branch'",
+		"manual_review_private: Thread.runStreamedInternal is a JavaScript private method",
+		"public_entry_candidates: Thread.runStreamed, Thread.run",
+	}, []string{
+		"instance.runStreamedInternal(",
+		"new Thread(undefined",
+	})
+
+	publicTask := types.CoverageTestTask{
+		ID:        "jest-thread-run",
+		Framework: "jest",
+		Target:    "Thread.run",
+		LineRange: "122-132",
+		GapType:   "branch",
+		TestName:  "covers item completed branch",
+	}
+	filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(nil, []jsClassInfo{cls}, &publicTask)
+	if len(filteredFuncs) != 0 || len(filteredClasses) != 1 || len(filteredClasses[0].Methods) != 1 || filteredClasses[0].Methods[0].Name != "run" {
+		t.Fatalf("expected only Thread.run target, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &publicTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new Thread(({ run: async function* () { yield JSON.stringify({ type: 'turn.completed', usage: null }); } } as any), {}, {}, null);",
+		"const result = await instance.run('test', {});",
+		"expect(typeof result).toBe('object');",
+	}, []string{
+		"new Thread(undefined",
+		"instance.run(undefined",
+	})
+
+	errorTask := publicTask
+	errorTask.GapType = "error_path"
+	errorTask.LineRange = "135-135"
+	errorTask.TestName = "covers turn failed branch"
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &errorTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"yield JSON.stringify({ type: 'turn.failed', error: { message: 'failed' } });",
+		"await expect(instance.run('test', {})).rejects.toThrow();",
+	}, []string{
+		"yield JSON.stringify({ type: 'turn.completed'",
+	})
+
+	getterTask := types.CoverageTestTask{
+		ID:        "jest-thread-id",
+		Framework: "jest",
+		Target:    "Thread.id",
+		LineRange: "49-49",
+		GapType:   "return_path",
+		TestName:  "covers id getter",
+	}
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(nil, []jsClassInfo{cls}, &getterTask)
+	if len(filteredFuncs) != 0 || len(filteredClasses) != 1 || len(filteredClasses[0].Methods) != 1 || filteredClasses[0].Methods[0].Name != "id" {
+		t.Fatalf("expected only Thread.id target, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &getterTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"const result = instance.id;",
+	}, []string{
+		"instance.id()",
 	})
 }
 

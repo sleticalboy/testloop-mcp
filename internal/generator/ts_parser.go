@@ -277,6 +277,7 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 		method := jsFuncInfo{
 			Name:      methodName,
 			IsMethod:  true,
+			IsPrivate: jsMethodDefinitionIsPrivate(methodNode, source, methodName),
 			ClassName: cls.Name,
 		}
 
@@ -285,12 +286,13 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 		}
 
 		content := methodNode.Content(source)
-		method.IsAsync = strings.HasPrefix(content, "async ")
+		method.IsAsync = jsMethodDefinitionIsAsync(content, methodName)
 
 		bodyNode := methodNode.ChildByFieldName("body")
 		method.Body = jsExtractBody(bodyNode, source)
 		method.Analysis = analyzeJSBody(method.Body)
 		method.Analysis.ReturnTypeExpr = jsExtractTSReturnTypeExpr(content)
+		method.Analysis.IsGetter = jsMethodDefinitionIsGetter(methodNode, source, methodName)
 
 		cls.Methods = append(cls.Methods, method)
 	}
@@ -302,11 +304,11 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 func jsPrivateEntryCandidates(cls jsClassInfo) map[string][]string {
 	entries := map[string][]string{}
 	for _, privateMethod := range cls.Methods {
-		if !strings.HasPrefix(privateMethod.Name, "#") {
+		if !privateMethod.IsPrivate && !strings.HasPrefix(privateMethod.Name, "#") {
 			continue
 		}
 		for _, method := range cls.Methods {
-			if strings.HasPrefix(method.Name, "#") {
+			if method.IsPrivate || strings.HasPrefix(method.Name, "#") {
 				continue
 			}
 			if strings.Contains(method.Body, privateMethod.Name) {
@@ -318,6 +320,40 @@ func jsPrivateEntryCandidates(cls jsClassInfo) map[string][]string {
 		return nil
 	}
 	return entries
+}
+
+func jsMethodDefinitionIsPrivate(node *sitter.Node, source []byte, methodName string) bool {
+	if strings.HasPrefix(methodName, "#") {
+		return true
+	}
+	prefix := jsMethodDefinitionPrefix(node, source, methodName)
+	return strings.Contains(prefix, "private ") || strings.Contains(prefix, "protected ")
+}
+
+func jsMethodDefinitionIsAsync(content string, methodName string) bool {
+	idx := strings.Index(content, methodName)
+	if idx < 0 {
+		return strings.HasPrefix(strings.TrimSpace(content), "async ")
+	}
+	prefix := content[:idx]
+	return strings.Contains(prefix, "async")
+}
+
+func jsMethodDefinitionIsGetter(node *sitter.Node, source []byte, methodName string) bool {
+	prefix := jsMethodDefinitionPrefix(node, source, methodName)
+	return strings.Contains(prefix, "get ")
+}
+
+func jsMethodDefinitionPrefix(node *sitter.Node, source []byte, methodName string) string {
+	if node == nil {
+		return ""
+	}
+	content := node.Content(source)
+	idx := strings.Index(content, methodName)
+	if idx < 0 {
+		return content
+	}
+	return content[:idx]
 }
 
 // jsExtractBody 提取函数体文本
@@ -347,7 +383,7 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 		}
 		switch child.Type() {
 		case "identifier":
-			params = append(params, jsParamInfo{Name: child.Content(source)})
+			params = append(params, jsParamInfo{Name: child.Content(source), TypeExpr: jsParamTypeExprFromNode(child, source)})
 
 		case "assignment_pattern":
 			// param = defaultValue
@@ -355,7 +391,7 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 			if leftNode != nil {
 				name := jsParamNameFromNode(leftNode, source)
 				if name != "" {
-					params = append(params, jsParamInfo{Name: name, HasDefault: true})
+					params = append(params, jsParamInfo{Name: name, TypeExpr: jsParamTypeExprFromNode(child, source), HasDefault: true})
 				}
 			}
 
@@ -363,7 +399,7 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 			// ...args — 没有统一 name 字段，直接找 identifier 子节点
 			nameNode := jsFindIdentifierChild(child, source)
 			if nameNode != "" {
-				params = append(params, jsParamInfo{Name: nameNode, IsRest: true})
+				params = append(params, jsParamInfo{Name: nameNode, TypeExpr: jsParamTypeExprFromNode(child, source), IsRest: true})
 			}
 
 		// TypeScript 专用参数类型
@@ -372,7 +408,7 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 			if patternNode != nil {
 				name := jsParamNameFromNode(patternNode, source)
 				if name != "" {
-					params = append(params, jsParamInfo{Name: name})
+					params = append(params, jsParamInfo{Name: name, TypeExpr: jsParamTypeExprFromNode(child, source)})
 				}
 			}
 
@@ -381,12 +417,32 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 			if patternNode != nil {
 				name := jsParamNameFromNode(patternNode, source)
 				if name != "" {
-					params = append(params, jsParamInfo{Name: name, HasDefault: true})
+					params = append(params, jsParamInfo{Name: name, TypeExpr: jsParamTypeExprFromNode(child, source), HasDefault: true})
 				}
 			}
 		}
 	}
 	return params
+}
+
+func jsParamTypeExprFromNode(node *sitter.Node, source []byte) string {
+	if node == nil {
+		return ""
+	}
+	return jsParamTypeExprFromContent(node.Content(source))
+}
+
+func jsParamTypeExprFromContent(content string) string {
+	colon := strings.Index(content, ":")
+	if colon < 0 {
+		return ""
+	}
+	typeExpr := strings.TrimSpace(content[colon+1:])
+	if eq := strings.Index(typeExpr, "="); eq >= 0 {
+		typeExpr = strings.TrimSpace(typeExpr[:eq])
+	}
+	typeExpr = strings.TrimSuffix(typeExpr, ",")
+	return strings.TrimSpace(typeExpr)
 }
 
 func jsParamNameFromNode(node *sitter.Node, source []byte) string {

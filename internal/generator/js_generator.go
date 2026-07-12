@@ -21,6 +21,7 @@ type jsFuncInfo struct {
 	IsDefault  bool
 	IsArrow    bool
 	IsMethod   bool
+	IsPrivate  bool
 	ClassName  string
 	Body       string         // 函数体源码
 	Analysis   jsFuncAnalysis // 函数体分析结果
@@ -28,6 +29,7 @@ type jsFuncInfo struct {
 
 type jsParamInfo struct {
 	Name       string
+	TypeExpr   string
 	HasDefault bool
 	IsRest     bool // ...args
 }
@@ -908,7 +910,7 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSInternalClassManualReviewTest(cls, method, task, testName))
 			continue
 		}
-		if strings.HasPrefix(method.Name, "#") {
+		if method.IsPrivate || strings.HasPrefix(method.Name, "#") {
 			if cls.Name == "ConfigManager" && method.Name == "#diffConfigs" {
 				sb.WriteString(genJSConfigManagerDiffPublicEntryTest(cls, method, task, testName))
 				continue
@@ -948,16 +950,17 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
 		}
 		sb.WriteString(fmt.Sprintf("      const instance = %s;\n", jsClassInstanceForCoverageTask(cls, method, task)))
+		callExpr := jsClassMethodCallExpr(method, args)
 		if jsCoverageTaskWantsErrorAssertion(method, task) {
-			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
+			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, callExpr, "      "))
 			sb.WriteString("    });\n\n")
 			sb.WriteString("  });\n\n")
 			continue
 		}
 		if method.IsAsync {
-			sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, args))
+			sb.WriteString(fmt.Sprintf("      const result = await %s;\n", callExpr))
 		} else {
-			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, args))
+			sb.WriteString(fmt.Sprintf("      const result = %s;\n", callExpr))
 		}
 		if cls.Name == "SSEManager" && method.Name == "addConnection" {
 			sb.WriteString("      expect(result).toBeDefined();\n")
@@ -970,6 +973,13 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func jsClassMethodCallExpr(method jsFuncInfo, args string) string {
+	if method.Analysis.IsGetter {
+		return fmt.Sprintf("instance.%s", method.Name)
+	}
+	return fmt.Sprintf("instance.%s(%s)", method.Name, args)
 }
 
 func jsVitestImportNamesForCoverageTask(task *types.CoverageTestTask) string {
@@ -1914,6 +1924,8 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 	for i, param := range cls.ConstructorParams {
 		compact := jsCompactName(param.Name)
 		switch {
+		case jsParamTypeMentions(param, "CodexExec"):
+			args[i] = jsCodexExecMockForCoverageTask(method, task)
 		case strings.Contains(compact, "servername") || compact == "name":
 			args[i] = "'test-server'"
 		case strings.Contains(compact, "devconfig"):
@@ -1925,6 +1937,14 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsCodexExecMockForCoverageTask(method jsFuncInfo, task *types.CoverageTestTask) string {
+	event := "{ type: 'turn.completed', usage: null }"
+	if method.ClassName == "Thread" && method.Name == "run" && jsCoverageTaskWantsErrorAssertion(method, task) {
+		event = "{ type: 'turn.failed', error: { message: 'failed' } }"
+	}
+	return fmt.Sprintf("({ run: async function* () { yield JSON.stringify(%s); } } as any)", event)
 }
 
 func jsObjectLiteralWithDefaults(options []string, defaults []string) string {
@@ -2534,6 +2554,7 @@ func jsArgValue(p jsParamInfo, _ int) string {
 
 	name := strings.ToLower(p.Name)
 	compact := jsCompactName(name)
+	typeExpr := strings.ToLower(strings.TrimSpace(p.TypeExpr))
 
 	if jsNameHasPrefix(compact, "is", "has", "can", "should") ||
 		jsNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {
@@ -2542,11 +2563,30 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	if jsNameHasAny(compact, "items", "list", "array", "arr", "rows", "records", "args") {
 		return "[]"
 	}
+	if typeExpr != "" && strings.Contains(typeExpr, "null") {
+		return "null"
+	}
 	if jsNameIsNumeric(compact) {
 		if compact == "b" || compact == "y" {
 			return "2"
 		}
 		return "1"
+	}
+	if typeExpr != "" {
+		switch {
+		case strings.Contains(typeExpr, "codexexec"):
+			return "({ run: async function* () { yield JSON.stringify({ type: 'turn.completed', usage: null }); } } as any)"
+		case strings.Contains(typeExpr, "input") || strings.Contains(typeExpr, "string"):
+			return "'test'"
+		case strings.Contains(typeExpr, "number"):
+			return "1"
+		case strings.Contains(typeExpr, "boolean"):
+			return "true"
+		case strings.Contains(typeExpr, "[]") || strings.Contains(typeExpr, "array<"):
+			return "[]"
+		case strings.Contains(typeExpr, "options") || strings.Contains(typeExpr, "record<") || strings.Contains(typeExpr, "object") || strings.HasPrefix(typeExpr, "{"):
+			return "{}"
+		}
 	}
 	if jsNameHasAny(compact, "options", "opts", "config", "payload", "data", "body", "params", "query", "user", "metadata") {
 		return "{}"
@@ -2580,6 +2620,10 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	}
 
 	return "undefined"
+}
+
+func jsParamTypeMentions(p jsParamInfo, needle string) bool {
+	return strings.Contains(strings.ToLower(p.TypeExpr), strings.ToLower(needle))
 }
 
 func jsCompactName(name string) string {
