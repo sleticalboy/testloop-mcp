@@ -1830,37 +1830,101 @@ export default logger
 		},
 		{
 			name:     "vitest class private method manual review",
-			fileName: "config.js",
-			source: `export class DevWatcher {
-  #handleFileChange(filePath) {
-    if (filePath) {
-      return true
+			fileName: "token-store.js",
+			source: `export class TokenStore {
+  #readSecret(name) {
+    if (name) {
+      return 'secret'
     }
-    return false
+    return ''
   }
 
-  start() {
-    return this.#handleFileChange('app.js')
+  get(name) {
+    return this.#readSecret(name)
   }
 }
 `,
 			task: types.CoverageTestTask{
-				ID:              "vitest-private-change-1",
+				ID:              "vitest-private-secret-1",
 				Framework:       "vitest",
-				Target:          "DevWatcher.#handleFileChange",
+				Target:          "TokenStore.#readSecret",
 				LineRange:       "3-3",
 				GapType:         "branch",
-				TestName:        "covers DevWatcher private handle file change",
-				SuggestedInputs: []string{"构造满足条件 `filePath` 的输入"},
+				TestName:        "covers TokenStore private read secret",
+				SuggestedInputs: []string{"构造满足条件 `name` 的输入"},
 				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
 			},
 			wants: []string{
-				"import { DevWatcher } from './config';",
-				"it.skip('covers DevWatcher private handle file change'",
-				"manual_review_private: DevWatcher.#handleFileChange is a JavaScript private method",
-				"public_entry_candidates: DevWatcher.start",
+				"import { TokenStore } from './token-store';",
+				"it.skip('covers TokenStore private read secret'",
+				"manual_review_private: TokenStore.#readSecret is a JavaScript private method",
+				"public_entry_candidates: TokenStore.get",
 			},
-			forbidden: []string{"instance.#handleFileChange", "const result ="},
+			forbidden: []string{"instance.#readSecret", "const result ="},
+		},
+		{
+			name:     "vitest dev watcher private file change via start",
+			fileName: "dev-watcher.js",
+			source: `import chokidar from "chokidar"
+import path from "path"
+
+export class DevWatcher {
+  constructor(serverName, devConfig) {
+    this.serverName = serverName
+    this.devConfig = { enabled: true, watch: [], cwd: devConfig.cwd, debounce: 500 }
+    this.watcher = null
+    this.debounceTimer = null
+    this.changedFiles = new Set()
+  }
+
+  async start() {
+    this.watcher = chokidar.watch([])
+    this.watcher.on('change', (filePath) => this.#handleFileChange(filePath, 'change'))
+  }
+
+  #handleFileChange(filePath, eventType) {
+    this.changedFiles.add(filePath)
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer)
+    }
+    this.debounceTimer = setTimeout(() => {
+      const changedFilesArray = Array.from(this.changedFiles)
+      const relativeFiles = changedFilesArray.map(file => {
+        if (path.isAbsolute(file)) {
+          return path.relative(this.devConfig.cwd, file)
+        }
+        return file
+      })
+      this.emit('filesChanged', { serverName: this.serverName, files: changedFilesArray, relativeFiles })
+      this.changedFiles.clear()
+    }, this.devConfig.debounce)
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-dev-watcher-private-1",
+				Framework:       "vitest",
+				Target:          "DevWatcher.#handleFileChange",
+				LineRange:       "101-101",
+				GapType:         "branch",
+				TestName:        "covers DevWatcher private absolute file change",
+				MissingBranches: []string{"未覆盖 if 分支: path.isAbsolute(file"},
+				SuggestedInputs: []string{"构造满足条件 `path.isAbsolute(file` 的输入"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"vi.mock('chokidar'",
+				"import { DevWatcher } from './dev-watcher';",
+				"vi.useFakeTimers();",
+				"const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd });",
+				"await instance.start();",
+				"instance.watcher.emit('change', changedPath);",
+				"await vi.advanceTimersByTimeAsync(500);",
+				"expect(changes).toHaveLength(1);",
+				"expect(changes[0].relativeFiles).toContain(path.join('src', 'app.js'));",
+			},
+			forbidden: []string{"instance.#handleFileChange", "it.skip(", "manual_review_private"},
 		},
 		{
 			name:     "vitest config manager private diff via loadConfig",

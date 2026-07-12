@@ -506,17 +506,17 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
 		t.Fatalf("write package.json: %v", err)
 	}
-	source := filepath.Join(dir, "dev-watcher.js")
-	src := `export class DevWatcher {
-  #handleFileChange(filePath) {
-    if (filePath) {
+	source := filepath.Join(dir, "token-store.js")
+	src := `export class TokenStore {
+  #readSecret(name) {
+    if (name) {
       return true
     }
     return false
   }
 
-  start() {
-    return this.#handleFileChange('app.js')
+  get(name) {
+    return this.#readSecret(name)
   }
 }
 `
@@ -526,7 +526,7 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	installFakeNpx(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
-		" ↓ dev-watcher.test.js (1 test | 1 skipped)",
+		" ↓ token-store.test.js (1 test | 1 skipped)",
 		"",
 		" Test Files  1 skipped (1)",
 		"      Tests  1 skipped (1)",
@@ -535,16 +535,16 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 		ID:              "vitest-private-1",
 		Framework:       "vitest",
 		File:            source,
-		Target:          "DevWatcher.#handleFileChange",
+		Target:          "TokenStore.#readSecret",
 		Kind:            "method",
 		LineRange:       "4-4",
 		GapType:         "branch",
-		MissingBranches: []string{"未覆盖 if 分支: filePath"},
-		SuggestedInputs: []string{"构造满足条件 `filePath` 的输入"},
-		Goal:            "为 DevWatcher.#handleFileChange 补充私有方法分支测试",
-		Command:         "npx vitest run dev-watcher.js",
-		TestFile:        filepath.Join(dir, "dev-watcher.test.js"),
-		TestName:        "covers DevWatcher private file change",
+		MissingBranches: []string{"未覆盖 if 分支: name"},
+		SuggestedInputs: []string{"构造满足条件 `name` 的输入"},
+		Goal:            "为 TokenStore.#readSecret 补充私有方法分支测试",
+		Command:         "npx vitest run token-store.js",
+		TestFile:        filepath.Join(dir, "token-store.test.js"),
+		TestName:        "covers TokenStore private read secret",
 		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
 		Confidence:      0.95,
 	}
@@ -574,16 +574,16 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 		t.Fatalf("expected private method metadata, got %+v", out.Metadata)
 	}
 	reason, _ := out.Metadata["private_reason"].(string)
-	if !strings.Contains(reason, "DevWatcher.#handleFileChange") || !strings.Contains(reason, "private method") {
+	if !strings.Contains(reason, "TokenStore.#readSecret") || !strings.Contains(reason, "private method") {
 		t.Fatalf("unexpected private reason: %q", reason)
 	}
 	entries, ok := out.Metadata["public_entry_candidates"].([]any)
-	if !ok || len(entries) != 1 || entries[0] != "DevWatcher.start" {
+	if !ok || len(entries) != 1 || entries[0] != "TokenStore.get" {
 		t.Fatalf("unexpected public entry candidates: %+v", out.Metadata["public_entry_candidates"])
 	}
-	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_private: DevWatcher.#handleFileChange") ||
-		!strings.Contains(out.Generated.Preview, "public_entry_candidates: DevWatcher.start") ||
-		strings.Contains(out.Generated.Preview, "instance.#handleFileChange") {
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_private: TokenStore.#readSecret") ||
+		!strings.Contains(out.Generated.Preview, "public_entry_candidates: TokenStore.get") ||
+		strings.Contains(out.Generated.Preview, "instance.#readSecret") {
 		t.Fatalf("expected generated private method review skip, got %+v", out.Generated)
 	}
 }

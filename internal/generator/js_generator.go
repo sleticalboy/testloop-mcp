@@ -157,7 +157,10 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	} else if mochaTask {
 		buf.WriteString("const { expect } = require('chai');\n")
 	} else if vitestTask && isESModule {
-		buf.WriteString("import { describe, it, expect } from 'vitest';\n")
+		buf.WriteString(fmt.Sprintf("import { %s } from 'vitest';\n", jsVitestImportNamesForCoverageTask(task)))
+	}
+	if vitestTask {
+		buf.WriteString(jsVitestPreludeForCoverageTask(task))
 	}
 	if isESModule {
 		buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
@@ -638,6 +641,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 				sb.WriteString(genJSConfigManagerDiffPublicEntryTest(cls, method, task, testName))
 				continue
 			}
+			if cls.Name == "DevWatcher" && method.Name == "#handleFileChange" {
+				sb.WriteString(genJSDevWatcherHandleFileChangePublicEntryTest(method, task, testName))
+				continue
+			}
 			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName))
 			continue
 		}
@@ -673,6 +680,43 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func jsVitestImportNamesForCoverageTask(task *types.CoverageTestTask) string {
+	names := []string{"describe", "it", "expect"}
+	if jsCoverageTaskNeedsVitestVi(task) {
+		names = append(names, "vi")
+	}
+	return strings.Join(names, ", ")
+}
+
+func jsVitestPreludeForCoverageTask(task *types.CoverageTestTask) string {
+	if !jsCoverageTaskNeedsChokidarMock(task) {
+		return ""
+	}
+	return `
+vi.mock('chokidar', async () => {
+  const { EventEmitter } = await import('node:events');
+  return {
+    default: {
+      watch: vi.fn(() => {
+        const watcher = new EventEmitter();
+        watcher.close = vi.fn();
+        return watcher;
+      }),
+    },
+  };
+});
+
+`
+}
+
+func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
+	return jsCoverageTaskNeedsChokidarMock(task)
+}
+
+func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
+	return task != nil && task.Target == "DevWatcher.#handleFileChange"
 }
 
 func genJSConfigManagerDiffPublicEntryTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
@@ -762,6 +806,66 @@ func jsConfigManagerDiffScenarioForTask(task *types.CoverageTestTask) jsConfigMa
 				"expect(result.changes.modified.length + result.changes.removed.length + result.changes.added.length).toBeGreaterThanOrEqual(0);",
 			},
 		}
+	}
+}
+
+func genJSDevWatcherHandleFileChangePublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	scenario := jsDevWatcherHandleFileChangeScenarioForTask(task)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      vi.useFakeTimers();\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        const path = await import('node:path');\n")
+	sb.WriteString("        const cwd = process.cwd();\n")
+	sb.WriteString("        const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd });\n")
+	sb.WriteString("        const changes = [];\n")
+	sb.WriteString("        instance.on('filesChanged', (event) => changes.push(event));\n")
+	sb.WriteString("        await instance.start();\n")
+	if scenario.primeTimer {
+		sb.WriteString("        instance.watcher.emit('change', 'src/first.js');\n")
+	}
+	if scenario.absolutePath {
+		sb.WriteString("        const changedPath = path.join(cwd, 'src/app.js');\n")
+	} else {
+		sb.WriteString("        const changedPath = 'src/app.js';\n")
+	}
+	sb.WriteString("        instance.watcher.emit('change', changedPath);\n")
+	sb.WriteString("        await vi.advanceTimersByTimeAsync(500);\n")
+	sb.WriteString("        expect(changes).toHaveLength(1);\n")
+	sb.WriteString("        expect(changes[0].serverName).toBe('test-server');\n")
+	sb.WriteString("        expect(changes[0].files).toContain(changedPath);\n")
+	if scenario.absolutePath {
+		sb.WriteString("        expect(changes[0].relativeFiles).toContain(path.join('src', 'app.js'));\n")
+	} else {
+		sb.WriteString("        expect(changes[0].relativeFiles).toContain('src/app.js');\n")
+	}
+	if scenario.primeTimer {
+		sb.WriteString("        expect(changes[0].files).toContain('src/first.js');\n")
+	}
+	sb.WriteString("        expect(instance.changedFiles.size).toBe(0);\n")
+	sb.WriteString("        await instance.stop();\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        vi.useRealTimers();\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+type jsDevWatcherHandleFileChangeScenario struct {
+	absolutePath bool
+	primeTimer   bool
+}
+
+func jsDevWatcherHandleFileChangeScenarioForTask(task *types.CoverageTestTask) jsDevWatcherHandleFileChangeScenario {
+	hints := jsCoverageTaskHints(task)
+	return jsDevWatcherHandleFileChangeScenario{
+		absolutePath: strings.Contains(hints, "path.isAbsolute(file"),
+		primeTimer:   strings.Contains(hints, "this.debounceTimer"),
 	}
 }
 
