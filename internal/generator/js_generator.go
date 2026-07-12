@@ -18,6 +18,7 @@ type jsFuncInfo struct {
 	Params     []jsParamInfo
 	IsAsync    bool
 	IsExported bool
+	IsDefault  bool
 	IsArrow    bool
 	IsMethod   bool
 	ClassName  string
@@ -54,6 +55,9 @@ type jsBoundary struct {
 // jsClassInfo 类信息
 type jsClassInfo struct {
 	Name              string
+	IsExported        bool
+	IsDefault         bool
+	DefaultInstance   string
 	ConstructorParams []jsParamInfo
 	Methods           []jsFuncInfo
 }
@@ -154,7 +158,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		buf.WriteString("import { describe, it, expect } from 'vitest';\n")
 	}
 	if isESModule {
-		buf.WriteString(fmt.Sprintf("import { %s } from '%s';\n\n", joinExportNames(funcs, classes), moduleImportPath))
+		buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
 	} else {
 		buf.WriteString(fmt.Sprintf("const { %s } = require('./%s');\n\n", joinExportNames(funcs, classes), moduleName))
 	}
@@ -208,7 +212,14 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 			}
 		}
 		if len(methods) > 0 {
-			filteredClasses = append(filteredClasses, jsClassInfo{Name: cls.Name, ConstructorParams: cls.ConstructorParams, Methods: methods})
+			filteredClasses = append(filteredClasses, jsClassInfo{
+				Name:              cls.Name,
+				IsExported:        cls.IsExported,
+				IsDefault:         cls.IsDefault,
+				DefaultInstance:   cls.DefaultInstance,
+				ConstructorParams: cls.ConstructorParams,
+				Methods:           methods,
+			})
 		}
 	}
 
@@ -301,6 +312,9 @@ func inferJSReturnType(matches [][]string) string {
 			return "object"
 		}
 		if strings.Contains(expr, ".json()") {
+			return "object"
+		}
+		if strings.HasPrefix(expr, "new ") {
 			return "object"
 		}
 		if isArithmeticExpr(expr) {
@@ -649,6 +663,9 @@ func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTe
 }
 
 func jsClassInstanceForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask) string {
+	if cls.DefaultInstance != "" {
+		return cls.DefaultInstance
+	}
 	args := jsClassConstructorArgsForCoverageTask(cls, method, task)
 	if args == "" {
 		return fmt.Sprintf("new %s()", cls.Name)
@@ -721,6 +738,12 @@ func jsClassCoverageTaskInputOverrides(method jsFuncInfo, task *types.CoverageTe
 		jsSetNamedParamOverride(method.Params, overrides, "str", "'plain'")
 		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
 		jsSetNamedParamOverride(method.Params, overrides, "depth", "0")
+	}
+	if strings.Contains(body, "this.LOG_LEVELS[level] !== undefined") {
+		jsSetNamedParamOverride(method.Params, overrides, "level", "'info'")
+	}
+	if strings.Contains(body, "if (enable)") || strings.Contains(body, "if(enable)") {
+		jsSetNamedParamOverride(method.Params, overrides, "enable", "true")
 	}
 	return overrides
 }
@@ -1287,6 +1310,9 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	}
 	if jsNameHasAny(compact, "options", "opts", "config", "payload", "data", "body", "params", "query", "user", "metadata") {
 		return "{}"
+	}
+	if jsNameHasAny(compact, "error", "err") {
+		return "new Error('test error')"
 	}
 	if jsNameLooksLikeResponseParam(compact) {
 		return jsResponseJSONMock("{ ok: true }")
@@ -2521,6 +2547,62 @@ func dedupJSFuncs(funcs []jsFuncInfo) []jsFuncInfo {
 		}
 	}
 	return result
+}
+
+func jsESMImportLines(funcs []jsFuncInfo, classes []jsClassInfo, moduleImportPath string) string {
+	defaultImport := ""
+	for _, cls := range classes {
+		if cls.DefaultInstance != "" {
+			defaultImport = cls.DefaultInstance
+			break
+		}
+		if cls.IsDefault {
+			defaultImport = cls.Name
+			break
+		}
+	}
+	for _, fn := range funcs {
+		if defaultImport == "" && fn.IsDefault {
+			defaultImport = fn.Name
+			break
+		}
+	}
+
+	namedImport := joinNamedESMExportNames(funcs, classes)
+	switch {
+	case defaultImport != "" && namedImport != "":
+		return fmt.Sprintf("import %s, { %s } from '%s';\n\n", defaultImport, namedImport, moduleImportPath)
+	case defaultImport != "":
+		return fmt.Sprintf("import %s from '%s';\n\n", defaultImport, moduleImportPath)
+	case namedImport != "":
+		return fmt.Sprintf("import { %s } from '%s';\n\n", namedImport, moduleImportPath)
+	default:
+		return fmt.Sprintf("import '%s';\n\n", moduleImportPath)
+	}
+}
+
+func joinNamedESMExportNames(funcs []jsFuncInfo, classes []jsClassInfo) string {
+	var names []string
+	seen := make(map[string]bool)
+	for _, fn := range funcs {
+		if fn.IsMethod || fn.IsDefault {
+			continue
+		}
+		if !seen[fn.Name] {
+			names = append(names, fn.Name)
+			seen[fn.Name] = true
+		}
+	}
+	for _, cls := range classes {
+		if cls.DefaultInstance != "" || cls.IsDefault {
+			continue
+		}
+		if !seen[cls.Name] {
+			names = append(names, cls.Name)
+			seen[cls.Name] = true
+		}
+	}
+	return strings.Join(names, ", ")
 }
 
 func joinExportNames(funcs []jsFuncInfo, classes []jsClassInfo) string {

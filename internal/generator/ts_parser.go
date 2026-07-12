@@ -35,6 +35,7 @@ func parseJSWithTreeSitter(source []byte, ext string) (funcs []jsFuncInfo, class
 	root := tree.RootNode()
 	ctx := &jsParseCtx{tsTypes: jsExtractTSTypeDecls(string(source))}
 	jsWalkNode(root, source, ctx)
+	jsMarkExportMetadata(string(source), ctx)
 
 	return ctx.funcs, ctx.classes, ctx.isESModule
 }
@@ -88,6 +89,7 @@ func jsHandleNode(node *sitter.Node, source []byte, ctx *jsParseCtx) {
 
 	case "class_declaration":
 		cls := jsExtractClass(node, source)
+		cls.IsExported = ctx.exported
 		jsAttachTSTypeDeclsToClass(&cls, ctx.tsTypes)
 		if cls.Name != "" {
 			ctx.classes = append(ctx.classes, cls)
@@ -122,6 +124,74 @@ func jsHandleDeclarator(node *sitter.Node, source []byte, ctx *jsParseCtx) {
 		jsAttachTSTypeDeclsToFunc(&fn, ctx.tsTypes)
 		ctx.funcs = append(ctx.funcs, fn)
 	}
+}
+
+func jsMarkExportMetadata(source string, ctx *jsParseCtx) {
+	if ctx == nil {
+		return
+	}
+	defaultName := jsDefaultExportName(source)
+	for i := range ctx.funcs {
+		fn := &ctx.funcs[i]
+		if fn.Name == defaultName || jsHasDefaultFunctionExport(source, fn.Name) {
+			fn.IsDefault = true
+			fn.IsExported = true
+			ctx.isESModule = true
+		}
+	}
+	for i := range ctx.classes {
+		cls := &ctx.classes[i]
+		if cls.Name == defaultName || jsHasDefaultClassExport(source, cls.Name) {
+			cls.IsDefault = true
+			cls.IsExported = true
+			ctx.isESModule = true
+		}
+		if instance := jsDefaultInstanceForClass(source, cls.Name, defaultName); instance != "" {
+			cls.DefaultInstance = instance
+			ctx.isESModule = true
+		}
+	}
+}
+
+func jsDefaultExportName(source string) string {
+	re := regexp.MustCompile(`(?m)\bexport\s+default\s+([A-Za-z_$][A-Za-z0-9_$]*)\b`)
+	if match := re.FindStringSubmatch(source); len(match) == 2 {
+		return match[1]
+	}
+	return ""
+}
+
+func jsHasDefaultFunctionExport(source, name string) bool {
+	if name == "" {
+		return false
+	}
+	re := regexp.MustCompile(`(?m)\bexport\s+default\s+(?:async\s+)?function\s+` + regexp.QuoteMeta(name) + `\b`)
+	return re.MatchString(source)
+}
+
+func jsHasDefaultClassExport(source, name string) bool {
+	if name == "" {
+		return false
+	}
+	re := regexp.MustCompile(`(?m)\bexport\s+default\s+class\s+` + regexp.QuoteMeta(name) + `\b`)
+	return re.MatchString(source)
+}
+
+func jsDefaultInstanceForClass(source, className, defaultName string) string {
+	if className == "" {
+		return ""
+	}
+	inlineRe := regexp.MustCompile(`(?m)\bexport\s+default\s+new\s+` + regexp.QuoteMeta(className) + `\s*\(`)
+	if inlineRe.MatchString(source) {
+		return strings.ToLower(className[:1]) + className[1:]
+	}
+	instanceRe := regexp.MustCompile(`(?m)\b(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*new\s+` + regexp.QuoteMeta(className) + `\s*\(`)
+	for _, match := range instanceRe.FindAllStringSubmatch(source, -1) {
+		if len(match) == 2 && match[1] == defaultName {
+			return match[1]
+		}
+	}
+	return ""
 }
 
 func jsExtractFunction(node *sitter.Node, source []byte, isExported bool) jsFuncInfo {

@@ -1747,6 +1747,87 @@ module.exports = { Widget };
 			},
 			forbidden: []string{"new DevWatcher();", "rejects.toThrow()"},
 		},
+		{
+			name:     "vitest function wraps ordinary error",
+			fileName: "errors.js",
+			source: `export class MCPHubError extends Error {
+  constructor(code, message, data = {}) {
+    super(message)
+    this.code = code
+    this.data = data
+  }
+}
+
+export function isMCPHubError(error) {
+  return error instanceof MCPHubError
+}
+
+export function wrapError(error, code = 'UNEXPECTED_ERROR', data = {}) {
+  if (isMCPHubError(error)) {
+    return error
+  }
+
+  return new MCPHubError(error.code || code, error.message, {
+    ...data,
+    originalError: error,
+  })
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-wrap-error-1",
+				Framework:       "vitest",
+				Target:          "wrapError",
+				LineRange:       "15-15",
+				GapType:         "branch",
+				TestName:        "covers wrapError ordinary error",
+				SuggestedInputs: []string{"构造满足条件 `isMCPHubError(error` 的输入", "设置 error 覆盖未执行分支"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { wrapError } from './errors';",
+				"const result = wrapError(new Error('test error'), undefined, {});",
+				"expect(typeof result).toBe('object');",
+				"expect(result).not.toBeNull();",
+			},
+			forbidden: []string{"wrapError(undefined", "toBe('boolean')"},
+		},
+		{
+			name:     "vitest class default exported instance",
+			fileName: "logger.js",
+			source: `class Logger {
+  constructor(options = {}) {
+    this.logLevel = options.logLevel || 'info'
+    this.enableFileLogging = options.enableFileLogging !== false
+    this.LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 }
+  }
+
+  setLogLevel(level) {
+    if (this.LOG_LEVELS[level] !== undefined) {
+      this.logLevel = level
+    }
+  }
+}
+
+const logger = new Logger({ logLevel: 'debug' })
+export default logger
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-logger-level-1",
+				Framework:       "vitest",
+				Target:          "Logger.setLogLevel",
+				LineRange:       "8-8",
+				GapType:         "branch",
+				TestName:        "covers Logger setLogLevel valid level",
+				SuggestedInputs: []string{"构造满足条件 `this.LOG_LEVELS[level] !== undefined` 的输入", "设置 level 覆盖未执行分支"},
+			},
+			wants: []string{
+				"import logger from './logger';",
+				"const instance = logger;",
+				"const result = instance.setLogLevel('info');",
+				"// void function, verify no exception",
+			},
+			forbidden: []string{"import { Logger }", "new Logger({})", "setLogLevel(undefined)"},
+		},
 	}
 
 	for _, tt := range tests {

@@ -17,6 +17,8 @@
 - JS class method coverage task 支持从 `this.strict`、`this.maxPasses` 和 placeholder 返回分支推导实例构造参数与方法入参，并避免 return-path 因方法体存在其他 `throw` 分支而误生成错误断言。
 - `validate_coverage_task` 会将直接调用 JavaScript `#private` method 导致的语法失败标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。
+- JS class coverage task 支持默认导出实例，例如 `class Logger` + `export default logger` 会生成 `import logger from ...` 并通过实例调用方法，避免错误生成不可导出的 `new Logger()`。
+- JS coverage task 对 `error` / `err` 参数会生成普通 `Error` 对象，并把 `new ErrorLike(...)` 返回路径识别为 object，减少错误包装 helper 的无效边界输入。
 - Go 测试文件写入会对新建文件和合并文件统一执行 import 整理，避免 coverage task 只生成单个目标测试时保留未使用 import 导致构建失败。
 - Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
 - Go static generator 支持泛型 helper 的 `return &param`、nil 指针返回零值和非 nil 指针解引用返回路径，例如 `anyPtr[T]` / `derefAny[T]` 会生成真实指针值或返回值断言。
