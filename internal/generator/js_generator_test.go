@@ -3105,6 +3105,40 @@ func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
 		"isPlainObject(",
 		"import { isPlainObject }",
 	})
+
+	task.Target = "toTomlValue"
+	task.LineRange = "306-306"
+	task.TestName = "covers inline object value"
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { settings: [{ model: 'gpt-5' }] });",
+		"expect(commandArgs).toContain('settings=[{model = \"gpt-5\"}]');",
+	}, []string{
+		"expect(commandArgs).toContain('retries=3');",
+		"toTomlValue(",
+	})
+
+	task.LineRange = "312-312"
+	task.TestName = "covers undefined child skip"
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { settings: [{ model: undefined, effort: 'high' }] });",
+		"expect(commandArgs).toContain('settings=[{effort = \"high\"}]');",
+		"expect(commandArgs).not.toContain('model');",
+	}, []string{
+		"expect(commandArgs).toContain('retries=3');",
+	})
+
+	task.LineRange = "320-320"
+	task.TestName = "covers unsupported value"
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { invalid: () => 'bad' });",
+		"rejects.toThrow('Unsupported Codex config override value');",
+		"expect(spawnMock).not.toHaveBeenCalled();",
+	}, []string{
+		"expect(commandArgs).toContain('retries=3');",
+	})
 }
 
 func TestGenerateJSCoverageTaskCodexExecUsesDynamicJestMock(t *testing.T) {
@@ -3238,6 +3272,18 @@ func TestJSCoverageTaskCodexExecRunArgsUsesBranchSpecificAssertions(t *testing.T
 		"expect(output).toEqual(['ready']);",
 	}, []string{
 		"Array.fromAsync",
+		"child.emit('error', new Error('spawn failed'))",
+		"rejects.toThrow('spawn failed')",
+	})
+
+	task.LineRange = "90-92"
+	task.TestName = "covers config override loop"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { model: 'gpt-5' });",
+		"expect(commandArgs).toContain('--config');",
+		"expect(commandArgs).toContain('model=\"gpt-5\"');",
+	}, []string{
 		"child.emit('error', new Error('spawn failed'))",
 		"rejects.toThrow('spawn failed')",
 	})

@@ -1310,6 +1310,12 @@ func jsCodexExecRunArgsScenarioForTask(task *types.CoverageTestTask) (jsCodexExe
 		scenario.assertions = []string{
 			"expect(spawnOptions.env.PATH.split(':')[0]).toBe('/tmp/codex-bin');",
 		}
+	case strings.HasPrefix(lineRange, "90"):
+		scenario.instanceSetup = "const instance = new CodexExec('codex', {}, { model: 'gpt-5' });"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('model=\"gpt-5\"');",
+		}
 	case strings.HasPrefix(lineRange, "190"), strings.HasPrefix(lineRange, "189"):
 		scenario.childSetup = []string{"child.stdin = null;"}
 		scenario.expectError = "Child process has no stdin"
@@ -1466,6 +1472,57 @@ func jsCodexExecConfigOverrideScenarioForTask(task *types.CoverageTestTask) jsCo
 				configOverrides: "{ retries: Infinity }",
 				expectError:     true,
 				errorMessage:    "finite number",
+			}
+		}
+		if strings.HasPrefix(lineRange, "300") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ enabled: true }",
+				assertions: []string{
+					"expect(commandArgs).toContain('--config');",
+					"expect(commandArgs).toContain('enabled=true');",
+				},
+			}
+		}
+		if strings.HasPrefix(lineRange, "303") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ models: ['gpt-5'] }",
+				assertions: []string{
+					"expect(commandArgs).toContain('--config');",
+					"expect(commandArgs).toContain('models=[\"gpt-5\"]');",
+				},
+			}
+		}
+		if strings.HasPrefix(lineRange, "306") || strings.HasPrefix(lineRange, "314") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ settings: [{ model: 'gpt-5' }] }",
+				assertions: []string{
+					"expect(commandArgs).toContain('--config');",
+					"expect(commandArgs).toContain('settings=[{model = \"gpt-5\"}]');",
+				},
+			}
+		}
+		if strings.HasPrefix(lineRange, "312") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ settings: [{ model: undefined, effort: 'high' }] }",
+				assertions: []string{
+					"expect(commandArgs).toContain('--config');",
+					"expect(commandArgs).toContain('settings=[{effort = \"high\"}]');",
+					"expect(commandArgs).not.toContain('model');",
+				},
+			}
+		}
+		if strings.HasPrefix(lineRange, "317") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ invalid: null }",
+				expectError:     true,
+				errorMessage:    "cannot be null",
+			}
+		}
+		if strings.HasPrefix(lineRange, "320") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ invalid: () => 'bad' }",
+				expectError:     true,
+				errorMessage:    "Unsupported Codex config override value",
 			}
 		}
 		return jsCodexExecConfigOverrideScenario{
