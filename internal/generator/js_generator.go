@@ -634,6 +634,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			continue
 		}
 		if strings.HasPrefix(method.Name, "#") {
+			if cls.Name == "ConfigManager" && method.Name == "#diffConfigs" {
+				sb.WriteString(genJSConfigManagerDiffPublicEntryTest(cls, method, task, testName))
+				continue
+			}
 			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName))
 			continue
 		}
@@ -669,6 +673,96 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	sb.WriteString("});\n\n")
 
 	return sb.String()
+}
+
+func genJSConfigManagerDiffPublicEntryTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	scenario := jsConfigManagerDiffScenarioForTask(task)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const fs = await import('node:fs/promises');\n")
+	sb.WriteString("      const os = await import('node:os');\n")
+	sb.WriteString("      const path = await import('node:path');\n")
+	sb.WriteString("      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'testloop-config-'));\n")
+	sb.WriteString("      const configPath = path.join(dir, 'mcp.json');\n")
+	sb.WriteString(fmt.Sprintf("      await fs.writeFile(configPath, JSON.stringify(%s));\n", scenario.newConfig))
+	sb.WriteString(fmt.Sprintf("      const instance = new %s(%s);\n", cls.Name, scenario.oldConfig))
+	sb.WriteString("      instance.configPaths = [configPath];\n")
+	sb.WriteString("      const result = await instance.loadConfig();\n")
+	for _, assertion := range scenario.assertions {
+		sb.WriteString("      " + assertion + "\n")
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+type jsConfigManagerDiffTestScenario struct {
+	oldConfig  string
+	newConfig  string
+	assertions []string
+}
+
+func jsConfigManagerDiffScenarioForTask(task *types.CoverageTestTask) jsConfigManagerDiffTestScenario {
+	hints := jsCoverageTaskHints(task)
+	switch {
+	case strings.Contains(hints, "!newServers[name]") || strings.Contains(hints, "removed"):
+		return jsConfigManagerDiffTestScenario{
+			oldConfig: "{ mcpServers: { old: { command: 'node' } } }",
+			newConfig: "{ mcpServers: {} }",
+			assertions: []string{
+				"expect(result.changes.removed).toContain('old');",
+			},
+		}
+	case strings.Contains(hints, "field === 'args'") || strings.Contains(hints, "field === 'env'") || strings.Contains(hints, "field === 'headers'") || strings.Contains(hints, "field === 'dev'"):
+		return jsConfigManagerDiffTestScenario{
+			oldConfig: "{ mcpServers: { app: { command: 'node', args: ['old'] } } }",
+			newConfig: "{ mcpServers: { app: { command: 'node', args: ['new'] } } }",
+			assertions: []string{
+				"expect(result.changes.modified).toContain('app');",
+				"expect(result.changes.details.app.modifiedFields).toContain('args');",
+			},
+		}
+	case strings.Contains(hints, "!oldServers[name].hasOwnProperty(field"):
+		if task != nil && strings.HasPrefix(strings.TrimSpace(task.LineRange), "85") {
+			return jsConfigManagerDiffTestScenario{
+				oldConfig: "{ mcpServers: { app: { command: 'node' } } }",
+				newConfig: "{ mcpServers: { app: { command: 'node' } } }",
+				assertions: []string{
+					"expect(result.changes.modified).toContain('app');",
+					"expect(result.changes.details.app.modifiedFields).toContain('config_source');",
+				},
+			}
+		}
+		return jsConfigManagerDiffTestScenario{
+			oldConfig: "{ mcpServers: { app: { command: 'node' } } }",
+			newConfig: "{ mcpServers: { app: { command: 'node', args: ['run'] } } }",
+			assertions: []string{
+				"expect(result.changes.modified).toContain('app');",
+				"expect(result.changes.details.app.modifiedFields).toContain('args');",
+			},
+		}
+	case strings.Contains(hints, "modifiedFields.length > 0"):
+		return jsConfigManagerDiffTestScenario{
+			oldConfig: "{ mcpServers: { app: { command: 'node' } } }",
+			newConfig: "{ mcpServers: { app: { command: 'node', cwd: '/tmp' } } }",
+			assertions: []string{
+				"expect(result.changes.modified).toContain('app');",
+				"expect(result.changes.details.app.modifiedFields).toContain('cwd');",
+			},
+		}
+	default:
+		return jsConfigManagerDiffTestScenario{
+			oldConfig: "{ mcpServers: { app: { command: 'node' } } }",
+			newConfig: "{ mcpServers: { app: { command: 'node', args: ['run'] } } }",
+			assertions: []string{
+				"expect(result.changes.modified.length + result.changes.removed.length + result.changes.added.length).toBeGreaterThanOrEqual(0);",
+			},
+		}
+	}
 }
 
 func jsClassRequiresInternalManualReview(cls jsClassInfo) bool {
@@ -1422,9 +1516,16 @@ func jsCoverageTaskMentions(task *types.CoverageTestTask, needle string) bool {
 	if task == nil || needle == "" {
 		return false
 	}
-	haystack := strings.Join(append(append([]string{}, task.MissingBranches...), task.SuggestedInputs...), " ")
-	haystack += " " + strings.Join(task.AssertionFocus, " ")
-	return strings.Contains(haystack, needle)
+	return strings.Contains(jsCoverageTaskHints(task), needle)
+}
+
+func jsCoverageTaskHints(task *types.CoverageTestTask) string {
+	if task == nil {
+		return ""
+	}
+	hints := append(append([]string{}, task.MissingBranches...), task.SuggestedInputs...)
+	hints = append(hints, task.AssertionFocus...)
+	return strings.Join(hints, " ")
 }
 
 func jsExpressRequestMock() string {

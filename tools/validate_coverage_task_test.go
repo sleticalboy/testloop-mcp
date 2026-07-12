@@ -506,19 +506,17 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
 		t.Fatalf("write package.json: %v", err)
 	}
-	source := filepath.Join(dir, "config.js")
-	src := `export class ConfigManager {
-  #diffConfigs(oldServers, newServers) {
-    for (const name of Object.keys(oldServers)) {
-      if (!newServers[name]) {
-        return true
-      }
+	source := filepath.Join(dir, "dev-watcher.js")
+	src := `export class DevWatcher {
+  #handleFileChange(filePath) {
+    if (filePath) {
+      return true
     }
     return false
   }
 
-  loadConfig() {
-    return this.#diffConfigs({ old: { command: 'node' } }, {})
+  start() {
+    return this.#handleFileChange('app.js')
   }
 }
 `
@@ -528,7 +526,7 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	installFakeNpx(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
-		" ↓ config.test.js (1 test | 1 skipped)",
+		" ↓ dev-watcher.test.js (1 test | 1 skipped)",
 		"",
 		" Test Files  1 skipped (1)",
 		"      Tests  1 skipped (1)",
@@ -537,16 +535,16 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 		ID:              "vitest-private-1",
 		Framework:       "vitest",
 		File:            source,
-		Target:          "ConfigManager.#diffConfigs",
+		Target:          "DevWatcher.#handleFileChange",
 		Kind:            "method",
 		LineRange:       "4-4",
 		GapType:         "branch",
-		MissingBranches: []string{"未覆盖 if 分支: !newServers[name]"},
-		SuggestedInputs: []string{"构造满足条件 `!newServers[name]` 的输入"},
-		Goal:            "为 ConfigManager.#diffConfigs 补充私有方法分支测试",
-		Command:         "npx vitest run config.js",
-		TestFile:        filepath.Join(dir, "config.test.js"),
-		TestName:        "covers ConfigManager private diff",
+		MissingBranches: []string{"未覆盖 if 分支: filePath"},
+		SuggestedInputs: []string{"构造满足条件 `filePath` 的输入"},
+		Goal:            "为 DevWatcher.#handleFileChange 补充私有方法分支测试",
+		Command:         "npx vitest run dev-watcher.js",
+		TestFile:        filepath.Join(dir, "dev-watcher.test.js"),
+		TestName:        "covers DevWatcher private file change",
 		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
 		Confidence:      0.95,
 	}
@@ -576,16 +574,16 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 		t.Fatalf("expected private method metadata, got %+v", out.Metadata)
 	}
 	reason, _ := out.Metadata["private_reason"].(string)
-	if !strings.Contains(reason, "ConfigManager.#diffConfigs") || !strings.Contains(reason, "private method") {
+	if !strings.Contains(reason, "DevWatcher.#handleFileChange") || !strings.Contains(reason, "private method") {
 		t.Fatalf("unexpected private reason: %q", reason)
 	}
 	entries, ok := out.Metadata["public_entry_candidates"].([]any)
-	if !ok || len(entries) != 1 || entries[0] != "ConfigManager.loadConfig" {
+	if !ok || len(entries) != 1 || entries[0] != "DevWatcher.start" {
 		t.Fatalf("unexpected public entry candidates: %+v", out.Metadata["public_entry_candidates"])
 	}
-	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_private: ConfigManager.#diffConfigs") ||
-		!strings.Contains(out.Generated.Preview, "public_entry_candidates: ConfigManager.loadConfig") ||
-		strings.Contains(out.Generated.Preview, "instance.#diffConfigs") {
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_private: DevWatcher.#handleFileChange") ||
+		!strings.Contains(out.Generated.Preview, "public_entry_candidates: DevWatcher.start") ||
+		strings.Contains(out.Generated.Preview, "instance.#handleFileChange") {
 		t.Fatalf("expected generated private method review skip, got %+v", out.Generated)
 	}
 }

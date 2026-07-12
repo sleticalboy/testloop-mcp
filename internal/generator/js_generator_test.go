@@ -1831,21 +1831,65 @@ export default logger
 		{
 			name:     "vitest class private method manual review",
 			fileName: "config.js",
-			source: `export class ConfigManager {
-  #diffConfigs(oldServers, newServers) {
-    if (!newServers.old) {
+			source: `export class DevWatcher {
+  #handleFileChange(filePath) {
+    if (filePath) {
       return true
     }
     return false
   }
 
-  loadConfig() {
-    return this.#diffConfigs({ old: {} }, {})
+  start() {
+    return this.#handleFileChange('app.js')
   }
 }
 `,
 			task: types.CoverageTestTask{
-				ID:              "vitest-private-diff-1",
+				ID:              "vitest-private-change-1",
+				Framework:       "vitest",
+				Target:          "DevWatcher.#handleFileChange",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers DevWatcher private handle file change",
+				SuggestedInputs: []string{"构造满足条件 `filePath` 的输入"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			wants: []string{
+				"import { DevWatcher } from './config';",
+				"it.skip('covers DevWatcher private handle file change'",
+				"manual_review_private: DevWatcher.#handleFileChange is a JavaScript private method",
+				"public_entry_candidates: DevWatcher.start",
+			},
+			forbidden: []string{"instance.#handleFileChange", "const result ="},
+		},
+		{
+			name:     "vitest config manager private diff via loadConfig",
+			fileName: "config.js",
+			source: `export class ConfigManager {
+  constructor(configPathOrObject) {
+    this.configPaths = null
+    this.config = null
+    this.#previousConfig = null
+    if (configPathOrObject && typeof configPathOrObject === 'object') {
+      this.config = configPathOrObject
+      this.#previousConfig = JSON.parse(JSON.stringify(configPathOrObject))
+    }
+  }
+
+  #diffConfigs(oldServers, newServers) {
+    if (!newServers.old) {
+      return { removed: ['old'], modified: [], added: [], unchanged: [], details: {} }
+    }
+    return { removed: [], modified: [], added: [], unchanged: ['old'], details: {} }
+  }
+
+  loadConfig() {
+    return { changes: this.#diffConfigs(this.#previousConfig?.mcpServers, {}) }
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-config-private-diff-1",
 				Framework:       "vitest",
 				Target:          "ConfigManager.#diffConfigs",
 				LineRange:       "3-3",
@@ -1856,11 +1900,14 @@ export default logger
 			},
 			wants: []string{
 				"import { ConfigManager } from './config';",
-				"it.skip('covers ConfigManager private diff'",
-				"manual_review_private: ConfigManager.#diffConfigs is a JavaScript private method",
-				"public_entry_candidates: ConfigManager.loadConfig",
+				"const fs = await import('node:fs/promises');",
+				"await fs.writeFile(configPath, JSON.stringify({ mcpServers: {} }));",
+				"const instance = new ConfigManager({ mcpServers: { old: { command: 'node' } } });",
+				"instance.configPaths = [configPath];",
+				"const result = await instance.loadConfig();",
+				"expect(result.changes.removed).toContain('old');",
 			},
-			forbidden: []string{"instance.#diffConfigs", "const result ="},
+			forbidden: []string{"instance.#diffConfigs", "it.skip(", "manual_review_private"},
 		},
 		{
 			name:     "vitest internal esm class manual review",

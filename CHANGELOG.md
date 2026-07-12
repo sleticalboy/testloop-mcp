@@ -16,6 +16,7 @@
 - JS/Vitest coverage task 在项目已有 `tests/` 目录且源码位于 `src/` 下时，会把生成测试写入 `tests/` 镜像路径，并按测试文件位置生成相对 import，避免被真实项目的 Vitest `include` 配置排除。
 - JS class method coverage task 支持从 `this.strict`、`this.maxPasses` 和 placeholder 返回分支推导实例构造参数与方法入参，并避免 return-path 因方法体存在其他 `throw` 分支而误生成错误断言。
 - JS class coverage task 遇到 JavaScript `#private` method 时不再生成非法的 `instance.#method()` 外部调用，而是生成 `it.skip` 的 manual-review 草稿，并在 metadata 中返回可检测到的公共入口候选。
+- JS class coverage task 可通过 `ConfigManager.loadConfig()` 公共入口覆盖 `ConfigManager.#diffConfigs` 私有分支，自动生成临时 config 文件、旧配置状态和 changes 断言。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。
