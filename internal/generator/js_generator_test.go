@@ -823,6 +823,8 @@ func TestJSTestArgsUseSemanticDefaults(t *testing.T) {
 		{Name: "items"},
 		{Name: "options"},
 		{Name: "name"},
+		{Name: "id", TypeExpr: "string"},
+		{Name: "b", TypeExpr: "number"},
 	}
 
 	got := jsArgList(params)
@@ -833,6 +835,8 @@ func TestJSTestArgsUseSemanticDefaults(t *testing.T) {
 		"[]",
 		"{}",
 		"'test'",
+		"'test'",
+		"2",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("jsArgList() = %q, want value %q", got, want)
@@ -3352,6 +3356,85 @@ func TestJSCoverageTaskThreadPrivateAndTypedArgs(t *testing.T) {
 		"const result = instance.id;",
 	}, []string{
 		"instance.id()",
+	})
+}
+
+func TestJSFuncCoverageTaskCreateOutputSchemaFile(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:    "createOutputSchemaFile",
+		IsAsync: true,
+		Params:  []jsParamInfo{{Name: "schema", TypeExpr: "unknown"}},
+		Analysis: jsFuncAnalysis{
+			Throws:    true,
+			HasReturn: true,
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-output-schema-invalid",
+		Framework: "jest",
+		Target:    "createOutputSchemaFile",
+		LineRange: "16-16",
+		GapType:   "error_path",
+		TestName:  "covers invalid output schema",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"await expect(createOutputSchemaFile(null)).rejects.toThrow('outputSchema must be a plain JSON object');",
+	}, []string{
+		"createOutputSchemaFile(undefined)",
+	})
+
+	task.ID = "jest-output-schema-write-failure"
+	task.LineRange = "33-34"
+	task.GapType = "statement"
+	task.TestName = "covers output schema write failure cleanup"
+	code = genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const { promises: fs } = await import('node:fs');",
+		"const { jest } = await import('@jest/globals');",
+		"jest.spyOn(fs, 'writeFile').mockRejectedValueOnce(writeError);",
+		"jest.spyOn(fs, 'rm').mockResolvedValueOnce(undefined);",
+		"await expect(createOutputSchemaFile({ type: 'object' })).rejects.toThrow('write failed');",
+		"expect(rmSpy).toHaveBeenCalled();",
+	}, []string{
+		"createOutputSchemaFile(undefined)",
+	})
+}
+
+func TestJSCoverageTaskCodexResumeThreadUsesPathOverride(t *testing.T) {
+	cls := jsClassInfo{
+		Name:              "Codex",
+		IsExported:        true,
+		ConstructorParams: []jsParamInfo{{Name: "options", TypeExpr: "CodexOptions", HasDefault: true}},
+		Methods: []jsFuncInfo{{
+			Name:      "resumeThread",
+			IsMethod:  true,
+			ClassName: "Codex",
+			Params: []jsParamInfo{
+				{Name: "id", TypeExpr: "string"},
+				{Name: "options", TypeExpr: "ThreadOptions", HasDefault: true},
+			},
+			Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"},
+		}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-codex-resume",
+		Framework: "jest",
+		Target:    "Codex.resumeThread",
+		LineRange: "37-37",
+		GapType:   "return_path",
+		TestName:  "covers resume thread",
+	}
+
+	code := genJSClassTestForCoverageTask(cls, &task, "../src/codex")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new Codex({ codexPathOverride: 'codex' });",
+		"const result = instance.resumeThread('test', {});",
+		"expect(typeof result).toBe('object');",
+	}, []string{
+		"new Codex({})",
+		"resumeThread(1, {})",
 	})
 }
 

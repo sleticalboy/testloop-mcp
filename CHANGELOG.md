@@ -36,6 +36,8 @@
 - JS/TS parser 会识别 TypeScript `private` / `protected` class method 和 `get` accessor；coverage task 对不可外部调用的 TS private method 会生成 `manual_review_private` 草稿和公共入口候选，对 getter 会生成属性访问而不是错误的函数调用。
 - JS/TS class coverage task 会利用 TypeScript 参数类型生成更合法的 constructor / method 入参，例如为 `CodexExec` 注入最小 async generator mock、为 `Input` 生成字符串输入、为 options 生成对象、为 nullable id 生成 `null`，减少 TS 严格模式下的 `undefined` 编译失败。
 - JS/TS coverage task 针对 `Thread.run` 这类消费 event stream 的错误路径，会让 `CodexExec` mock 产出 `turn.failed` 事件，从而稳定覆盖 reject 分支。
+- JS/TS coverage task 支持 `createOutputSchemaFile` 的非法 schema 和写文件失败 cleanup 分支，使用 `node:fs` / `@jest/globals` 动态 import 的 spy 触发 `writeFile` reject 并断言 `rm` cleanup。
+- JS/TS class coverage task 对 `Codex` 包装类会生成 `codexPathOverride`，避免 `resumeThread` 这类纯包装方法测试在构造阶段触发 native CLI package lookup。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

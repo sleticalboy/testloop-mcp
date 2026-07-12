@@ -594,6 +594,9 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "resolveNativePackage" && task != nil && strings.TrimSpace(task.Target) == "resolveNativePackage" {
 		return genJSResolveNativePackageCoverageTask(fn, task, testName)
 	}
+	if fn.Name == "createOutputSchemaFile" && task != nil && strings.TrimSpace(task.Target) == "createOutputSchemaFile" {
+		return genJSCreateOutputSchemaFileCoverageTask(task, testName)
+	}
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -617,6 +620,36 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	}
 	sb.WriteString(genJSResultAssertionWithTaskArgsStyle(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    ", assertions))
 	sb.WriteString(genJSInjectedClientCallAssertion(clientCall, "    ", assertions))
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSCreateOutputSchemaFileCoverageTask(task *types.CoverageTestTask, testName string) string {
+	lineRange := ""
+	if task != nil {
+		lineRange = strings.TrimSpace(task.LineRange)
+	}
+	var sb strings.Builder
+	sb.WriteString("describe('createOutputSchemaFile', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	if strings.HasPrefix(lineRange, "33") || strings.HasPrefix(lineRange, "34") {
+		sb.WriteString("    const { promises: fs } = await import('node:fs');\n")
+		sb.WriteString("    const { jest } = await import('@jest/globals');\n")
+		sb.WriteString("    const writeError = new Error('write failed');\n")
+		sb.WriteString("    const writeSpy = jest.spyOn(fs, 'writeFile').mockRejectedValueOnce(writeError);\n")
+		sb.WriteString("    const rmSpy = jest.spyOn(fs, 'rm').mockResolvedValueOnce(undefined);\n")
+		sb.WriteString("    await expect(createOutputSchemaFile({ type: 'object' })).rejects.toThrow('write failed');\n")
+		sb.WriteString("    expect(writeSpy).toHaveBeenCalled();\n")
+		sb.WriteString("    expect(rmSpy).toHaveBeenCalled();\n")
+		sb.WriteString("    writeSpy.mockRestore();\n")
+		sb.WriteString("    rmSpy.mockRestore();\n")
+	} else {
+		sb.WriteString("    await expect(createOutputSchemaFile(null)).rejects.toThrow('outputSchema must be a plain JSON object');\n")
+	}
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -1908,6 +1941,9 @@ func jsClassInstanceForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *ty
 	if cls.Name == "SSEManager" && method.Name == "addConnection" && jsCoverageTaskMentions(task, "this.shutdownTimer") {
 		return "Object.assign(new SSEManager({}), { shutdownTimer: setTimeout(() => {}, 1000) })"
 	}
+	if cls.Name == "Codex" {
+		return "new Codex({ codexPathOverride: 'codex' })"
+	}
 	args := jsClassConstructorArgsForCoverageTask(cls, method, task)
 	if args == "" {
 		return fmt.Sprintf("new %s()", cls.Name)
@@ -2566,6 +2602,15 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	if typeExpr != "" && strings.Contains(typeExpr, "null") {
 		return "null"
 	}
+	if typeExpr != "" && (strings.Contains(typeExpr, "input") || strings.Contains(typeExpr, "string")) {
+		return "'test'"
+	}
+	if typeExpr != "" && strings.Contains(typeExpr, "number") {
+		if compact == "b" || compact == "y" {
+			return "2"
+		}
+		return "1"
+	}
 	if jsNameIsNumeric(compact) {
 		if compact == "b" || compact == "y" {
 			return "2"
@@ -2576,10 +2621,6 @@ func jsArgValue(p jsParamInfo, _ int) string {
 		switch {
 		case strings.Contains(typeExpr, "codexexec"):
 			return "({ run: async function* () { yield JSON.stringify({ type: 'turn.completed', usage: null }); } } as any)"
-		case strings.Contains(typeExpr, "input") || strings.Contains(typeExpr, "string"):
-			return "'test'"
-		case strings.Contains(typeExpr, "number"):
-			return "1"
 		case strings.Contains(typeExpr, "boolean"):
 			return "true"
 		case strings.Contains(typeExpr, "[]") || strings.Contains(typeExpr, "array<"):
