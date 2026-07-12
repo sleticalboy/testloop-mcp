@@ -654,6 +654,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName))
 			continue
 		}
+		if cls.Name == "WorkspaceCacheManager" && method.Name == "updateWorkspaceState" && jsCoverageTaskMentions(task, "cache[workspaceKey]") {
+			sb.WriteString(genJSWorkspaceCacheUpdateStateTest(method, task, testName))
+			continue
+		}
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
 		overrides := jsClassCoverageTaskInputOverrides(method, task)
 		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, overrides)
@@ -752,7 +756,7 @@ vi.mock('%s', () => ({
 }
 
 func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsChokidarMock(task) || jsCoverageTaskNeedsOAuthProviderMocks(task)
+	return jsCoverageTaskNeedsChokidarMock(task) || jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsWorkspaceCacheSpies(task)
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
@@ -761,6 +765,10 @@ func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
 
 func jsCoverageTaskNeedsOAuthProviderMocks(task *types.CoverageTestTask) bool {
 	return task != nil && strings.HasPrefix(task.Target, "StorageManager.")
+}
+
+func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
+	return task != nil && task.Target == "WorkspaceCacheManager.updateWorkspaceState"
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
@@ -890,6 +898,30 @@ func genJSStorageManagerPublicEntryTest(method jsFuncInfo, task *types.CoverageT
 		sb.WriteString("      const provider = new MCPHubOAuthProvider({ serverName: 'test-server', serverUrl: 'https://example.com/mcp', hubServerUrl: 'http://localhost:3000' });\n")
 		sb.WriteString("      await expect(provider.tokens()).resolves.toBeNull();\n")
 	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSWorkspaceCacheUpdateStateTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const instance = new WorkspaceCacheManager({ port: 3000 });\n")
+	sb.WriteString("      const cache = {\n")
+	sb.WriteString("        '3000': { state: 'active', activeConnections: 1, port: 3000 },\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      instance._withLock = async (fn) => fn();\n")
+	sb.WriteString("      instance._readCache = vi.fn().mockResolvedValue(cache);\n")
+	sb.WriteString("      instance._writeCache = vi.fn().mockResolvedValue(undefined);\n")
+	sb.WriteString("      await instance.updateWorkspaceState(3000, { state: 'shutting_down', activeConnections: 0 });\n")
+	sb.WriteString("      expect(instance._readCache).toHaveBeenCalled();\n")
+	sb.WriteString("      expect(instance._writeCache).toHaveBeenCalledWith(expect.objectContaining({\n")
+	sb.WriteString("        '3000': expect.objectContaining({ state: 'shutting_down', activeConnections: 0, port: 3000 }),\n")
+	sb.WriteString("      }));\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()

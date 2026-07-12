@@ -2116,6 +2116,49 @@ export default class CacheFacade {
 			forbidden: []string{"import { LocalCache }", "new LocalCache()"},
 		},
 		{
+			name:     "vitest workspace cache update state existing entry",
+			fileName: "workspace-cache.js",
+			source: `export class WorkspaceCacheManager {
+  constructor(options = {}) {
+    this.port = options.port || null
+  }
+
+  async updateWorkspaceState(port, updates) {
+    const workspaceKey = port.toString()
+    await this._withLock(async () => {
+      const cache = await this._readCache()
+      if (cache[workspaceKey]) {
+        cache[workspaceKey] = { ...cache[workspaceKey], ...updates }
+        await this._writeCache(cache)
+      }
+    })
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-workspace-update-1",
+				Framework:       "vitest",
+				Target:          "WorkspaceCacheManager.updateWorkspaceState",
+				LineRange:       "10-10",
+				GapType:         "branch",
+				TestName:        "covers WorkspaceCacheManager update existing workspace",
+				MissingBranches: []string{"未覆盖 if 分支: cache[workspaceKey]"},
+				SuggestedInputs: []string{"构造满足条件 `cache[workspaceKey]` 的输入", "设置 port 覆盖未执行分支", "设置 updates 覆盖未执行分支"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"import { WorkspaceCacheManager } from './workspace-cache';",
+				"const instance = new WorkspaceCacheManager({ port: 3000 });",
+				"'3000': { state: 'active', activeConnections: 1, port: 3000 },",
+				"instance._withLock = async (fn) => fn();",
+				"instance._readCache = vi.fn().mockResolvedValue(cache);",
+				"instance._writeCache = vi.fn().mockResolvedValue(undefined);",
+				"await instance.updateWorkspaceState(3000, { state: 'shutting_down', activeConnections: 0 });",
+				"expect(instance._writeCache).toHaveBeenCalledWith(expect.objectContaining({",
+			},
+			forbidden: []string{"updateWorkspaceState(undefined", "const result = await instance.updateWorkspaceState"},
+		},
+		{
 			name:     "vitest sse add connection mocks express req res",
 			fileName: "sse-manager.js",
 			source: `export class SSEManager {
