@@ -991,6 +991,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if seed, ok := goHTTPRequestSeedTestCase(fn, task); ok {
 		return seed, true
 	}
+	if seed, ok := goUnixSocketResponseSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if seed, ok := goBranchSeedTestCase(fn, task); ok {
 		return seed, true
 	}
@@ -1483,6 +1486,90 @@ func goTaskLooksLikeSuccessReturnPath(task *types.CoverageTestTask) bool {
 	return strings.Contains(hints, "返回路径") && !strings.Contains(hints, "err != nil")
 }
 
+func goUnixSocketResponseSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	inputs, ok := goUnixSocketResponseInputs(fn)
+	if !ok {
+		return goSeedCase{}, false
+	}
+	switch fn.Name {
+	case "RunClient":
+		if !goReturnsOnlyError(fn) || !strings.Contains(hints, `resp.Error == ""`) {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert:  goAssertErrorPath,
+			Inputs:  inputs,
+			Outputs: map[string]string{},
+			Setup:   goUnixSocketResponseSetup(`{"ok":false}`),
+		}, true
+	case "QueryStatus":
+		if len(fn.Returns) != 2 || fn.Returns[1].Type != "error" || !strings.Contains(hints, `status.SocketPath == ""`) {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert:  goAssertErrorPath,
+			Inputs:  inputs,
+			Outputs: map[string]string{fn.Returns[0].Name: zeroValue(fn.Returns[0].Type)},
+			Setup:   goUnixSocketResponseSetup(`{}`),
+		}, true
+	case "SendControl":
+		if len(fn.Returns) != 2 || fn.Returns[1].Type != "error" || !strings.Contains(hints, `!resp.OK && resp.Error == ""`) {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert: goAssertExact,
+			Inputs: inputs,
+			Outputs: map[string]string{
+				fn.Returns[0].Name: `ControlResponse{Error: "control failed"}`,
+				fn.Returns[1].Name: "nil",
+			},
+			Setup: goUnixSocketResponseSetup(`{"ok":false}`),
+		}, true
+	default:
+		return goSeedCase{}, false
+	}
+}
+
+func goUnixSocketResponseInputs(fn funcInfo) (map[string]string, bool) {
+	inputs := map[string]string{}
+	hasSocketPath := false
+	for i, p := range fn.Params {
+		value := goArgValue(p, i)
+		if p.Type == "string" && goSocketPathParamName(p.Name) {
+			value = `filepath.Join(t.TempDir(), "s")`
+			hasSocketPath = true
+		}
+		inputs[p.Name] = value
+	}
+	if !hasSocketPath {
+		return nil, false
+	}
+	return inputs, true
+}
+
+func goUnixSocketResponseSetup(response string) []string {
+	return []string{
+		`listener, listenErr := net.Listen("unix", tt.socketPath)`,
+		`if listenErr != nil {`,
+		"\tt.Fatalf(\"listen unix socket: %v\", listenErr)",
+		`}`,
+		`t.Cleanup(func() { _ = listener.Close() })`,
+		`go func() {`,
+		"\tconn, acceptErr := listener.Accept()",
+		"\tif acceptErr != nil {",
+		"\t\treturn",
+		"\t}",
+		"\tdefer conn.Close()",
+		"\t_, _ = bufio.NewReader(conn).ReadBytes('\\n')",
+		fmt.Sprintf("\t_, _ = conn.Write([]byte(%q + \"\\n\"))", response),
+		`}()`,
+	}
+}
+
 func goBranchSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
 	if task == nil || task.GapType != "branch" || len(fn.Boundaries) == 0 || len(fn.Returns) == 0 {
 		return goSeedCase{}, false
@@ -1610,6 +1697,10 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		for _, p := range fn.Params {
 			if p.Type != "string" || !goSocketPathParamName(p.Name) {
 				continue
+			}
+			if boundary.ErrSource == "ReadBytes" || boundary.ErrSource == "json.Unmarshal" {
+				inputs[p.Name] = `filepath.Join(t.TempDir(), "s")`
+				return inputs, true
 			}
 			inputs[p.Name] = `filepath.Join(t.TempDir(), "missing.sock")`
 			return inputs, true
