@@ -3313,6 +3313,32 @@ func TestJSFuncCoverageTaskFindCodexPathUsesPublicConstructorOrManualReview(t *t
 		"it.skip(",
 	})
 
+	task.LineRange = "343-344"
+	task.TestName = "covers linux x64 target triple"
+	code = genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"Object.defineProperty(process, 'platform', { value: 'linux' });",
+		"Object.defineProperty(process, 'arch', { value: 'x64' });",
+		"expect(() => new CodexExec(null)).toThrow('Unable to locate Codex CLI binaries');",
+	}, []string{
+		"import { findCodexPath }",
+		"findCodexPath()",
+		"it.skip(",
+	})
+
+	task.LineRange = "373-373"
+	task.TestName = "covers win32 unsupported arch"
+	code = genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"Object.defineProperty(process, 'platform', { value: 'win32' });",
+		"Object.defineProperty(process, 'arch', { value: 'mips' });",
+		"expect(() => new CodexExec(null)).toThrow('Unsupported platform');",
+	}, []string{
+		"import { findCodexPath }",
+		"findCodexPath()",
+		"it.skip(",
+	})
+
 	task.LineRange = "403-407"
 	task.TestName = "covers missing native package"
 	code = genJSFuncTestForCoverageTask(fn, &task)

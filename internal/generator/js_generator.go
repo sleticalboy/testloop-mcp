@@ -647,10 +647,73 @@ func genJSParseIPPrivateParserCoverageTask(task *types.CoverageTestTask, testNam
 }
 
 func genJSFindCodexPathCoverageTask(task *types.CoverageTestTask, testName string) string {
+	if scenario, ok := jsFindCodexPathPlatformScenarioForTask(task); ok {
+		return genJSFindCodexPathPlatformTask(task, testName, scenario)
+	}
 	if task != nil && strings.HasPrefix(strings.TrimSpace(task.LineRange), "380") {
 		return genJSFindCodexPathUnsupportedPlatformTask(task, testName)
 	}
 	return genJSFindCodexPathManualReviewTask(task, testName)
+}
+
+type jsFindCodexPathPlatformScenario struct {
+	platform      string
+	arch          string
+	errorContains string
+}
+
+func jsFindCodexPathPlatformScenarioForTask(task *types.CoverageTestTask) (jsFindCodexPathPlatformScenario, bool) {
+	if task == nil || strings.TrimSpace(task.Target) != "findCodexPath" {
+		return jsFindCodexPathPlatformScenario{}, false
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	switch {
+	case strings.HasPrefix(lineRange, "335") || strings.HasPrefix(lineRange, "337"):
+		return jsFindCodexPathPlatformScenario{platform: "linux", arch: "mips", errorContains: "Unsupported platform"}, true
+	case strings.HasPrefix(lineRange, "343"):
+		return jsFindCodexPathPlatformScenario{platform: "linux", arch: "x64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "346"):
+		return jsFindCodexPathPlatformScenario{platform: "linux", arch: "arm64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "349") || strings.HasPrefix(lineRange, "351"):
+		return jsFindCodexPathPlatformScenario{platform: "linux", arch: "mips", errorContains: "Unsupported platform"}, true
+	case strings.HasPrefix(lineRange, "355"):
+		return jsFindCodexPathPlatformScenario{platform: "darwin", arch: "x64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "358"):
+		return jsFindCodexPathPlatformScenario{platform: "darwin", arch: "arm64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "361") || strings.HasPrefix(lineRange, "363"):
+		return jsFindCodexPathPlatformScenario{platform: "darwin", arch: "mips", errorContains: "Unsupported platform"}, true
+	case strings.HasPrefix(lineRange, "367"):
+		return jsFindCodexPathPlatformScenario{platform: "win32", arch: "x64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "370"):
+		return jsFindCodexPathPlatformScenario{platform: "win32", arch: "arm64", errorContains: "Unable to locate Codex CLI binaries"}, true
+	case strings.HasPrefix(lineRange, "373") || strings.HasPrefix(lineRange, "375"):
+		return jsFindCodexPathPlatformScenario{platform: "win32", arch: "mips", errorContains: "Unsupported platform"}, true
+	default:
+		return jsFindCodexPathPlatformScenario{}, false
+	}
+}
+
+func genJSFindCodexPathPlatformTask(task *types.CoverageTestTask, testName string, scenario jsFindCodexPathPlatformScenario) string {
+	var sb strings.Builder
+	sb.WriteString("describe('findCodexPath', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const originalPlatform = process.platform;\n")
+	sb.WriteString("    const originalArch = process.arch;\n")
+	sb.WriteString(fmt.Sprintf("    Object.defineProperty(process, 'platform', { value: '%s' });\n", scenario.platform))
+	sb.WriteString(fmt.Sprintf("    Object.defineProperty(process, 'arch', { value: '%s' });\n", scenario.arch))
+	sb.WriteString("    try {\n")
+	sb.WriteString("      const { CodexExec } = await import('../src/exec');\n")
+	sb.WriteString(fmt.Sprintf("      expect(() => new CodexExec(null)).toThrow('%s');\n", scenario.errorContains))
+	sb.WriteString("    } finally {\n")
+	sb.WriteString("      Object.defineProperty(process, 'platform', { value: originalPlatform });\n")
+	sb.WriteString("      Object.defineProperty(process, 'arch', { value: originalArch });\n")
+	sb.WriteString("    }\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
 }
 
 func genJSFindCodexPathUnsupportedPlatformTask(task *types.CoverageTestTask, testName string) string {

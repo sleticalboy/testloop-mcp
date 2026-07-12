@@ -31,6 +31,7 @@
 - JS/TS coverage task 会为 `CodexExec.run` 参数分支生成分支专属断言，覆盖 `--model`、`--sandbox`、`--cd`、`--add-dir`、`--output-schema`、网络/搜索/审批配置、PATH prepend、`CODEX_API_KEY` 和缺失 stdin/stdout 错误路径，避免用泛化 spawn error 测试掩盖低价值覆盖。
 - JS/TS coverage task 会为 `CodexExec.run` 的 stdout yield 分支生成 `for await` 收集断言，兼容不支持 `Array.fromAsync` 的 Jest/Node 环境。
 - JS/TS coverage task 会为 Codex SDK 配置序列化分支生成更具体的 TOML 断言，覆盖 inline object、对象中 `undefined` child skip、unsupported value 错误路径，以及 `CodexExec.run` 内 config override loop。
+- JS/TS coverage task 会通过 `CodexExec(null)` 公共入口和临时覆盖 `process.platform/process.arch` 覆盖 `findCodexPath` 的 linux/darwin/win32 平台映射分支，将仅依赖平台选择的任务从 `manual_review_internal` 转为 ready。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。
