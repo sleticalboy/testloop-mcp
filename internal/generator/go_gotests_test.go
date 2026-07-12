@@ -2578,6 +2578,115 @@ func Parse(secret, raw string) (*Claims, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskAssertsGinFailWithErrBranches(t *testing.T) {
+	src := `package resp
+
+import (
+	"errors"
+	berr "quicksmoke/backendgo/internal/errors"
+
+	"github.com/gin-gonic/gin"
+)
+
+type APIResponse struct {
+	ResultCode    int    ` + "`json:\"resultCode\"`" + `
+	ResultMessage string ` + "`json:\"resultMessage\"`" + `
+	Success       bool   ` + "`json:\"success\"`" + `
+}
+
+func FailWithErr(c *gin.Context, err error) {
+	if err == nil {
+		err = berr.ErrSystemError
+	}
+	var biz *berr.BizError
+	if errors.As(err, &biz) {
+		Fail(c, biz.Code, biz.Message)
+		return
+	}
+	Fail(c, berr.ErrSystemError.Code, berr.ErrSystemError.Message)
+}
+
+func Fail(c *gin.Context, code int, msg string) {}
+`
+	srcPath := filepath.Join(t.TempDir(), "resp.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		task types.CoverageTestTask
+		want []string
+	}{
+		{
+			name: "nil error",
+			task: types.CoverageTestTask{
+				ID:              "go-test-fail-with-nil",
+				Framework:       "go-test",
+				Target:          "FailWithErr",
+				LineRange:       "15-18",
+				GapType:         "branch",
+				TestName:        "TestFailWithErrNil",
+				MissingBranches: []string{"未覆盖 if 分支: err == nil"},
+				AssertionFocus:  []string{"断言 nil error 响应"},
+			},
+			want: []string{
+				`"encoding/json"`,
+				`"net/http/httptest"`,
+				`"github.com/gin-gonic/gin"`,
+				"gin.SetMode(gin.TestMode)",
+				"w := httptest.NewRecorder()",
+				"c, _ := gin.CreateTestContext(w)",
+				`c.Request = httptest.NewRequest("GET", "/test", nil)`,
+				"err:  nil",
+				"var got APIResponse",
+				"if got.ResultCode != 2000 || got.ResultMessage != \"系统异常\" || got.Success",
+			},
+		},
+		{
+			name: "biz error",
+			task: types.CoverageTestTask{
+				ID:              "go-test-fail-with-biz",
+				Framework:       "go-test",
+				Target:          "FailWithErr",
+				LineRange:       "20-24",
+				GapType:         "branch",
+				TestName:        "TestFailWithErrBiz",
+				MissingBranches: []string{"未覆盖 if 分支: errors.As(err, &biz)"},
+				AssertionFocus:  []string{"断言业务 error 响应"},
+			},
+			want: []string{
+				`berr "quicksmoke/backendgo/internal/errors"`,
+				"err:  berr.ErrParamInvalid",
+				"if got.ResultCode != 1006 || got.ResultMessage != \"参数异常\" || got.Success",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range []string{
+				"skip: true",
+				"\"net/http\"\n",
+				`"errors"`,
+				"TODO: 填写有意义的输入",
+			} {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskAssertsTimeDateZeroReturn(t *testing.T) {
 	src := `package sample
 

@@ -255,24 +255,34 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	needTime := false
 	needErrors := false
 	needFilepath := false
-	needHTTPServer := false
+	needHTTP := false
+	needHTTPTest := false
+	needEncodingJSON := false
 	neededTypeImports := make(map[string]string)
+	neededImportAliases := make(map[string]string)
 	for _, fn := range funcs {
 		seedCase, hasSeedCase := goSeedTestCase(fn, task)
 		if hasSeedCase && seedCase.Assert == goAssertTimeFormat {
 			needTime = true
 		}
 		if hasSeedCase && seedCase.HTTPServerBody != "" {
-			needHTTPServer = true
+			needHTTP = true
+			needHTTPTest = true
+		}
+		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "http") {
+			needHTTP = true
 		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "httptest") {
-			needHTTPServer = true
+			needHTTPTest = true
 		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "errors") {
 			needErrors = true
 		}
 		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "filepath") {
 			needFilepath = true
+		}
+		if hasSeedCase && goSeedCaseUsesPackage(seedCase, "json") {
+			needEncodingJSON = true
 		}
 		if hasSeedCase && seedCase.Assert != goAssertExact && seedCase.Assert != goAssertErrorPath {
 			continue
@@ -295,6 +305,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 			neededTypeImports[alias] = importPath
 		}
 		if seedCase, ok := goSeedTestCase(fn, task); ok {
+			for alias, importPath := range seedCase.ImportAliases {
+				neededImportAliases[importPath] = alias
+			}
 			for alias, importPath := range goNeededSeedImports(seedCase, sourceImports) {
 				neededTypeImports[alias] = importPath
 			}
@@ -317,9 +330,14 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	if needReflect {
 		imports["reflect"] = true
 	}
-	if needHTTPServer {
+	if needHTTP {
 		imports["net/http"] = true
+	}
+	if needHTTPTest {
 		imports["net/http/httptest"] = true
+	}
+	if needEncodingJSON {
+		imports["encoding/json"] = true
 	}
 	for _, importPath := range neededTypeImports {
 		imports[importPath] = true
@@ -330,6 +348,10 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 	}
 	sort.Strings(importList)
 	for _, importPath := range importList {
+		if alias := neededImportAliases[importPath]; alias != "" {
+			buf.WriteString(fmt.Sprintf("\t%s %q\n", alias, importPath))
+			continue
+		}
 		buf.WriteString(fmt.Sprintf("\t%q\n", importPath))
 	}
 	buf.WriteString(")\n\n")
@@ -526,7 +548,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 	pointerValueCase := hasSeedCase && seedCase.Assert == goAssertPointerValue
 	recoverPanicCase := hasSeedCase && seedCase.Assert == goAssertRecoverPanic
 	receiverMutationCase := hasSeedCase && seedCase.Assert == goAssertReceiverMutation
-	expectedReturnFields := !smokeCase && !nonNilResultCase && !pointerValueCase && !recoverPanicCase && !receiverMutationCase && (!hasSeedCase || exactCase || errorPathCase)
+	postAssertCase := hasSeedCase && seedCase.Assert == goAssertPostAssert
+	expectedReturnFields := !smokeCase && !nonNilResultCase && !pointerValueCase && !recoverPanicCase && !receiverMutationCase && !postAssertCase && (!hasSeedCase || exactCase || errorPathCase)
 
 	// 定义测试用例结构体
 	sb.WriteString("\ttype testCase struct {\n")
@@ -674,6 +697,8 @@ func genTableDrivenTestForTask(fn funcInfo, task *types.CoverageTestTask) string
 		writeGoRecoverPanicCall(&sb, callExpr)
 	} else if receiverMutationCase {
 		writeGoReceiverMutationCall(&sb, fn, callExpr, seedCase)
+	} else if postAssertCase {
+		writeGoPostAssertCall(&sb, fn, callExpr, seedCase)
 	} else if len(fn.Returns) == 0 {
 		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
 	} else if len(fn.Returns) == 1 {
@@ -827,6 +852,17 @@ func writeGoReceiverMutationCall(sb *strings.Builder, fn funcInfo, callExpr stri
 	}
 }
 
+func writeGoPostAssertCall(sb *strings.Builder, fn funcInfo, callExpr string, seed goSeedCase) {
+	if len(fn.Returns) == 0 {
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", callExpr))
+	} else {
+		writeGoSmokeCall(sb, fn, callExpr)
+	}
+	for _, line := range seed.PostAssert {
+		sb.WriteString(fmt.Sprintf("\t\t\t%s\n", line))
+	}
+}
+
 func writeGoHTTPServerSetup(sb *strings.Builder, fn funcInfo, body string) {
 	urlField := ""
 	for _, p := range fn.Params {
@@ -925,6 +961,7 @@ const (
 	goAssertPointerValue     goAssertionKind = "pointer_value"
 	goAssertRecoverPanic     goAssertionKind = "recover_panic"
 	goAssertReceiverMutation goAssertionKind = "receiver_mutation"
+	goAssertPostAssert       goAssertionKind = "post_assert"
 	goAssertTimeFormat       goAssertionKind = "time_format"
 	goAssertTimeDateZero     goAssertionKind = "time_date_zero"
 )
@@ -935,6 +972,7 @@ type goSeedCase struct {
 	Outputs        map[string]string
 	Setup          []string
 	PostAssert     []string
+	ImportAliases  map[string]string
 	TimeLayout     string
 	HTTPServerBody string
 }
@@ -992,6 +1030,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 		return seed, true
 	}
 	if seed, ok := goJWTSeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goGinFailWithErrSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if seed, ok := goHTTPWrapperSeedTestCase(fn, task); ok {
@@ -1285,6 +1326,57 @@ func goJWTParseSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCa
 		Assert:  goAssertErrorPath,
 		Inputs:  inputs,
 		Outputs: map[string]string{fn.Returns[0].Name: "nil"},
+	}, true
+}
+
+func goGinFailWithErrSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || fn.Name != "FailWithErr" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 2 || fn.Params[0].Type != "*gin.Context" || fn.Params[1].Type != "error" || len(fn.Returns) != 0 {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	errInput := "nil"
+	expectedCode := "2000"
+	expectedMessage := `"系统异常"`
+	importAliases := map[string]string{}
+	switch {
+	case strings.Contains(hints, "err == nil"):
+	case strings.Contains(hints, "errors.As"):
+		errInput = "berr.ErrParamInvalid"
+		expectedCode = "1006"
+		expectedMessage = `"参数异常"`
+		importAliases["berr"] = "quicksmoke/backendgo/internal/errors"
+	default:
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert: goAssertPostAssert,
+		Inputs: map[string]string{
+			fn.Params[0].Name: "nil",
+			fn.Params[1].Name: errInput,
+		},
+		Setup: []string{
+			"gin.SetMode(gin.TestMode)",
+			"w := httptest.NewRecorder()",
+			"c, _ := gin.CreateTestContext(w)",
+			`c.Request = httptest.NewRequest("GET", "/test", nil)`,
+			fmt.Sprintf("tt.%s = c", goTestCaseFieldName(fn.Params[0].Name)),
+		},
+		PostAssert: []string{
+			"if w.Code != 200 {",
+			`t.Errorf("status code = %d, want 200", w.Code)`,
+			"}",
+			"var got APIResponse",
+			"if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {",
+			`t.Fatalf("decode response: %v", err)`,
+			"}",
+			fmt.Sprintf("if got.ResultCode != %s || got.ResultMessage != %s || got.Success {", expectedCode, expectedMessage),
+			`t.Errorf("response = {code: %d, message: %q, success: %v}", got.ResultCode, got.ResultMessage, got.Success)`,
+			"}",
+		},
+		ImportAliases: importAliases,
 	}, true
 }
 
