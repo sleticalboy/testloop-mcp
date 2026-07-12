@@ -966,9 +966,6 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if seed, ok := goRecoverSeedTestCase(fn, task); ok {
 		return seed, true
 	}
-	if fn.IsVariadic {
-		return goSeedCase{}, false
-	}
 	if seed, ok := goAliasUtilitySeedTestCase(fn, task); ok {
 		return seed, true
 	}
@@ -986,6 +983,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	}
 	if seed, ok := goBranchSeedTestCase(fn, task); ok {
 		return seed, true
+	}
+	if fn.IsVariadic {
+		return goSeedCase{}, false
 	}
 	if len(fn.Returns) != 1 || fn.Returns[0].Type == "error" {
 		return goSeedCase{}, false

@@ -1443,6 +1443,66 @@ func QueryStatus(socketPath string) (Status, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesVariadicStringGuardForMultiReturnErrorPath(t *testing.T) {
+	src := `package sample
+
+import "fmt"
+
+type ControlOptions struct {
+	Force bool
+}
+
+type ControlResponse struct {
+	OK bool
+}
+
+func SendControl(socketPath, control string, opts ...ControlOptions) (ControlResponse, error) {
+	if control == "" {
+		return ControlResponse{}, fmt.Errorf("control is required")
+	}
+	return ControlResponse{OK: true}, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-send-control",
+		Framework:       "go-test",
+		Target:          "SendControl",
+		LineRange:       "13-15",
+		GapType:         "branch",
+		TestName:        "TestSendControl",
+		MissingBranches: []string{`未覆盖 if 分支: control == ""`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`control == \"\"`" + ` 的输入`},
+		AssertionFocus:  []string{"断言错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestSendControl(t *testing.T)",
+		"opts       []ControlOptions",
+		"skip:       false",
+		`socketPath: "test"`,
+		`control:    ""`,
+		"opts:       nil",
+		"ret0:       *new(ControlResponse)",
+		"got0, got1 := SendControl(tt.socketPath, tt.control, tt.opts...)",
+		"if got1 == nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+		t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskExplainsUnsafeBranchFallback(t *testing.T) {
 	src := `package sample
 
