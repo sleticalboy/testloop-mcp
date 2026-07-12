@@ -151,6 +151,9 @@ func jsMarkExportMetadata(source string, ctx *jsParseCtx) {
 			ctx.isESModule = true
 		}
 	}
+	for i := range ctx.classes {
+		ctx.classes[i].SourceIsESModule = ctx.isESModule
+	}
 }
 
 func jsDefaultExportName(source string) string {

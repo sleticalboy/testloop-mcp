@@ -1862,6 +1862,86 @@ export default logger
 			},
 			forbidden: []string{"instance.#diffConfigs", "const result ="},
 		},
+		{
+			name:     "vitest internal esm class manual review",
+			fileName: "oauth-provider.js",
+			source: `class StorageManager {
+  get(serverUrl) {
+    if (!serversStorage[serverUrl]) {
+      serversStorage[serverUrl] = { tokens: null }
+    }
+    return serversStorage[serverUrl]
+  }
+}
+
+const storage = new StorageManager()
+
+export default class MCPHubOAuthProvider {
+  async tokens() {
+    return storage.get(this.serverUrl).tokens
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-storage-get-1",
+				Framework:       "vitest",
+				Target:          "StorageManager.get",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers StorageManager get missing server",
+				SuggestedInputs: []string{"构造满足条件 `!serversStorage[serverUrl]` 的输入"},
+			},
+			wants: []string{
+				"import './oauth-provider';",
+				"it.skip('covers StorageManager get missing server'",
+				"manual_review_internal: StorageManager is not exported from this ES module",
+			},
+			forbidden: []string{"import { StorageManager }", "new StorageManager()"},
+		},
+		{
+			name:     "vitest sse add connection mocks express req res",
+			fileName: "sse-manager.js",
+			source: `export class SSEManager {
+  constructor(options = {}) {
+    this.connections = new Map()
+    this.shutdownTimer = null
+  }
+
+  async addConnection(req, res) {
+    const connection = {
+      send: (event, data) => {
+        if (res.writableEnded) return false
+        res.write(event)
+        return true
+      }
+    }
+    res.setHeader('Content-Type', 'text/event-stream')
+    req.on('close', () => {})
+    if (this.shutdownTimer) {
+      clearTimeout(this.shutdownTimer)
+      this.shutdownTimer = null
+    }
+    this.connections.set('id', connection)
+    return connection
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-sse-shutdown-1",
+				Framework:       "vitest",
+				Target:          "SSEManager.addConnection",
+				LineRange:       "17-17",
+				GapType:         "branch",
+				TestName:        "covers SSEManager addConnection shutdown timer",
+				SuggestedInputs: []string{"构造满足条件 `this.shutdownTimer` 的输入", "设置 req 覆盖未执行分支", "设置 res 覆盖未执行分支"},
+			},
+			wants: []string{
+				"const instance = Object.assign(new SSEManager({}), { shutdownTimer: setTimeout(() => {}, 1000) });",
+				"const result = await instance.addConnection({ on: () => {} }, { writableEnded: false, setHeader: () => {}, write: () => {}, end: () => {} });",
+				"expect(result).toBeDefined();",
+			},
+			forbidden: []string{"undefined, { json", "res.setHeader is not a function"},
+		},
 	}
 
 	for _, tt := range tests {

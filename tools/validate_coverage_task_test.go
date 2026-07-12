@@ -590,6 +590,85 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksJSInternalClassAsManualReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "oauth-provider.js")
+	src := `class StorageManager {
+  get(serverUrl) {
+    if (!serversStorage[serverUrl]) {
+      serversStorage[serverUrl] = { tokens: null }
+    }
+    return serversStorage[serverUrl]
+  }
+}
+
+const storage = new StorageManager()
+
+export default class MCPHubOAuthProvider {
+  async tokens() {
+    return storage.get(this.serverUrl).tokens
+  }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeNpx(t, strings.Join([]string{
+		" RUN  v3.2.4 " + dir,
+		"",
+		" ↓ oauth-provider.test.js (1 test | 1 skipped)",
+		"",
+		" Test Files  1 skipped (1)",
+		"      Tests  1 skipped (1)",
+	}, "\n"))
+	task := types.CoverageTestTask{
+		ID:              "vitest-internal-1",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "StorageManager.get",
+		Kind:            "method",
+		LineRange:       "3-3",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: !serversStorage[serverUrl]"},
+		SuggestedInputs: []string{"构造满足条件 `!serversStorage[serverUrl]` 的输入"},
+		TestFile:        filepath.Join(dir, "oauth-provider.test.js"),
+		TestName:        "covers StorageManager internal get",
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "manual_review_internal" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.Metadata["internal_symbol"] != true {
+		t.Fatalf("expected internal symbol metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["internal_reason"].(string)
+	if !strings.Contains(reason, "StorageManager.get") || !strings.Contains(reason, "not exported") {
+		t.Fatalf("unexpected internal reason: %q", reason)
+	}
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_internal: StorageManager") ||
+		strings.Contains(out.Generated.Preview, "new StorageManager()") {
+		t.Fatalf("expected generated internal review skip, got %+v", out.Generated)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",
