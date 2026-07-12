@@ -12,6 +12,9 @@
 - `validate_coverage_task` 会将静态生成器无法稳定构造的 socket write / streaming I/O 错误分支标记为 `manual_review_protocol`，避免继续以普通 `ready` skipped TODO 暴露给 Agent。
 - Go 测试文件写入会对新建文件和合并文件统一执行 import 整理，避免 coverage task 只生成单个目标测试时保留未使用 import 导致构建失败。
 - Go return 表达式提取支持空 composite literal，例如 `Status{}`，用于识别多返回值 error 分支中的零值返回。
+- Go static generator 支持泛型 helper 的 `return &param`、nil 指针返回零值和非 nil 指针解引用返回路径，例如 `anyPtr[T]` / `derefAny[T]` 会生成真实指针值或返回值断言。
+- Go static generator 支持 nil pointer receiver 的字符串分支，例如 `(*BizError).Error()` 的 `receiver == nil` 分支会生成非 skipped 测试并断言空字符串。
+- Go static generator 支持 JWT `Parse(secret, raw)` 的常见错误分支，可生成错误签名算法 token 或非法 token 输入，并自动补齐 `/vN` 语义版本 import 的源码包名别名。
 
 ## v0.4.14 - 2026-07-11
 

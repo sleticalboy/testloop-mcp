@@ -967,16 +967,28 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if seed, ok := goBeforeSaveSeedTestCase(fn, task); ok {
 		return seed, true
 	}
+	if seed, ok := goNilReceiverStringSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if fn.IsMethod {
 		return goSeedCase{}, false
 	}
 	if seed, ok := goPointerSeedTestCase(fn, task); ok {
 		return seed, true
 	}
+	if seed, ok := goParamAddressSeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goPointerDerefSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if seed, ok := goRecoverSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if seed, ok := goAliasUtilitySeedTestCase(fn, task); ok {
+		return seed, true
+	}
+	if seed, ok := goJWTParseSeedTestCase(fn, task); ok {
 		return seed, true
 	}
 	if seed, ok := goJWTSeedTestCase(fn, task); ok {
@@ -1058,6 +1070,80 @@ func goPointerSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCas
 		},
 		Outputs: map[string]string{},
 	}, true
+}
+
+func goParamAddressSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "return_path" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 1 || len(fn.Returns) != 1 || !strings.HasPrefix(fn.Returns[0].Type, "*") {
+		return goSeedCase{}, false
+	}
+	if strings.TrimSpace(fn.FinalReturn) != "&"+fn.Params[0].Name {
+		return goSeedCase{}, false
+	}
+	if !goTypeSupportsExactSeed(strings.TrimPrefix(fn.Returns[0].Type, "*")) {
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert: goAssertPointerValue,
+		Inputs: map[string]string{
+			fn.Params[0].Name: goArgValue(fn.Params[0], 0),
+		},
+		Outputs: map[string]string{},
+	}, true
+}
+
+func goPointerDerefSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || len(fn.Params) != 1 || len(fn.Returns) != 1 {
+		return goSeedCase{}, false
+	}
+	param := fn.Params[0]
+	ret := fn.Returns[0]
+	if !strings.HasPrefix(param.Type, "*") || strings.TrimPrefix(param.Type, "*") != ret.Type || !goTypeSupportsExactSeed(ret.Type) {
+		return goSeedCase{}, false
+	}
+
+	switch task.GapType {
+	case "branch":
+		boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
+		if boundary == nil || boundary.Param != param.Name || boundary.Op != "==" || boundary.Value != "nil" {
+			return goSeedCase{}, false
+		}
+		if strings.TrimSpace(boundary.ReturnExpr) != "*new(T)" && strings.TrimSpace(boundary.ReturnExpr) != "*new("+ret.Type+")" {
+			return goSeedCase{}, false
+		}
+		return goSeedCase{
+			Assert: goAssertExact,
+			Inputs: map[string]string{
+				param.Name: "nil",
+			},
+			Outputs: map[string]string{
+				ret.Name: zeroValue(ret.Type),
+			},
+		}, true
+	case "return_path":
+		if strings.TrimSpace(fn.FinalReturn) != "*"+param.Name {
+			return goSeedCase{}, false
+		}
+		input := goAddressableExactSeedValue(param.Type, goArgValue(paramInfo{Name: param.Name, Type: ret.Type}, 0))
+		return goSeedCase{
+			Assert: goAssertExact,
+			Inputs: map[string]string{
+				param.Name: input,
+			},
+			Outputs: map[string]string{
+				ret.Name: goArgValue(paramInfo{Name: param.Name, Type: ret.Type}, 0),
+			},
+		}, true
+	default:
+		return goSeedCase{}, false
+	}
+}
+
+func goAddressableExactSeedValue(pointerType string, value string) string {
+	elem := strings.TrimPrefix(pointerType, "*")
+	return fmt.Sprintf("func() *%s { v := %s; return &v }()", elem, value)
 }
 
 func goRecoverSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
@@ -1173,6 +1259,35 @@ func goJWTSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, b
 	}, true
 }
 
+func goJWTParseSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || task.GapType != "branch" || fn.Name != "Parse" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Params) != 2 || fn.Params[0].Type != "string" || fn.Params[1].Type != "string" {
+		return goSeedCase{}, false
+	}
+	if len(fn.Returns) != 2 || !strings.HasPrefix(fn.Returns[0].Type, "*") || fn.Returns[1].Type != "error" {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	inputs := map[string]string{
+		fn.Params[0].Name: `"test-secret"`,
+	}
+	switch {
+	case strings.Contains(hints, "token.Method.Alg()") || strings.Contains(hints, "SigningMethodHS384"):
+		inputs[fn.Params[1].Name] = `func() string { token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{}); raw, _ := token.SignedString([]byte("test-secret")); return raw }()`
+	case strings.Contains(hints, "err != nil") || strings.Contains(hints, "!token.Valid"):
+		inputs[fn.Params[1].Name] = `"not-a-token"`
+	default:
+		return goSeedCase{}, false
+	}
+	return goSeedCase{
+		Assert:  goAssertErrorPath,
+		Inputs:  inputs,
+		Outputs: map[string]string{fn.Returns[0].Name: "nil"},
+	}, true
+}
+
 func goTraceTransportSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
 	if task == nil || task.GapType != "branch" || !fn.IsMethod || fn.Name != "RoundTrip" || strings.TrimPrefix(fn.ReceiverType, "*") != "TraceTransport" {
 		return goSeedCase{}, false
@@ -1241,6 +1356,29 @@ func goBeforeSaveSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeed
 		Outputs:    map[string]string{},
 		Setup:      setup,
 		PostAssert: postAssert,
+	}, true
+}
+
+func goNilReceiverStringSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || !fn.IsMethod || task.GapType != "branch" {
+		return goSeedCase{}, false
+	}
+	if !strings.HasPrefix(fn.ReceiverType, "*") || len(fn.Params) != 0 || len(fn.Returns) != 1 || fn.Returns[0].Type != "string" {
+		return goSeedCase{}, false
+	}
+	boundary := goBoundaryForCoverageTask(fn.Boundaries, task)
+	if boundary == nil || boundary.Param != fn.Receiver || boundary.Op != "==" || boundary.Value != "nil" {
+		return goSeedCase{}, false
+	}
+	if strings.TrimSpace(boundary.ReturnExpr) != `""` {
+		return goSeedCase{}, false
+	}
+	receiverVar := goTestReceiverVar(fn)
+	return goSeedCase{
+		Assert:  goAssertExact,
+		Inputs:  map[string]string{},
+		Outputs: map[string]string{fn.Returns[0].Name: `""`},
+		Setup:   []string{receiverVar + " = nil"},
 	}, true
 }
 
@@ -2951,7 +3089,13 @@ func goImportAliases(file *ast.File) map[string]string {
 			aliases[name] = importPath
 			continue
 		}
-		aliases[path.Base(importPath)] = importPath
+		base := path.Base(importPath)
+		aliases[base] = importPath
+		if len(base) > 1 && base[0] == 'v' {
+			if _, err := strconv.Atoi(base[1:]); err == nil {
+				aliases[path.Base(path.Dir(importPath))] = importPath
+			}
+		}
 	}
 	return aliases
 }

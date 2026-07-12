@@ -2289,6 +2289,295 @@ func GetNowDate() string {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskAssertsGenericParamAddressReturn(t *testing.T) {
+	src := `package sample
+
+func anyPtr[T any](v T) *T {
+	return &v
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "helpers.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:             "go-test-any-ptr",
+		Framework:      "go-test",
+		Target:         "anyPtr",
+		LineRange:      "3-5",
+		GapType:        "return_path",
+		TestName:       "TestAnyPtr",
+		AssertionFocus: []string{"断言未覆盖返回路径的具体结果"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestAnyPtr(t *testing.T)",
+		"skip: false",
+		"v:    1",
+		"got := anyPtr[int](tt.v)",
+		"if got == nil",
+		"if *got != tt.v",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"ret0 *int",
+		"got != tt.ret0",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskAssertsGenericPointerDeref(t *testing.T) {
+	src := `package sample
+
+func derefAny[T any](v *T) T {
+	if v == nil {
+		return *new(T)
+	}
+	return *v
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "helpers.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name    string
+		task    types.CoverageTestTask
+		want    []string
+		notWant []string
+	}{
+		{
+			name: "nil branch",
+			task: types.CoverageTestTask{
+				ID:              "go-test-deref-nil",
+				Framework:       "go-test",
+				Target:          "derefAny",
+				LineRange:       "4-6",
+				GapType:         "branch",
+				TestName:        "TestDerefAnyNil",
+				MissingBranches: []string{"未覆盖 if 分支: v == nil"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			want: []string{
+				"func TestDerefAnyNil(t *testing.T)",
+				"skip: false",
+				"v:    nil",
+				"ret0: 0",
+				"got := derefAny[int](tt.v)",
+				"if got != tt.ret0",
+			},
+			notWant: []string{"skip: true"},
+		},
+		{
+			name: "non nil return",
+			task: types.CoverageTestTask{
+				ID:             "go-test-deref-return",
+				Framework:      "go-test",
+				Target:         "derefAny",
+				LineRange:      "7-7",
+				GapType:        "return_path",
+				TestName:       "TestDerefAnyReturn",
+				AssertionFocus: []string{"断言未覆盖返回路径的具体结果"},
+			},
+			want: []string{
+				"func TestDerefAnyReturn(t *testing.T)",
+				"skip: false",
+				"v:    func() *int { v := 1; return &v }()",
+				"ret0: 1",
+				"got := derefAny[int](tt.v)",
+				"if got != tt.ret0",
+			},
+			notWant: []string{"skip: true"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskAssertsNilReceiverStringBranch(t *testing.T) {
+	src := `package sample
+
+type BizError struct {
+	Message string
+}
+
+func (e *BizError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return e.Message
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "biz_err.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-nil-receiver",
+		Framework:       "go-test",
+		Target:          "BizError.Error",
+		LineRange:       "7-10",
+		GapType:         "branch",
+		TestName:        "TestBizErrorError",
+		MissingBranches: []string{"未覆盖 if 分支: e == nil"},
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"func TestBizErrorError(t *testing.T)",
+		"skip: false",
+		"ret0: \"\"",
+		"e := &BizError{}",
+		"e = nil",
+		"got := e.Error()",
+		"if got != tt.ret0",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, notWant := range []string{
+		"skip: true",
+		"TODO: 填写有意义的输入",
+	} {
+		if strings.Contains(code, notWant) {
+			t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+		}
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskAssertsJWTParseErrorBranches(t *testing.T) {
+	src := `package jwtx
+
+import (
+	"errors"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+type Claims struct {
+	UserID int64 ` + "`json:\"userId\"`" + `
+	jwt.RegisteredClaims
+}
+
+func Parse(secret, raw string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(raw, claims, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS384.Alg() {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+	return claims, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "jwtx.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		task types.CoverageTestTask
+		want []string
+	}{
+		{
+			name: "invalid method",
+			task: types.CoverageTestTask{
+				ID:              "go-test-jwt-method",
+				Framework:       "go-test",
+				Target:          "Parse",
+				LineRange:       "17-20",
+				GapType:         "branch",
+				TestName:        "TestParseInvalidMethod",
+				MissingBranches: []string{"未覆盖 if 分支: token.Method.Alg() != jwt.SigningMethodHS384.Alg()"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			want: []string{
+				"\"github.com/golang-jwt/jwt/v5\"",
+				"secret: \"test-secret\"",
+				"raw: func() string {",
+				"token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{})",
+				"raw, _ := token.SignedString([]byte(\"test-secret\"))",
+				"got0, got1 := Parse(tt.secret, tt.raw)",
+				"if got1 == nil",
+			},
+		},
+		{
+			name: "invalid token",
+			task: types.CoverageTestTask{
+				ID:              "go-test-jwt-invalid",
+				Framework:       "go-test",
+				Target:          "Parse",
+				LineRange:       "23-25",
+				GapType:         "branch",
+				TestName:        "TestParseInvalidToken",
+				MissingBranches: []string{"未覆盖 if 分支: err != nil || !token.Valid"},
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+			},
+			want: []string{
+				"secret: \"test-secret\"",
+				"raw:    \"not-a-token\"",
+				"ret0:   nil",
+				"if got1 == nil",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range []string{"skip: true", "TODO: 填写有意义的输入"} {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskAssertsTimeDateZeroReturn(t *testing.T) {
 	src := `package sample
 
