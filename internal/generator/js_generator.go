@@ -954,7 +954,7 @@ func jsCoverageTaskFindCodexPathTarget(task *types.CoverageTestTask) bool {
 
 func jsCoverageTaskCodexConfigOverridesTarget(target string) bool {
 	switch strings.TrimSpace(target) {
-	case "flattenConfigOverrides", "serializeConfigOverrides", "toTomlValue":
+	case "flattenConfigOverrides", "formatTomlKey", "isPlainObject", "serializeConfigOverrides", "toTomlValue":
 		return true
 	default:
 		return false
@@ -1252,6 +1252,24 @@ func jsCodexExecConfigOverrideScenarioForTask(task *types.CoverageTestTask) jsCo
 			assertions: []string{
 				"expect(commandArgs).toContain('--config');",
 				"expect(commandArgs).toContain('retries=3');",
+			},
+		}
+	}
+	if target == "formatTomlKey" {
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{ settings: [{ 'model name': 'gpt-5' }] }",
+			assertions: []string{
+				"expect(commandArgs).toContain('--config');",
+				"expect(commandArgs).toContain('settings=[{\"model name\" = \"gpt-5\"}]');",
+			},
+		}
+	}
+	if target == "isPlainObject" {
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{ models: ['gpt-5'] }",
+			assertions: []string{
+				"expect(commandArgs).toContain('--config');",
+				"expect(commandArgs).toContain('models=[\"gpt-5\"]');",
 			},
 		}
 	}

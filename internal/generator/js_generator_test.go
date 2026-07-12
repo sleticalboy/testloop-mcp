@@ -2996,6 +2996,8 @@ func TestJSClassCoverageTaskGeneratesIP2RegionStatefulClassCases(t *testing.T) {
 func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
 	funcs := []jsFuncInfo{
 		{Name: "flattenConfigOverrides", IsExported: false},
+		{Name: "formatTomlKey", IsExported: false},
+		{Name: "isPlainObject", IsExported: false},
 		{Name: "serializeConfigOverrides", IsExported: false},
 		{Name: "toTomlValue", IsExported: false},
 	}
@@ -3070,6 +3072,38 @@ func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
 	}, []string{
 		"serializeConfigOverrides(",
 		"import { serializeConfigOverrides }",
+	})
+
+	task.Target = "formatTomlKey"
+	task.LineRange = "327-327"
+	task.TestName = "covers quoted toml key"
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(funcs, classes, &task)
+	if len(filteredFuncs) != 0 {
+		t.Fatalf("unexported formatTomlKey should not be imported directly: %+v", filteredFuncs)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { settings: [{ 'model name': 'gpt-5' }] });",
+		"expect(commandArgs).toContain('settings=[{\"model name\" = \"gpt-5\"}]');",
+	}, []string{
+		"formatTomlKey(",
+		"import { formatTomlKey }",
+	})
+
+	task.Target = "isPlainObject"
+	task.LineRange = "331-331"
+	task.TestName = "covers non plain object"
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(funcs, classes, &task)
+	if len(filteredFuncs) != 0 {
+		t.Fatalf("unexported isPlainObject should not be imported directly: %+v", filteredFuncs)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { models: ['gpt-5'] });",
+		"expect(commandArgs).toContain('models=[\"gpt-5\"]');",
+	}, []string{
+		"isPlainObject(",
+		"import { isPlainObject }",
 	})
 }
 
