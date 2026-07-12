@@ -28,6 +28,7 @@
 - JS/TS coverage task 支持 `resolveNativePackage` 的缺失 native package 返回 `null` 分支，生成类型合法的字符串入参；未导出的 `serializeConfigOverrides` 会复用 `CodexExec.run` 公共入口覆盖返回路径。
 - JS/TS coverage task 会通过 `CodexExec.run` 公共入口覆盖未导出的 `formatTomlKey` / `isPlainObject` helper，使用数组对象配置值触发 quoted TOML key formatter，并用数组配置值覆盖非 plain object 判定。
 - JS/TS coverage task 遇到未导出的 `isDirectory` 这类内部文件系统 helper 时，会生成 `manual_review_internal` 草稿并标注 `findCodexPath` / `resolveNativePackage` 公共入口候选，避免错误生成非法命名 import。
+- JS/TS coverage task 会为 `CodexExec.run` 参数分支生成分支专属断言，覆盖 `--model`、`--sandbox`、`--cd`、`--add-dir`、`--output-schema`、网络/搜索/审批配置、PATH prepend、`CODEX_API_KEY` 和缺失 stdin/stdout 错误路径，避免用泛化 spawn error 测试掩盖低价值覆盖。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

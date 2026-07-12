@@ -3152,6 +3152,82 @@ export class CodexExec {
 	})
 }
 
+func TestJSCoverageTaskCodexExecRunArgsUsesBranchSpecificAssertions(t *testing.T) {
+	cls := jsClassInfo{
+		Name:       "CodexExec",
+		IsExported: true,
+		Methods: []jsFuncInfo{{
+			Name:    "run",
+			IsAsync: true,
+			Params:  []jsParamInfo{{Name: "args"}},
+			Analysis: jsFuncAnalysis{
+				HasReturn: true,
+			},
+		}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-run-output-schema",
+		Framework: "jest",
+		Target:    "CodexExec.run",
+		LineRange: "125-125",
+		GapType:   "statement",
+		TestName:  "covers output schema arg",
+	}
+
+	code := genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"instance.run({ input: 'hi', outputSchemaFile: '/tmp/schema.json' })",
+		"expect(commandArgs).toContain('--output-schema');",
+		"expect(commandArgs).toContain('/tmp/schema.json');",
+	}, []string{
+		"child.emit('error', new Error('spawn failed'))",
+		"rejects.toThrow('spawn failed')",
+	})
+
+	task.LineRange = "133-136"
+	task.TestName = "covers network access arg"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"instance.run({ input: 'hi', networkAccessEnabled: true })",
+		"expect(commandArgs).toContain('sandbox_workspace_write.network_access=true');",
+	}, []string{
+		"rejects.toThrow('spawn failed')",
+	})
+
+	task.LineRange = "178-178"
+	task.TestName = "covers path dirs"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', { PATH: '/usr/bin' });",
+		"instance.pathDirs = ['/tmp/codex-bin'];",
+		"expect(spawnOptions.env.PATH.split(':')[0]).toBe('/tmp/codex-bin');",
+	}, []string{
+		"rejects.toThrow('spawn failed')",
+	})
+
+	task.LineRange = "190-190"
+	task.TestName = "covers missing stdin"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"child.stdin = null;",
+		"rejects.toThrow('Child process has no stdin');",
+		"expect(child.killed).toBe(true);",
+	}, []string{
+		"child.emit('error', new Error('spawn failed'))",
+	})
+
+	task.LineRange = "197-197"
+	task.TestName = "covers missing stdout"
+	code = genJSClassTestForCoverageTask(cls, &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"child.stdout = null;",
+		"rejects.toThrow('Child process has no stdout');",
+		"expect(child.killed).toBe(true);",
+	}, []string{
+		"child.emit('error', new Error('spawn failed'))",
+	})
+}
+
 func TestJSFuncCoverageTaskFindCodexPathUsesPublicConstructorOrManualReview(t *testing.T) {
 	fn := jsFuncInfo{Name: "findCodexPath", Analysis: jsFuncAnalysis{Throws: true}}
 	task := types.CoverageTestTask{

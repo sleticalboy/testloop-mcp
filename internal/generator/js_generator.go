@@ -1182,7 +1182,186 @@ func genJSCodexExecRunCoverageTask(method jsFuncInfo, task *types.CoverageTestTa
 	if jsCoverageTaskCodexConfigOverridesTarget(target) {
 		return genJSCodexExecConfigOverrideCoverageTask(method, task, testName, moduleImportPath)
 	}
+	if scenario, ok := jsCodexExecRunArgsScenarioForTask(task); ok {
+		return genJSCodexExecRunArgsCoverageTask(method, task, testName, moduleImportPath, scenario)
+	}
 	return genJSCodexExecSpawnErrorCoverageTask(method, task, testName, moduleImportPath)
+}
+
+type jsCodexExecRunArgsScenario struct {
+	instanceSetup string
+	runArgs       string
+	childSetup    []string
+	expectError   string
+	assertions    []string
+}
+
+func jsCodexExecRunArgsScenarioForTask(task *types.CoverageTestTask) (jsCodexExecRunArgsScenario, bool) {
+	if task == nil || strings.TrimSpace(task.Target) != "CodexExec.run" {
+		return jsCodexExecRunArgsScenario{}, false
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	scenario := jsCodexExecRunArgsScenario{
+		instanceSetup: "const instance = new CodexExec('codex');",
+		runArgs:       "{ input: 'hi' }",
+		assertions: []string{
+			"expect(spawnMock).toHaveBeenCalled();",
+		},
+	}
+	switch {
+	case strings.HasPrefix(lineRange, "95"):
+		scenario.runArgs = "{ input: 'hi', baseUrl: 'https://api.example.com' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('openai_base_url=\"https://api.example.com\"');",
+		}
+	case strings.HasPrefix(lineRange, "103"):
+		scenario.runArgs = "{ input: 'hi', model: 'gpt-5' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--model');",
+			"expect(commandArgs).toContain('gpt-5');",
+		}
+	case strings.HasPrefix(lineRange, "107"):
+		scenario.runArgs = "{ input: 'hi', sandboxMode: 'workspace-write' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--sandbox');",
+			"expect(commandArgs).toContain('workspace-write');",
+		}
+	case strings.HasPrefix(lineRange, "111"):
+		scenario.runArgs = "{ input: 'hi', workingDirectory: '/tmp/project' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--cd');",
+			"expect(commandArgs).toContain('/tmp/project');",
+		}
+	case strings.HasPrefix(lineRange, "115"):
+		scenario.runArgs = "{ input: 'hi', additionalDirectories: ['/tmp/extra'] }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--add-dir');",
+			"expect(commandArgs).toContain('/tmp/extra');",
+		}
+	case strings.HasPrefix(lineRange, "121"):
+		scenario.runArgs = "{ input: 'hi', skipGitRepoCheck: true }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--skip-git-repo-check');",
+		}
+	case strings.HasPrefix(lineRange, "125"):
+		scenario.runArgs = "{ input: 'hi', outputSchemaFile: '/tmp/schema.json' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--output-schema');",
+			"expect(commandArgs).toContain('/tmp/schema.json');",
+		}
+	case strings.HasPrefix(lineRange, "129"):
+		scenario.runArgs = "{ input: 'hi', modelReasoningEffort: 'high' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('model_reasoning_effort=\"high\"');",
+		}
+	case strings.HasPrefix(lineRange, "133"):
+		scenario.runArgs = "{ input: 'hi', networkAccessEnabled: true }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('sandbox_workspace_write.network_access=true');",
+		}
+	case strings.HasPrefix(lineRange, "140"):
+		scenario.runArgs = "{ input: 'hi', webSearchMode: 'live' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('web_search=\"live\"');",
+		}
+	case strings.HasPrefix(lineRange, "142"):
+		scenario.runArgs = "{ input: 'hi', webSearchEnabled: true }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('web_search=\"live\"');",
+		}
+	case strings.HasPrefix(lineRange, "144"):
+		scenario.runArgs = "{ input: 'hi', webSearchEnabled: false }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('web_search=\"disabled\"');",
+		}
+	case strings.HasPrefix(lineRange, "148"):
+		scenario.runArgs = "{ input: 'hi', approvalPolicy: 'never' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--config');",
+			"expect(commandArgs).toContain('approval_policy=\"never\"');",
+		}
+	case strings.HasPrefix(lineRange, "151"):
+		scenario.runArgs = "{ input: 'hi', threadId: 'thread-123' }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('resume');",
+			"expect(commandArgs).toContain('thread-123');",
+		}
+	case strings.HasPrefix(lineRange, "155"):
+		scenario.runArgs = "{ input: 'hi', images: ['/tmp/image.png'] }"
+		scenario.assertions = []string{
+			"expect(commandArgs).toContain('--image');",
+			"expect(commandArgs).toContain('/tmp/image.png');",
+		}
+	case strings.HasPrefix(lineRange, "174"):
+		scenario.runArgs = "{ input: 'hi', apiKey: 'test-api-key' }"
+		scenario.assertions = []string{
+			"expect(spawnOptions.env.CODEX_API_KEY).toBe('test-api-key');",
+		}
+	case strings.HasPrefix(lineRange, "178"):
+		scenario.instanceSetup = "const instance = new CodexExec('codex', { PATH: '/usr/bin' });\n      instance.pathDirs = ['/tmp/codex-bin'];"
+		scenario.assertions = []string{
+			"expect(spawnOptions.env.PATH.split(':')[0]).toBe('/tmp/codex-bin');",
+		}
+	case strings.HasPrefix(lineRange, "190"), strings.HasPrefix(lineRange, "189"):
+		scenario.childSetup = []string{"child.stdin = null;"}
+		scenario.expectError = "Child process has no stdin"
+		scenario.assertions = []string{
+			"expect(child.killed).toBe(true);",
+		}
+	case strings.HasPrefix(lineRange, "197"), strings.HasPrefix(lineRange, "196"):
+		scenario.childSetup = []string{"child.stdout = null;"}
+		scenario.expectError = "Child process has no stdout"
+		scenario.assertions = []string{
+			"expect(child.killed).toBe(true);",
+		}
+	default:
+		return jsCodexExecRunArgsScenario{}, false
+	}
+	return scenario, true
+}
+
+func genJSCodexExecRunArgsCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string, scenario jsCodexExecRunArgsScenario) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("      const { CodexExec } = await import('%s');\n", moduleImportPath))
+	sb.WriteString("      const spawnMock = jest.mocked(child_process.spawn);\n")
+	sb.WriteString("      spawnMock.mockClear();\n")
+	sb.WriteString("      const child = new TestloopCodexExecChild();\n")
+	for _, line := range scenario.childSetup {
+		sb.WriteString("      " + line + "\n")
+	}
+	sb.WriteString("      spawnMock.mockReturnValue(child);\n")
+	if scenario.expectError == "" {
+		sb.WriteString("      setImmediate(() => {\n")
+		sb.WriteString("        child.stdout.end();\n")
+		sb.WriteString("        child.stderr.end();\n")
+		sb.WriteString("        child.emit('exit', 0, null);\n")
+		sb.WriteString("      });\n")
+	}
+	sb.WriteString("      " + scenario.instanceSetup + "\n")
+	if scenario.expectError != "" {
+		sb.WriteString(fmt.Sprintf("      await expect(consumeTestloopCodexExec(instance.run(%s))).rejects.toThrow('%s');\n", scenario.runArgs, strings.ReplaceAll(scenario.expectError, "'", "\\'")))
+	} else {
+		sb.WriteString(fmt.Sprintf("      await consumeTestloopCodexExec(instance.run(%s));\n", scenario.runArgs))
+	}
+	sb.WriteString("      const commandArgs = spawnMock.mock.calls[0]?.[1] || [];\n")
+	sb.WriteString("      const spawnOptions = spawnMock.mock.calls[0]?.[2] || {};\n")
+	for _, assertion := range scenario.assertions {
+		sb.WriteString("      " + assertion + "\n")
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
 }
 
 func genJSCodexExecSpawnErrorCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string) string {
