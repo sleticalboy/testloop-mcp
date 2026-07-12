@@ -160,10 +160,12 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		buf.WriteString(fmt.Sprintf("import { %s } from 'vitest';\n", jsVitestImportNamesForCoverageTask(task)))
 	}
 	if vitestTask {
-		buf.WriteString(jsVitestPreludeForCoverageTask(task))
+		buf.WriteString(jsVitestPreludeForCoverageTask(task, moduleImportPath))
 	}
 	if isESModule {
-		buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
+		if !jsCoverageTaskNeedsDynamicImportOnly(task) {
+			buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
+		}
 	} else {
 		buf.WriteString(fmt.Sprintf("const { %s } = require('./%s');\n\n", joinExportNames(funcs, classes), moduleName))
 	}
@@ -180,7 +182,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 
 	for _, cls := range classes {
 		if coverageMode {
-			buf.WriteString(genJSClassTestForCoverageTask(cls, task))
+			buf.WriteString(genJSClassTestForCoverageTask(cls, task, moduleImportPath))
 		} else if task != nil {
 			buf.WriteString(genJSClassTest(cls, jsAssertionStyleForTask(task)))
 		} else {
@@ -625,7 +627,7 @@ func genJestClassTest(cls jsClassInfo, isESModule bool, moduleName string) strin
 	return genJSClassTest(cls, jsAssertionStyleJest)
 }
 
-func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask) string {
+func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask, moduleImportPath string) string {
 	var sb strings.Builder
 	assertions := jsAssertionStyleForTask(task)
 
@@ -633,6 +635,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	for _, method := range cls.Methods {
 		testName := jsCoverageTaskTestName(task, "should cover "+method.Name+" coverage gap")
 		if jsClassRequiresInternalManualReview(cls) {
+			if cls.Name == "StorageManager" && (method.Name == "init" || method.Name == "get") {
+				sb.WriteString(genJSStorageManagerPublicEntryTest(method, task, testName, moduleImportPath))
+				continue
+			}
 			sb.WriteString(genJSInternalClassManualReviewTest(cls, method, task, testName))
 			continue
 		}
@@ -690,11 +696,15 @@ func jsVitestImportNamesForCoverageTask(task *types.CoverageTestTask) string {
 	return strings.Join(names, ", ")
 }
 
-func jsVitestPreludeForCoverageTask(task *types.CoverageTestTask) string {
+func jsVitestPreludeForCoverageTask(task *types.CoverageTestTask, moduleImportPath string) string {
 	if !jsCoverageTaskNeedsChokidarMock(task) {
-		return ""
+		if !jsCoverageTaskNeedsOAuthProviderMocks(task) {
+			return ""
+		}
 	}
-	return `
+	var sb strings.Builder
+	if jsCoverageTaskNeedsChokidarMock(task) {
+		sb.WriteString(`
 vi.mock('chokidar', async () => {
   const { EventEmitter } = await import('node:events');
   return {
@@ -708,15 +718,61 @@ vi.mock('chokidar', async () => {
   };
 });
 
-`
+`)
+	}
+	if jsCoverageTaskNeedsOAuthProviderMocks(task) {
+		loggerPath := jsSiblingModuleImportPath(moduleImportPath, "logger.js")
+		sb.WriteString(`
+vi.mock('fs/promises', () => {
+  const mkdir = vi.fn();
+  const readFile = vi.fn();
+  const writeFile = vi.fn();
+  return {
+    default: { mkdir, readFile, writeFile },
+    mkdir,
+    readFile,
+    writeFile,
+  };
+});
+`)
+		sb.WriteString(fmt.Sprintf(`
+vi.mock('%s', () => ({
+  default: {
+    file: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+`, loggerPath))
+	}
+	return sb.String()
 }
 
 func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsChokidarMock(task)
+	return jsCoverageTaskNeedsChokidarMock(task) || jsCoverageTaskNeedsOAuthProviderMocks(task)
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
 	return task != nil && task.Target == "DevWatcher.#handleFileChange"
+}
+
+func jsCoverageTaskNeedsOAuthProviderMocks(task *types.CoverageTestTask) bool {
+	return task != nil && strings.HasPrefix(task.Target, "StorageManager.")
+}
+
+func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
+	return jsCoverageTaskNeedsOAuthProviderMocks(task)
+}
+
+func jsSiblingModuleImportPath(moduleImportPath, sibling string) string {
+	idx := strings.LastIndex(moduleImportPath, "/")
+	if idx < 0 {
+		return "./" + sibling
+	}
+	return moduleImportPath[:idx+1] + sibling
 }
 
 func genJSConfigManagerDiffPublicEntryTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
@@ -807,6 +863,36 @@ func jsConfigManagerDiffScenarioForTask(task *types.CoverageTestTask) jsConfigMa
 			},
 		}
 	}
+}
+
+func genJSStorageManagerPublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      vi.resetModules();\n")
+	sb.WriteString("      const fs = await import('fs/promises');\n")
+	if method.Name == "init" {
+		sb.WriteString("      const logger = await import('" + jsSiblingModuleImportPath(moduleImportPath, "logger.js") + "');\n")
+		sb.WriteString("      fs.default.mkdir.mockResolvedValue(undefined);\n")
+		sb.WriteString("      fs.default.readFile.mockRejectedValue(Object.assign(new Error('permission denied'), { code: 'EACCES' }));\n")
+		sb.WriteString(fmt.Sprintf("      await import('%s');\n", moduleImportPath))
+		sb.WriteString("      await new Promise((resolve) => setTimeout(resolve, 0));\n")
+		sb.WriteString("      expect(fs.default.readFile).toHaveBeenCalled();\n")
+		sb.WriteString("      expect(logger.default.warn).toHaveBeenCalledWith(expect.stringContaining('Error reading storage'));\n")
+	} else {
+		sb.WriteString("      fs.default.mkdir.mockResolvedValue(undefined);\n")
+		sb.WriteString("      fs.default.readFile.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));\n")
+		sb.WriteString(fmt.Sprintf("      const { default: MCPHubOAuthProvider } = await import('%s');\n", moduleImportPath))
+		sb.WriteString("      await new Promise((resolve) => setTimeout(resolve, 0));\n")
+		sb.WriteString("      const provider = new MCPHubOAuthProvider({ serverName: 'test-server', serverUrl: 'https://example.com/mcp', hubServerUrl: 'http://localhost:3000' });\n")
+		sb.WriteString("      await expect(provider.tokens()).resolves.toBeNull();\n")
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
 }
 
 func genJSDevWatcherHandleFileChangePublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {

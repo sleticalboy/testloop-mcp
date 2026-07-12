@@ -1974,12 +1974,20 @@ export class DevWatcher {
 			forbidden: []string{"instance.#diffConfigs", "it.skip(", "manual_review_private"},
 		},
 		{
-			name:     "vitest internal esm class manual review",
+			name:     "vitest storage manager internal class via default provider",
 			fileName: "oauth-provider.js",
-			source: `class StorageManager {
+			source: `import fs from 'fs/promises'
+
+let serversStorage = {}
+
+class StorageManager {
+  async init() {
+    await fs.mkdir('/tmp', { recursive: true })
+  }
+
   get(serverUrl) {
     if (!serversStorage[serverUrl]) {
-      serversStorage[serverUrl] = { tokens: null }
+      serversStorage[serverUrl] = { clientInfo: null, tokens: null, codeVerifier: null }
     }
     return serversStorage[serverUrl]
   }
@@ -1988,6 +1996,12 @@ export class DevWatcher {
 const storage = new StorageManager()
 
 export default class MCPHubOAuthProvider {
+  constructor({ serverName, serverUrl, hubServerUrl }) {
+    this.serverName = serverName
+    this.serverUrl = serverUrl
+    this.hubServerUrl = hubServerUrl
+  }
+
   async tokens() {
     return storage.get(this.serverUrl).tokens
   }
@@ -2003,11 +2017,103 @@ export default class MCPHubOAuthProvider {
 				SuggestedInputs: []string{"构造满足条件 `!serversStorage[serverUrl]` 的输入"},
 			},
 			wants: []string{
-				"import './oauth-provider';",
-				"it.skip('covers StorageManager get missing server'",
-				"manual_review_internal: StorageManager is not exported from this ES module",
+				"import { describe, it, expect, vi } from 'vitest';",
+				"vi.mock('fs/promises'",
+				"vi.mock('./logger.js'",
+				"const { default: MCPHubOAuthProvider } = await import('./oauth-provider');",
+				"const provider = new MCPHubOAuthProvider({ serverName: 'test-server', serverUrl: 'https://example.com/mcp', hubServerUrl: 'http://localhost:3000' });",
+				"await expect(provider.tokens()).resolves.toBeNull();",
 			},
-			forbidden: []string{"import { StorageManager }", "new StorageManager()"},
+			forbidden: []string{"import './oauth-provider';", "import { StorageManager }", "new StorageManager()", "it.skip(", "manual_review_internal"},
+		},
+		{
+			name:     "vitest storage manager init via module import",
+			fileName: "oauth-provider.js",
+			source: `import fs from 'fs/promises'
+import logger from './logger.js'
+
+let serversStorage = {}
+
+class StorageManager {
+  constructor() {
+    this.path = '/tmp/oauth-storage.json'
+  }
+
+  async init() {
+    try {
+      await fs.mkdir('/tmp', { recursive: true })
+      try {
+        const data = await fs.readFile(this.path, 'utf8')
+        serversStorage = JSON.parse(data)
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          logger.warn('Error reading storage')
+        }
+      }
+    } catch (err) {
+      logger.warn('Storage initialization error')
+    }
+  }
+}
+
+const storage = new StorageManager()
+storage.init()
+
+export default class MCPHubOAuthProvider {}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-storage-init-1",
+				Framework:       "vitest",
+				Target:          "StorageManager.init",
+				LineRange:       "16-16",
+				GapType:         "branch",
+				TestName:        "covers StorageManager init read warning",
+				MissingBranches: []string{"未覆盖 if 分支: err.code !== 'ENOENT'"},
+				SuggestedInputs: []string{"构造满足条件 `err.code !== 'ENOENT'` 的输入"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"vi.mock('fs/promises'",
+				"const logger = await import('./logger.js');",
+				"fs.default.readFile.mockRejectedValue(Object.assign(new Error('permission denied'), { code: 'EACCES' }));",
+				"await import('./oauth-provider');",
+				"expect(logger.default.warn).toHaveBeenCalledWith(expect.stringContaining('Error reading storage'));",
+			},
+			forbidden: []string{"import './oauth-provider';", "import { StorageManager }", "new StorageManager()", "it.skip(", "manual_review_internal"},
+		},
+		{
+			name:     "vitest generic internal esm class manual review",
+			fileName: "cache.js",
+			source: `class LocalCache {
+  get(key) {
+    if (!this.values[key]) {
+      this.values[key] = null
+    }
+    return this.values[key]
+  }
+}
+
+export default class CacheFacade {
+  constructor() {
+    this.cache = new LocalCache()
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-internal-cache-1",
+				Framework:       "vitest",
+				Target:          "LocalCache.get",
+				LineRange:       "3-3",
+				GapType:         "branch",
+				TestName:        "covers LocalCache get missing key",
+				SuggestedInputs: []string{"构造满足条件 `!this.values[key]` 的输入"},
+			},
+			wants: []string{
+				"import './cache';",
+				"it.skip('covers LocalCache get missing key'",
+				"manual_review_internal: LocalCache is not exported from this ES module",
+			},
+			forbidden: []string{"import { LocalCache }", "new LocalCache()"},
 		},
 		{
 			name:     "vitest sse add connection mocks express req res",
@@ -2601,7 +2707,7 @@ func TestJSClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 		},
 	}
 
-	code := genJSClassTestForCoverageTask(cls, &task)
+	code := genJSClassTestForCoverageTask(cls, &task, "./widget")
 	for _, want := range []string{
 		"describe('Widget'",
 		"it('covers widget load'",

@@ -18,6 +18,7 @@
 - JS class coverage task 遇到 JavaScript `#private` method 时不再生成非法的 `instance.#method()` 外部调用，而是生成 `it.skip` 的 manual-review 草稿，并在 metadata 中返回可检测到的公共入口候选。
 - JS class coverage task 可通过 `ConfigManager.loadConfig()` 公共入口覆盖 `ConfigManager.#diffConfigs` 私有分支，自动生成临时 config 文件、旧配置状态和 changes 断言。
 - JS class coverage task 可通过 `DevWatcher.start()` 公共入口覆盖 `DevWatcher.#handleFileChange` 私有分支，自动生成 Vitest `chokidar` mock、fake timers、watcher 事件和 `filesChanged` 断言。
+- JS class coverage task 可通过 `MCPHubOAuthProvider` 和模块动态导入覆盖未导出的 `StorageManager.init/get`，自动生成 `fs/promises`、logger mock 和默认导出 provider 断言。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

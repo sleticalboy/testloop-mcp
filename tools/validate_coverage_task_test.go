@@ -593,21 +593,19 @@ func TestHandleValidateCoverageTaskMarksJSInternalClassAsManualReview(t *testing
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
 		t.Fatalf("write package.json: %v", err)
 	}
-	source := filepath.Join(dir, "oauth-provider.js")
-	src := `class StorageManager {
-  get(serverUrl) {
-    if (!serversStorage[serverUrl]) {
-      serversStorage[serverUrl] = { tokens: null }
+	source := filepath.Join(dir, "cache.js")
+	src := `class LocalCache {
+  get(key) {
+    if (!this.values[key]) {
+      this.values[key] = null
     }
-    return serversStorage[serverUrl]
+    return this.values[key]
   }
 }
 
-const storage = new StorageManager()
-
-export default class MCPHubOAuthProvider {
-  async tokens() {
-    return storage.get(this.serverUrl).tokens
+export default class CacheFacade {
+  constructor() {
+    this.cache = new LocalCache()
   }
 }
 `
@@ -617,7 +615,7 @@ export default class MCPHubOAuthProvider {
 	installFakeNpx(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
-		" ↓ oauth-provider.test.js (1 test | 1 skipped)",
+		" ↓ cache.test.js (1 test | 1 skipped)",
 		"",
 		" Test Files  1 skipped (1)",
 		"      Tests  1 skipped (1)",
@@ -626,14 +624,14 @@ export default class MCPHubOAuthProvider {
 		ID:              "vitest-internal-1",
 		Framework:       "vitest",
 		File:            source,
-		Target:          "StorageManager.get",
+		Target:          "LocalCache.get",
 		Kind:            "method",
 		LineRange:       "3-3",
 		GapType:         "branch",
-		MissingBranches: []string{"未覆盖 if 分支: !serversStorage[serverUrl]"},
-		SuggestedInputs: []string{"构造满足条件 `!serversStorage[serverUrl]` 的输入"},
-		TestFile:        filepath.Join(dir, "oauth-provider.test.js"),
-		TestName:        "covers StorageManager internal get",
+		MissingBranches: []string{"未覆盖 if 分支: !this.values[key]"},
+		SuggestedInputs: []string{"构造满足条件 `!this.values[key]` 的输入"},
+		TestFile:        filepath.Join(dir, "cache.test.js"),
+		TestName:        "covers LocalCache internal get",
 	}
 
 	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
@@ -658,11 +656,11 @@ export default class MCPHubOAuthProvider {
 		t.Fatalf("expected internal symbol metadata, got %+v", out.Metadata)
 	}
 	reason, _ := out.Metadata["internal_reason"].(string)
-	if !strings.Contains(reason, "StorageManager.get") || !strings.Contains(reason, "not exported") {
+	if !strings.Contains(reason, "LocalCache.get") || !strings.Contains(reason, "not exported") {
 		t.Fatalf("unexpected internal reason: %q", reason)
 	}
-	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_internal: StorageManager") ||
-		strings.Contains(out.Generated.Preview, "new StorageManager()") {
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_internal: LocalCache") ||
+		strings.Contains(out.Generated.Preview, "new LocalCache()") {
 		t.Fatalf("expected generated internal review skip, got %+v", out.Generated)
 	}
 }
