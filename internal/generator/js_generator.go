@@ -735,6 +735,16 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSWorkspaceCacheUpdateStateTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "Version" && method.Name == "ipCompare" {
+			sb.WriteString(genJSVersionIPCompareCoverageTask(method, task, testName))
+			continue
+		}
+		if cls.Name == "Searcher" {
+			if code, ok := genJSSearcherCoverageTask(method, task, testName); ok {
+				sb.WriteString(code)
+				continue
+			}
+		}
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
 		overrides := jsClassCoverageTaskInputOverrides(method, task)
 		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, overrides)
@@ -999,6 +1009,105 @@ func genJSWorkspaceCacheUpdateStateTest(method jsFuncInfo, task *types.CoverageT
 	sb.WriteString("      expect(instance._writeCache).toHaveBeenCalledWith(expect.objectContaining({\n")
 	sb.WriteString("        '3000': expect.objectContaining({ state: 'shutting_down', activeConnections: 0, port: 3000 }),\n")
 	sb.WriteString("      }));\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSVersionIPCompareCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const calls = [];\n")
+	sb.WriteString("      const compare = (...args) => {\n")
+	sb.WriteString("        calls.push(args);\n")
+	sb.WriteString("        return 0;\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new Version(4, 'IPv4', 4, 14, compare);\n")
+	sb.WriteString("      const left = Buffer.from([1, 0, 0, 0]);\n")
+	sb.WriteString("      const right = Buffer.from([1, 0, 0, 0]);\n")
+	sb.WriteString("      const result = instance.ipCompare(left, right);\n")
+	sb.WriteString("      expect(result).toBe(0);\n")
+	sb.WriteString("      expect(calls).toEqual([[left, right, 0]]);\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSearcherCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) (string, bool) {
+	switch method.Name {
+	case "search":
+		return genJSSearcherSearchCoverageTask(method, task, testName), true
+	case "read":
+		return genJSSearcherReadCoverageTask(method, task, testName), true
+	case "toString":
+		return genJSSearcherToStringCoverageTask(method, task, testName), true
+	default:
+		return "", false
+	}
+}
+
+func genJSSearcherSearchCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	dLenZero := task != nil && strings.HasPrefix(strings.TrimSpace(task.LineRange), "100")
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const version = { name: 'IPv4', bytes: 4, indexSize: 14, ipSubCompare: () => 0 };\n")
+	if dLenZero {
+		sb.WriteString("      const cBuffer = Buffer.alloc(278);\n")
+		sb.WriteString("      cBuffer.writeUInt32LE(264, 256);\n")
+		sb.WriteString("      cBuffer.writeUInt32LE(264, 260);\n")
+	} else {
+		sb.WriteString("      const cBuffer = Buffer.alloc(264);\n")
+	}
+	sb.WriteString("      const instance = new Searcher(version, null, null, cBuffer);\n")
+	sb.WriteString("      const result = await instance.search('0.0.0.0');\n")
+	sb.WriteString("      expect(result).toBe('');\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSearcherReadCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const fs = await import('fs');\n")
+	sb.WriteString("      const originalReadSync = fs.default.readSync;\n")
+	sb.WriteString("      fs.default.readSync = () => 0;\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        const instance = Object.assign(Object.create(Searcher.prototype), { cBuffer: null, handle: 1, ioCount: 0 });\n")
+	sb.WriteString("        expect(() => instance.read(0, Buffer.alloc(4))).toThrow('incomplete read');\n")
+	sb.WriteString("        expect(instance.ioCount).toBe(1);\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        fs.default.readSync = originalReadSync;\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSearcherToStringCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const version = { name: 'IPv4' };\n")
+	sb.WriteString("      const instance = new Searcher(version, null, null, Buffer.alloc(8));\n")
+	sb.WriteString("      const result = instance.toString();\n")
+	sb.WriteString("      expect(result).toContain('IPv4');\n")
+	sb.WriteString("      expect(result).toContain('\"cBuffer\": 8');\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()

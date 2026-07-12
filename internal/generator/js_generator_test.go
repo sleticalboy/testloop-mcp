@@ -2822,6 +2822,177 @@ func TestJSClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestJSClassCoverageTaskGeneratesIP2RegionStatefulClassCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		cls       jsClassInfo
+		task      types.CoverageTestTask
+		wants     []string
+		forbidden []string
+	}{
+		{
+			name: "version ipCompare supplies compare callback",
+			cls: jsClassInfo{
+				Name: "Version",
+				ConstructorParams: []jsParamInfo{
+					{Name: "id"},
+					{Name: "name"},
+					{Name: "bytes"},
+					{Name: "indexSize"},
+					{Name: "ipCompareFunc"},
+				},
+				Methods: []jsFuncInfo{{
+					Name: "ipCompare",
+					Params: []jsParamInfo{
+						{Name: "ip1"},
+						{Name: "ip2"},
+					},
+					Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "unknown", Returns: []string{"this.ipCompareFunc(ip1, ip2, 0)"}},
+				}},
+			},
+			task: types.CoverageTestTask{
+				ID:        "jest-version-compare",
+				Framework: "jest",
+				Target:    "Version.ipCompare",
+				LineRange: "268-268",
+				GapType:   "return_path",
+				TestName:  "covers version compare",
+			},
+			wants: []string{
+				"describe('Version'",
+				"describe('ipCompare'",
+				"const calls = [];",
+				"const compare = (...args) => {",
+				"const instance = new Version(4, 'IPv4', 4, 14, compare);",
+				"const result = instance.ipCompare(left, right);",
+				"expect(result).toBe(0);",
+				"expect(calls).toEqual([[left, right, 0]]);",
+			},
+			forbidden: []string{"new Version(1, 'test-server', undefined"},
+		},
+		{
+			name: "searcher search zero pointer branch uses cBuffer",
+			cls: jsClassInfo{
+				Name:              "Searcher",
+				ConstructorParams: []jsParamInfo{{Name: "version"}, {Name: "dbPath"}, {Name: "vectorIndex"}, {Name: "cBuffer"}},
+				Methods: []jsFuncInfo{{
+					Name:     "search",
+					IsAsync:  true,
+					Params:   []jsParamInfo{{Name: "ip"}},
+					Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "string", Returns: []string{`""`}},
+				}},
+			},
+			task: types.CoverageTestTask{
+				ID:        "jest-searcher-zero",
+				Framework: "jest",
+				Target:    "Searcher.search",
+				LineRange: "72-72",
+				GapType:   "return_path",
+				TestName:  "covers zero pointer",
+			},
+			wants: []string{
+				"const version = { name: 'IPv4', bytes: 4, indexSize: 14, ipSubCompare: () => 0 };",
+				"const cBuffer = Buffer.alloc(264);",
+				"const instance = new Searcher(version, null, null, cBuffer);",
+				"const result = await instance.search('0.0.0.0');",
+				"expect(result).toBe('');",
+			},
+			forbidden: []string{"new Searcher(undefined, 'test'"},
+		},
+		{
+			name: "searcher search empty match branch seeds segment pointers",
+			cls: jsClassInfo{
+				Name:              "Searcher",
+				ConstructorParams: []jsParamInfo{{Name: "version"}, {Name: "dbPath"}, {Name: "vectorIndex"}, {Name: "cBuffer"}},
+				Methods: []jsFuncInfo{{
+					Name:     "search",
+					IsAsync:  true,
+					Params:   []jsParamInfo{{Name: "ip"}},
+					Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "string", Returns: []string{`""`}},
+				}},
+			},
+			task: types.CoverageTestTask{
+				ID:        "jest-searcher-empty-match",
+				Framework: "jest",
+				Target:    "Searcher.search",
+				LineRange: "100-100",
+				GapType:   "return_path",
+				TestName:  "covers empty match",
+			},
+			wants: []string{
+				"const cBuffer = Buffer.alloc(278);",
+				"cBuffer.writeUInt32LE(264, 256);",
+				"cBuffer.writeUInt32LE(264, 260);",
+				"expect(result).toBe('');",
+			},
+		},
+		{
+			name: "searcher read incomplete read mocks fs after construction",
+			cls: jsClassInfo{
+				Name:              "Searcher",
+				ConstructorParams: []jsParamInfo{{Name: "version"}, {Name: "dbPath"}, {Name: "vectorIndex"}, {Name: "cBuffer"}},
+				Methods: []jsFuncInfo{{
+					Name:   "read",
+					Params: []jsParamInfo{{Name: "offset"}, {Name: "buff"}, {Name: "stats"}},
+					Analysis: jsFuncAnalysis{
+						Throws: true,
+					},
+				}},
+			},
+			task: types.CoverageTestTask{
+				ID:        "jest-searcher-read",
+				Framework: "jest",
+				Target:    "Searcher.read",
+				LineRange: "122-122",
+				GapType:   "error_path",
+				TestName:  "covers incomplete read",
+			},
+			wants: []string{
+				"const fs = await import('fs');",
+				"fs.default.readSync = () => 0;",
+				"Object.assign(Object.create(Searcher.prototype), { cBuffer: null, handle: 1, ioCount: 0 });",
+				"expect(() => instance.read(0, Buffer.alloc(4))).toThrow('incomplete read');",
+				"fs.default.readSync = originalReadSync;",
+			},
+			forbidden: []string{"new Searcher(undefined, 'test'"},
+		},
+		{
+			name: "searcher toString uses memory buffer constructor path",
+			cls: jsClassInfo{
+				Name:              "Searcher",
+				ConstructorParams: []jsParamInfo{{Name: "version"}, {Name: "dbPath"}, {Name: "vectorIndex"}, {Name: "cBuffer"}},
+				Methods: []jsFuncInfo{{
+					Name:     "toString",
+					Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "string", Returns: []string{"`json`"}},
+				}},
+			},
+			task: types.CoverageTestTask{
+				ID:        "jest-searcher-string",
+				Framework: "jest",
+				Target:    "Searcher.toString",
+				LineRange: "137-137",
+				GapType:   "return_path",
+				TestName:  "covers searcher string",
+			},
+			wants: []string{
+				"const version = { name: 'IPv4' };",
+				"const instance = new Searcher(version, null, null, Buffer.alloc(8));",
+				"const result = instance.toString();",
+				"expect(result).toContain('IPv4');",
+				"expect(result).toContain('\"cBuffer\": 8');",
+			},
+			forbidden: []string{"new Searcher(undefined, 'test'"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code := genJSClassTestForCoverageTask(tt.cls, &tt.task, "./searcher")
+			assertGeneratedJS(t, code, tt.wants, tt.forbidden)
+		})
+	}
+}
+
 func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",
