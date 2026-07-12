@@ -147,6 +147,9 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	moduleName := stripExt(baseName(srcPath))
 	testPath := generatorTestPath(srcPath, task)
 	moduleImportPath := jsSourceModuleImportPath(srcPath, testPath)
+	if coverageMode && jsCoverageTaskFileLevelTarget(srcPath, task) {
+		return genJSFileLevelManualReviewTask(task), nil
+	}
 
 	var buf strings.Builder
 
@@ -252,6 +255,37 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 		return funcs, classes
 	}
 	return filteredFuncs, filteredClasses
+}
+
+func jsCoverageTaskFileLevelTarget(srcPath string, task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	if target != "" && target == filepath.Base(srcPath) {
+		return true
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	return strings.EqualFold(lineRange, "entire file")
+}
+
+func genJSFileLevelManualReviewTask(task *types.CoverageTestTask) string {
+	testName := jsCoverageTaskTestName(task, "covers file-level coverage gap")
+	target := "file"
+	if task != nil && strings.TrimSpace(task.Target) != "" {
+		target = strings.TrimSpace(task.Target)
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", target))
+	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    // manual_review_internal: file-level coverage task cannot be mapped to one exported public entry without importing internal helpers.\n")
+	sb.WriteString("    // split_into_targets: exported class methods, exported functions, or explicit public-entry tasks\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
 }
 
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----

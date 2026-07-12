@@ -2752,6 +2752,44 @@ func TestFilterJSTargetsForCoverageTaskBranches(t *testing.T) {
 	}
 }
 
+func TestGenerateJSCoverageTaskFileLevelUsesManualReview(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "exec.ts")
+	src := `function internalHelper(): string {
+  return "ok";
+}
+
+export class CodexExec {
+  run() {
+    return internalHelper();
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "jest-file-level",
+		Framework: "jest",
+		Target:    "exec.ts",
+		LineRange: "entire file",
+		TestName:  "covers file-level gap",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"describe('exec.ts'",
+		"it.skip('covers file-level gap'",
+		"manual_review_internal: file-level coverage task cannot be mapped to one exported public entry",
+		"split_into_targets: exported class methods, exported functions, or explicit public-entry tasks",
+	}, []string{
+		"import { internalHelper",
+		"import { CodexExec",
+		"internalHelper()",
+	})
+}
+
 func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
 	tests := map[string]string{
 		"number":    "number",
