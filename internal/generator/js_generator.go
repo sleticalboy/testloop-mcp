@@ -53,8 +53,9 @@ type jsBoundary struct {
 
 // jsClassInfo 类信息
 type jsClassInfo struct {
-	Name    string
-	Methods []jsFuncInfo
+	Name              string
+	ConstructorParams []jsParamInfo
+	Methods           []jsFuncInfo
 }
 
 var jsTSIdentifierRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
@@ -207,7 +208,7 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 			}
 		}
 		if len(methods) > 0 {
-			filteredClasses = append(filteredClasses, jsClassInfo{Name: cls.Name, Methods: methods})
+			filteredClasses = append(filteredClasses, jsClassInfo{Name: cls.Name, ConstructorParams: cls.ConstructorParams, Methods: methods})
 		}
 	}
 
@@ -648,11 +649,42 @@ func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTe
 }
 
 func jsClassInstanceForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask) string {
-	options := jsClassCoverageTaskConstructorOptions(method, task)
-	if len(options) == 0 {
+	args := jsClassConstructorArgsForCoverageTask(cls, method, task)
+	if args == "" {
 		return fmt.Sprintf("new %s()", cls.Name)
 	}
-	return fmt.Sprintf("new %s({ %s })", cls.Name, strings.Join(options, ", "))
+	return fmt.Sprintf("new %s(%s)", cls.Name, args)
+}
+
+func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask) string {
+	if len(cls.ConstructorParams) == 0 {
+		return ""
+	}
+	options := jsClassCoverageTaskConstructorOptions(method, task)
+	args := make([]string, len(cls.ConstructorParams))
+	for i, param := range cls.ConstructorParams {
+		compact := jsCompactName(param.Name)
+		switch {
+		case strings.Contains(compact, "servername") || compact == "name":
+			args[i] = "'test-server'"
+		case strings.Contains(compact, "devconfig"):
+			args[i] = jsObjectLiteralWithDefaults(options, []string{"enabled: true", "watch: []", "cwd: process.cwd()"})
+		case strings.Contains(compact, "config") || strings.Contains(compact, "options"):
+			args[i] = jsObjectLiteralWithDefaults(options, nil)
+		default:
+			args[i] = jsArgValue(param, i)
+		}
+	}
+	return strings.Join(args, ", ")
+}
+
+func jsObjectLiteralWithDefaults(options []string, defaults []string) string {
+	parts := append([]string{}, options...)
+	parts = append(parts, defaults...)
+	if len(parts) == 0 {
+		return "{}"
+	}
+	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
 func jsClassCoverageTaskConstructorOptions(method jsFuncInfo, task *types.CoverageTestTask) []string {

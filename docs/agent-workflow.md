@@ -154,6 +154,7 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 - `passed` / `manual_review_environment`：生成结果能跑通，但目标错误分支依赖 OS、硬件、外部运行时或第三方库内部错误；通常需要依赖注入或人工重构后再补。
 - `passed` / `manual_review_protocol`：生成结果能跑通，但目标错误分支依赖 socket write、streaming I/O 或协议时序错误；通常需要 fake connection、协议层注入点或人工复核。
 - `passed` / `manual_review_database`：生成结果能跑通，但目标错误分支依赖 GORM/数据库行为；如果项目没有现成 sqlite/sqlmock 或测试数据库策略，不应自动引入第三方依赖，应先做依赖注入或测试数据库设计。
+- `failed` / `manual_review_private`：生成结果命中 JavaScript `#private` method 的语言访问限制，外部测试不能直接调用；应改为公共入口测试、重构可见性或人工复核，而不是继续修补同一个直接调用测试。
 - `failed` / `apply_fix_suggestions`：生成成功但测试失败，优先读取 `run_result.fix_suggestions[].repair_task`。
 - `failed` / `repair_generated_test`：生成成功但没有足够修复摘要，读取 `run_result.failures[]` 后修测试或实现。
 - `generation_error`：测试未生成，读取 `provider_error.action` 或 `error`，必要时降级 `provider: "static"`。

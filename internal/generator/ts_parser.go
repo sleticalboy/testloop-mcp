@@ -191,7 +191,13 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 			continue
 		}
 		methodName := methodNameNode.Content(source)
-		if methodName == "constructor" || isTestHelper(methodName) || isJSKeyword(methodName) {
+		if methodName == "constructor" {
+			if paramsNode := methodNode.ChildByFieldName("parameters"); paramsNode != nil {
+				cls.ConstructorParams = jsParseParams(paramsNode, source)
+			}
+			continue
+		}
+		if isTestHelper(methodName) || isJSKeyword(methodName) {
 			continue
 		}
 

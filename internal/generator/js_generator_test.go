@@ -1708,6 +1708,45 @@ module.exports = { Widget };
 			},
 			forbidden: []string{"rejects.toThrow()", "to.equal(", "require('chai')"},
 		},
+		{
+			name:     "vitest class constructor config branch",
+			fileName: "dev-watcher.js",
+			source: `export class DevWatcher {
+  constructor(serverName, devConfig) {
+    this.serverName = serverName
+    this.devConfig = {
+      enabled: devConfig.enabled ?? true,
+      watch: devConfig.watch ?? [],
+      cwd: devConfig.cwd
+    }
+    this.isWatching = false
+  }
+
+  async stop() {
+    if (!this.isWatching) {
+      return
+    }
+    this.isWatching = false
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-dev-watcher-stop-1",
+				Framework:       "vitest",
+				Target:          "DevWatcher.stop",
+				LineRange:       "13-13",
+				GapType:         "branch",
+				TestName:        "covers DevWatcher stop not watching",
+				SuggestedInputs: []string{"构造满足条件 `!this.isWatching` 的输入"},
+			},
+			wants: []string{
+				"import { DevWatcher } from './dev-watcher';",
+				"const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() });",
+				"const result = await instance.stop();",
+				"expect(result).toBeDefined();",
+			},
+			forbidden: []string{"new DevWatcher();", "rejects.toThrow()"},
+		},
 	}
 
 	for _, tt := range tests {

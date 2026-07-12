@@ -74,6 +74,8 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "manual_review_protocol"
 	} else if metadata["database_dependent"] == true {
 		action = "manual_review_database"
+	} else if metadata["private_method"] == true {
+		action = "manual_review_private"
 	}
 	out := types.CoverageTaskValidationOutput{
 		Status:       coverageTaskValidationStatus(runResult),
@@ -108,6 +110,10 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskDatabaseReason(task, generated, result); reason != "" {
 		metadata["database_dependent"] = true
 		metadata["database_reason"] = reason
+	}
+	if reason := coverageTaskPrivateMethodReason(task, generated, result); reason != "" {
+		metadata["private_method"] = true
+		metadata["private_reason"] = reason
 	}
 	return metadata
 }
@@ -204,6 +210,20 @@ func coverageTaskDatabaseReason(task *types.CoverageTestTask, generated *types.G
 		return fmt.Sprintf("%s database branch depends on GORM DB behavior; generate a deterministic test database or inject a fake repository/DB instead of adding third-party test dependencies implicitly", task.Target)
 	}
 	return ""
+}
+
+func coverageTaskPrivateMethodReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil || result.Status != "fail" {
+		return ""
+	}
+	target := strings.TrimSpace(task.Target)
+	if !strings.Contains(target, ".#") && !strings.Contains(generated.Preview, "instance.#") {
+		return ""
+	}
+	if !strings.Contains(result.RawOutput, "Private field") && !strings.Contains(result.RawOutput, "private field") {
+		return ""
+	}
+	return fmt.Sprintf("%s is a JavaScript private method; generate a public-entry test or review manually instead of calling it directly", target)
 }
 
 func validationCoverageTask(input *types.CoverageTestTask, generated *types.GenerateTestsOutput) *types.CoverageTestTask {

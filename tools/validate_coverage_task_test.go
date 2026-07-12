@@ -501,6 +501,83 @@ var _ = errors.New
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "config.js")
+	src := `export class ConfigManager {
+  #diffConfigs(oldServers, newServers) {
+    for (const name of Object.keys(oldServers)) {
+      if (!newServers[name]) {
+        return true
+      }
+    }
+    return false
+  }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeNpx(t, strings.Join([]string{
+		" RUN  v3.2.4 " + dir,
+		"",
+		" FAIL  config.test.js [ config.test.js ]",
+		"SyntaxError: Private field '#diffConfigs' must be declared in an enclosing class",
+		"",
+		" Test Files  1 failed (1)",
+		"      Tests  no tests",
+	}, "\n"))
+	task := types.CoverageTestTask{
+		ID:              "vitest-private-1",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "ConfigManager.#diffConfigs",
+		Kind:            "method",
+		LineRange:       "4-4",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: !newServers[name]"},
+		SuggestedInputs: []string{"构造满足条件 `!newServers[name]` 的输入"},
+		Goal:            "为 ConfigManager.#diffConfigs 补充私有方法分支测试",
+		Command:         "npx vitest run config.js",
+		TestFile:        filepath.Join(dir, "config.test.js"),
+		TestName:        "covers ConfigManager private diff",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "manual_review_private" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.Metadata["private_method"] != true {
+		t.Fatalf("expected private method metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["private_reason"].(string)
+	if !strings.Contains(reason, "ConfigManager.#diffConfigs") || !strings.Contains(reason, "private method") {
+		t.Fatalf("unexpected private reason: %q", reason)
+	}
+	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "instance.#diffConfigs") {
+		t.Fatalf("expected generated private method call, got %+v", out.Generated)
+	}
+}
+
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-test-1",

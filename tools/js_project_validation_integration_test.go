@@ -89,7 +89,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 			t.Fatalf("write output jsonl: %v", err)
 		}
 		summary.record(i+1, task, out)
-		if out.Status != "passed" {
+		if out.Status != "passed" && !strings.HasPrefix(out.Action, "manual_review_") {
 			failures = append(failures, fmt.Sprintf("task %d %s %s status=%s action=%s error=%s", i+1, task.ID, task.Target, out.Status, out.Action, out.Error))
 		}
 	}
