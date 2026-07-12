@@ -310,6 +310,9 @@ func generateGoTests(srcPath string, task *types.CoverageTestTask) (string, erro
 			}
 			for alias, importPath := range goNeededSeedImports(seedCase, sourceImports) {
 				neededTypeImports[alias] = importPath
+				if alias != path.Base(importPath) {
+					neededImportAliases[importPath] = alias
+				}
 			}
 		}
 	}
@@ -1035,6 +1038,9 @@ func goSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool
 	if seed, ok := goGinFailWithErrSeedTestCase(fn, task); ok {
 		return seed, true
 	}
+	if seed, ok := goLogxInitSeedTestCase(fn, task); ok {
+		return seed, true
+	}
 	if seed, ok := goHTTPWrapperSeedTestCase(fn, task); ok {
 		return seed, true
 	}
@@ -1378,6 +1384,76 @@ func goGinFailWithErrSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (go
 		},
 		ImportAliases: importAliases,
 	}, true
+}
+
+func goLogxInitSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {
+	if task == nil || fn.Name != "Init" || len(fn.Params) != 1 || fn.Params[0].Type != "config.Log" || len(fn.Returns) != 0 {
+		return goSeedCase{}, false
+	}
+	hints := strings.Join(goCoverageTaskConditionHints(task), " ")
+	cfg := `config.Log{Level: "debug", Path: "logs", MaxSize: 1, MaxBackups: 1, MaxAge: 1}`
+	setup := goLogxInitSetup(false)
+	postAssert := []string{}
+
+	switch {
+	case strings.Contains(hints, "switch/case"):
+		postAssert = append(postAssert,
+			"if zerolog.GlobalLevel() != zerolog.DebugLevel {",
+			`t.Errorf("global level = %v, want %v", zerolog.GlobalLevel(), zerolog.DebugLevel)`,
+			"}",
+		)
+	case strings.Contains(hints, "fn != nil") || strings.Contains(hints, "idx != -1") || strings.Contains(hints, "file[i] == '/'"):
+		postAssert = append(postAssert,
+			"pc, _, _, ok := runtime.Caller(0)",
+			"if !ok {",
+			`t.Fatalf("runtime.Caller failed")`,
+			"}",
+			`gotCaller := zerolog.CallerMarshalFunc(pc, "/tmp/test/file.go", 42)`,
+			`if !strings.Contains(gotCaller, "file.go:") {`,
+			`t.Errorf("caller = %q, want shortened file path", gotCaller)`,
+			"}",
+		)
+	case strings.Contains(hints, "err != nil"):
+		cfg = `config.Log{Level: "debug", Path: string([]byte{0}), MaxSize: 1, MaxBackups: 1, MaxAge: 1}`
+	case strings.Contains(hints, "config.Dev"):
+		setup = goLogxInitSetup(true)
+	default:
+		return goSeedCase{}, false
+	}
+
+	return goSeedCase{
+		Assert: goAssertPostAssert,
+		Inputs: map[string]string{
+			fn.Params[0].Name: cfg,
+		},
+		Setup:      setup,
+		PostAssert: postAssert,
+	}, true
+}
+
+func goLogxInitSetup(dev bool) []string {
+	return []string{
+		"oldLevel := zerolog.GlobalLevel()",
+		"oldCallerMarshalFunc := zerolog.CallerMarshalFunc",
+		"oldLogger := zlog.Logger",
+		"oldDev := config.Dev",
+		"oldWD, wdErr := os.Getwd()",
+		"if wdErr != nil {",
+		`t.Fatalf("getwd: %v", wdErr)`,
+		"}",
+		"tmpDir := t.TempDir()",
+		"if err := os.Chdir(tmpDir); err != nil {",
+		`t.Fatalf("chdir temp dir: %v", err)`,
+		"}",
+		"t.Cleanup(func() {",
+		"\tzerolog.SetGlobalLevel(oldLevel)",
+		"\tzerolog.CallerMarshalFunc = oldCallerMarshalFunc",
+		"\tzlog.Logger = oldLogger",
+		"\tconfig.Dev = oldDev",
+		"\t_ = os.Chdir(oldWD)",
+		"})",
+		fmt.Sprintf("config.Dev = %t", dev),
+	}
 }
 
 func goTraceTransportSeedTestCase(fn funcInfo, task *types.CoverageTestTask) (goSeedCase, bool) {

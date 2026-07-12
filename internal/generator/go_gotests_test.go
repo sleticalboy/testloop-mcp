@@ -2687,6 +2687,179 @@ func Fail(c *gin.Context, code int, msg string) {}
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskAssertsLogxInitBranches(t *testing.T) {
+	src := `package logx
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"quicksmoke/backendgo/internal/config"
+	"runtime"
+	"strings"
+
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
+	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+func Init(cfg config.Log) {
+	switch strings.ToLower(cfg.Level) {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+		funcName := ""
+		if fn := runtime.FuncForPC(pc); fn != nil {
+			funcName = filepath.Base(fn.Name())
+			if idx := strings.LastIndex(funcName, "."); idx != -1 {
+				funcName = funcName[idx+1:]
+			}
+		}
+		shortFile := file
+		for i := len(file) - 1; i > 0; i-- {
+			if file[i] == '/' {
+				shortFile = file[i+1:]
+				break
+			}
+		}
+		return fmt.Sprintf("%s:%s:%d", shortFile, funcName, line)
+	}
+	logDir := "./" + cfg.Path
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Printf("failed: %v", err)
+		return
+	}
+	w := &lumberjack.Logger{Filename: logDir + "/app.log"}
+	var writer io.Writer = w
+	if config.Dev {
+		writer = io.MultiWriter(w, os.Stdout)
+	}
+	zlog.Logger = zerolog.New(writer).With().Caller().Timestamp().Logger()
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "logx.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		task types.CoverageTestTask
+		want []string
+	}{
+		{
+			name: "level switch",
+			task: types.CoverageTestTask{
+				ID:              "go-test-logx-level",
+				Framework:       "go-test",
+				Target:          "Init",
+				LineRange:       "17-25",
+				GapType:         "branch",
+				TestName:        "TestInitLevel",
+				MissingBranches: []string{"未覆盖 switch/case 分支"},
+				AssertionFocus:  []string{"断言日志级别"},
+			},
+			want: []string{
+				`"os"`,
+				`"github.com/rs/zerolog"`,
+				`zlog "github.com/rs/zerolog/log"`,
+				`cfg:  config.Log{Level: "debug", Path: "logs", MaxSize: 1, MaxBackups: 1, MaxAge: 1}`,
+				"oldLevel := zerolog.GlobalLevel()",
+				"oldCallerMarshalFunc := zerolog.CallerMarshalFunc",
+				"oldLogger := zlog.Logger",
+				"oldDev := config.Dev",
+				"tmpDir := t.TempDir()",
+				"config.Dev = false",
+				"if zerolog.GlobalLevel() != zerolog.DebugLevel",
+			},
+		},
+		{
+			name: "caller marshal",
+			task: types.CoverageTestTask{
+				ID:              "go-test-logx-caller",
+				Framework:       "go-test",
+				Target:          "Init",
+				LineRange:       "28-37",
+				GapType:         "branch",
+				TestName:        "TestInitCaller",
+				MissingBranches: []string{"未覆盖 if 分支: fn != nil"},
+				AssertionFocus:  []string{"断言 caller 格式化"},
+			},
+			want: []string{
+				`"runtime"`,
+				`"strings"`,
+				"pc, _, _, ok := runtime.Caller(0)",
+				`gotCaller := zerolog.CallerMarshalFunc(pc, "/tmp/test/file.go", 42)`,
+				`if !strings.Contains(gotCaller, "file.go:")`,
+			},
+		},
+		{
+			name: "mkdir error",
+			task: types.CoverageTestTask{
+				ID:              "go-test-logx-mkdir",
+				Framework:       "go-test",
+				Target:          "Init",
+				LineRange:       "50-53",
+				GapType:         "branch",
+				TestName:        "TestInitMkdirError",
+				MissingBranches: []string{"未覆盖 if 分支: err != nil"},
+				AssertionFocus:  []string{"断言目录创建错误路径"},
+			},
+			want: []string{
+				`cfg:  config.Log{Level: "debug", Path: string([]byte{0}), MaxSize: 1, MaxBackups: 1, MaxAge: 1}`,
+				"skip: false",
+			},
+		},
+		{
+			name: "dev writer",
+			task: types.CoverageTestTask{
+				ID:              "go-test-logx-dev",
+				Framework:       "go-test",
+				Target:          "Init",
+				LineRange:       "58-62",
+				GapType:         "branch",
+				TestName:        "TestInitDev",
+				MissingBranches: []string{"未覆盖 if 分支: config.Dev"},
+				AssertionFocus:  []string{"断言 dev writer 分支"},
+			},
+			want: []string{
+				"config.Dev = true",
+				"skip: false",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, err := GenerateGoTestsForCoverageTask(srcPath, &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, notWant := range []string{
+				"skip: true",
+				"TODO: 填写有意义的输入",
+			} {
+				if strings.Contains(code, notWant) {
+					t.Fatalf("did not expect %q in generated code:\n%s", notWant, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskAssertsTimeDateZeroReturn(t *testing.T) {
 	src := `package sample
 

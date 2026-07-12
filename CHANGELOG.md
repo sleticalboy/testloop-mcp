@@ -16,6 +16,7 @@
 - Go static generator 支持 nil pointer receiver 的字符串分支，例如 `(*BizError).Error()` 的 `receiver == nil` 分支会生成非 skipped 测试并断言空字符串。
 - Go static generator 支持 JWT `Parse(secret, raw)` 的常见错误分支，可生成错误签名算法 token 或非法 token 输入，并自动补齐 `/vN` 语义版本 import 的源码包名别名。
 - Go static generator 支持 Gin `FailWithErr` 这类 response helper 分支，会生成 `gin.CreateTestContext`、`httptest.ResponseRecorder` 和 JSON response 断言；seed 也支持显式 import alias，避免业务 `errors` 包与标准库包名冲突。
+- Go static generator 支持 `logx.Init(config.Log)` 这类全局 logger 初始化分支，会生成全局状态恢复、临时工作目录、日志级别断言、caller marshal 断言、目录创建错误路径和 dev writer 分支测试。
 
 ## v0.4.14 - 2026-07-11
 
