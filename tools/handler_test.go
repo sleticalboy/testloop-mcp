@@ -1620,6 +1620,67 @@ func Sub(a, b int) int { return a - b }
 	}
 }
 
+func TestWriteGeneratedTestFileCleansUnusedGoImportsAfterMerge(t *testing.T) {
+	dir := t.TempDir()
+	testFile := filepath.Join(dir, "calc_test.go")
+	existing := `package calc
+
+import (
+	"io"
+	"testing"
+)
+
+func TestExisting(t *testing.T) {}
+`
+	if err := os.WriteFile(testFile, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write existing test file: %v", err)
+	}
+	generated := `package calc
+
+import "testing"
+
+func TestAdd(t *testing.T) {}
+`
+
+	merged, err := writeGeneratedTestFile(testFile, generated, ".go")
+	if err != nil {
+		t.Fatalf("writeGeneratedTestFile returned error: %v", err)
+	}
+	if strings.Contains(merged, "\"io\"") {
+		t.Fatalf("unused io import was not removed:\n%s", merged)
+	}
+	for _, want := range []string{"func TestExisting(t *testing.T)", "func TestAdd(t *testing.T)", "\"testing\""} {
+		if !strings.Contains(merged, want) {
+			t.Fatalf("merged Go test file missing %q:\n%s", want, merged)
+		}
+	}
+}
+
+func TestWriteGeneratedTestFileCleansUnusedGoImportsForNewFile(t *testing.T) {
+	dir := t.TempDir()
+	testFile := filepath.Join(dir, "calc_test.go")
+	generated := `package calc
+
+import (
+	"io"
+	"testing"
+)
+
+func TestAdd(t *testing.T) {}
+`
+
+	written, err := writeGeneratedTestFile(testFile, generated, ".go")
+	if err != nil {
+		t.Fatalf("writeGeneratedTestFile returned error: %v", err)
+	}
+	if strings.Contains(written, "\"io\"") {
+		t.Fatalf("unused io import was not removed:\n%s", written)
+	}
+	if !strings.Contains(written, "func TestAdd(t *testing.T)") || !strings.Contains(written, "\"testing\"") {
+		t.Fatalf("written Go test file missing expected content:\n%s", written)
+	}
+}
+
 func TestHandleGenerateTestsRenamesDuplicateGoCoverageTaskFunction(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"golang.org/x/tools/imports"
 
 	"github.com/sleticalboy/testloop-mcp/internal/generator"
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -320,13 +320,13 @@ func writeGeneratedTestFile(testFile string, code string, sourceExt string) (str
 func mergeGoGeneratedTestFile(testFile string, generated string) (string, error) {
 	existing, err := os.ReadFile(testFile)
 	if os.IsNotExist(err) {
-		return generated, nil
+		return formatGoTestFile(testFile, generated)
 	}
 	if err != nil {
 		return "", err
 	}
 	if strings.TrimSpace(string(existing)) == "" {
-		return generated, nil
+		return formatGoTestFile(testFile, generated)
 	}
 
 	existingSet := token.NewFileSet()
@@ -362,9 +362,13 @@ func mergeGoGeneratedTestFile(testFile string, generated string) (string, error)
 	}
 	merged = strings.TrimRight(merged, "\n") + "\n\n" + strings.Join(snippets, "\n\n") + "\n"
 
-	formatted, err := format.Source([]byte(merged))
+	return formatGoTestFile(testFile, merged)
+}
+
+func formatGoTestFile(testFile string, source string) (string, error) {
+	formatted, err := imports.Process(testFile, []byte(source), nil)
 	if err != nil {
-		return merged, fmt.Errorf("格式化合并后的 Go 测试文件失败: %w", err)
+		return source, fmt.Errorf("格式化合并后的 Go 测试文件失败: %w", err)
 	}
 	return string(formatted), nil
 }

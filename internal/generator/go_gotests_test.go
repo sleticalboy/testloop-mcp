@@ -1606,6 +1606,149 @@ func QueryStatus(socketPath string) (Status, error) {
 	}
 }
 
+func TestGenerateGoTestsForCoverageTaskUsesUnixSocketCloseForReadBytesErrorPath(t *testing.T) {
+	src := `package sample
+
+import (
+	"bufio"
+	"encoding/json"
+	"net"
+)
+
+type Status struct{}
+type BindRequest struct{ Control string }
+
+func QueryStatus(socketPath string) (Status, error) {
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		return Status{}, err
+	}
+	bind, _ := json.Marshal(BindRequest{Control: "status"})
+	if _, err := conn.Write(append(bind, '\n')); err != nil {
+		return Status{}, err
+	}
+	line, err := bufio.NewReader(conn).ReadBytes('\n')
+	if err != nil {
+		return Status{}, err
+	}
+	_ = line
+	return Status{}, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status-read",
+		Framework:       "go-test",
+		Target:          "QueryStatus",
+		LineRange:       "22-24",
+		GapType:         "branch",
+		TestName:        "TestQueryStatusReadError",
+		MissingBranches: []string{`未覆盖 if 分支: err != nil`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`err != nil`" + ` 的输入`},
+		AssertionFocus:  []string{"断言读取错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"bufio"`,
+		`"net"`,
+		`"path/filepath"`,
+		"skip:       false",
+		`socketPath: filepath.Join(t.TempDir(), "missing.sock")`,
+		`listener, listenErr := net.Listen("unix", tt.socketPath)`,
+		"_, _ = bufio.NewReader(conn).ReadBytes('\\n')",
+		"_ = conn.Close()",
+		"got0, got1 := QueryStatus(tt.socketPath)",
+		"if got1 == nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+		t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+	}
+}
+
+func TestGenerateGoTestsForCoverageTaskUsesInvalidUnixSocketJSONForUnmarshalErrorPath(t *testing.T) {
+	src := `package sample
+
+import (
+	"bufio"
+	"encoding/json"
+	"net"
+)
+
+type Status struct{}
+type BindRequest struct{ Control string }
+
+func QueryStatus(socketPath string) (Status, error) {
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		return Status{}, err
+	}
+	bind, _ := json.Marshal(BindRequest{Control: "status"})
+	if _, err := conn.Write(append(bind, '\n')); err != nil {
+		return Status{}, err
+	}
+	line, err := bufio.NewReader(conn).ReadBytes('\n')
+	if err != nil {
+		return Status{}, err
+	}
+	var status Status
+	if err := json.Unmarshal(line, &status); err != nil {
+		return Status{}, err
+	}
+	return status, nil
+}
+`
+	srcPath := filepath.Join(t.TempDir(), "client.go")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-query-status-json",
+		Framework:       "go-test",
+		Target:          "QueryStatus",
+		LineRange:       "26-28",
+		GapType:         "branch",
+		TestName:        "TestQueryStatusJSONError",
+		MissingBranches: []string{`未覆盖 if 分支: err != nil`},
+		SuggestedInputs: []string{`构造满足条件 ` + "`err != nil`" + ` 的输入`},
+		AssertionFocus:  []string{"断言 JSON 解码错误分支返回值"},
+	}
+
+	code, err := GenerateGoTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GenerateGoTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`"bufio"`,
+		`"net"`,
+		`"path/filepath"`,
+		"skip:       false",
+		`socketPath: filepath.Join(t.TempDir(), "missing.sock")`,
+		`listener, listenErr := net.Listen("unix", tt.socketPath)`,
+		"_, _ = bufio.NewReader(conn).ReadBytes('\\n')",
+		"_, _ = conn.Write([]byte(\"{\\n\"))",
+		"got0, got1 := QueryStatus(tt.socketPath)",
+		"if got1 == nil",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "skip: true") || strings.Contains(code, "TODO: 填写有意义的输入") {
+		t.Fatalf("did not expect skipped TODO in generated code:\n%s", code)
+	}
+}
+
 func TestGenerateGoTestsForCoverageTaskExplainsUnsafeBranchFallback(t *testing.T) {
 	src := `package sample
 

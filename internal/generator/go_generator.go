@@ -1549,6 +1549,7 @@ func goErrorPathSeedTestCase(fn funcInfo, boundary goBoundary) (goSeedCase, bool
 		Assert:  goAssertErrorPath,
 		Inputs:  inputs,
 		Outputs: outputs,
+		Setup:   goErrorPathSetup(boundary),
 	}, true
 }
 
@@ -1605,7 +1606,7 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		inputs[p.Name] = "\"://invalid-url\""
 		return inputs, true
 	}
-	if boundary.ErrSource == "net.Dial" {
+	if boundary.ErrSource == "net.Dial" || boundary.ErrSource == "ReadBytes" || boundary.ErrSource == "json.Unmarshal" {
 		for _, p := range fn.Params {
 			if p.Type != "string" || !goSocketPathParamName(p.Name) {
 				continue
@@ -1615,6 +1616,46 @@ func goErrorPathInputs(fn funcInfo, boundary goBoundary) (map[string]string, boo
 		}
 	}
 	return nil, false
+}
+
+func goErrorPathSetup(boundary goBoundary) []string {
+	switch boundary.ErrSource {
+	case "ReadBytes":
+		return []string{
+			`listener, listenErr := net.Listen("unix", tt.socketPath)`,
+			`if listenErr != nil {`,
+			"\tt.Fatalf(\"listen unix socket: %v\", listenErr)",
+			`}`,
+			`t.Cleanup(func() { _ = listener.Close() })`,
+			`go func() {`,
+			"\tconn, acceptErr := listener.Accept()",
+			"\tif acceptErr != nil {",
+			"\t\treturn",
+			"\t}",
+			"\t_, _ = bufio.NewReader(conn).ReadBytes('\\n')",
+			"\t_ = conn.Close()",
+			`}()`,
+		}
+	case "json.Unmarshal":
+		return []string{
+			`listener, listenErr := net.Listen("unix", tt.socketPath)`,
+			`if listenErr != nil {`,
+			"\tt.Fatalf(\"listen unix socket: %v\", listenErr)",
+			`}`,
+			`t.Cleanup(func() { _ = listener.Close() })`,
+			`go func() {`,
+			"\tconn, acceptErr := listener.Accept()",
+			"\tif acceptErr != nil {",
+			"\t\treturn",
+			"\t}",
+			"\tdefer conn.Close()",
+			"\t_, _ = bufio.NewReader(conn).ReadBytes('\\n')",
+			"\t_, _ = conn.Write([]byte(\"{\\n\"))",
+			`}()`,
+		}
+	default:
+		return nil
+	}
 }
 
 func goReturnExprIsZeroValue(expr, typ string) bool {
