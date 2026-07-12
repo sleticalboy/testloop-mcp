@@ -3098,6 +3098,43 @@ export class CodexExec {
 	})
 }
 
+func TestJSFuncCoverageTaskFindCodexPathUsesPublicConstructorOrManualReview(t *testing.T) {
+	fn := jsFuncInfo{Name: "findCodexPath", Analysis: jsFuncAnalysis{Throws: true}}
+	task := types.CoverageTestTask{
+		ID:        "jest-find-path-unsupported",
+		Framework: "jest",
+		Target:    "findCodexPath",
+		LineRange: "380-382",
+		GapType:   "branch",
+		TestName:  "covers unsupported platform",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"describe('findCodexPath'",
+		"const originalPlatform = process.platform;",
+		"Object.defineProperty(process, 'arch', { value: 'mips' });",
+		"const { CodexExec } = await import('../src/exec');",
+		"expect(() => new CodexExec(null)).toThrow('Unsupported platform');",
+	}, []string{
+		"import { findCodexPath }",
+		"findCodexPath()",
+		"it.skip(",
+	})
+
+	task.LineRange = "403-407"
+	task.TestName = "covers missing native package"
+	code = genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"it.skip('covers missing native package'",
+		"manual_review_internal: findCodexPath is not exported",
+		"public_entry_candidates: CodexExec constructor, resolveNativePackage",
+	}, []string{
+		"import { findCodexPath }",
+		"findCodexPath()",
+	})
+}
+
 func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",

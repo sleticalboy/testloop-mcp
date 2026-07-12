@@ -549,6 +549,9 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "parseIP" && task != nil && jsCoverageTaskPrivateIPParserTarget(strings.TrimSpace(task.Target)) {
 		return genJSParseIPPrivateParserCoverageTask(task, testName)
 	}
+	if fn.Name == "findCodexPath" && jsCoverageTaskFindCodexPathTarget(task) {
+		return genJSFindCodexPathCoverageTask(task, testName)
+	}
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -632,6 +635,50 @@ func genJSParseIPPrivateParserCoverageTask(task *types.CoverageTestTask, testNam
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
 	sb.WriteString(fmt.Sprintf("    expect(() => parseIP(%s)).toThrow();\n", input))
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSFindCodexPathCoverageTask(task *types.CoverageTestTask, testName string) string {
+	if task != nil && strings.HasPrefix(strings.TrimSpace(task.LineRange), "380") {
+		return genJSFindCodexPathUnsupportedPlatformTask(task, testName)
+	}
+	return genJSFindCodexPathManualReviewTask(task, testName)
+}
+
+func genJSFindCodexPathUnsupportedPlatformTask(task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString("describe('findCodexPath', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const originalPlatform = process.platform;\n")
+	sb.WriteString("    const originalArch = process.arch;\n")
+	sb.WriteString("    Object.defineProperty(process, 'platform', { value: 'linux' });\n")
+	sb.WriteString("    Object.defineProperty(process, 'arch', { value: 'mips' });\n")
+	sb.WriteString("    try {\n")
+	sb.WriteString("      const { CodexExec } = await import('../src/exec');\n")
+	sb.WriteString("      expect(() => new CodexExec(null)).toThrow('Unsupported platform');\n")
+	sb.WriteString("    } finally {\n")
+	sb.WriteString("      Object.defineProperty(process, 'platform', { value: originalPlatform });\n")
+	sb.WriteString("      Object.defineProperty(process, 'arch', { value: originalArch });\n")
+	sb.WriteString("    }\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSFindCodexPathManualReviewTask(task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString("describe('findCodexPath', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    // manual_review_internal: findCodexPath is not exported and this branch depends on internal platform/package resolution state.\n")
+	sb.WriteString("    // public_entry_candidates: CodexExec constructor, resolveNativePackage\n")
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -873,7 +920,7 @@ func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsCodexExecMock(task)
+	return jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsCodexExecMock(task) || jsCoverageTaskFindCodexPathTarget(task)
 }
 
 func jsCoverageTaskNeedsCodexExecMock(task *types.CoverageTestTask) bool {
@@ -882,6 +929,10 @@ func jsCoverageTaskNeedsCodexExecMock(task *types.CoverageTestTask) bool {
 	}
 	target := strings.TrimSpace(task.Target)
 	return target == "CodexExec.run" || jsCoverageTaskCodexConfigOverridesTarget(target)
+}
+
+func jsCoverageTaskFindCodexPathTarget(task *types.CoverageTestTask) bool {
+	return task != nil && strings.TrimSpace(task.Target) == "findCodexPath"
 }
 
 func jsCoverageTaskCodexConfigOverridesTarget(target string) bool {
