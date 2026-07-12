@@ -552,6 +552,9 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "findCodexPath" && jsCoverageTaskFindCodexPathTarget(task) {
 		return genJSFindCodexPathCoverageTask(task, testName)
 	}
+	if fn.Name == "isDirectory" && jsCoverageTaskCodexInternalFSHelperTarget(task) {
+		return genJSCodexInternalFSHelperManualReviewTask(task, testName)
+	}
 	if fn.Name == "resolveNativePackage" && task != nil && strings.TrimSpace(task.Target) == "resolveNativePackage" {
 		return genJSResolveNativePackageCoverageTask(fn, task, testName)
 	}
@@ -682,6 +685,21 @@ func genJSFindCodexPathManualReviewTask(task *types.CoverageTestTask, testName s
 	}
 	sb.WriteString("    // manual_review_internal: findCodexPath is not exported and this branch depends on internal platform/package resolution state.\n")
 	sb.WriteString("    // public_entry_candidates: CodexExec constructor, resolveNativePackage\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSCodexInternalFSHelperManualReviewTask(task *types.CoverageTestTask, testName string) string {
+	target := strings.TrimSpace(task.Target)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", target))
+	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("    // manual_review_internal: %s is not exported and is only reachable through internal filesystem/package-resolution helpers.\n", target))
+	sb.WriteString("    // public_entry_candidates: findCodexPath, resolveNativePackage\n")
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -937,7 +955,10 @@ func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsCodexExecMock(task) || jsCoverageTaskFindCodexPathTarget(task)
+	return jsCoverageTaskNeedsOAuthProviderMocks(task) ||
+		jsCoverageTaskNeedsCodexExecMock(task) ||
+		jsCoverageTaskFindCodexPathTarget(task) ||
+		jsCoverageTaskCodexInternalFSHelperTarget(task)
 }
 
 func jsCoverageTaskNeedsCodexExecMock(task *types.CoverageTestTask) bool {
@@ -950,6 +971,10 @@ func jsCoverageTaskNeedsCodexExecMock(task *types.CoverageTestTask) bool {
 
 func jsCoverageTaskFindCodexPathTarget(task *types.CoverageTestTask) bool {
 	return task != nil && strings.TrimSpace(task.Target) == "findCodexPath"
+}
+
+func jsCoverageTaskCodexInternalFSHelperTarget(task *types.CoverageTestTask) bool {
+	return task != nil && strings.TrimSpace(task.Target) == "isDirectory"
 }
 
 func jsCoverageTaskCodexConfigOverridesTarget(target string) bool {

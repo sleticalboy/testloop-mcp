@@ -3219,6 +3219,40 @@ func TestJSFuncCoverageTaskResolveNativePackageUsesTypedNullReturnInput(t *testi
 	})
 }
 
+func TestJSFuncCoverageTaskInternalFSHelperUsesManualReview(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:       "isDirectory",
+		IsExported: false,
+		Params:     []jsParamInfo{{Name: "filePath"}},
+		Analysis: jsFuncAnalysis{
+			HasReturn:      true,
+			ReturnType:     "boolean",
+			ReturnTypeExpr: "boolean",
+			Returns:        []string{"statSync(filePath).isDirectory()", "false"},
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-directory-false",
+		Framework: "jest",
+		Target:    "isDirectory",
+		LineRange: "482-482",
+		GapType:   "return_path",
+		TestName:  "covers missing directory",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"describe('isDirectory'",
+		"it.skip('covers missing directory'",
+		"manual_review_internal: isDirectory is not exported",
+		"public_entry_candidates: findCodexPath, resolveNativePackage",
+	}, []string{
+		"import { isDirectory }",
+		"isDirectory('test')",
+		"const result = isDirectory",
+	})
+}
+
 func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",
