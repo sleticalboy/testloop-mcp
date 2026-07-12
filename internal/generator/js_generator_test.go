@@ -1082,6 +1082,62 @@ export function status(): string {
 			forbidden: []string{"to.equal(", "require('chai')", "expect(typeof result).toBe('object')"},
 		},
 		{
+			name:     "jest version from header branch",
+			fileName: "util.js",
+			source: `export function versionFromHeader(h) {
+  if (h.version == 2) return { name: 'IPv4' }
+  if (h.version != 3) return null
+  if (h.ipVersion == 4) return { name: 'IPv4' }
+  if (h.ipVersion == 6) return { name: 'IPv6' }
+  return null
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "jest-version-header-1",
+				Framework:       "jest",
+				Target:          "versionFromHeader",
+				LineRange:       "4-4",
+				GapType:         "branch",
+				TestName:        "covers versionFromHeader IPv4 header",
+				MissingBranches: []string{"未覆盖 if 分支: ipVer == XdbIPv4Id"},
+				SuggestedInputs: []string{"构造满足条件 `ipVer == XdbIPv4Id` 的输入"},
+			},
+			wants: []string{
+				"import { versionFromHeader } from './util';",
+				"const result = versionFromHeader({ version: 3, ipVersion: 4 });",
+				"expect(result?.name).toBe('IPv4');",
+			},
+			forbidden: []string{"versionFromHeader(undefined)", "expect(result).toBeNull();"},
+		},
+		{
+			name:     "jest internal ipv6 parser via parseIP",
+			fileName: "util.js",
+			source: `function _parse_ipv6_addr(v6String) {
+  if (v6String === '1::2::3') throw new Error('invalid ipv6 address: multi double colon detected')
+  return Buffer.alloc(16)
+}
+
+export function parseIP(ipString) {
+  return _parse_ipv6_addr(ipString)
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "jest-ipv6-private-1",
+				Framework:       "jest",
+				Target:          "_parse_ipv6_addr",
+				LineRange:       "91-91",
+				GapType:         "error_path",
+				TestName:        "covers internal ipv6 multi double colon",
+				SuggestedInputs: []string{"设置 v6String 覆盖未执行分支"},
+			},
+			wants: []string{
+				"import { parseIP } from './util';",
+				"describe('parseIP'",
+				"expect(() => parseIP('1::2::3')).toThrow();",
+			},
+			forbidden: []string{"_parse_ipv6_addr }", "_parse_ipv6_addr(undefined)", "import { _parse_ipv6_addr"},
+		},
+		{
 			name:     "vitest typescript response json",
 			fileName: "api.ts",
 			source: `export async function parseUser(response: Response): Promise<{ ok: boolean }> {

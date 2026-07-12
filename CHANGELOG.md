@@ -20,6 +20,8 @@
 - JS class coverage task 可通过 `DevWatcher.start()` 公共入口覆盖 `DevWatcher.#handleFileChange` 私有分支，自动生成 Vitest `chokidar` mock、fake timers、watcher 事件和 `filesChanged` 断言。
 - JS class coverage task 可通过 `MCPHubOAuthProvider` 和模块动态导入覆盖未导出的 `StorageManager.init/get`，自动生成 `fs/promises`、logger mock 和默认导出 provider 断言。
 - JS class coverage task 支持 `WorkspaceCacheManager.updateWorkspaceState` 这类缓存状态更新分支，自动预置 workspace cache、mock `_readCache/_writeCache/_withLock`，并断言写入的合并状态。
+- JS coverage 验证脚本支持 `TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS`，可在隔离 worktree 中挂载 monorepo 父级资源，例如 `ip2region` JS 子包依赖的 `data/` 目录。
+- JS function coverage task 支持 `versionFromHeader` 这类对象参数分支输入合成，并可通过公开 `parseIP()` 入口覆盖未导出的 `_parse_ipv4_addr/_parse_ipv6_addr` 错误分支。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

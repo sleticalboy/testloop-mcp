@@ -41,6 +41,9 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	if err := copyJSProjectTree(projectDir, baselineRoot); err != nil {
 		t.Fatalf("copy baseline project: %v", err)
 	}
+	if err := linkJSExtraResources(projectDir, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
+		t.Fatalf("link baseline extra resources: %v", err)
+	}
 
 	report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")))
 	tasks := filterJSCoverageTasks(report.TestTasks, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
@@ -66,6 +69,9 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		taskRoot := filepath.Join(t.TempDir(), fmt.Sprintf("task-%02d", i+1))
 		if err := copyJSProjectTree(projectDir, taskRoot); err != nil {
 			t.Fatalf("copy task worktree for %s: %v", task.ID, err)
+		}
+		if err := linkJSExtraResources(projectDir, taskRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
+			t.Fatalf("link task extra resources for %s: %v", task.ID, err)
 		}
 		task.File = rewriteJSValidationPath(baselineRoot, taskRoot, task.File)
 		task.TestFile = rewriteJSValidationPath(baselineRoot, taskRoot, task.TestFile)
@@ -204,6 +210,57 @@ func rewriteJSValidationPath(baselineRoot string, taskRoot string, value string)
 		}
 	}
 	return rewriteGoValidationPath(baselineRoot, taskRoot, value)
+}
+
+func linkJSExtraResources(projectDir string, copyRoot string, spec string) error {
+	spec = strings.TrimSpace(spec)
+	if spec == "" {
+		return nil
+	}
+	for _, raw := range strings.Split(spec, ",") {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		parts := strings.SplitN(raw, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS entry %q, expected src:dst", raw)
+		}
+		src := strings.TrimSpace(parts[0])
+		dst := strings.TrimSpace(parts[1])
+		if src == "" || dst == "" {
+			return fmt.Errorf("invalid TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS entry %q, src and dst are required", raw)
+		}
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(projectDir, src)
+		}
+		src, err := filepath.Abs(src)
+		if err != nil {
+			return fmt.Errorf("resolve extra source %q: %w", parts[0], err)
+		}
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("stat extra source %q: %w", src, err)
+		}
+		linkPath := filepath.Clean(filepath.Join(copyRoot, dst))
+		if err := os.MkdirAll(filepath.Dir(linkPath), 0o755); err != nil {
+			return fmt.Errorf("create extra resource parent for %q: %w", linkPath, err)
+		}
+		if existing, err := os.Readlink(linkPath); err == nil {
+			if existing == src {
+				continue
+			}
+			return fmt.Errorf("extra resource link %q already points to %q, want %q", linkPath, existing, src)
+		} else if !os.IsNotExist(err) {
+			if _, statErr := os.Stat(linkPath); statErr == nil {
+				continue
+			}
+			return fmt.Errorf("inspect extra resource link %q: %w", linkPath, err)
+		}
+		if err := os.Symlink(src, linkPath); err != nil {
+			return fmt.Errorf("link extra resource %q -> %q: %w", linkPath, src, err)
+		}
+	}
+	return nil
 }
 
 func copyJSProjectTree(src string, dst string) error {

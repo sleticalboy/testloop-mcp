@@ -201,6 +201,12 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 
 	filteredFuncs := make([]jsFuncInfo, 0, len(funcs))
 	for _, fn := range funcs {
+		if jsCoverageTaskPrivateIPParserTarget(target) {
+			if fn.Name == "parseIP" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
 		if taskTargetMatches(target, "", fn.Name) {
 			filteredFuncs = append(filteredFuncs, fn)
 		}
@@ -527,6 +533,13 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	args := jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis, nil)
 	assertions := jsAssertionStyleForTask(task)
 
+	if fn.Name == "versionFromHeader" {
+		return genJSVersionFromHeaderCoverageTask(fn, task, testName)
+	}
+	if fn.Name == "parseIP" && task != nil && jsCoverageTaskPrivateIPParserTarget(strings.TrimSpace(task.Target)) {
+		return genJSParseIPPrivateParserCoverageTask(task, testName)
+	}
+
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
 	if comment := coverageTaskComment(task); comment != "" {
@@ -552,6 +565,70 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
+}
+
+func genJSVersionFromHeaderCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	hints := jsCoverageTaskHints(task)
+	header := "{ version: 3, ipVersion: 4 }"
+	assertion := "expect(result?.name).toBe('IPv4');"
+	switch {
+	case strings.Contains(hints, "h.version == XdbStructure20"):
+		header = "{ version: 2 }"
+		assertion = "expect(result?.name).toBe('IPv4');"
+	case strings.Contains(hints, "h.version != XdbStructure30"):
+		header = "{ version: 99 }"
+		assertion = "expect(result).toBeNull();"
+	case strings.Contains(hints, "ipVer == XdbIPv6Id"):
+		header = "{ version: 3, ipVersion: 6 }"
+		assertion = "expect(result?.name).toBe('IPv6');"
+	case strings.Contains(hints, "ipVer == XdbIPv4Id"):
+		header = "{ version: 3, ipVersion: 4 }"
+		assertion = "expect(result?.name).toBe('IPv4');"
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
+	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("    const result = versionFromHeader(%s);\n", header))
+	sb.WriteString("    " + assertion + "\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSParseIPPrivateParserCoverageTask(task *types.CoverageTestTask, testName string) string {
+	input := "'1.2.3'"
+	if task != nil {
+		target := strings.TrimSpace(task.Target)
+		lineRange := strings.TrimSpace(task.LineRange)
+		switch {
+		case target == "_parse_ipv4_addr" && strings.HasPrefix(lineRange, "66"):
+			input = "'999.1.1.1'"
+		case target == "_parse_ipv6_addr" && strings.HasPrefix(lineRange, "91"):
+			input = "'1::2::3'"
+		case target == "_parse_ipv6_addr" && strings.HasPrefix(lineRange, "123"):
+			input = "'10000::1'"
+		case target == "_parse_ipv6_addr":
+			input = "'abcd:ef'"
+		}
+	}
+	var sb strings.Builder
+	sb.WriteString("describe('parseIP', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("    expect(() => parseIP(%s)).toThrow();\n", input))
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func jsCoverageTaskPrivateIPParserTarget(target string) bool {
+	return target == "_parse_ipv4_addr" || target == "_parse_ipv6_addr"
 }
 
 func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {

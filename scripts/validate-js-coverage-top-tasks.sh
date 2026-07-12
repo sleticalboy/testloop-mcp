@@ -21,6 +21,11 @@ Environment:
   TESTLOOP_VALIDATE_JS_OUTPUT       Overrides [output-jsonl]
   TESTLOOP_VALIDATE_JS_TEST_ARGS    Extra baseline coverage args, e.g. "tests/foo.test.js"
   TESTLOOP_VALIDATE_JS_FILE_FILTER  Optional substring filter for task source files
+  TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS
+                                      Optional comma-separated src:dst mappings.
+                                      src is relative to <js-project-dir> unless absolute;
+                                      dst is relative to the isolated project copy and may
+                                      include ../ segments for monorepo parent resources.
 USAGE
 }
 
