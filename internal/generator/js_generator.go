@@ -552,6 +552,9 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "findCodexPath" && jsCoverageTaskFindCodexPathTarget(task) {
 		return genJSFindCodexPathCoverageTask(task, testName)
 	}
+	if fn.Name == "resolveNativePackage" && task != nil && strings.TrimSpace(task.Target) == "resolveNativePackage" {
+		return genJSResolveNativePackageCoverageTask(fn, task, testName)
+	}
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -679,6 +682,20 @@ func genJSFindCodexPathManualReviewTask(task *types.CoverageTestTask, testName s
 	}
 	sb.WriteString("    // manual_review_internal: findCodexPath is not exported and this branch depends on internal platform/package resolution state.\n")
 	sb.WriteString("    // public_entry_candidates: CodexExec constructor, resolveNativePackage\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSResolveNativePackageCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
+	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const result = resolveNativePackage('missing-vendor-root', 'missing-triple', 'codex');\n")
+	sb.WriteString("    expect(result).toBeNull();\n")
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -937,7 +954,7 @@ func jsCoverageTaskFindCodexPathTarget(task *types.CoverageTestTask) bool {
 
 func jsCoverageTaskCodexConfigOverridesTarget(target string) bool {
 	switch strings.TrimSpace(target) {
-	case "flattenConfigOverrides", "toTomlValue":
+	case "flattenConfigOverrides", "serializeConfigOverrides", "toTomlValue":
 		return true
 	default:
 		return false

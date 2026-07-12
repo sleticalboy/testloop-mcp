@@ -2994,7 +2994,11 @@ func TestJSClassCoverageTaskGeneratesIP2RegionStatefulClassCases(t *testing.T) {
 }
 
 func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
-	funcs := []jsFuncInfo{{Name: "flattenConfigOverrides", IsExported: false}, {Name: "toTomlValue", IsExported: false}}
+	funcs := []jsFuncInfo{
+		{Name: "flattenConfigOverrides", IsExported: false},
+		{Name: "serializeConfigOverrides", IsExported: false},
+		{Name: "toTomlValue", IsExported: false},
+	}
 	classes := []jsClassInfo{{
 		Name:       "CodexExec",
 		IsExported: true,
@@ -3050,6 +3054,22 @@ func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
 	}, []string{
 		"toTomlValue(",
 		"import { toTomlValue }",
+	})
+
+	task.Target = "serializeConfigOverrides"
+	task.LineRange = "249-249"
+	task.TestName = "covers serialized config return"
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(funcs, classes, &task)
+	if len(filteredFuncs) != 0 {
+		t.Fatalf("unexported serializeConfigOverrides should not be imported directly: %+v", filteredFuncs)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { model: 'gpt-5' });",
+		"expect(commandArgs).toContain('model=\"gpt-5\"');",
+	}, []string{
+		"serializeConfigOverrides(",
+		"import { serializeConfigOverrides }",
 	})
 }
 
@@ -3132,6 +3152,36 @@ func TestJSFuncCoverageTaskFindCodexPathUsesPublicConstructorOrManualReview(t *t
 	}, []string{
 		"import { findCodexPath }",
 		"findCodexPath()",
+	})
+}
+
+func TestJSFuncCoverageTaskResolveNativePackageUsesTypedNullReturnInput(t *testing.T) {
+	fn := jsFuncInfo{
+		Name: "resolveNativePackage",
+		Params: []jsParamInfo{
+			{Name: "vendorRoot"},
+			{Name: "targetTriple"},
+			{Name: "codexBinaryName"},
+		},
+		Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "null", Returns: []string{"null"}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-native-package-null",
+		Framework: "jest",
+		Target:    "resolveNativePackage",
+		LineRange: "434-434",
+		GapType:   "error_path",
+		TestName:  "covers missing native package root",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"describe('resolveNativePackage'",
+		"const result = resolveNativePackage('missing-vendor-root', 'missing-triple', 'codex');",
+		"expect(result).toBeNull();",
+	}, []string{
+		"resolveNativePackage(undefined",
+		"toThrow()",
 	})
 }
 
