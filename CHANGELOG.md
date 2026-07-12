@@ -23,6 +23,7 @@
 - JS coverage 验证脚本支持 `TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS`，可在隔离 worktree 中挂载 monorepo 父级资源，例如 `ip2region` JS 子包依赖的 `data/` 目录。
 - JS function coverage task 支持 `versionFromHeader` 这类对象参数分支输入合成，并可通过公开 `parseIP()` 入口覆盖未导出的 `_parse_ipv4_addr/_parse_ipv6_addr` 错误分支。
 - JS class coverage task 支持 `ip2region` 这类带状态 class 的最小实例构造：`Version.ipCompare` 会注入 compare callback，`Searcher.search/read/toString` 会用内存 buffer、临时 `fs.readSync` 替换和合法 version 结构覆盖二进制搜索、短读异常和字符串返回路径，避免 ESM Jest 下依赖不存在的全局 `jest`。
+- JS/TS coverage task 支持通过 `CodexExec.run` 公共入口覆盖未导出的 `flattenConfigOverrides` / `toTomlValue` 配置序列化 helper，自动生成 ESM Jest `child_process.spawn` mock、合法 `CodexExecArgs`、config override 断言和 `@ts-nocheck` mock 草稿，避免 TypeScript/Jest 项目直接 import 内部函数失败。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

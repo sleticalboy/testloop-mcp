@@ -2993,6 +2993,111 @@ func TestJSClassCoverageTaskGeneratesIP2RegionStatefulClassCases(t *testing.T) {
 	}
 }
 
+func TestJSCoverageTaskRoutesCodexConfigHelperThroughPublicRun(t *testing.T) {
+	funcs := []jsFuncInfo{{Name: "flattenConfigOverrides", IsExported: false}, {Name: "toTomlValue", IsExported: false}}
+	classes := []jsClassInfo{{
+		Name:       "CodexExec",
+		IsExported: true,
+		Methods: []jsFuncInfo{{
+			Name:    "run",
+			IsAsync: true,
+			Params:  []jsParamInfo{{Name: "args"}},
+			Analysis: jsFuncAnalysis{
+				HasReturn: true,
+			},
+		}},
+	}}
+	task := types.CoverageTestTask{
+		ID:        "jest-flatten-1",
+		Framework: "jest",
+		Target:    "flattenConfigOverrides",
+		LineRange: "271-274",
+		GapType:   "branch",
+		TestName:  "covers nested empty config",
+	}
+
+	filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(funcs, classes, &task)
+	if len(filteredFuncs) != 0 {
+		t.Fatalf("unexported helper should not be imported directly: %+v", filteredFuncs)
+	}
+	if len(filteredClasses) != 1 || filteredClasses[0].Name != "CodexExec" || len(filteredClasses[0].Methods) != 1 || filteredClasses[0].Methods[0].Name != "run" {
+		t.Fatalf("expected CodexExec.run public entry, got %+v", filteredClasses)
+	}
+
+	code := genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const { CodexExec } = await import('../src/exec');",
+		"const instance = new CodexExec('codex', {}, { sandbox_workspace_write: {} });",
+		"await consumeTestloopCodexExec(instance.run({ input: 'hi' }));",
+		"expect(commandArgs).toContain('sandbox_workspace_write={}');",
+	}, []string{
+		"flattenConfigOverrides(",
+		"import { flattenConfigOverrides }",
+	})
+
+	task.Target = "toTomlValue"
+	task.LineRange = "296-298"
+	task.TestName = "covers finite number validation"
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(funcs, classes, &task)
+	if len(filteredFuncs) != 0 {
+		t.Fatalf("unexported toTomlValue should not be imported directly: %+v", filteredFuncs)
+	}
+	code = genJSClassTestForCoverageTask(filteredClasses[0], &task, "../src/exec")
+	assertGeneratedJS(t, code, []string{
+		"const instance = new CodexExec('codex', {}, { retries: Infinity });",
+		"rejects.toThrow('finite number');",
+		"expect(spawnMock).not.toHaveBeenCalled();",
+	}, []string{
+		"toTomlValue(",
+		"import { toTomlValue }",
+	})
+}
+
+func TestGenerateJSCoverageTaskCodexExecUsesDynamicJestMock(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "exec.ts")
+	src := `import { spawn } from "node:child_process";
+
+export class CodexExec {
+  constructor(executablePath: string | null = null) {}
+  async *run(args: { input: string }): AsyncGenerator<string> {
+    const child = spawn("codex", []);
+    let spawnError: unknown | null = null;
+    child.once("error", (err) => (spawnError = err));
+    if (spawnError) throw spawnError;
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "jest-run-spawn-error",
+		Framework: "jest",
+		Target:    "CodexExec.run",
+		LineRange: "8-8",
+		GapType:   "branch",
+		TestName:  "covers spawn error",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"// @ts-nocheck",
+		"import * as child_process from 'node:child_process';",
+		"import { jest } from '@jest/globals';",
+		"jest.mock('node:child_process'",
+		"const { CodexExec } = await import('./exec');",
+		"const instance = new CodexExec('codex');",
+		"instance.run({ input: 'hi' })",
+		"rejects.toThrow('spawn failed');",
+	}, []string{
+		"import { CodexExec } from './exec';",
+		"instance.run([])",
+	})
+}
+
 func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",

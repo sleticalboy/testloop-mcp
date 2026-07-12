@@ -162,6 +162,9 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	if vitestTask {
 		buf.WriteString(jsVitestPreludeForCoverageTask(task, moduleImportPath))
 	}
+	if isESModule && jsCoverageTaskNeedsCodexExecMock(task) {
+		buf.WriteString(jsCodexExecJestPrelude())
+	}
 	if isESModule {
 		if !jsCoverageTaskNeedsDynamicImportOnly(task) {
 			buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
@@ -207,6 +210,9 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 			}
 			continue
 		}
+		if jsCoverageTaskCodexConfigOverridesTarget(target) {
+			continue
+		}
 		if taskTargetMatches(target, "", fn.Name) {
 			filteredFuncs = append(filteredFuncs, fn)
 		}
@@ -220,6 +226,10 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 		}
 		methods := make([]jsFuncInfo, 0, len(cls.Methods))
 		for _, method := range cls.Methods {
+			if jsCoverageTaskCodexConfigOverridesTarget(target) && cls.Name == "CodexExec" && method.Name == "run" {
+				methods = append(methods, method)
+				continue
+			}
 			if taskTargetMatches(target, cls.Name, method.Name) {
 				methods = append(methods, method)
 			}
@@ -735,6 +745,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSWorkspaceCacheUpdateStateTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
+			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
+			continue
+		}
 		if cls.Name == "Version" && method.Name == "ipCompare" {
 			sb.WriteString(genJSVersionIPCompareCoverageTask(method, task, testName))
 			continue
@@ -859,7 +873,60 @@ func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsOAuthProviderMocks(task)
+	return jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsCodexExecMock(task)
+}
+
+func jsCoverageTaskNeedsCodexExecMock(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target == "CodexExec.run" || jsCoverageTaskCodexConfigOverridesTarget(target)
+}
+
+func jsCoverageTaskCodexConfigOverridesTarget(target string) bool {
+	switch strings.TrimSpace(target) {
+	case "flattenConfigOverrides", "toTomlValue":
+		return true
+	default:
+		return false
+	}
+}
+
+func jsCodexExecJestPrelude() string {
+	return `// @ts-nocheck
+import * as child_process from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+import { jest } from '@jest/globals';
+
+jest.mock('node:child_process', () => {
+  const actual = jest.requireActual('node:child_process');
+  return Object.assign({}, actual, { spawn: jest.fn() });
+});
+
+class TestloopCodexExecChild extends EventEmitter {
+  constructor() {
+    super();
+    this.stdin = new PassThrough();
+    this.stdout = new PassThrough();
+    this.stderr = new PassThrough();
+    this.killed = false;
+  }
+
+  kill() {
+    this.killed = true;
+    return true;
+  }
+}
+
+async function consumeTestloopCodexExec(iterable) {
+  for await (const _ of iterable) {
+    // consume all output
+  }
+}
+
+`
 }
 
 func jsSiblingModuleImportPath(moduleImportPath, sibling string) string {
@@ -1012,6 +1079,145 @@ func genJSWorkspaceCacheUpdateStateTest(method jsFuncInfo, task *types.CoverageT
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()
+}
+
+func genJSCodexExecRunCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string) string {
+	target := ""
+	if task != nil {
+		target = task.Target
+	}
+	if jsCoverageTaskCodexConfigOverridesTarget(target) {
+		return genJSCodexExecConfigOverrideCoverageTask(method, task, testName, moduleImportPath)
+	}
+	return genJSCodexExecSpawnErrorCoverageTask(method, task, testName, moduleImportPath)
+}
+
+func genJSCodexExecSpawnErrorCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("      const { CodexExec } = await import('%s');\n", moduleImportPath))
+	sb.WriteString("      const spawnMock = jest.mocked(child_process.spawn);\n")
+	sb.WriteString("      spawnMock.mockClear();\n")
+	sb.WriteString("      const child = new TestloopCodexExecChild();\n")
+	sb.WriteString("      spawnMock.mockReturnValue(child);\n")
+	sb.WriteString("      setImmediate(() => {\n")
+	sb.WriteString("        child.emit('error', new Error('spawn failed'));\n")
+	sb.WriteString("        child.stdout.end();\n")
+	sb.WriteString("        child.stderr.end();\n")
+	sb.WriteString("        child.emit('exit', 0, null);\n")
+	sb.WriteString("      });\n")
+	sb.WriteString("      const instance = new CodexExec('codex');\n")
+	sb.WriteString("      await expect(consumeTestloopCodexExec(instance.run({ input: 'hi' }))).rejects.toThrow('spawn failed');\n")
+	sb.WriteString("      expect(spawnMock).toHaveBeenCalled();\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSCodexExecConfigOverrideCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, moduleImportPath string) string {
+	scenario := jsCodexExecConfigOverrideScenarioForTask(task)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("      const { CodexExec } = await import('%s');\n", moduleImportPath))
+	sb.WriteString("      const spawnMock = jest.mocked(child_process.spawn);\n")
+	sb.WriteString("      spawnMock.mockClear();\n")
+	if scenario.expectError {
+		sb.WriteString(fmt.Sprintf("      const instance = new CodexExec('codex', {}, %s);\n", scenario.configOverrides))
+		message := scenario.errorMessage
+		if message == "" {
+			message = "Error"
+		}
+		sb.WriteString(fmt.Sprintf("      await expect(consumeTestloopCodexExec(instance.run({ input: 'hi' }))).rejects.toThrow('%s');\n", strings.ReplaceAll(message, "'", "\\'")))
+		sb.WriteString("      expect(spawnMock).not.toHaveBeenCalled();\n")
+	} else {
+		sb.WriteString("      const child = new TestloopCodexExecChild();\n")
+		sb.WriteString("      spawnMock.mockReturnValue(child);\n")
+		sb.WriteString("      setImmediate(() => {\n")
+		sb.WriteString("        child.stdout.end();\n")
+		sb.WriteString("        child.stderr.end();\n")
+		sb.WriteString("        child.emit('exit', 0, null);\n")
+		sb.WriteString("      });\n")
+		sb.WriteString(fmt.Sprintf("      const instance = new CodexExec('codex', {}, %s);\n", scenario.configOverrides))
+		sb.WriteString("      await consumeTestloopCodexExec(instance.run({ input: 'hi' }));\n")
+		sb.WriteString("      const commandArgs = spawnMock.mock.calls[0]?.[1] || [];\n")
+		for _, assertion := range scenario.assertions {
+			sb.WriteString("      " + assertion + "\n")
+		}
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+type jsCodexExecConfigOverrideScenario struct {
+	configOverrides string
+	expectError     bool
+	errorMessage    string
+	assertions      []string
+}
+
+func jsCodexExecConfigOverrideScenarioForTask(task *types.CoverageTestTask) jsCodexExecConfigOverrideScenario {
+	lineRange := ""
+	target := ""
+	if task != nil {
+		lineRange = strings.TrimSpace(task.LineRange)
+		target = strings.TrimSpace(task.Target)
+	}
+	if target == "toTomlValue" {
+		if strings.HasPrefix(lineRange, "296") {
+			return jsCodexExecConfigOverrideScenario{
+				configOverrides: "{ retries: Infinity }",
+				expectError:     true,
+				errorMessage:    "finite number",
+			}
+		}
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{ retries: 3 }",
+			assertions: []string{
+				"expect(commandArgs).toContain('--config');",
+				"expect(commandArgs).toContain('retries=3');",
+			},
+		}
+	}
+	switch {
+	case strings.HasPrefix(lineRange, "257"):
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "'invalid-config'",
+			expectError:     true,
+			errorMessage:    "plain object",
+		}
+	case strings.HasPrefix(lineRange, "267"):
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{}",
+			assertions: []string{
+				"expect(commandArgs).not.toContain('--config');",
+			},
+		}
+	case strings.HasPrefix(lineRange, "271"):
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{ sandbox_workspace_write: {} }",
+			assertions: []string{
+				"expect(commandArgs).toContain('--config');",
+				"expect(commandArgs).toContain('sandbox_workspace_write={}');",
+			},
+		}
+	default:
+		return jsCodexExecConfigOverrideScenario{
+			configOverrides: "{ model: 'gpt-5' }",
+			assertions: []string{
+				"expect(commandArgs).toContain('--config');",
+				"expect(commandArgs).toContain('model=\"gpt-5\"');",
+			},
+		}
+	}
 }
 
 func genJSVersionIPCompareCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
