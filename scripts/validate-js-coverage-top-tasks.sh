@@ -20,6 +20,13 @@ Environment:
   TESTLOOP_VALIDATE_JS_TASK_LIMIT   Overrides [limit], default 20
   TESTLOOP_VALIDATE_JS_OUTPUT       Overrides [output-jsonl]
   TESTLOOP_VALIDATE_JS_TEST_ARGS    Extra baseline coverage args, e.g. "tests/foo.test.js"
+  TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND
+                                      Optional shell command template for baseline coverage.
+                                      Use {args} for TESTLOOP_VALIDATE_JS_TEST_ARGS, e.g.
+                                      "npx egg-bin cov --timeout 60000 {args}".
+  TESTLOOP_JS_TEST_COMMAND           Optional shell command template used by run_tests during
+                                      generated task validation. Use {path} for the generated
+                                      test file, e.g. "npx egg-bin test --timeout 60000 {path}".
   TESTLOOP_VALIDATE_JS_FILE_FILTER  Optional substring filter for task source files
   TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS
                                       Optional comma-separated src:dst mappings.

@@ -169,6 +169,18 @@ export { startThread } from "./codex";
 	}
 }
 
+func TestJSCoverageCommandSupportsCustomTemplate(t *testing.T) {
+	t.Setenv("TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND", "npx egg-bin cov --timeout 60000 {args}")
+
+	cmd := jsCoverageCommand("mocha", []string{"test/index.test.ts", "test/space name.test.ts"})
+
+	got := strings.Join(cmd.Args, " ")
+	want := "sh -c npx egg-bin cov --timeout 60000 'test/index.test.ts' 'test/space name.test.ts'"
+	if got != want {
+		t.Fatalf("jsCoverageCommand args = %q, want %q", got, want)
+	}
+}
+
 type jsProjectValidationSummary struct {
 	Limit        int            `json:"limit"`
 	Framework    string         `json:"framework"`
@@ -225,6 +237,17 @@ func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework
 }
 
 func jsCoverageCommand(framework string, testArgs []string) *exec.Cmd {
+	if template := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND")); template != "" {
+		args := make([]string, 0, len(testArgs))
+		for _, arg := range testArgs {
+			args = append(args, shellQuote(arg))
+		}
+		command := strings.ReplaceAll(template, "{args}", strings.Join(args, " "))
+		if !strings.Contains(template, "{args}") && len(args) > 0 {
+			command = strings.TrimSpace(command + " " + strings.Join(args, " "))
+		}
+		return exec.Command("sh", "-c", command)
+	}
 	args := []string{}
 	switch framework {
 	case "vitest":

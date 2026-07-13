@@ -169,10 +169,44 @@ func runTestRepairCommands(framework, sourceFile, testFile string) []string {
 
 func jsTestCommand(ctx context.Context, framework, path string, verbose, coverage bool) *exec.Cmd {
 	root := findProjectRoot(path, "package.json")
+	if template := strings.TrimSpace(os.Getenv("TESTLOOP_JS_TEST_COMMAND")); template != "" {
+		relPath := commandPathArg(path, root)
+		command := expandJSCommandTemplate(template, framework, relPath, coverage)
+		cmd := exec.CommandContext(ctx, "sh", "-c", command)
+		cmd.Dir = root
+		return cmd
+	}
 	args := jsTestArgs(framework, path, root, verbose, coverage)
 	cmd := exec.CommandContext(ctx, "npx", args...)
 	cmd.Dir = root
 	return cmd
+}
+
+func expandJSCommandTemplate(template, framework, relPath string, coverage bool) string {
+	coverageArg := ""
+	if coverage {
+		coverageArg = "--coverage"
+	}
+	replacements := map[string]string{
+		"{framework}": framework,
+		"{path}":      shellQuote(relPath),
+		"{coverage}":  coverageArg,
+	}
+	command := template
+	for placeholder, value := range replacements {
+		command = strings.ReplaceAll(command, placeholder, value)
+	}
+	if !strings.Contains(template, "{path}") && relPath != "." {
+		command = strings.TrimSpace(command + " " + shellQuote(relPath))
+	}
+	return strings.Join(strings.Fields(command), " ")
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func jsTestArgs(framework, path, root string, verbose, coverage bool) []string {

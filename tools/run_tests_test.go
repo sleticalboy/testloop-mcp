@@ -772,6 +772,29 @@ func TestHandleRunTestsJSCoverageUsesPackageRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsJSCustomCommandTemplateUsesPackageRootAndRelativePath(t *testing.T) {
+	dir := writeTempMochaPackage(t)
+	testFile := filepath.Join(dir, "test", "calc.test.js")
+	t.Setenv("TESTLOOP_JS_TEST_COMMAND", "npx egg-bin test --timeout 60000 {path}")
+	logPath := installFakeNpxRecorder(t, mochaFailureOutput())
+
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "mocha",
+	}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake npx cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=egg-bin test --timeout 60000 test/calc.test.js\n") {
+		t.Fatalf("fake npx args log = %q, want custom egg-bin command", logText)
+	}
+}
+
 func TestPytestArgsUsesRelativePath(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "tests", "test_calc.py")
