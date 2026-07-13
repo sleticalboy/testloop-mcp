@@ -2881,6 +2881,39 @@ export { Codex } from "./codex";
 	})
 }
 
+func TestGenerateJSCoverageTaskVitestFileLevelImportsGlobals(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "index.ts")
+	src := `export * from "./encoding";
+export * from "./parse";
+export * from "./query";
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "vitest-barrel-no-runtime",
+		Framework: "vitest",
+		Target:    "index.ts",
+		Kind:      "file_level",
+		LineRange: "entire file",
+		GapType:   "no_runtime",
+		TestName:  "marks barrel module as no runtime coverage",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { describe, it } from 'vitest';",
+		"describe('index.ts'",
+		"it.skip('marks barrel module as no runtime coverage'",
+		"manual_review_no_runtime: this TypeScript module only declares types or re-exports symbols",
+	}, []string{
+		"ReferenceError: describe is not defined",
+		"manual_review_internal:",
+	})
+}
+
 func TestJSAnalysisReturnTypeForAssert(t *testing.T) {
 	tests := map[string]string{
 		"number":    "number",
@@ -4191,6 +4224,96 @@ func TestJSFuncCoverageTaskCoversAsyncErrorFallbackName(t *testing.T) {
 	if strings.Contains(code, "const result =") {
 		t.Fatalf("error-path coverage task should not assign result:\n%s", code)
 	}
+}
+
+func TestJSFuncCoverageTaskStatementDoesNotForceErrorAssertion(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "resolveURL",
+		Params: []jsParamInfo{{Name: "base", TypeExpr: "string"}, {Name: "inputs", IsRest: true}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "string",
+			HasReturn:  true,
+			Throws:     true,
+			Returns:    []string{"url.pathname + url.search + url.hash"},
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:        "vitest-2",
+		Framework: "vitest",
+		Target:    "resolveURL",
+		GapType:   "statement",
+		LineRange: "645-645",
+		TestName:  "covers resolveURL statement branch",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = resolveURL('test', []);",
+		"expect(typeof result).toBe('string');",
+	}, []string{
+		"toThrow",
+		"expect(() => resolveURL",
+	})
+}
+
+func TestJSFuncCoverageTaskStringTransformUsesStringInput(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "toASCII",
+		Params: []jsParamInfo{{Name: "o"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "number",
+			HasReturn:  true,
+			Returns:    []string{"t.join(\"\")"},
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:              "vitest-5",
+		Framework:       "vitest",
+		Target:          "toASCII",
+		GapType:         "statement",
+		LineRange:       "52-55",
+		TestName:        "covers toASCII coverage gap",
+		SuggestedInputs: []string{"设置 o 覆盖未执行分支"},
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = toASCII('test');",
+		"expect(typeof result).toBe('string');",
+	}, []string{
+		"toASCII(undefined)",
+		"expect(typeof result).toBe('number');",
+		"expect(result).not.toBeNaN();",
+	})
+}
+
+func TestJSFuncCoverageTaskStringInputDoesNotForceStringReturn(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:   "parseQuery",
+		Params: []jsParamInfo{{Name: "parametersString"}},
+		Analysis: jsFuncAnalysis{
+			ReturnType: "object",
+			HasReturn:  true,
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:              "vitest-6",
+		Framework:       "vitest",
+		Target:          "parseQuery",
+		GapType:         "statement",
+		LineRange:       "63-63",
+		TestName:        "covers parseQuery coverage gap",
+		SuggestedInputs: []string{"设置 parametersString 覆盖未执行分支"},
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = parseQuery('test');",
+		"expect(typeof result).toBe('object');",
+		"expect(result).not.toBeNull();",
+	}, []string{
+		"expect(typeof result).toBe('string');",
+	})
 }
 
 func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {

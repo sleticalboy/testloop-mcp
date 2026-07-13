@@ -338,6 +338,9 @@ func genJSFileLevelManualReviewTask(srcPath string, source []byte, task *types.C
 		target = strings.TrimSpace(task.Target)
 	}
 	var sb strings.Builder
+	if task != nil && strings.EqualFold(strings.TrimSpace(task.Framework), "vitest") {
+		sb.WriteString("import { describe, it } from 'vitest';\n\n")
+	}
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", target))
 	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
 	if comment := coverageTaskComment(task); comment != "" {
@@ -677,8 +680,12 @@ func genJestFuncTest(fn jsFuncInfo) string {
 func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) string {
 	var sb strings.Builder
 	testName := jsCoverageTaskTestName(task, "should cover "+fn.Name+" coverage gap")
-	boundary := jsBoundaryForCoverageTask(fn.Analysis.Boundaries, task)
-	args := jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis, nil)
+	analysis := fn.Analysis
+	if jsCoverageTaskReturnsString(fn, task) {
+		analysis.ReturnType = "string"
+	}
+	boundary := jsBoundaryForCoverageTask(analysis.Boundaries, task)
+	args := jsArgListForCoverageTask(fn.Params, task, boundary, analysis, jsCoverageTaskArgOverrides(fn, task))
 	assertions := jsAssertionStyleForTask(task)
 
 	if fn.Name == "versionFromHeader" {
@@ -720,26 +727,69 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
-	if fn.Analysis.Throws || task.GapType == "error_path" {
+	if jsFunctionCoverageTaskWantsErrorAssertion(fn, task) {
 		sb.WriteString(genJSErrorAssertion(assertions, fn.IsAsync, fmt.Sprintf("%s(%s)", fn.Name, args), "    "))
 		sb.WriteString("  });\n\n")
 		sb.WriteString("});\n\n")
 		return sb.String()
 	}
 
-	setup, callValues, clientCall := genJSInjectedClientSetup(fn.Params, fn.Analysis, "    ")
-	args = jsArgListForCoverageTask(fn.Params, task, boundary, fn.Analysis, callValues)
+	setup, callValues, clientCall := genJSInjectedClientSetup(fn.Params, analysis, "    ")
+	for name, value := range jsCoverageTaskArgOverrides(fn, task) {
+		if callValues == nil {
+			callValues = map[string]string{}
+		}
+		callValues[name] = value
+	}
+	args = jsArgListForCoverageTask(fn.Params, task, boundary, analysis, callValues)
 	sb.WriteString(setup)
 	if fn.IsAsync {
 		sb.WriteString(fmt.Sprintf("    const result = await %s(%s);\n", fn.Name, args))
 	} else {
 		sb.WriteString(fmt.Sprintf("    const result = %s(%s);\n", fn.Name, args))
 	}
-	sb.WriteString(genJSResultAssertionWithTaskArgsStyle(fn.Analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    ", assertions))
+	sb.WriteString(genJSResultAssertionWithTaskArgsStyle(analysis, fn.Params, boundary, coverageTaskInputValues(task, "javascript"), "    ", assertions))
 	sb.WriteString(genJSInjectedClientCallAssertion(clientCall, "    ", assertions))
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
+}
+
+func jsFunctionCoverageTaskWantsErrorAssertion(fn jsFuncInfo, task *types.CoverageTestTask) bool {
+	if task == nil {
+		return fn.Analysis.Throws
+	}
+	return task.GapType == "error_path"
+}
+
+func jsCoverageTaskArgOverrides(fn jsFuncInfo, task *types.CoverageTestTask) map[string]string {
+	if !jsCoverageTaskNeedsStringInput(fn, task) || len(fn.Params) == 0 {
+		return nil
+	}
+	first := fn.Params[0]
+	if first.IsRest || strings.TrimSpace(first.TypeExpr) != "" {
+		return nil
+	}
+	if value := coverageTaskInputValues(task, "javascript")[first.Name]; value != "" {
+		return nil
+	}
+	return map[string]string{first.Name: "'test'"}
+}
+
+func jsCoverageTaskNeedsStringInput(fn jsFuncInfo, task *types.CoverageTestTask) bool {
+	if task == nil || len(fn.Params) != 1 {
+		return false
+	}
+	target := jsCompactName(fn.Name + " " + task.Target)
+	return jsNameHasAny(target, "ascii", "url", "uri", "path", "query", "encode", "decode", "parse", "string", "slug", "text")
+}
+
+func jsCoverageTaskReturnsString(fn jsFuncInfo, task *types.CoverageTestTask) bool {
+	if task == nil || len(fn.Params) != 1 {
+		return false
+	}
+	target := jsCompactName(fn.Name + " " + task.Target)
+	return jsNameHasAny(target, "ascii", "encode", "decode", "stringify", "slug", "text")
 }
 
 func genJSCreateOutputSchemaFileCoverageTask(task *types.CoverageTestTask, testName string) string {

@@ -641,6 +641,38 @@ func TestCoverageTaskPriorityPrefersLowSetupCostTasks(t *testing.T) {
 	}
 }
 
+func TestGenerateTestTasksSkipsUnsupportedJSFiles(t *testing.T) {
+	report := &types.CoverageReport{
+		Framework: "vitest",
+		Suggestions: []types.CoverageSuggestion{
+			{
+				File:      filepath.Join("src", "query.ts"),
+				Function:  "parseQuery",
+				Kind:      "function",
+				LineRange: "63-63",
+				GapType:   "statement",
+			},
+			{
+				File:      filepath.Join("test", "fixture", "toascii.json"),
+				Kind:      "file_level",
+				LineRange: "entire file",
+				GapType:   "statement",
+			},
+		},
+	}
+
+	tasks := GenerateTestTasks(report)
+	if len(tasks) != 1 {
+		t.Fatalf("expected only code task, got %+v", tasks)
+	}
+	if tasks[0].File != filepath.Join("src", "query.ts") {
+		t.Fatalf("expected TS task to remain, got %+v", tasks[0])
+	}
+	if tasks[0].ID != "vitest-1" {
+		t.Fatalf("expected IDs to be assigned after filtering, got %q", tasks[0].ID)
+	}
+}
+
 func findCoverageSuggestion(suggestions []types.CoverageSuggestion, fn string) *types.CoverageSuggestion {
 	for i := range suggestions {
 		if suggestions[i].Function == fn {

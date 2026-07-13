@@ -304,6 +304,9 @@ func suggestedGoInputs(params []string) []string {
 func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 	tasks := make([]types.CoverageTestTask, 0, len(report.Suggestions))
 	for _, suggestion := range report.Suggestions {
+		if !coverageSuggestionSupportsGeneratedTask(report.Framework, suggestion.File) {
+			continue
+		}
 		target := suggestion.Function
 		if target == "" {
 			target = filepath.Base(suggestion.File)
@@ -336,6 +339,20 @@ func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 		tasks[i].ID = fmt.Sprintf("%s-%d", sanitizeTaskID(report.Framework), i+1)
 	}
 	return tasks
+}
+
+func coverageSuggestionSupportsGeneratedTask(framework string, file string) bool {
+	switch strings.ToLower(strings.TrimSpace(framework)) {
+	case "javascript", "typescript", "jest", "vitest", "mocha", "nyc":
+		switch strings.ToLower(filepath.Ext(file)) {
+		case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+			return true
+		default:
+			return false
+		}
+	default:
+		return true
+	}
 }
 
 func coverageTaskGoal(target string, lineRange string) string {
