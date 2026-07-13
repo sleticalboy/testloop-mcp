@@ -278,6 +278,7 @@ func jsExtractClass(node *sitter.Node, source []byte) jsClassInfo {
 			Name:      methodName,
 			IsMethod:  true,
 			IsPrivate: jsMethodDefinitionIsPrivate(methodNode, source, methodName),
+			IsStatic:  jsMethodDefinitionIsStatic(methodNode, source, methodName),
 			ClassName: cls.Name,
 		}
 
@@ -328,6 +329,11 @@ func jsMethodDefinitionIsPrivate(node *sitter.Node, source []byte, methodName st
 	}
 	prefix := jsMethodDefinitionPrefix(node, source, methodName)
 	return strings.Contains(prefix, "private ") || strings.Contains(prefix, "protected ")
+}
+
+func jsMethodDefinitionIsStatic(node *sitter.Node, source []byte, methodName string) bool {
+	prefix := jsMethodDefinitionPrefix(node, source, methodName)
+	return strings.Contains(prefix, "static")
 }
 
 func jsMethodDefinitionIsAsync(content string, methodName string) bool {

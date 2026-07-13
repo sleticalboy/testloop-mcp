@@ -523,7 +523,7 @@ func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing
 	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	installFakeNpx(t, strings.Join([]string{
+	installFakeNpxSuccess(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
 		" ↓ token-store.test.js (1 test | 1 skipped)",
@@ -612,7 +612,7 @@ export default class CacheFacade {
 	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	installFakeNpx(t, strings.Join([]string{
+	installFakeNpxSuccess(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
 		" ↓ cache.test.js (1 test | 1 skipped)",
@@ -681,7 +681,7 @@ export type ThreadEvent = ThreadStartedEvent;
 	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
 		t.Fatalf("write source: %v", err)
 	}
-	installFakeNpx(t, strings.Join([]string{
+	installFakeNpxSuccess(t, strings.Join([]string{
 		" RUN  v3.2.4 " + dir,
 		"",
 		" ↓ events.test.ts (1 test | 1 skipped)",
@@ -734,6 +734,17 @@ export type ThreadEvent = ThreadStartedEvent;
 		strings.Contains(out.Generated.Preview, "manual_review_internal:") {
 		t.Fatalf("expected generated no-runtime review skip, got %+v", out.Generated)
 	}
+}
+
+func installFakeNpxSuccess(t *testing.T, output string) {
+	t.Helper()
+	fakeBin := t.TempDir()
+	script := "#!/usr/bin/env sh\ncat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\nexit 0\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
 func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {

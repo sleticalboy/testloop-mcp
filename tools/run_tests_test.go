@@ -795,6 +795,32 @@ func TestHandleRunTestsJSCustomCommandTemplateUsesPackageRootAndRelativePath(t *
 	}
 }
 
+func TestHandleRunTestsNonZeroExitFallsBackToRunnerFailure(t *testing.T) {
+	dir := writeTempMochaPackage(t)
+	testFile := filepath.Join(dir, "test", "calc.test.js")
+	t.Setenv("TESTLOOP_JS_TEST_COMMAND", "npx egg-bin test --timeout 60000 {path}")
+	installFakeNpx(t, "Exception during run: TypeScript compile failed")
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "mocha",
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Failed != 1 || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected fallback result: %+v", parsed)
+	}
+	if !strings.Contains(parsed.Failures[0].Error, "Exception during run") {
+		t.Fatalf("unexpected fallback failure: %+v", parsed.Failures[0])
+	}
+}
+
 func TestPytestArgsUsesRelativePath(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "tests", "test_calc.py")

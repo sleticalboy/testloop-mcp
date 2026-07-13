@@ -111,9 +111,17 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, cargo-test, jest, vitest, mocha, pytest, junit）", framework)
 	}
 
-	// 测试失败是正常情况，继续解析输出
-	_ = err
+	// 测试失败是正常情况，继续解析输出；如果解析器没有识别失败，再用非零退出码兜底。
 	result := parser.ParseTestOutput(string(output), framework)
+	if err != nil && result.Status == "pass" && result.Failed == 0 {
+		result.Status = "fail"
+		result.Failed = 1
+		result.Total = result.Passed + result.Failed + result.Skipped
+		result.Failures = []types.TestFailure{{
+			TestName: "test runner",
+			Error:    firstNonEmpty(firstNonBlankLine(string(output)), err.Error()),
+		}}
+	}
 	if coverage {
 		result.CoveragePercent = collectCoveragePercent(ctx, framework, path, result.CoveragePercent)
 	}
@@ -297,6 +305,16 @@ func readOptionalText(path string) string {
 		return ""
 	}
 	return string(data)
+}
+
+func firstNonBlankLine(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func normalizeGoTestPath(path string) string {

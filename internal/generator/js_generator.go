@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -22,6 +23,7 @@ type jsFuncInfo struct {
 	IsArrow          bool
 	IsMethod         bool
 	IsPrivate        bool
+	IsStatic         bool
 	SourceIsESModule bool
 	ClassName        string
 	Body             string         // 函数体源码
@@ -161,10 +163,15 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 
 	mochaTask := task != nil && strings.EqualFold(task.Framework, "mocha")
 	vitestTask := task != nil && strings.EqualFold(task.Framework, "vitest")
-	if mochaTask && isESModule {
+	assertions := jsAssertionStyleForTask(task)
+	if mochaTask && assertions == jsAssertionStyleChai && isESModule {
 		buf.WriteString("import { expect } from 'chai';\n")
-	} else if mochaTask {
+	} else if mochaTask && assertions == jsAssertionStyleChai {
 		buf.WriteString("const { expect } = require('chai');\n")
+	} else if mochaTask && isESModule {
+		buf.WriteString("import { strict as assert } from 'node:assert';\n")
+	} else if mochaTask {
+		buf.WriteString("const assert = require('node:assert/strict');\n")
 	} else if vitestTask && isESModule {
 		buf.WriteString(fmt.Sprintf("import { %s } from 'vitest';\n", jsVitestImportNamesForCoverageTask(task)))
 	}
@@ -186,7 +193,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		if coverageMode {
 			buf.WriteString(genJSFuncTestForCoverageTask(fn, task))
 		} else if task != nil {
-			buf.WriteString(genJSFuncTest(fn, jsAssertionStyleForTask(task)))
+			buf.WriteString(genJSFuncTest(fn, assertions))
 		} else {
 			buf.WriteString(genJSFuncTest(fn, jsAssertionStyleJest))
 		}
@@ -196,7 +203,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		if coverageMode {
 			buf.WriteString(genJSClassTestForCoverageTask(cls, task, moduleImportPath))
 		} else if task != nil {
-			buf.WriteString(genJSClassTest(cls, jsAssertionStyleForTask(task)))
+			buf.WriteString(genJSClassTest(cls, assertions))
 		} else {
 			buf.WriteString(genJSClassTest(cls, jsAssertionStyleJest))
 		}
@@ -1232,7 +1239,9 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 	sb.WriteString(fmt.Sprintf("  describe('constructor', () => {\n"))
 	sb.WriteString(fmt.Sprintf("    it('should create an instance', () => {\n"))
 	sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
-	if assertions == jsAssertionStyleChai {
+	if assertions == jsAssertionStyleNode {
+		sb.WriteString(fmt.Sprintf("      assert(instance instanceof %s);\n", cls.Name))
+	} else if assertions == jsAssertionStyleChai {
 		sb.WriteString(fmt.Sprintf("      expect(instance).to.be.instanceOf(%s);\n", cls.Name))
 	} else {
 		sb.WriteString(fmt.Sprintf("      expect(instance).toBeInstanceOf(%s);\n", cls.Name))
@@ -1244,11 +1253,14 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 		sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 
 		sb.WriteString(fmt.Sprintf("    it('should return expected result', %s => {\n", jsAsyncArrow(method.IsAsync)))
-		sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+		if !method.IsStatic {
+			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+		}
+		callExpr := jsClassMethodCallExpr(method, jsArgListForAnalysis(method.Params, method.Analysis))
 		if method.IsAsync {
-			sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, jsArgListForAnalysis(method.Params, method.Analysis)))
+			sb.WriteString(fmt.Sprintf("      const result = await %s;\n", callExpr))
 		} else {
-			sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgListForAnalysis(method.Params, method.Analysis)))
+			sb.WriteString(fmt.Sprintf("      const result = %s;\n", callExpr))
 		}
 		sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, nil, "      ", assertions))
 		sb.WriteString("    });\n\n")
@@ -1257,8 +1269,10 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 			args := jsInvalidArgList(method.Params, method.Analysis.Boundaries)
 			if !jsErrorBoundaryArgsExist(method.Params, method.Analysis.Boundaries, args) {
 				sb.WriteString(fmt.Sprintf("    it('should throw on invalid input', %s => {\n", jsAsyncArrow(method.IsAsync)))
-				sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
-				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
+				if !method.IsStatic {
+					sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+				}
+				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, jsClassMethodCallExpr(method, args), "      "))
 				sb.WriteString("    });\n\n")
 			}
 		}
@@ -1269,15 +1283,18 @@ func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {
 			}
 			sb.WriteString(fmt.Sprintf("    it('should handle %s = %s', %s => {\n",
 				b.Param, jsEscapeTestNameValue(b.Value), jsAsyncArrow(method.IsAsync)))
-			sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+			if !method.IsStatic {
+				sb.WriteString(fmt.Sprintf("      const instance = new %s();\n", cls.Name))
+			}
 			args := jsArgListWithBoundary(method.Params, b)
+			callExpr := jsClassMethodCallExpr(method, args)
 			if method.Analysis.Throws {
-				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, fmt.Sprintf("instance.%s(%s)", method.Name, args), "      "))
+				sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, callExpr, "      "))
 			} else {
 				if method.IsAsync {
-					sb.WriteString(fmt.Sprintf("      const result = await instance.%s(%s);\n", method.Name, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis)))
+					sb.WriteString(fmt.Sprintf("      const result = await %s;\n", jsClassMethodCallExpr(method, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis))))
 				} else {
-					sb.WriteString(fmt.Sprintf("      const result = instance.%s(%s);\n", method.Name, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis)))
+					sb.WriteString(fmt.Sprintf("      const result = %s;\n", jsClassMethodCallExpr(method, jsArgListWithBoundaryForAnalysis(method.Params, b, method.Analysis))))
 				}
 				boundary := b
 				sb.WriteString(genJSResultAssertionWithArgsStyle(method.Analysis, method.Params, &boundary, "      ", assertions))
@@ -1309,7 +1326,7 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 				sb.WriteString(genJSStorageManagerPublicEntryTest(method, task, testName, moduleImportPath))
 				continue
 			}
-			sb.WriteString(genJSInternalClassManualReviewTest(cls, method, task, testName))
+			sb.WriteString(genJSInternalClassManualReviewTest(cls, method, task, testName, assertions))
 			continue
 		}
 		if method.IsPrivate || strings.HasPrefix(method.Name, "#") {
@@ -1325,7 +1342,7 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 				sb.WriteString(genJSDevWatcherHandleFileChangePublicEntryTest(method, task, testName))
 				continue
 			}
-			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName))
+			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName, assertions))
 			continue
 		}
 		if cls.Name == "WorkspaceCacheManager" && method.Name == "updateWorkspaceState" && jsCoverageTaskMentions(task, "cache[workspaceKey]") {
@@ -1346,6 +1363,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 				continue
 			}
 		}
+		if cls.Name == "StatusChecker" && method.Name == "check" {
+			sb.WriteString(genJSStatusCheckerCoverageTask(method, task, testName, assertions))
+			continue
+		}
 		boundary := jsBoundaryForCoverageTask(method.Analysis.Boundaries, task)
 		overrides := jsClassCoverageTaskInputOverrides(method, task)
 		args := jsArgListForCoverageTask(method.Params, task, boundary, method.Analysis, overrides)
@@ -1355,10 +1376,18 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 		if comment := coverageTaskComment(task); comment != "" {
 			sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
 		}
-		sb.WriteString(fmt.Sprintf("      const instance = %s;\n", jsClassInstanceForCoverageTask(cls, method, task)))
+		if !method.IsStatic {
+			sb.WriteString(fmt.Sprintf("      const instance = %s;\n", jsClassInstanceForCoverageTask(cls, method, task)))
+		}
 		callExpr := jsClassMethodCallExpr(method, args)
 		if jsCoverageTaskWantsErrorAssertion(method, task) {
 			sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, callExpr, "      "))
+			sb.WriteString("    });\n\n")
+			sb.WriteString("  });\n\n")
+			continue
+		}
+		if !method.Analysis.HasReturn {
+			sb.WriteString(genJSVoidCallAssertion(assertions, method.IsAsync, callExpr, "      "))
 			sb.WriteString("    });\n\n")
 			sb.WriteString("  });\n\n")
 			continue
@@ -1449,10 +1478,108 @@ func genJSThreadNormalizeInputPublicEntryTest(method jsFuncInfo, task *types.Cov
 }
 
 func jsClassMethodCallExpr(method jsFuncInfo, args string) string {
-	if method.Analysis.IsGetter {
-		return fmt.Sprintf("instance.%s", method.Name)
+	receiver := "instance"
+	if method.IsStatic && method.ClassName != "" {
+		receiver = method.ClassName
 	}
-	return fmt.Sprintf("instance.%s(%s)", method.Name, args)
+	if method.Analysis.IsGetter {
+		return fmt.Sprintf("%s.%s", receiver, method.Name)
+	}
+	return fmt.Sprintf("%s.%s(%s)", receiver, method.Name, args)
+}
+
+func genJSStatusCheckerCoverageTask(method jsFuncInfo, task *types.CoverageTestTask, testName string, assertions jsAssertionStyle) string {
+	codeName, shouldThrow := jsStatusCheckerCodeForTask(task)
+	var sb strings.Builder
+	sb.WriteString("  describe('check', () => {\n")
+	sb.WriteString(fmt.Sprintf("    it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	if codeName == "" {
+		if assertions == jsAssertionStyleChai {
+			sb.WriteString("      expect(() => StatusChecker.check(undefined, 'req-1')).to.not.throw();\n")
+		} else if assertions == jsAssertionStyleNode {
+			sb.WriteString("      assert.doesNotThrow(() => StatusChecker.check(undefined, 'req-1'));\n")
+		} else {
+			sb.WriteString("      expect(() => StatusChecker.check(undefined, 'req-1')).not.toThrow();\n")
+		}
+		sb.WriteString("    });\n\n")
+		sb.WriteString("  });\n\n")
+		return sb.String()
+	}
+	codeExpr := "Code." + codeName
+	if isNumericLiteral(codeName) {
+		codeExpr = codeName
+	} else {
+		sb.WriteString("      const { Code } = require('../../proto/apache/rocketmq/v2/definition_pb');\n")
+	}
+	sb.WriteString(fmt.Sprintf("      const status = { code: %s, message: 'status message' };\n", codeExpr))
+	callExpr := "StatusChecker.check(status, 'req-1')"
+	if shouldThrow {
+		sb.WriteString(genJSErrorAssertion(assertions, method.IsAsync, callExpr, "      "))
+	} else if assertions == jsAssertionStyleChai {
+		sb.WriteString(fmt.Sprintf("      expect(() => %s).to.not.throw();\n", callExpr))
+	} else if assertions == jsAssertionStyleNode {
+		sb.WriteString(fmt.Sprintf("      assert.doesNotThrow(() => %s);\n", callExpr))
+	} else {
+		sb.WriteString(fmt.Sprintf("      expect(() => %s).not.toThrow();\n", callExpr))
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func jsStatusCheckerCodeForTask(task *types.CoverageTestTask) (string, bool) {
+	line := jsCoverageTaskStartLine(task)
+	switch {
+	case line == 33:
+		return "", false
+	case line >= 34 && line <= 37:
+		return "MULTIPLE_RESULTS", false
+	case line >= 38 && line <= 57:
+		return "BAD_REQUEST", true
+	case line >= 58 && line <= 59:
+		return "UNAUTHORIZED", true
+	case line >= 60 && line <= 61:
+		return "PAYMENT_REQUIRED", true
+	case line >= 62 && line <= 63:
+		return "FORBIDDEN", true
+	case line >= 64 && line <= 65:
+		return "MESSAGE_NOT_FOUND", false
+	case line >= 66 && line <= 69:
+		return "NOT_FOUND", true
+	case line >= 70 && line <= 72:
+		return "PAYLOAD_TOO_LARGE", true
+	case line >= 73 && line <= 74:
+		return "TOO_MANY_REQUESTS", true
+	case line >= 75 && line <= 77:
+		return "REQUEST_HEADER_FIELDS_TOO_LARGE", true
+	case line >= 78 && line <= 81:
+		return "INTERNAL_ERROR", true
+	case line >= 82 && line <= 85:
+		return "PROXY_TIMEOUT", true
+	case line >= 86 && line <= 89:
+		return "UNSUPPORTED", true
+	default:
+		return "999999", true
+	}
+}
+
+func jsCoverageTaskStartLine(task *types.CoverageTestTask) int {
+	if task == nil {
+		return 0
+	}
+	if len(task.UncoveredLines) > 0 {
+		return task.UncoveredLines[0]
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	if lineRange == "" {
+		return 0
+	}
+	part := strings.SplitN(lineRange, "-", 2)[0]
+	n, _ := strconv.Atoi(strings.TrimSpace(part))
+	return n
 }
 
 func jsVitestImportNamesForCoverageTask(task *types.CoverageTestTask) string {
@@ -2327,10 +2454,11 @@ func jsClassRequiresInternalManualReview(cls jsClassInfo) bool {
 	return cls.SourceIsESModule && !cls.IsExported && !cls.IsDefault && cls.DefaultInstance == ""
 }
 
-func genJSInternalClassManualReviewTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+func genJSInternalClassManualReviewTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string, assertions jsAssertionStyle) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 	sb.WriteString(fmt.Sprintf("    it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	sb.WriteString(jsManualReviewSymbolReferences(cls.Name, assertions, "      "))
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
 	}
@@ -2341,11 +2469,12 @@ func genJSInternalClassManualReviewTest(cls jsClassInfo, method jsFuncInfo, task
 	return sb.String()
 }
 
-func genJSPrivateMethodManualReviewTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+func genJSPrivateMethodManualReviewTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string, assertions jsAssertionStyle) string {
 	var sb strings.Builder
 	entries := jsPrivateEntryCandidatesForMethod(cls, method.Name)
 	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
 	sb.WriteString(fmt.Sprintf("    it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	sb.WriteString(jsManualReviewSymbolReferences(cls.Name, assertions, "      "))
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
 	}
@@ -2357,6 +2486,20 @@ func genJSPrivateMethodManualReviewTest(cls jsClassInfo, method jsFuncInfo, task
 	}
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func jsManualReviewSymbolReferences(className string, assertions jsAssertionStyle, indent string) string {
+	var sb strings.Builder
+	if className != "" {
+		sb.WriteString(fmt.Sprintf("%svoid %s;\n", indent, className))
+	}
+	switch assertions {
+	case jsAssertionStyleNode:
+		sb.WriteString(indent + "void assert;\n")
+	case jsAssertionStyleChai:
+		sb.WriteString(indent + "void expect;\n")
+	}
 	return sb.String()
 }
 
@@ -2520,16 +2663,65 @@ type jsAssertionStyle string
 const (
 	jsAssertionStyleJest jsAssertionStyle = "jest"
 	jsAssertionStyleChai jsAssertionStyle = "chai"
+	jsAssertionStyleNode jsAssertionStyle = "node"
 )
 
 func jsAssertionStyleForTask(task *types.CoverageTestTask) jsAssertionStyle {
 	if task != nil && strings.EqualFold(task.Framework, "mocha") {
+		if task.File != "" && !jsProjectHasDependency(task.File, "chai") {
+			return jsAssertionStyleNode
+		}
 		return jsAssertionStyleChai
 	}
 	return jsAssertionStyleJest
 }
 
+func jsProjectHasDependency(startPath string, dep string) bool {
+	dir := startPath
+	if info, err := os.Stat(dir); err == nil && !info.IsDir() {
+		dir = filepath.Dir(dir)
+	}
+	for {
+		pkgPath := filepath.Join(dir, "package.json")
+		data, err := os.ReadFile(pkgPath)
+		if err == nil {
+			var pkg struct {
+				Dependencies         map[string]any `json:"dependencies"`
+				DevDependencies      map[string]any `json:"devDependencies"`
+				OptionalDependencies map[string]any `json:"optionalDependencies"`
+				PeerDependencies     map[string]any `json:"peerDependencies"`
+			}
+			if json.Unmarshal(data, &pkg) == nil {
+				if _, ok := pkg.Dependencies[dep]; ok {
+					return true
+				}
+				if _, ok := pkg.DevDependencies[dep]; ok {
+					return true
+				}
+				if _, ok := pkg.OptionalDependencies[dep]; ok {
+					return true
+				}
+				if _, ok := pkg.PeerDependencies[dep]; ok {
+					return true
+				}
+			}
+			return false
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return false
+		}
+		dir = parent
+	}
+}
+
 func genJSErrorAssertion(style jsAssertionStyle, isAsync bool, callExpr string, indent string) string {
+	if style == jsAssertionStyleNode {
+		if isAsync {
+			return fmt.Sprintf("%sawait assert.rejects(async () => %s);\n", indent, callExpr)
+		}
+		return fmt.Sprintf("%sassert.throws(() => %s);\n", indent, callExpr)
+	}
 	if style == jsAssertionStyleChai {
 		if isAsync {
 			return indent + "let caughtError;\n" +
@@ -2548,6 +2740,31 @@ func genJSErrorAssertion(style jsAssertionStyle, isAsync bool, callExpr string, 
 	return fmt.Sprintf("%sexpect(() => %s).toThrow();\n", indent, callExpr)
 }
 
+func genJSVoidCallAssertion(style jsAssertionStyle, isAsync bool, callExpr string, indent string) string {
+	if isAsync {
+		if style == jsAssertionStyleNode {
+			return fmt.Sprintf("%sawait assert.doesNotReject(async () => %s);\n", indent, callExpr)
+		}
+		if style == jsAssertionStyleChai {
+			return indent + "let caughtError;\n" +
+				indent + "try {\n" +
+				indent + "  await " + callExpr + ";\n" +
+				indent + "} catch (err) {\n" +
+				indent + "  caughtError = err;\n" +
+				indent + "}\n" +
+				indent + "expect(caughtError).to.be.undefined;\n"
+		}
+		return fmt.Sprintf("%sawait %s;\n", indent, callExpr)
+	}
+	if style == jsAssertionStyleNode {
+		return fmt.Sprintf("%sassert.doesNotThrow(() => %s);\n", indent, callExpr)
+	}
+	if style == jsAssertionStyleChai {
+		return fmt.Sprintf("%sexpect(() => %s).to.not.throw();\n", indent, callExpr)
+	}
+	return fmt.Sprintf("%sexpect(() => %s).not.toThrow();\n", indent, callExpr)
+}
+
 func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInfo, boundary *jsBoundary, values map[string]string, indent string, style jsAssertionStyle) string {
 	var sb strings.Builder
 
@@ -2557,7 +2774,11 @@ func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInf
 	}
 
 	if expected, ok, deepEqual := jsExpectedReturnExprWithValuesKind(a, params, boundary, values); ok {
-		if style == jsAssertionStyleChai && deepEqual {
+		if style == jsAssertionStyleNode && deepEqual {
+			sb.WriteString(indent + "assert.deepEqual(result, " + expected + ");\n")
+		} else if style == jsAssertionStyleNode {
+			sb.WriteString(indent + "assert.equal(result, " + expected + ");\n")
+		} else if style == jsAssertionStyleChai && deepEqual {
 			sb.WriteString(indent + "expect(result).to.deep.equal(" + expected + ");\n")
 		} else if style == jsAssertionStyleChai {
 			sb.WriteString(indent + "expect(result).to.equal(" + expected + ");\n")
@@ -2590,6 +2811,30 @@ func genJSResultAssertionWithTaskArgsStyle(a jsFuncAnalysis, params []jsParamInf
 			sb.WriteString(indent + "expect(result).to.equal(undefined);\n")
 		default:
 			sb.WriteString(indent + "expect(result).to.not.equal(undefined);\n")
+		}
+		return sb.String()
+	}
+	if style == jsAssertionStyleNode {
+		switch a.ReturnType {
+		case "number":
+			sb.WriteString(indent + "assert.equal(typeof result, 'number');\n")
+			sb.WriteString(indent + "assert.equal(Number.isNaN(result), false);\n")
+		case "string":
+			sb.WriteString(indent + "assert.equal(typeof result, 'string');\n")
+			sb.WriteString(indent + "assert(result.length >= 0);\n")
+		case "boolean":
+			sb.WriteString(indent + "assert.equal(typeof result, 'boolean');\n")
+		case "array":
+			sb.WriteString(indent + "assert.equal(Array.isArray(result), true);\n")
+		case "object":
+			sb.WriteString(indent + "assert.equal(typeof result, 'object');\n")
+			sb.WriteString(indent + "assert.notEqual(result, null);\n")
+		case "null":
+			sb.WriteString(indent + "assert.equal(result, null);\n")
+		case "undefined":
+			sb.WriteString(indent + "assert.equal(result, undefined);\n")
+		default:
+			sb.WriteString(indent + "assert.notEqual(result, undefined);\n")
 		}
 		return sb.String()
 	}
@@ -3051,6 +3296,12 @@ func jsArgValue(p jsParamInfo, _ int) string {
 		}
 		return "1"
 	}
+	if typeExpr != "" && strings.Contains(typeExpr, "buffer") {
+		return "Buffer.from('test')"
+	}
+	if typeExpr != "" && strings.Contains(typeExpr, "uint8array") {
+		return "new Uint8Array([1, 2, 3])"
+	}
 	if jsNameIsNumeric(compact) {
 		if compact == "b" || compact == "y" {
 			return "2"
@@ -3210,6 +3461,9 @@ func genJSInjectedClientCallAssertion(info *jsInjectedClientCallInfo, indent str
 	expectedCalls := "[" + expectedArgs + "]"
 	if style == jsAssertionStyleChai {
 		return fmt.Sprintf("%sexpect(%s.%sCalls).to.deep.equal(%s);\n", indent, info.Param, info.Method, expectedCalls)
+	}
+	if style == jsAssertionStyleNode {
+		return fmt.Sprintf("%sassert.deepEqual(%s.%sCalls, %s);\n", indent, info.Param, info.Method, expectedCalls)
 	}
 	return fmt.Sprintf("%sexpect(%s.%sCalls).toEqual(%s);\n", indent, info.Param, info.Method, expectedCalls)
 }

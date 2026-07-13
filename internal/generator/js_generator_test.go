@@ -1897,8 +1897,7 @@ export default logger
 			wants: []string{
 				"import logger from './logger';",
 				"const instance = logger;",
-				"const result = instance.setLogLevel('info');",
-				"// void function, verify no exception",
+				"expect(() => instance.setLogLevel('info')).not.toThrow();",
 			},
 			forbidden: []string{"import { Logger }", "new Logger({})", "setLogLevel(undefined)"},
 		},
@@ -4552,6 +4551,175 @@ func TestJestAssertionAndDedupeCompatHelpers(t *testing.T) {
 	})
 	if len(funcs) != 3 {
 		t.Fatalf("dedupJSFuncs() kept %d funcs: %+v", len(funcs), funcs)
+	}
+}
+
+func TestMochaCoverageTaskUsesNodeAssertWhenChaiIsMissing(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "status.ts")
+	source := `export class Widget {
+  static check(status?: { code: number, message: string }) {
+    if (!status) return;
+    if (status.code === 40000) throw new Error(status.message);
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:             "mocha-status",
+		Framework:      "mocha",
+		File:           srcPath,
+		Target:         "Widget.check",
+		Kind:           "method",
+		LineRange:      "3-3",
+		UncoveredLines: []int{3},
+		GapType:        "branch",
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, task)
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	for _, want := range []string{
+		"import { strict as assert } from 'node:assert';",
+		"Widget.check(",
+		"assert.doesNotThrow",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated code missing %q:\n%s", want, code)
+		}
+	}
+	for _, forbidden := range []string{"from 'chai'", "new StatusChecker()", "instance.check"} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("generated code contains forbidden %q:\n%s", forbidden, code)
+		}
+	}
+}
+
+func TestStatusCheckerCoverageTaskGeneratesConcreteCodeInput(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src", "exception")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "StatusChecker.ts")
+	source := `export class StatusChecker {
+  static check(status?: { code: number, message: string }) {
+    if (!status) return;
+    switch (status.code) {
+      case 40000:
+        throw new Error(status.message);
+      default:
+        return;
+    }
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:             "mocha-status-bad-request",
+		Framework:      "mocha",
+		File:           srcPath,
+		Target:         "StatusChecker.check",
+		Kind:           "method",
+		LineRange:      "57-57",
+		UncoveredLines: []int{57},
+		GapType:        "error_path",
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, task)
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	for _, want := range []string{
+		"const { Code } = require('../../proto/apache/rocketmq/v2/definition_pb');",
+		"code: Code.BAD_REQUEST",
+		"assert.throws(() => StatusChecker.check(status, 'req-1'));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated code missing %q:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new StatusChecker()") || strings.Contains(code, "instance.check") {
+		t.Fatalf("generated code should call static method directly:\n%s", code)
+	}
+}
+
+func TestMochaManualReviewTaskReferencesImportedSymbols(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "client.ts")
+	source := `export class RpcClientManager {
+  #clearIdleRpcClients() {
+    return 1;
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:             "mocha-private",
+		Framework:      "mocha",
+		File:           srcPath,
+		Target:         "RpcClientManager.#clearIdleRpcClients",
+		Kind:           "method",
+		LineRange:      "2-2",
+		UncoveredLines: []int{2},
+		GapType:        "branch",
+		TestFile:       filepath.Join(srcDir, "client.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	for _, want := range []string{
+		"import { strict as assert } from 'node:assert';",
+		"import { RpcClientManager } from './client';",
+		"void RpcClientManager;",
+		"void assert;",
+		"manual_review_private: RpcClientManager.#clearIdleRpcClients is a JavaScript private method",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("generated code missing %q:\n%s", want, code)
+		}
+	}
+}
+
+func TestJSArgValueUsesTypedBinaryPayloads(t *testing.T) {
+	if got := jsArgValue(jsParamInfo{Name: "body", TypeExpr: "Buffer"}, 0); got != "Buffer.from('test')" {
+		t.Fatalf("Buffer arg = %q", got)
+	}
+	if got := jsArgValue(jsParamInfo{Name: "bytes", TypeExpr: "Uint8Array"}, 0); got != "new Uint8Array([1, 2, 3])" {
+		t.Fatalf("Uint8Array arg = %q", got)
+	}
+}
+
+func TestJSVoidCallAssertionUsesAsyncMochaAssertions(t *testing.T) {
+	if got := genJSVoidCallAssertion(jsAssertionStyleNode, true, "instance.sync()", "  "); got != "  await assert.doesNotReject(async () => instance.sync());\n" {
+		t.Fatalf("node async void assertion = %q", got)
+	}
+	if got := genJSVoidCallAssertion(jsAssertionStyleChai, true, "instance.sync()", "  "); !strings.Contains(got, "expect(caughtError).to.be.undefined;") {
+		t.Fatalf("chai async void assertion = %q", got)
 	}
 }
 
