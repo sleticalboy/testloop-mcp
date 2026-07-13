@@ -222,7 +222,7 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 			}
 			continue
 		}
-		if jsCoverageTaskExplicitProviderConfigTarget(target) {
+		if jsCoverageTaskTestCodexPublicClientTarget(target) {
 			if fn.Name == "createTestClient" {
 				filteredFuncs = append(filteredFuncs, fn)
 			}
@@ -683,7 +683,7 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "createOutputSchemaFile" && jsCoverageTaskOutputSchemaFileTarget(task) {
 		return genJSCreateOutputSchemaFileCoverageTask(task, testName)
 	}
-	if fn.Name == "createTestClient" && task != nil && jsCoverageTaskExplicitProviderConfigTarget(task.Target) {
+	if fn.Name == "createTestClient" && task != nil && jsCoverageTaskTestCodexPublicClientTarget(task.Target) {
 		return genJSCreateTestClientProviderConfigCoverageTask(task, testName)
 	}
 	if fn.Name == "startResponsesTestProxy" && jsCoverageTaskResponsesProxyTarget(task) {
@@ -763,6 +763,36 @@ func genJSCreateTestClientProviderConfigCoverageTask(task *types.CoverageTestTas
 	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	if task != nil && strings.TrimSpace(task.Target) == "getCurrentEnv" {
+		sb.WriteString("    const previousOriginator = process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE;\n")
+		sb.WriteString("    const previousVisible = process.env.TESTLOOP_VISIBLE_ENV;\n")
+		sb.WriteString("    try {\n")
+		sb.WriteString("      process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = 'internal-originator';\n")
+		sb.WriteString("      process.env.TESTLOOP_VISIBLE_ENV = 'visible';\n")
+		sb.WriteString("      const result = createTestClient();\n")
+		sb.WriteString("      try {\n")
+		sb.WriteString("        const env = (result.client as any).options.env;\n")
+		sb.WriteString("        expect(env.TESTLOOP_VISIBLE_ENV).toBe('visible');\n")
+		sb.WriteString("        expect(env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE).toBeUndefined();\n")
+		sb.WriteString("      } finally {\n")
+		sb.WriteString("        result.cleanup();\n")
+		sb.WriteString("      }\n")
+		sb.WriteString("    } finally {\n")
+		sb.WriteString("      if (previousOriginator === undefined) {\n")
+		sb.WriteString("        delete process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE;\n")
+		sb.WriteString("      } else {\n")
+		sb.WriteString("        process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = previousOriginator;\n")
+		sb.WriteString("      }\n")
+		sb.WriteString("      if (previousVisible === undefined) {\n")
+		sb.WriteString("        delete process.env.TESTLOOP_VISIBLE_ENV;\n")
+		sb.WriteString("      } else {\n")
+		sb.WriteString("        process.env.TESTLOOP_VISIBLE_ENV = previousVisible;\n")
+		sb.WriteString("      }\n")
+		sb.WriteString("    }\n")
+		sb.WriteString("  });\n\n")
+		sb.WriteString("});\n\n")
+		return sb.String()
 	}
 	sb.WriteString("    const result = createTestClient({\n")
 	sb.WriteString("      baseUrl: 'http://127.0.0.1:9',\n")
@@ -1146,6 +1176,11 @@ func jsCoverageTaskOutputSchemaFileTarget(task *types.CoverageTestTask) bool {
 
 func jsCoverageTaskExplicitProviderConfigTarget(target string) bool {
 	return strings.TrimSpace(target) == "hasExplicitProviderConfig"
+}
+
+func jsCoverageTaskTestCodexPublicClientTarget(target string) bool {
+	target = strings.TrimSpace(target)
+	return target == "hasExplicitProviderConfig" || target == "getCurrentEnv"
 }
 
 func jsCoverageTaskResponsesProxyTarget(task *types.CoverageTestTask) bool {

@@ -4027,6 +4027,7 @@ func TestJSCoverageTaskOutputSchemaInternalJsonObjectUsesPublicEntry(t *testing.
 func TestJSCoverageTaskHasExplicitProviderConfigUsesCreateTestClient(t *testing.T) {
 	funcs := []jsFuncInfo{
 		{Name: "hasExplicitProviderConfig", IsExported: false},
+		{Name: "getCurrentEnv", IsExported: false},
 		{Name: "createTestClient", IsExported: true, Params: []jsParamInfo{{Name: "options", TypeExpr: "CreateTestClientOptions"}}, Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"}},
 	}
 	task := types.CoverageTestTask{
@@ -4051,6 +4052,29 @@ func TestJSCoverageTaskHasExplicitProviderConfigUsesCreateTestClient(t *testing.
 	}, []string{
 		"hasExplicitProviderConfig(",
 		"import { hasExplicitProviderConfig }",
+		"it.skip(",
+	})
+
+	task.Target = "getCurrentEnv"
+	task.LineRange = "98-98"
+	task.TestName = "covers originator env filtering"
+	filteredFuncs, filteredClasses = filterJSTargetsForCoverageTask(funcs, nil, &task)
+	if len(filteredClasses) != 0 || len(filteredFuncs) != 1 || filteredFuncs[0].Name != "createTestClient" {
+		t.Fatalf("getCurrentEnv should route through createTestClient, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code = genJSFuncTestForCoverageTask(filteredFuncs[0], &task)
+	assertGeneratedJS(t, code, []string{
+		"process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = 'internal-originator';",
+		"process.env.TESTLOOP_VISIBLE_ENV = 'visible';",
+		"const result = createTestClient();",
+		"const env = (result.client as any).options.env;",
+		"expect(env.TESTLOOP_VISIBLE_ENV).toBe('visible');",
+		"expect(env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE).toBeUndefined();",
+		"delete process.env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE;",
+		"delete process.env.TESTLOOP_VISIBLE_ENV;",
+	}, []string{
+		"getCurrentEnv(",
+		"import { getCurrentEnv }",
 		"it.skip(",
 	})
 }
