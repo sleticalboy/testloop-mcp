@@ -499,6 +499,7 @@ func jsAttachTSTypeDeclsToClass(cls *jsClassInfo, decls map[string]string) {
 var (
 	jsTSInterfaceDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*<([^>{}]*)>)?[^{]*\{`)
 	jsTSTypeAliasDeclRe = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*<([^>=]*)>)?\s*=`)
+	jsTSEnumDeclRe      = regexp.MustCompile(`(?m)(?:^|\s)(?:export\s+)?enum\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\{`)
 )
 
 func jsExtractTSTypeDecls(source string) map[string]string {
@@ -533,10 +534,44 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 			decls[jsTSTypeDeclKey(name, params)] = typeExpr
 		}
 	}
+	for _, match := range jsTSEnumDeclRe.FindAllStringSubmatchIndex(source, -1) {
+		if len(match) < 4 {
+			continue
+		}
+		name := source[match[2]:match[3]]
+		open := match[1] - 1
+		if value := jsExtractTSEnumMockValue(source, open, name); value != "" {
+			decls[name] = jsEnumMockKey + value
+		}
+	}
 	if len(decls) == 0 {
 		return nil
 	}
 	return decls
+}
+
+func jsExtractTSEnumMockValue(source string, open int, name string) string {
+	typeExpr := jsExtractBracedTypeExpr(source, open)
+	if typeExpr == "" {
+		return ""
+	}
+	body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(typeExpr, "{"), "}"))
+	for _, part := range splitTopLevelJSCSV(body) {
+		member := strings.TrimSpace(part)
+		if member == "" {
+			continue
+		}
+		member = strings.SplitN(member, "=", 2)[0]
+		member = strings.TrimSpace(member)
+		if !jsTSIdentifierRe.MatchString(member) {
+			continue
+		}
+		if strings.Contains(strings.ToLower(member), "unspecified") {
+			continue
+		}
+		return name + "." + member
+	}
+	return ""
 }
 
 func jsExtractTSInterfaceExtends(header string) []string {

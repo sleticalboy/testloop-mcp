@@ -5004,6 +5004,117 @@ export class Producer {
 	})
 }
 
+func TestImportedInterfaceMethodMocksGenerateFunctionFields(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "log_result.ts"), []byte(`export enum LogResult {
+  UNSPECIFIED = 0,
+  WRITTEN = 1,
+}
+`), 0o644); err != nil {
+		t.Fatalf("write log_result: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "message_view.ts"), []byte(`export class MessageView {
+}
+`), 0o644); err != nil {
+		t.Fatalf("write message_view: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "logger.ts"), []byte(`import { LogResult } from './log_result';
+import { MessageView } from './message_view';
+
+export interface ILogger {
+  info(message: string): void;
+  warn(message: string, meta?: unknown): void;
+  error(view: MessageView): Promise<LogResult>;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write logger: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "producer.ts")
+	source := `import { ILogger } from './logger';
+
+export class Producer {
+  constructor(logger: ILogger) {}
+  sync() {
+    return true;
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write producer: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "mocha-producer-logger",
+		Framework: "mocha",
+		File:      srcPath,
+		Target:    "Producer.sync",
+		Kind:      "method",
+		LineRange: "5-5",
+		GapType:   "return_path",
+		TestFile:  filepath.Join(srcDir, "producer.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { LogResult } from './log_result';",
+		"const instance = new Producer({ info: () => undefined, warn: () => undefined, error: async () => LogResult.WRITTEN });",
+	}, []string{
+		"new Producer({})",
+		"error: async () => undefined",
+		"import { MessageView }",
+	})
+}
+
+func TestCoverageTaskKeepsOptionalTypedParamUndefined(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "producer.ts")
+	source := `export class Transaction {
+  constructor(producer: Producer) {}
+}
+
+export class Producer {
+  send(message: { topic: string }, transaction?: Transaction) {
+    if (!transaction) {
+      return message.topic;
+    }
+    return 'transaction';
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write producer: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "mocha-producer-send",
+		Framework:       "mocha",
+		File:            srcPath,
+		Target:          "Producer.send",
+		Kind:            "method",
+		LineRange:       "7-7",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: !transaction"},
+		SuggestedInputs: []string{"构造满足条件 `!transaction` 的输入", "设置 message 覆盖未执行分支"},
+		TestFile:        filepath.Join(srcDir, "producer.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"const result = instance.send({ topic: 'test' }, undefined);",
+	}, []string{
+		"new Transaction(undefined)",
+		"import { Producer, Transaction }",
+	})
+}
+
 func TestImportedTypeMocksSkipCyclicImports(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "src")

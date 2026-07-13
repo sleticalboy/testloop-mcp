@@ -77,6 +77,7 @@ var (
 	jsExportStarRe       = regexp.MustCompile(`(?m)export\s+\*\s+from\s+['"]([^'"]+)['"]`)
 	jsExportNamedFromRe  = regexp.MustCompile(`(?m)export\s+\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
 	jsConstructorMockKey = "__testloop_constructor_mock__:"
+	jsEnumMockKey        = "__testloop_enum_mock__:"
 )
 
 // returnTypeForAssert 返回 JS 类型字符串用于 typeof 断言
@@ -1654,7 +1655,7 @@ func jsImportedTypeMocksSeen(srcPath string, source string, seen map[string]bool
 		}
 		if decls := jsExtractTSTypeDecls(text); len(decls) > 0 {
 			if decl, ok := decls[imported.ImportedName]; ok {
-				result[localName] = jsImportedTypeMock{Name: localName, ImportedName: imported.ImportedName, Module: imported.Module, Decl: decl, FilePath: resolvedPath}
+				result[localName] = jsImportedTypeMock{Name: localName, ImportedName: imported.ImportedName, Module: imported.Module, Decl: decl, IsValue: strings.HasPrefix(decl, jsEnumMockKey), FilePath: resolvedPath}
 				continue
 			}
 		}
@@ -1770,7 +1771,7 @@ func jsFileExportsSymbol(source string, symbol string) bool {
 	if !jsTSIdentifierRe.MatchString(symbol) {
 		return false
 	}
-	pattern := regexp.MustCompile(fmt.Sprintf(`(?m)export\s+(?:abstract\s+)?(?:class|interface|type)\s+%s(?:\s|<|=|\{)`, regexp.QuoteMeta(symbol)))
+	pattern := regexp.MustCompile(fmt.Sprintf(`(?m)export\s+(?:abstract\s+)?(?:class|interface|type|enum)\s+%s(?:\s|<|=|\{)`, regexp.QuoteMeta(symbol)))
 	if pattern.MatchString(source) {
 		return true
 	}
@@ -1903,21 +1904,68 @@ func jsImportSpecifierForMock(name string, mock jsImportedTypeMock) string {
 
 func jsTypeValueImportsNeeded(funcs []jsFuncInfo, classes []jsClassInfo, mocks map[string]jsImportedTypeMock) map[string]jsImportedTypeMock {
 	result := map[string]jsImportedTypeMock{}
-	addParams := func(params []jsParamInfo) {
-		for _, p := range params {
-			for _, name := range jsNamedTypesInTSType(p.TypeExpr) {
-				mock, ok := mocks[name]
-				if ok && mock.IsValue {
-					result[name] = mock
+	seenTypes := map[string]bool{}
+	var addTypeExpr func(string, map[string]string)
+	var addNamedType func(string, map[string]string)
+	addNamedType = func(name string, decls map[string]string) {
+		if name == "" {
+			return
+		}
+		seenKey := name
+		if decls != nil {
+			seenKey += "\x00" + decls[name]
+		}
+		if seenTypes[seenKey] {
+			return
+		}
+		seenTypes[seenKey] = true
+		mock, ok := mocks[name]
+		if ok {
+			if mock.IsValue {
+				result[name] = mock
+			}
+			addTypeExpr(mock.Decl, decls)
+			return
+		}
+		if decls != nil {
+			if decl := decls[name]; decl != "" {
+				addTypeExpr(decl, decls)
+			}
+		}
+	}
+	addTypeExpr = func(typeExpr string, decls map[string]string) {
+		typeExpr = strings.TrimSpace(typeExpr)
+		if strings.HasPrefix(typeExpr, "{") && strings.HasSuffix(typeExpr, "}") {
+			body := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(typeExpr, "{"), "}"))
+			for _, field := range jsSplitTopLevelTypeFields(body) {
+				_, typ, ok := jsParseTSTypeField(field)
+				if ok {
+					addTypeExpr(typ, decls)
 				}
 			}
+			return
+		}
+		if jsTSTypeIsFunction(typeExpr) {
+			addTypeExpr(jsTSTypeFunctionReturnType(typeExpr), decls)
+			return
+		}
+		for _, name := range jsNamedTypesInTSType(typeExpr) {
+			addNamedType(name, decls)
+		}
+	}
+	addParams := func(params []jsParamInfo, decls map[string]string) {
+		for _, p := range params {
+			if p.HasDefault {
+				continue
+			}
+			addTypeExpr(p.TypeExpr, decls)
 		}
 	}
 	for _, fn := range funcs {
 		if fn.SourceIsESModule && !fn.IsExported {
 			continue
 		}
-		addParams(fn.Params)
+		addParams(fn.Params, fn.Analysis.TSTypeDecls)
 	}
 	for _, cls := range classes {
 		for _, method := range cls.Methods {
@@ -1928,9 +1976,9 @@ func jsTypeValueImportsNeeded(funcs []jsFuncInfo, classes []jsClassInfo, mocks m
 				continue
 			}
 			if !method.IsStatic {
-				addParams(cls.ConstructorParams)
+				addParams(cls.ConstructorParams, method.Analysis.TSTypeDecls)
 			}
-			addParams(method.Params)
+			addParams(method.Params, method.Analysis.TSTypeDecls)
 		}
 	}
 	return result
@@ -3627,6 +3675,8 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 	for i, p := range params {
 		if value := values[p.Name]; value != "" {
 			args[i] = value
+		} else if jsDefaultParamShouldStayUndefined(p, analysis) {
+			args[i] = "undefined"
 		} else if value, ok := jsTypedParamMockValue(p, analysis); ok {
 			args[i] = value
 		} else if method := jsInjectedClientMethodForParam(analysis, p.Name); method != "" {
@@ -3638,6 +3688,26 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsDefaultParamShouldStayUndefined(p jsParamInfo, analysis *jsFuncAnalysis) bool {
+	if !p.HasDefault {
+		return false
+	}
+	compact := jsCompactName(p.Name)
+	if jsNameHasAny(compact, "options", "opts", "config", "context", "payload", "data", "body", "params", "query", "metadata") {
+		return false
+	}
+	typeExpr := jsNormalizeTSTypeExpr(p.TypeExpr)
+	if typeExpr == "" || strings.HasPrefix(typeExpr, "{") || strings.Contains(strings.ToLower(typeExpr), "record<") || strings.Contains(strings.ToLower(typeExpr), "object") {
+		return false
+	}
+	if analysis != nil && len(analysis.TSTypeDecls) > 0 {
+		if _, resolved := jsResolveNamedTSType(typeExpr, analysis.TSTypeDecls); resolved != "" {
+			return strings.HasPrefix(resolved, jsConstructorMockKey)
+		}
+	}
+	return jsTSIdentifierRe.MatchString(typeExpr) && jsLooksLikeConstructableTypeName(typeExpr)
 }
 
 func jsTypedParamMockValue(p jsParamInfo, analysis *jsFuncAnalysis) (string, bool) {
@@ -4397,20 +4467,62 @@ func jsSplitTopLevelTypeFields(body string) []string {
 
 func jsParseTSTypeField(field string) (string, string, bool) {
 	field = strings.TrimSpace(field)
-	if field == "" || strings.Contains(field, "(") {
+	if field == "" {
 		return "", "", false
+	}
+	if name, typ, ok := jsParseTSTypeMethodField(field); ok {
+		return name, typ, true
 	}
 	parts := strings.SplitN(field, ":", 2)
-	if len(parts) != 2 {
+	if len(parts) == 2 {
+		name := strings.TrimSpace(parts[0])
+		name = strings.TrimPrefix(name, "readonly ")
+		name = strings.TrimSuffix(name, "?")
+		name = strings.Trim(name, `"'`)
+		if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(name) {
+			return "", "", false
+		}
+		return name, strings.TrimSpace(parts[1]), true
+	}
+	return "", "", false
+}
+
+func jsParseTSTypeMethodField(field string) (string, string, bool) {
+	open := strings.Index(field, "(")
+	close := strings.LastIndex(field, ")")
+	if open <= 0 || close <= open {
 		return "", "", false
 	}
-	name := strings.TrimSpace(parts[0])
+	name := strings.TrimSpace(field[:open])
+	name = strings.TrimPrefix(name, "readonly ")
 	name = strings.TrimSuffix(name, "?")
 	name = strings.Trim(name, `"'`)
 	if !regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`).MatchString(name) {
 		return "", "", false
 	}
-	return name, strings.TrimSpace(parts[1]), true
+	returnType := "void"
+	rest := strings.TrimSpace(field[close+1:])
+	if strings.HasPrefix(rest, ":") {
+		returnType = strings.TrimSpace(strings.TrimPrefix(rest, ":"))
+	}
+	if returnType == "" {
+		returnType = "void"
+	}
+	return name, "() => " + returnType, true
+}
+
+func jsTSTypeIsFunction(typeExpr string) bool {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	return strings.Contains(typeExpr, "=>") || strings.HasPrefix(typeExpr, "Function")
+}
+
+func jsTSTypeFunctionReturnType(typeExpr string) string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	arrow := strings.Index(typeExpr, "=>")
+	if arrow < 0 {
+		return ""
+	}
+	return strings.TrimSpace(typeExpr[arrow+len("=>"):])
 }
 
 func jsMockValueForTSType(fieldName, typeExpr string) string {
@@ -4431,6 +4543,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	if value, ok := jsConstructorMockValueForTSType(typeExpr, decls); ok {
 		return value
 	}
+	if value, ok := jsEnumMockValueForTSType(typeExpr, decls); ok {
+		return value
+	}
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
 	}
@@ -4448,6 +4563,16 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	}
 	compactName := jsCompactName(fieldName)
 	switch {
+	case jsTSTypeIsFunction(typeExpr):
+		return jsMockFunctionValueForTSType(typeExpr, decls, seen)
+	case strings.HasPrefix(typeExpr, "Promise<") || strings.HasPrefix(typeExpr, "PromiseLike<"):
+		if args, ok := jsTSGenericArgs(typeExpr, "Promise"); ok && len(args) == 1 {
+			return "Promise.resolve(" + jsMockValueForTSTypeWithDeclsSeen(fieldName, args[0], decls, seen) + ")"
+		}
+		if args, ok := jsTSGenericArgs(typeExpr, "PromiseLike"); ok && len(args) == 1 {
+			return "Promise.resolve(" + jsMockValueForTSTypeWithDeclsSeen(fieldName, args[0], decls, seen) + ")"
+		}
+		return "Promise.resolve(undefined)"
 	case typeExpr == "Buffer":
 		return "Buffer.from('test')"
 	case typeExpr == "Uint8Array":
@@ -4510,6 +4635,31 @@ func jsConstructorMockValueForTSType(typeExpr string, decls map[string]string) (
 		return strings.TrimPrefix(resolved, jsConstructorMockKey), true
 	}
 	return strings.TrimPrefix(resolved, jsConstructorMockKey), true
+}
+
+func jsEnumMockValueForTSType(typeExpr string, decls map[string]string) (string, bool) {
+	if len(decls) == 0 {
+		return "", false
+	}
+	_, resolved := jsResolveNamedTSType(typeExpr, decls)
+	if resolved == "" || !strings.HasPrefix(resolved, jsEnumMockKey) {
+		return "", false
+	}
+	return strings.TrimPrefix(resolved, jsEnumMockKey), true
+}
+
+func jsMockFunctionValueForTSType(typeExpr string, decls map[string]string, seen map[string]bool) string {
+	returnType := jsTSTypeFunctionReturnType(typeExpr)
+	if returnType == "" || returnType == "void" || returnType == "undefined" {
+		return "() => undefined"
+	}
+	if args, ok := jsTSGenericArgs(returnType, "Promise"); ok && len(args) == 1 {
+		return "async () => " + jsMockValueForTSTypeWithDeclsSeen("value", args[0], decls, seen)
+	}
+	if args, ok := jsTSGenericArgs(returnType, "PromiseLike"); ok && len(args) == 1 {
+		return "async () => " + jsMockValueForTSTypeWithDeclsSeen("value", args[0], decls, seen)
+	}
+	return "() => " + jsMockValueForTSTypeWithDeclsSeen("value", returnType, decls, seen)
 }
 
 func jsPreferredTSTypeUnionBranch(typeExpr string) (string, bool) {
