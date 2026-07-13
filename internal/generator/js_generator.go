@@ -2928,6 +2928,12 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 			args[i] = jsCodexExecMockForCoverageTask(method, task)
 		case jsRocketMQLoadBalancerClass(cls.Name) && jsParamTypeMentions(param, "TopicRouteData"):
 			args[i] = jsRocketMQTopicRouteDataMock()
+		case cls.Name == "PublishingMessage" && jsParamTypeMentions(param, "MessageOptions"):
+			args[i] = jsRocketMQPublishingMessageOptionsMock(task)
+		case cls.Name == "PublishingMessage" && jsParamTypeMentions(param, "PublishingSettings"):
+			args[i] = "({ maxBodySizeBytes: 4194304 } as PublishingSettings)"
+		case cls.Name == "PublishingMessage" && strings.Contains(compact, "txenabled"):
+			args[i] = "false"
 		case strings.Contains(compact, "servername") || compact == "name":
 			args[i] = "'test-server'"
 		case strings.Contains(compact, "devconfig"):
@@ -2953,6 +2959,23 @@ func jsRocketMQLoadBalancerClass(name string) bool {
 
 func jsRocketMQTopicRouteDataMock() string {
 	return "Object.assign(new TopicRouteData([]), { messageQueues: [{ queueId: 0, permission: 4, broker: { name: 'broker-a', endpoints: { facade: '127.0.0.1:8081' } } }, { queueId: 0, permission: 4, broker: { name: 'broker-b', endpoints: { facade: '127.0.0.1:8082' } } }] })"
+}
+
+func jsRocketMQPublishingMessageOptionsMock(task *types.CoverageTestTask) string {
+	fields := []string{"topic: 'test'", "body: Buffer.from('test')"}
+	switch {
+	case jsCoverageTaskMentions(task, "this.tag"):
+		fields = append(fields, "tag: 'test'")
+	case jsCoverageTaskMentions(task, "this.deliveryTimestamp"):
+		fields = append(fields, "deliveryTimestamp: new Date('2026-01-01T00:00:00.000Z')")
+	case jsCoverageTaskMentions(task, "this.messageGroup"):
+		fields = append(fields, "messageGroup: 'test'")
+	case jsCoverageTaskMentions(task, "this.properties"):
+		fields = append(fields, "properties: new Map([['key', 'test']])")
+	default:
+		fields = append(fields, "keys: ['key']")
+	}
+	return "{ " + strings.Join(fields, ", ") + " }"
 }
 
 func jsCodexExecMockForCoverageTask(method jsFuncInfo, task *types.CoverageTestTask) string {
@@ -3020,6 +3043,9 @@ func jsClassCoverageTaskInputOverrides(method jsFuncInfo, task *types.CoverageTe
 			writableEnded = "true"
 		}
 		jsSetNamedParamOverride(method.Params, overrides, "res", jsExpressResponseMock(writableEnded))
+	}
+	if method.ClassName == "PublishingMessage" && method.Name == "toProtobuf" {
+		jsSetNamedParamOverride(method.Params, overrides, "mq", "({ queueId: 0 } as MessageQueue)")
 	}
 	return overrides
 }

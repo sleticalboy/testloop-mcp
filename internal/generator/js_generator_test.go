@@ -4831,6 +4831,93 @@ export class PublishingLoadBalancer {
 	})
 }
 
+func TestMochaCoverageTaskUsesRocketMQPublishingMessageMocks(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	messageDir := filepath.Join(srcDir, "message")
+	producerDir := filepath.Join(srcDir, "producer")
+	routeDir := filepath.Join(srcDir, "route")
+	for _, dir := range []string{messageDir, producerDir, routeDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(producerDir, "PublishingSettings.ts"), []byte(`export class PublishingSettings {
+  constructor(namespace: string, clientId: string, accessPoint: unknown, retryPolicy: unknown, requestTimeout: number, topics: Set<string>) {}
+  get maxBodySizeBytes() { return 4194304; }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write PublishingSettings: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(routeDir, "MessageQueue.ts"), []byte(`export class MessageQueue {
+  constructor(messageQueue: unknown) {}
+  queueId = 0;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write MessageQueue: %v", err)
+	}
+	srcPath := filepath.Join(messageDir, "PublishingMessage.ts")
+	if err := os.WriteFile(srcPath, []byte(`import { PublishingSettings } from '../producer/PublishingSettings';
+import { MessageQueue } from '../route/MessageQueue';
+
+export interface MessageOptions {
+  topic: string;
+  body: Buffer;
+  tag?: string;
+  messageGroup?: string;
+  properties?: Map<string, string>;
+  deliveryTimestamp?: Date;
+}
+
+export class PublishingMessage {
+  tag?: string;
+  constructor(options: MessageOptions, publishingSettings: PublishingSettings, txEnabled: boolean) {
+    this.tag = options.tag;
+    void publishingSettings.maxBodySizeBytes;
+    void txEnabled;
+  }
+  toProtobuf(namespace: string, mq: MessageQueue) {
+    if (this.tag) {
+      return { namespace, queueId: mq.queueId, tag: this.tag };
+    }
+    return { namespace, queueId: mq.queueId };
+  }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "mocha-publishing-message",
+		Framework:       "mocha",
+		File:            srcPath,
+		Target:          "PublishingMessage.toProtobuf",
+		Kind:            "method",
+		LineRange:       "18-18",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: this.tag"},
+		SuggestedInputs: []string{"构造满足条件 `this.tag` 的输入", "设置 mq 覆盖未执行分支"},
+		TestFile:        filepath.Join(messageDir, "PublishingMessage.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { PublishingSettings } from '../producer/PublishingSettings';",
+		"import { MessageQueue } from '../route/MessageQueue';",
+		"const instance = new PublishingMessage({ topic: 'test', body: Buffer.from('test'), tag: 'test' }, ({ maxBodySizeBytes: 4194304 } as PublishingSettings), false);",
+		"const result = instance.toProtobuf('test', ({ queueId: 0 } as MessageQueue));",
+	}, []string{
+		"new PublishingSettings(",
+		"new MessageQueue('test')",
+		"messageGroup: 'test'",
+		"deliveryTimestamp:",
+		"true);",
+	})
+}
+
 func TestTSTypeDeclsCaptureInterfaceExtends(t *testing.T) {
 	decls := jsExtractTSTypeDecls(`interface BaseOptions {
   endpoints: string;
