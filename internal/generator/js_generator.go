@@ -1608,6 +1608,18 @@ type jsNamedImport struct {
 }
 
 func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTypeMock {
+	return jsImportedTypeMocksSeen(srcPath, source, map[string]bool{})
+}
+
+func jsImportedTypeMocksSeen(srcPath string, source string, seen map[string]bool) map[string]jsImportedTypeMock {
+	key := srcPath
+	if abs, err := filepath.Abs(srcPath); err == nil {
+		key = abs
+	}
+	if seen[key] {
+		return nil
+	}
+	seen[key] = true
 	imports := jsNamedImports(source)
 	if len(imports) == 0 {
 		return nil
@@ -1635,7 +1647,7 @@ func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTyp
 			continue
 		}
 		text := string(data)
-		for name, nested := range jsImportedTypeMocks(resolvedPath, text) {
+		for name, nested := range jsImportedTypeMocksSeen(resolvedPath, text, seen) {
 			if _, exists := result[name]; !exists {
 				result[name] = nested
 			}

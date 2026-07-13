@@ -28,6 +28,14 @@ Environment:
                                       generated task validation. Use {path} for the generated
                                       test file, e.g. "npx egg-bin test --timeout 60000 {path}".
   TESTLOOP_VALIDATE_JS_FILE_FILTER  Optional substring filter for task source files
+  TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS
+                                      Optional timeout in seconds used as the default for
+                                      baseline coverage and each task validation stage.
+  TESTLOOP_VALIDATE_JS_BASELINE_TIMEOUT_SECONDS
+                                      Optional timeout in seconds for baseline coverage only.
+  TESTLOOP_VALIDATE_JS_TASK_TIMEOUT_SECONDS
+                                      Optional timeout in seconds for each generated task
+                                      validation only.
   TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS
                                       Optional comma-separated src:dst mappings.
                                       src is relative to <js-project-dir> unless absolute;

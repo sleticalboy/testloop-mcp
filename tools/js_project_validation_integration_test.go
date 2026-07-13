@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,9 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		t.Fatalf("unsupported TESTLOOP_VALIDATE_JS_FRAMEWORK=%q", framework)
 	}
 	limit := envPositiveInt(t, "TESTLOOP_VALIDATE_JS_TASK_LIMIT", 20)
+	stageTimeout := envOptionalDurationSeconds(t, "TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS")
+	baselineTimeout := firstNonZeroDuration(envOptionalDurationSeconds(t, "TESTLOOP_VALIDATE_JS_BASELINE_TIMEOUT_SECONDS"), stageTimeout)
+	taskTimeout := firstNonZeroDuration(envOptionalDurationSeconds(t, "TESTLOOP_VALIDATE_JS_TASK_TIMEOUT_SECONDS"), stageTimeout)
 	outputPath := os.Getenv("TESTLOOP_VALIDATE_JS_OUTPUT")
 	if outputPath == "" {
 		outputPath = filepath.Join(os.TempDir(), fmt.Sprintf("testloop-js-coverage-top%d-%s.jsonl", limit, time.Now().Format("20060102150405")))
@@ -39,18 +43,23 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		t.Fatalf("resolve project dir: %v", err)
 	}
 	baselineRoot := filepath.Join(t.TempDir(), "baseline")
+	logJSValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
 	if err := copyJSProjectTree(projectDir, baselineRoot); err != nil {
 		t.Fatalf("copy baseline project: %v", err)
 	}
+	logJSValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
+	logJSValidationStage(t, "baseline.link.start extra=%q", os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS"))
 	if err := linkJSExtraResources(projectDir, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
 		t.Fatalf("link baseline extra resources: %v", err)
 	}
+	logJSValidationStage(t, "baseline.link.done")
 
-	report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")))
+	report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")), baselineTimeout)
 	tasks := jsCoverageTasksForValidationFilter(report, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
 	if len(tasks) < limit {
 		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
+	logJSValidationStage(t, "tasks.selected count=%d limit=%d filter=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
 
 	outFile, err := os.Create(outputPath)
 	if err != nil {
@@ -68,9 +77,11 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	for i := 0; i < limit; i++ {
 		task := tasks[i]
 		taskRoot := filepath.Join(t.TempDir(), fmt.Sprintf("task-%02d", i+1))
+		logJSValidationStage(t, "task.copy.start index=%d id=%s target=%s root=%s", i+1, task.ID, task.Target, taskRoot)
 		if err := copyJSProjectTree(projectDir, taskRoot); err != nil {
 			t.Fatalf("copy task worktree for %s: %v", task.ID, err)
 		}
+		logJSValidationStage(t, "task.copy.done index=%d id=%s", i+1, task.ID)
 		if err := linkJSExtraResources(projectDir, taskRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
 			t.Fatalf("link task extra resources for %s: %v", task.ID, err)
 		}
@@ -78,12 +89,19 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		task.TestFile = rewriteJSValidationPath(baselineRoot, taskRoot, task.TestFile)
 
 		includeFixSuggestions := false
-		validation, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		ctx := context.Background()
+		cancel := func() {}
+		if taskTimeout > 0 {
+			ctx, cancel = context.WithTimeout(ctx, taskTimeout)
+		}
+		logJSValidationStage(t, "task.validate.start index=%d id=%s target=%s file=%s timeout=%s", i+1, task.ID, task.Target, task.File, taskTimeout)
+		validation, _, err := HandleValidateCoverageTask(ctx, nil, validateCoverageTaskInput{
 			FilePath:              task.File,
 			Framework:             framework,
 			CoverageTask:          &task,
 			IncludeFixSuggestions: &includeFixSuggestions,
 		})
+		cancel()
 		if err != nil {
 			t.Fatalf("validate task %d %s %s: %v", i+1, task.ID, task.Target, err)
 		}
@@ -91,6 +109,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		if err := json.Unmarshal([]byte(resultText(t, validation)), &out); err != nil {
 			t.Fatalf("unmarshal validation output for %s: %v", task.ID, err)
 		}
+		logJSValidationStage(t, "task.validate.done index=%d id=%s target=%s status=%s action=%s", i+1, task.ID, task.Target, out.Status, out.Action)
 		encoded, _ := json.Marshal(out)
 		if _, err := outFile.Write(append(encoded, '\n')); err != nil {
 			t.Fatalf("write output jsonl: %v", err)
@@ -172,13 +191,42 @@ export { startThread } from "./codex";
 func TestJSCoverageCommandSupportsCustomTemplate(t *testing.T) {
 	t.Setenv("TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND", "npx egg-bin cov --timeout 60000 {args}")
 
-	cmd := jsCoverageCommand("mocha", []string{"test/index.test.ts", "test/space name.test.ts"})
+	cmd := jsCoverageCommand(context.Background(), "mocha", []string{"test/index.test.ts", "test/space name.test.ts"})
 
 	got := strings.Join(cmd.Args, " ")
 	want := "sh -c npx egg-bin cov --timeout 60000 'test/index.test.ts' 'test/space name.test.ts'"
 	if got != want {
 		t.Fatalf("jsCoverageCommand args = %q, want %q", got, want)
 	}
+}
+
+func envOptionalDurationSeconds(t *testing.T, name string) time.Duration {
+	t.Helper()
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return 0
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		t.Fatalf("%s=%q is not a positive integer second value", name, raw)
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+func firstNonZeroDuration(values ...time.Duration) time.Duration {
+	for _, value := range values {
+		if value > 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func logJSValidationStage(t *testing.T, format string, args ...any) {
+	t.Helper()
+	message := fmt.Sprintf(format, args...)
+	t.Log(message)
+	fmt.Fprintf(os.Stderr, "testloop-js-validation: %s\n", message)
 }
 
 type jsProjectValidationSummary struct {
@@ -206,11 +254,19 @@ func (s *jsProjectValidationSummary) record(index int, task types.CoverageTestTa
 	}
 }
 
-func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework string, testArgs []string) types.CoverageReport {
+func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework string, testArgs []string, timeout time.Duration) types.CoverageReport {
 	t.Helper()
-	cmd := jsCoverageCommand(framework, testArgs)
+	ctx := context.Background()
+	cancel := func() {}
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+	}
+	defer cancel()
+	cmd := jsCoverageCommand(ctx, framework, testArgs)
 	cmd.Dir = projectRoot
+	logJSValidationStage(t, "baseline.coverage.start root=%s framework=%s args=%q timeout=%s", projectRoot, framework, strings.Join(testArgs, " "), timeout)
 	output, err := cmd.CombinedOutput()
+	logJSValidationStage(t, "baseline.coverage.done root=%s framework=%s err=%v output_bytes=%d", projectRoot, framework, err, len(output))
 	coverageFile := filepath.Join(projectRoot, "coverage", "coverage-final.json")
 	if err != nil {
 		if _, statErr := os.Stat(coverageFile); statErr != nil {
@@ -236,7 +292,7 @@ func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework
 	return report
 }
 
-func jsCoverageCommand(framework string, testArgs []string) *exec.Cmd {
+func jsCoverageCommand(ctx context.Context, framework string, testArgs []string) *exec.Cmd {
 	if template := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND")); template != "" {
 		args := make([]string, 0, len(testArgs))
 		for _, arg := range testArgs {
@@ -246,7 +302,7 @@ func jsCoverageCommand(framework string, testArgs []string) *exec.Cmd {
 		if !strings.Contains(template, "{args}") && len(args) > 0 {
 			command = strings.TrimSpace(command + " " + strings.Join(args, " "))
 		}
-		return exec.Command("sh", "-c", command)
+		return configureCommandProcessGroup(exec.CommandContext(ctx, "sh", "-c", command))
 	}
 	args := []string{}
 	switch framework {
@@ -258,7 +314,7 @@ func jsCoverageCommand(framework string, testArgs []string) *exec.Cmd {
 		args = append(args, "jest", "--coverage")
 	}
 	args = append(args, testArgs...)
-	return exec.Command("npx", args...)
+	return configureCommandProcessGroup(exec.CommandContext(ctx, "npx", args...))
 }
 
 func filterJSCoverageTasks(tasks []types.CoverageTestTask, filter string) []types.CoverageTestTask {

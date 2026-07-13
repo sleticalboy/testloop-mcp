@@ -5004,6 +5004,46 @@ export class Producer {
 	})
 }
 
+func TestImportedTypeMocksSkipCyclicImports(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	aPath := filepath.Join(srcDir, "a.ts")
+	aSource := `import { BOptions } from './b';
+
+export interface AOptions {
+  b?: BOptions;
+}
+
+export class A {
+  constructor(options: BOptions) {}
+}
+`
+	if err := os.WriteFile(aPath, []byte(aSource), 0o644); err != nil {
+		t.Fatalf("write a: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "b.ts"), []byte(`import { AOptions } from './a';
+
+export interface BOptions {
+  a?: AOptions;
+  value: string;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write b: %v", err)
+	}
+
+	mocks := jsImportedTypeMocks(aPath, aSource)
+	mock, ok := mocks["BOptions"]
+	if !ok {
+		t.Fatalf("expected BOptions mock, got %+v", mocks)
+	}
+	if !strings.Contains(mock.Decl, "value: string") {
+		t.Fatalf("BOptions decl = %q", mock.Decl)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {
