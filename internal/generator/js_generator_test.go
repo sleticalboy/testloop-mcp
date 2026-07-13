@@ -3371,12 +3371,32 @@ func TestJSCoverageTaskThreadPrivateAndTypedArgs(t *testing.T) {
 	}
 	code := genJSClassTestForCoverageTask(cls, &privateTask, "../src/thread")
 	assertGeneratedJS(t, code, []string{
-		"it.skip('covers thread started branch'",
-		"manual_review_private: Thread.runStreamedInternal is a JavaScript private method",
-		"public_entry_candidates: Thread.runStreamed, Thread.run",
+		"const exec = {",
+		"yield JSON.stringify({ type: 'thread.started', thread_id: 'thread-123' });",
+		"const instance = new Thread(exec as any, {}, {}, null);",
+		"const { events } = await instance.runStreamed('hello');",
+		"expect(first.value).toEqual({ type: 'thread.started', thread_id: 'thread-123' });",
+		"expect(instance.id).toBe('thread-123');",
 	}, []string{
 		"instance.runStreamedInternal(",
+		"it.skip(",
+		"manual_review_private",
 		"new Thread(undefined",
+	})
+
+	parseTask := privateTask
+	parseTask.LineRange = "99-103"
+	parseTask.GapType = "error_path"
+	parseTask.TestName = "covers invalid JSON stream item"
+	code = genJSClassTestForCoverageTask(cls, &parseTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"yield 'not-json';",
+		"const { events } = await instance.runStreamed('hello');",
+		"await expect(events.next()).rejects.toThrow('Failed to parse item: not-json');",
+	}, []string{
+		"instance.runStreamedInternal(",
+		"it.skip(",
+		"manual_review_private",
 	})
 
 	publicTask := types.CoverageTestTask{

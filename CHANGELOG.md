@@ -33,6 +33,7 @@
 - JS/TS coverage task 会为 Codex SDK 配置序列化分支生成更具体的 TOML 断言，覆盖 inline object、对象中 `undefined` child skip、unsupported value 错误路径，以及 `CodexExec.run` 内 config override loop。
 - JS/TS coverage task 会通过 `CodexExec(null)` 公共入口和临时覆盖 `process.platform/process.arch` 覆盖 `findCodexPath` 的 linux/darwin/win32 平台映射分支，将仅依赖平台选择的任务从 `manual_review_internal` 转为 ready。
 - JS/TS coverage task 遇到文件级目标任务时会生成 `manual_review_internal` 草稿，避免回退成全量导入并错误引用未导出的内部 helper。
+- JS/TS coverage task 会通过 `Thread.runStreamed()` 公共入口覆盖 `Thread.runStreamedInternal` private 分支，自动生成 async generator `CodexExec.run` mock、`thread.started` id 更新断言和 JSON parse error 断言，把 Codex SDK `src/thread.ts` top18 的 private skipped 草稿转为真实 ready 测试。
 - JS/TS parser 会识别 TypeScript `private` / `protected` class method 和 `get` accessor；coverage task 对不可外部调用的 TS private method 会生成 `manual_review_private` 草稿和公共入口候选，对 getter 会生成属性访问而不是错误的函数调用。
 - JS/TS class coverage task 会利用 TypeScript 参数类型生成更合法的 constructor / method 入参，例如为 `CodexExec` 注入最小 async generator mock、为 `Input` 生成字符串输入、为 options 生成对象、为 nullable id 生成 `null`，减少 TS 严格模式下的 `undefined` 编译失败。
 - JS/TS coverage task 针对 `Thread.run` 这类消费 event stream 的错误路径，会让 `CodexExec` mock 产出 `turn.failed` 事件，从而稳定覆盖 reject 分支。

@@ -1084,6 +1084,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			continue
 		}
 		if method.IsPrivate || strings.HasPrefix(method.Name, "#") {
+			if cls.Name == "Thread" && method.Name == "runStreamedInternal" {
+				sb.WriteString(genJSThreadRunStreamedInternalPublicEntryTest(method, task, testName))
+				continue
+			}
 			if cls.Name == "ConfigManager" && method.Name == "#diffConfigs" {
 				sb.WriteString(genJSConfigManagerDiffPublicEntryTest(cls, method, task, testName))
 				continue
@@ -1145,6 +1149,42 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 	}
 	sb.WriteString("});\n\n")
 
+	return sb.String()
+}
+
+func genJSThreadRunStreamedInternalPublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	lineRange := ""
+	if task != nil {
+		lineRange = strings.TrimSpace(task.LineRange)
+	}
+	parseError := strings.HasPrefix(lineRange, "99") || strings.HasPrefix(lineRange, "100") || strings.HasPrefix(lineRange, "101") || strings.HasPrefix(lineRange, "102") || strings.HasPrefix(lineRange, "103")
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const exec = {\n")
+	sb.WriteString("        run: async function* () {\n")
+	if parseError {
+		sb.WriteString("          yield 'not-json';\n")
+	} else {
+		sb.WriteString("          yield JSON.stringify({ type: 'thread.started', thread_id: 'thread-123' });\n")
+	}
+	sb.WriteString("        },\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new Thread(exec as any, {}, {}, null);\n")
+	sb.WriteString("      const { events } = await instance.runStreamed('hello');\n")
+	if parseError {
+		sb.WriteString("      await expect(events.next()).rejects.toThrow('Failed to parse item: not-json');\n")
+	} else {
+		sb.WriteString("      const first = await events.next();\n")
+		sb.WriteString("      expect(first.value).toEqual({ type: 'thread.started', thread_id: 'thread-123' });\n")
+		sb.WriteString("      expect(instance.id).toBe('thread-123');\n")
+		sb.WriteString("      await expect(events.next()).resolves.toEqual({ done: true, value: undefined });\n")
+	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
 	return sb.String()
 }
 
