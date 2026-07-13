@@ -134,6 +134,15 @@ func TestSynthesizeJSTypeOnlyFileLevelTasks(t *testing.T) {
 `), 0o644); err != nil {
 		t.Fatalf("write runtime source: %v", err)
 	}
+	barrel := filepath.Join(srcDir, "index.ts")
+	if err := os.WriteFile(barrel, []byte(`export type {
+  ThreadStartedEvent,
+} from "./events";
+
+export { startThread } from "./codex";
+`), 0o644); err != nil {
+		t.Fatalf("write barrel source: %v", err)
+	}
 
 	tasks := synthesizeJSTypeOnlyFileLevelTasks("jest", projectRoot, "src/events.ts")
 	if len(tasks) != 1 {
@@ -149,6 +158,14 @@ func TestSynthesizeJSTypeOnlyFileLevelTasks(t *testing.T) {
 
 	if got := synthesizeJSTypeOnlyFileLevelTasks("jest", projectRoot, "src/codex.ts"); len(got) != 0 {
 		t.Fatalf("runtime file should not synthesize no-runtime task: %+v", got)
+	}
+
+	barrelTasks := synthesizeJSTypeOnlyFileLevelTasks("jest", projectRoot, "src/index.ts")
+	if len(barrelTasks) != 1 {
+		t.Fatalf("barrel file should synthesize no-runtime task, got %+v", barrelTasks)
+	}
+	if barrelTasks[0].Target != "index.ts" || barrelTasks[0].GapType != "no_runtime" {
+		t.Fatalf("unexpected barrel task: %+v", barrelTasks[0])
 	}
 }
 
@@ -266,8 +283,7 @@ func synthesizeJSTypeOnlyFileLevelTasks(framework string, projectRoot string, fi
 		if !strings.Contains(slashPath, filter) && !strings.Contains(slashRel, filter) {
 			return nil
 		}
-		ctx := generator.BuildGenerationContext(path)
-		if ctx == nil || len(ctx.Targets) > 0 || len(ctx.Types) == 0 {
+		if !jsValidationTSModuleHasNoRuntimeTargets(path) {
 			return nil
 		}
 		target := filepath.Base(path)
@@ -279,19 +295,60 @@ func synthesizeJSTypeOnlyFileLevelTasks(framework string, projectRoot string, fi
 			Kind:           "file_level",
 			LineRange:      "entire file",
 			GapType:        "no_runtime",
-			Goal:           fmt.Sprintf("确认 %s 是 TypeScript 纯类型文件，没有可直接执行的运行时代码覆盖任务", target),
+			Goal:           fmt.Sprintf("确认 %s 没有本地可执行的 TypeScript 运行时代码覆盖任务", target),
 			Command:        jsValidationCoverageTaskCommand(framework, path),
 			TestFile:       jsValidationTestFileForSource(projectRoot, path),
 			TestName:       "marks type-only module as no runtime coverage",
-			AssertionFocus: []string{"纯类型声明不会出现在 JavaScript coverage-final.json 中；应通过消费方运行时测试或类型检查验证"},
+			AssertionFocus: []string{"纯类型或 re-export 声明不会产生有意义的本地 JavaScript coverage task；应通过消费方运行时测试或类型检查验证"},
 			Priority:       90,
-			PriorityReason: "file filter matched a TypeScript type-only module that coverage data omits",
+			PriorityReason: "file filter matched a TypeScript module with no local runtime targets that coverage data omits",
 			Confidence:     0.9,
 		}
 		tasks = append(tasks, task)
 		return nil
 	})
 	return tasks
+}
+
+func jsValidationTSModuleHasNoRuntimeTargets(path string) bool {
+	ctx := generator.BuildGenerationContext(path)
+	if ctx != nil {
+		if len(ctx.Targets) > 0 {
+			return false
+		}
+		if len(ctx.Types) > 0 {
+			return true
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	return jsValidationSourceIsImportExportOnly(string(data))
+}
+
+func jsValidationSourceIsImportExportOnly(source string) bool {
+	inImportExportBlock := false
+	for _, line := range strings.Split(source, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+			continue
+		}
+		if inImportExportBlock {
+			if strings.Contains(trimmed, ";") {
+				inImportExportBlock = false
+			}
+			continue
+		}
+		if strings.HasPrefix(trimmed, "import ") || strings.HasPrefix(trimmed, "export ") {
+			if !strings.Contains(trimmed, ";") {
+				inImportExportBlock = true
+			}
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func sanitizeJSValidationTaskID(framework string) string {

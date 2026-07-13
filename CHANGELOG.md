@@ -40,6 +40,9 @@
 - JS/TS class coverage task 对 `Codex` 包装类会生成 `codexPathOverride`，避免 `resumeThread` 这类纯包装方法测试在构造阶段触发 native CLI package lookup。
 - JS/TS coverage task 遇到 TypeScript 纯类型文件时会生成 `manual_review_no_runtime` 草稿，明确这类文件没有可执行运行时代码，应通过消费方测试或类型检查验证，而不是继续按覆盖率缺口生成伪单测。
 - JS/TS generation context 对 type-only TS 文件会保留 `types` 信息；JS 真实项目验证脚本在文件过滤命中源码但 coverage report 没有任务时，会合成 no-runtime 文件级任务，并优先写入项目已有 `tests/` 目录以适配 Jest/Vitest `testMatch/include`。
+- JS/TS no-runtime 文件级任务会覆盖 TypeScript barrel re-export 文件，例如 `index.ts` 只做 `export type` / `export { ... }` 时会生成 `manual_review_no_runtime`，提示通过消费方测试验证包入口。
+- JS/TS coverage task 支持 `prependPathDirs` / `pathEnvKey` 的 PATH 归一化分支，生成类型合法的 env/pathDirs/platform 输入，并断言 Windows PATH key 合并和非 Windows `PATH` 保留行为。
+- JS/TS coverage task 会通过 `resolveNativePackage` 公共入口覆盖未导出的 `existingDirs` / `isFile` helper，构造临时 native package vendor 目录并断言 `executablePath` 与 `pathDirs`，避免直接 import 内部函数。
 - `validate_coverage_task` 会将 JavaScript `#private` method 任务标记为 `manual_review_private`，避免把语言访问性限制当成普通生成测试失败反复修。
 - JS class coverage task 遇到 ESM 文件中未导出的内部 class 时，会生成 `manual_review_internal` 草稿而不是错误生成命名导入，例如 `StorageManager` 这类模块内部状态 helper。
 - JS class coverage task 会解析 constructor 参数，并为 `serverName` / `devConfig` / `options` 这类常见参数生成最小实例化输入，例如 `new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() })`。

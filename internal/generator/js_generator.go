@@ -209,6 +209,18 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 
 	filteredFuncs := make([]jsFuncInfo, 0, len(funcs))
 	for _, fn := range funcs {
+		if jsCoverageTaskPathEnvKeyTarget(target) {
+			if fn.Name == "prependPathDirs" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
+		if jsCoverageTaskNativePackageHelperTarget(target) {
+			if fn.Name == "resolveNativePackage" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
 		if jsCoverageTaskPrivateIPParserTarget(target) {
 			if fn.Name == "parseIP" {
 				filteredFuncs = append(filteredFuncs, fn)
@@ -283,9 +295,9 @@ func genJSFileLevelManualReviewTask(srcPath string, source []byte, task *types.C
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
-	if jsSourceHasTypesButNoRuntimeTargets(srcPath, source) {
-		sb.WriteString("    // manual_review_no_runtime: this TypeScript module only exports types/interfaces, so coverage cannot add runtime line coverage.\n")
-		sb.WriteString("    // split_into_targets: validate through consumers that construct these event/item shapes or add compile-time type tests.\n")
+	if jsSourceHasNoRuntimeTargets(srcPath, source) {
+		sb.WriteString("    // manual_review_no_runtime: this TypeScript module only declares types or re-exports symbols, so coverage cannot add meaningful local runtime line coverage.\n")
+		sb.WriteString("    // split_into_targets: validate through runtime consumers of these exports or add compile-time type tests.\n")
 	} else {
 		sb.WriteString("    // manual_review_internal: file-level coverage task cannot be mapped to one exported public entry without importing internal helpers.\n")
 		sb.WriteString("    // split_into_targets: exported class methods, exported functions, or explicit public-entry tasks\n")
@@ -295,7 +307,7 @@ func genJSFileLevelManualReviewTask(srcPath string, source []byte, task *types.C
 	return sb.String()
 }
 
-func jsSourceHasTypesButNoRuntimeTargets(srcPath string, source []byte) bool {
+func jsSourceHasNoRuntimeTargets(srcPath string, source []byte) bool {
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	if ext != ".ts" && ext != ".tsx" {
 		return false
@@ -304,7 +316,32 @@ func jsSourceHasTypesButNoRuntimeTargets(srcPath string, source []byte) bool {
 	if len(funcs) > 0 || len(classes) > 0 {
 		return false
 	}
-	return len(extractJSTypes(string(source))) > 0
+	text := string(source)
+	return len(extractJSTypes(text)) > 0 || jsSourceIsImportExportOnly(text)
+}
+
+func jsSourceIsImportExportOnly(source string) bool {
+	inImportExportBlock := false
+	for _, line := range strings.Split(source, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+			continue
+		}
+		if inImportExportBlock {
+			if strings.Contains(trimmed, ";") {
+				inImportExportBlock = false
+			}
+			continue
+		}
+		if strings.HasPrefix(trimmed, "import ") || strings.HasPrefix(trimmed, "export ") {
+			if !strings.Contains(trimmed, ";") {
+				inImportExportBlock = true
+			}
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // ---- 函数体分析（基于 body 文本字符串，不依赖解析方式） ----
@@ -605,10 +642,13 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "findCodexPath" && jsCoverageTaskFindCodexPathTarget(task) {
 		return genJSFindCodexPathCoverageTask(task, testName)
 	}
+	if fn.Name == "prependPathDirs" && jsCoverageTaskPrependPathDirsTarget(task) {
+		return genJSPrependPathDirsCoverageTask(task, testName)
+	}
 	if fn.Name == "isDirectory" && jsCoverageTaskCodexInternalFSHelperTarget(task) {
 		return genJSCodexInternalFSHelperManualReviewTask(task, testName)
 	}
-	if fn.Name == "resolveNativePackage" && task != nil && strings.TrimSpace(task.Target) == "resolveNativePackage" {
+	if fn.Name == "resolveNativePackage" && jsCoverageTaskResolveNativePackageTarget(task) {
 		return genJSResolveNativePackageCoverageTask(fn, task, testName)
 	}
 	if fn.Name == "createOutputSchemaFile" && task != nil && strings.TrimSpace(task.Target) == "createOutputSchemaFile" {
@@ -854,15 +894,69 @@ func genJSCodexInternalFSHelperManualReviewTask(task *types.CoverageTestTask, te
 	return sb.String()
 }
 
-func genJSResolveNativePackageCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+func genJSPrependPathDirsCoverageTask(task *types.CoverageTestTask, testName string) string {
+	target := ""
+	lineRange := ""
+	if task != nil {
+		target = strings.TrimSpace(task.Target)
+		lineRange = strings.TrimSpace(task.LineRange)
+	}
+	useLinux := target == "pathEnvKey" && (strings.HasPrefix(lineRange, "462") || strings.HasPrefix(lineRange, "463") || strings.HasPrefix(lineRange, "464"))
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
-	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	sb.WriteString("describe('prependPathDirs', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
-	sb.WriteString("    const result = resolveNativePackage('missing-vendor-root', 'missing-triple', 'codex');\n")
-	sb.WriteString("    expect(result).toBeNull();\n")
+	sb.WriteString("    const { default: path } = await import('node:path');\n")
+	if useLinux {
+		sb.WriteString("    const env = { Path: 'ignored', PATH: ['existing-bin'].join(path.delimiter) };\n")
+		sb.WriteString("    prependPathDirs(env, ['codex-bin'], 'linux');\n")
+		sb.WriteString("    expect(env.Path).toBe('ignored');\n")
+		sb.WriteString("    expect(env.PATH.split(path.delimiter)).toEqual(['codex-bin', 'existing-bin']);\n")
+	} else {
+		sb.WriteString("    const env = { PATH: 'remove-me', Path: ['existing-bin', 'other-bin'].join(path.delimiter) };\n")
+		sb.WriteString("    prependPathDirs(env, ['codex-bin', 'existing-bin'], 'win32');\n")
+		sb.WriteString("    expect(env.PATH).toBeUndefined();\n")
+		sb.WriteString("    expect(env.Path.split(path.delimiter)).toEqual(['codex-bin', 'existing-bin', 'other-bin']);\n")
+	}
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSResolveNativePackageCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	target := ""
+	if task != nil {
+		target = strings.TrimSpace(task.Target)
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	if target == "existingDirs" {
+		sb.WriteString("    const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('node:fs');\n")
+		sb.WriteString("    const { tmpdir } = await import('node:os');\n")
+		sb.WriteString("    const { default: path } = await import('node:path');\n")
+		sb.WriteString("    const vendorRoot = mkdtempSync(path.join(tmpdir(), 'codex-vendor-'));\n")
+		sb.WriteString("    try {\n")
+		sb.WriteString("      const packageRoot = path.join(vendorRoot, 'test-triple');\n")
+		sb.WriteString("      mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });\n")
+		sb.WriteString("      mkdirSync(path.join(packageRoot, 'codex-path'), { recursive: true });\n")
+		sb.WriteString("      writeFileSync(path.join(packageRoot, 'bin', 'codex'), '');\n")
+		sb.WriteString("      writeFileSync(path.join(packageRoot, 'codex-package.json'), '{}');\n")
+		sb.WriteString("      const result = resolveNativePackage(vendorRoot, 'test-triple', 'codex');\n")
+		sb.WriteString("      expect(result?.executablePath).toBe(path.join(packageRoot, 'bin', 'codex'));\n")
+		sb.WriteString("      expect(result?.pathDirs).toEqual([path.join(packageRoot, 'codex-path')]);\n")
+		sb.WriteString("    } finally {\n")
+		sb.WriteString("      rmSync(vendorRoot, { recursive: true, force: true });\n")
+		sb.WriteString("    }\n")
+	} else {
+		sb.WriteString("    const result = resolveNativePackage('missing-vendor-root', 'missing-triple', 'codex');\n")
+		sb.WriteString("    expect(result).toBeNull();\n")
+	}
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -870,6 +964,35 @@ func genJSResolveNativePackageCoverageTask(fn jsFuncInfo, task *types.CoverageTe
 
 func jsCoverageTaskPrivateIPParserTarget(target string) bool {
 	return target == "_parse_ipv4_addr" || target == "_parse_ipv6_addr"
+}
+
+func jsCoverageTaskPrependPathDirsTarget(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target == "prependPathDirs" || target == "pathEnvKey"
+}
+
+func jsCoverageTaskPathEnvKeyTarget(target string) bool {
+	return strings.TrimSpace(target) == "pathEnvKey"
+}
+
+func jsCoverageTaskNativePackageHelperTarget(target string) bool {
+	switch strings.TrimSpace(target) {
+	case "existingDirs", "isFile":
+		return true
+	default:
+		return false
+	}
+}
+
+func jsCoverageTaskResolveNativePackageTarget(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target == "resolveNativePackage" || jsCoverageTaskNativePackageHelperTarget(target)
 }
 
 func genJSClassTest(cls jsClassInfo, assertions jsAssertionStyle) string {

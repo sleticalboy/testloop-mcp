@@ -2836,12 +2836,49 @@ export type ThreadEvent = ThreadStartedEvent;
 	assertGeneratedJS(t, code, []string{
 		"describe('events.ts'",
 		"it.skip('marks type-only module as no runtime coverage'",
-		"manual_review_no_runtime: this TypeScript module only exports types/interfaces",
-		"split_into_targets: validate through consumers that construct these event/item shapes or add compile-time type tests",
+		"manual_review_no_runtime: this TypeScript module only declares types or re-exports symbols",
+		"split_into_targets: validate through runtime consumers of these exports or add compile-time type tests",
 	}, []string{
 		"未发现需要生成测试的函数或类",
 		"manual_review_internal:",
 		"import { ThreadStartedEvent",
+	})
+}
+
+func TestGenerateJSCoverageTaskBarrelFileLevelUsesNoRuntimeManualReview(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "index.ts")
+	src := `export type {
+  ThreadEvent,
+  ThreadStartedEvent,
+} from "./events";
+
+export { Thread } from "./thread";
+export { Codex } from "./codex";
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "jest-barrel-no-runtime",
+		Framework: "jest",
+		Target:    "index.ts",
+		Kind:      "file_level",
+		LineRange: "entire file",
+		GapType:   "no_runtime",
+		TestName:  "marks barrel module as no runtime coverage",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"describe('index.ts'",
+		"it.skip('marks barrel module as no runtime coverage'",
+		"manual_review_no_runtime: this TypeScript module only declares types or re-exports symbols",
+	}, []string{
+		"未发现需要生成测试的函数或类",
+		"manual_review_internal:",
+		"import { Thread",
 	})
 }
 
@@ -3669,6 +3706,112 @@ func TestJSFuncCoverageTaskResolveNativePackageUsesTypedNullReturnInput(t *testi
 		"resolveNativePackage(undefined",
 		"toThrow()",
 	})
+}
+
+func TestJSFuncCoverageTaskPrependPathDirsUsesTypedEnv(t *testing.T) {
+	fn := jsFuncInfo{
+		Name: "prependPathDirs",
+		Params: []jsParamInfo{
+			{Name: "env", TypeExpr: "Record<string, string>"},
+			{Name: "pathDirs", TypeExpr: "string[]"},
+			{Name: "platform", TypeExpr: "NodeJS.Platform"},
+		},
+		Analysis: jsFuncAnalysis{},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-prepend-path",
+		Framework: "jest",
+		Target:    "prependPathDirs",
+		LineRange: "447-453",
+		GapType:   "branch",
+		TestName:  "covers windows path normalization",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"describe('prependPathDirs'",
+		"const { default: path } = await import('node:path');",
+		"const env = { PATH: 'remove-me', Path: ['existing-bin', 'other-bin'].join(path.delimiter) };",
+		"prependPathDirs(env, ['codex-bin', 'existing-bin'], 'win32');",
+		"expect(env.PATH).toBeUndefined();",
+		"expect(env.Path.split(path.delimiter)).toEqual(['codex-bin', 'existing-bin', 'other-bin']);",
+	}, []string{
+		"prependPathDirs('test'",
+	})
+
+	task.Target = "pathEnvKey"
+	task.LineRange = "463-463"
+	task.TestName = "covers non windows path key"
+	code = genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const env = { Path: 'ignored', PATH: ['existing-bin'].join(path.delimiter) };",
+		"prependPathDirs(env, ['codex-bin'], 'linux');",
+		"expect(env.Path).toBe('ignored');",
+		"expect(env.PATH.split(path.delimiter)).toEqual(['codex-bin', 'existing-bin']);",
+	}, []string{
+		"pathEnvKey(",
+		"prependPathDirs('test'",
+	})
+}
+
+func TestJSFuncCoverageTaskResolveNativePackageCoversExistingDirs(t *testing.T) {
+	fn := jsFuncInfo{
+		Name: "resolveNativePackage",
+		Params: []jsParamInfo{
+			{Name: "vendorRoot", TypeExpr: "string"},
+			{Name: "targetTriple", TypeExpr: "string"},
+			{Name: "codexBinaryName", TypeExpr: "string"},
+		},
+		Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-existing-dirs",
+		Framework: "jest",
+		Target:    "existingDirs",
+		LineRange: "438-438",
+		GapType:   "return_path",
+		TestName:  "covers native package path dirs",
+	}
+
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await import('node:fs');",
+		"const vendorRoot = mkdtempSync(path.join(tmpdir(), 'codex-vendor-'));",
+		"mkdirSync(path.join(packageRoot, 'codex-path'), { recursive: true });",
+		"writeFileSync(path.join(packageRoot, 'bin', 'codex'), '');",
+		"const result = resolveNativePackage(vendorRoot, 'test-triple', 'codex');",
+		"expect(result?.pathDirs).toEqual([path.join(packageRoot, 'codex-path')]);",
+		"rmSync(vendorRoot, { recursive: true, force: true });",
+	}, []string{
+		"import { existingDirs }",
+		"existingDirs(",
+	})
+}
+
+func TestJSCoverageTaskRoutesCodexPathHelpersThroughPublicEntries(t *testing.T) {
+	funcs := []jsFuncInfo{
+		{Name: "prependPathDirs", IsExported: true},
+		{Name: "pathEnvKey", IsExported: false},
+		{Name: "resolveNativePackage", IsExported: true},
+		{Name: "existingDirs", IsExported: false},
+		{Name: "isFile", IsExported: false},
+	}
+
+	for _, tt := range []struct {
+		target string
+		want   string
+	}{
+		{target: "pathEnvKey", want: "prependPathDirs"},
+		{target: "existingDirs", want: "resolveNativePackage"},
+		{target: "isFile", want: "resolveNativePackage"},
+	} {
+		t.Run(tt.target, func(t *testing.T) {
+			filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(funcs, nil, &types.CoverageTestTask{Target: tt.target})
+			if len(filteredClasses) != 0 || len(filteredFuncs) != 1 || filteredFuncs[0].Name != tt.want {
+				t.Fatalf("target %s routed to funcs=%+v classes=%+v, want %s", tt.target, filteredFuncs, filteredClasses, tt.want)
+			}
+		})
+	}
 }
 
 func TestJSFuncCoverageTaskInternalFSHelperUsesManualReview(t *testing.T) {
