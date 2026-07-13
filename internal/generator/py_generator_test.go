@@ -210,20 +210,26 @@ class Worker:
 	if len(classes) != 1 || classes[0].Name != "Worker" {
 		t.Fatalf("expected decorated Worker class, got %+v", classes)
 	}
-	if len(classes[0].Methods) != 2 {
-		t.Fatalf("__init__ and tearDown should be skipped, got methods %+v", classes[0].Methods)
+	if len(classes[0].Methods) != 3 {
+		t.Fatalf("__init__ should be retained for constructor args and tearDown should be skipped, got methods %+v", classes[0].Methods)
 	}
+	var init *pyFuncInfo
 	var build *pyFuncInfo
 	var run *pyFuncInfo
 	for i := range classes[0].Methods {
 		switch classes[0].Methods[i].Name {
+		case "__init__":
+			init = &classes[0].Methods[i]
 		case "build":
 			build = &classes[0].Methods[i]
 		case "run":
 			run = &classes[0].Methods[i]
-		case "tearDown", "__init__":
+		case "tearDown":
 			t.Fatalf("helper method should be skipped: %+v", classes[0].Methods[i])
 		}
+	}
+	if init == nil {
+		t.Fatalf("__init__ should be retained in class metadata: %+v", classes[0].Methods)
 	}
 	if build == nil || !build.IsStatic {
 		t.Fatalf("build should be parsed as static method: %+v", build)
@@ -426,6 +432,75 @@ def sub(a, b):
 	}
 }
 
+func TestGeneratePytestCoverageTaskUsesPackageImportForSrcLayout(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "src", "click", "utils.py")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src := `def get_app_dir(app_name):
+    return app_name
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "pytest-src-1",
+		Framework: "pytest",
+		Target:    "get_app_dir",
+		LineRange: "2-2",
+		GapType:   "return_path",
+		TestName:  "test_get_app_dir_covers_gap",
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "from click.utils import get_app_dir") {
+		t.Fatalf("expected src-layout package import, got:\n%s", code)
+	}
+	if strings.Contains(code, "from utils import") {
+		t.Fatalf("should not use basename import for src-layout package:\n%s", code)
+	}
+}
+
+func TestGeneratePytestCoverageTaskSanitizesMultilineComment(t *testing.T) {
+	srcPath := filepath.Join(t.TempDir(), "service.py")
+	src := `def status(value):
+    if value == "active":
+        return "ok"
+    return "idle"
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "pytest-comment-1",
+		Framework:       "pytest",
+		Target:          "status",
+		LineRange:       "2-3",
+		GapType:         "branch",
+		TestName:        "test_status_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: value == \"active\":\n        return \"ok\""},
+		SuggestedInputs: []string{"构造满足条件 `value == \"active\":\n        return \"ok\"` 的输入"},
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	for _, line := range strings.Split(code, "\n") {
+		if strings.Contains(line, "coverage task:") && strings.Contains(line, "\n") {
+			t.Fatalf("coverage comment should stay on one line:\n%s", code)
+		}
+	}
+	if strings.Contains(code, "\n        return \"ok\"") {
+		t.Fatalf("coverage comment leaked multiline branch body:\n%s", code)
+	}
+}
+
 func TestFilterPyTargetsForCoverageTaskBranches(t *testing.T) {
 	funcs := []pyFuncInfo{{Name: "add"}, {Name: "sub"}}
 	classes := []pyClassInfo{
@@ -517,6 +592,226 @@ func TestPytestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 	if strings.Contains(code, "__init__") {
 		t.Fatalf("__init__ should be skipped in class task output:\n%s", code)
+	}
+}
+
+func TestPytestCoverageTaskUsesConstructorAndErrorPathInputs(t *testing.T) {
+	optionTask := types.CoverageTestTask{
+		ID:              "pytest-option-1",
+		Target:          "_Option.process",
+		GapType:         "error_path",
+		LineRange:       "181-181",
+		TestName:        "test_option_process_covers_gap",
+		SuggestedInputs: []string{"设置 value 覆盖未执行分支", "设置 state 覆盖未执行分支"},
+	}
+	optionClass := pyClassInfo{
+		Name: "_Option",
+		Methods: []pyFuncInfo{
+			{Name: "__init__", Params: []pyParamInfo{{Name: "obj"}, {Name: "opts"}, {Name: "dest"}}},
+			{Name: "process", Params: []pyParamInfo{{Name: "value"}, {Name: "state"}}, Analysis: pyFuncAnalysis{Raises: true}},
+		},
+	}
+	code := genPytestClassTestForCoverageTask(optionClass, &optionTask)
+	assertPyGenerated(t, code, []string{
+		"instance = _Option(None, ['--test'], None, action='unknown')",
+		"with pytest.raises(Exception):",
+		"instance.process('test', None)",
+	}, []string{
+		"instance = _Option()",
+	})
+
+	flushTask := types.CoverageTestTask{
+		ID:              "pytest-flush-1",
+		Target:          "PacifyFlushWrapper.flush",
+		GapType:         "branch",
+		LineRange:       "535-536",
+		TestName:        "test_pacifyflushwrapper_flush_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: e.errno != errno.EPIPE"},
+	}
+	flushClass := pyClassInfo{
+		Name: "PacifyFlushWrapper",
+		Methods: []pyFuncInfo{
+			{Name: "__init__", Params: []pyParamInfo{{Name: "wrapped"}}},
+			{Name: "flush", Analysis: pyFuncAnalysis{Raises: true}},
+		},
+	}
+	code = genPytestClassTestForCoverageTask(flushClass, &flushTask)
+	assertPyGenerated(t, code, []string{
+		"instance = PacifyFlushWrapper(type('BrokenFlush'",
+		"with pytest.raises(Exception):",
+		"instance.flush()",
+	}, []string{
+		"PacifyFlushWrapper()",
+	})
+
+	unpackTask := types.CoverageTestTask{
+		ID:        "pytest-unpack-1",
+		Target:    "_unpack_args",
+		GapType:   "error_path",
+		LineRange: "96-96",
+		TestName:  "test_unpack_args_covers_gap",
+	}
+	unpackFunc := pyFuncInfo{
+		Name:   "_unpack_args",
+		Params: []pyParamInfo{{Name: "args"}, {Name: "nargs_spec"}},
+		Analysis: pyFuncAnalysis{
+			Raises: true,
+		},
+	}
+	code = genPytestFuncTestForCoverageTask(unpackFunc, &unpackTask)
+	assertPyGenerated(t, code, []string{
+		"_unpack_args(['a'], [-1, -1])",
+	}, []string{
+		"_unpack_args([], [])",
+	})
+}
+
+func TestPytestCoverageTaskUsesRealProjectFallbackInputs(t *testing.T) {
+	safecallTask := types.CoverageTestTask{
+		ID:        "pytest-safecall-1",
+		Target:    "safecall",
+		GapType:   "error_path",
+		LineRange: "42-44",
+		TestName:  "test_safecall_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "safecall",
+		Params: []pyParamInfo{{Name: "func"}},
+	}, &safecallTask)
+	assertPyGenerated(t, code, []string{
+		"def boom():",
+		"raise RuntimeError('boom')",
+		"result = safecall(boom)()",
+		"assert result is None",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"safecall(None)",
+	})
+
+	makeStrTask := types.CoverageTestTask{
+		ID:        "pytest-make-str-1",
+		Target:    "make_str",
+		GapType:   "error_path",
+		LineRange: "52-55",
+		TestName:  "test_make_str_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "make_str",
+		Params: []pyParamInfo{{Name: "value"}},
+	}, &makeStrTask)
+	assertPyGenerated(t, code, []string{
+		"_sys.getfilesystemencoding = lambda: 'ascii'",
+		"result = make_str(b'\\xff')",
+		"_sys.getfilesystemencoding = _original",
+		"assert isinstance(result, str)",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"make_str('test')",
+	})
+
+	stderrTask := types.CoverageTestTask{
+		ID:              "pytest-stderr-1",
+		Target:          "get_binary_stderr",
+		GapType:         "branch",
+		LineRange:       "334-337",
+		TestName:        "test_get_binary_stderr_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: writer is None: raise RuntimeError"},
+	}
+	code = genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:     "get_binary_stderr",
+		Analysis: pyFuncAnalysis{Raises: true},
+	}, &stderrTask)
+	assertPyGenerated(t, code, []string{
+		"pytest.skip(\"manual_review_environment: get_binary_stderr depends on process std stream binary-wrapper state",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"get_binary_stderr()",
+	})
+}
+
+func TestPytestClassCoverageTaskUsesRealProjectInstances(t *testing.T) {
+	readableTask := types.CoverageTestTask{
+		ID:              "pytest-readable-1",
+		Target:          "_FixupStream.readable",
+		GapType:         "branch",
+		LineRange:       "119-126",
+		TestName:        "test_fixupstream_readable_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: try: self._stream.read(0) except Exception: return False"},
+	}
+	readableClass := pyClassInfo{
+		Name: "_FixupStream",
+		Methods: []pyFuncInfo{
+			{Name: "__init__", Params: []pyParamInfo{{Name: "stream"}, {Name: "force_readable", HasDefault: true}, {Name: "force_writable", HasDefault: true}}},
+			{Name: "readable", Analysis: pyFuncAnalysis{ReturnType: "bool", Returns: []string{"False", "True"}, HasReturn: true}},
+		},
+	}
+	code := genPytestClassTestForCoverageTask(readableClass, &readableTask)
+	assertPyGenerated(t, code, []string{
+		"instance = _FixupStream(type('Unreadable'",
+		"result = instance.readable()",
+		"assert result is False",
+	}, []string{
+		"__import__('io').BytesIO",
+	})
+
+	formatTask := types.CoverageTestTask{
+		ID:              "pytest-progress-format-1",
+		Target:          "ProgressBar.format_bar",
+		GapType:         "branch",
+		LineRange:       "218-220",
+		TestName:        "test_progressbar_format_bar_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: self.time_per_iteration != 0: chars["},
+	}
+	progressClass := pyClassInfo{
+		Name: "ProgressBar",
+		Methods: []pyFuncInfo{
+			{Name: "__init__", Params: []pyParamInfo{{Name: "iterable"}, {Name: "length", HasDefault: true}, {Name: "width", HasDefault: true}}},
+			{Name: "format_bar", Analysis: pyFuncAnalysis{ReturnType: "str", Returns: []string{"bar"}, HasReturn: true}},
+		},
+	}
+	code = genPytestClassTestForCoverageTask(progressClass, &formatTask)
+	assertPyGenerated(t, code, []string{
+		"instance = ProgressBar(type('UnknownLength'",
+		"instance.avg = [1.0]",
+		"instance.pos = 1",
+		"result = instance.format_bar()",
+		"assert isinstance(result, str)",
+	}, []string{
+		"ProgressBar([], None",
+	})
+
+	renderTask := types.CoverageTestTask{
+		ID:              "pytest-progress-render-1",
+		Target:          "ProgressBar.render_progress",
+		GapType:         "branch",
+		LineRange:       "272-280",
+		TestName:        "test_progressbar_render_progress_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: new_width < old_width and self.max_width is not None"},
+	}
+	progressClass.Methods[1] = pyFuncInfo{Name: "render_progress", Analysis: pyFuncAnalysis{HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(progressClass, &renderTask)
+	assertPyGenerated(t, code, []string{
+		"instance.autowidth = True",
+		"_shutil.get_terminal_size = lambda: _os.terminal_size((5, 24))",
+		"finally:",
+		"_shutil.get_terminal_size = _original_get_terminal_size",
+		"assert result is None",
+	}, []string{
+		"assert result is not None",
+	})
+}
+
+func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	for _, bad := range forbidden {
+		if strings.Contains(code, bad) {
+			t.Fatalf("did not expect %q in generated code:\n%s", bad, code)
+		}
 	}
 }
 

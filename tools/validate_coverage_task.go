@@ -167,6 +167,13 @@ func coverageTaskEnvironmentReason(task *types.CoverageTestTask, generated *type
 	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
 		return ""
 	}
+	if strings.Contains(generated.Preview, "manual_review_environment:") {
+		target := strings.TrimSpace(task.Target)
+		if target == "" {
+			target = "coverage task"
+		}
+		return fmt.Sprintf("%s depends on OS/runtime environment state; use injection or an integration environment instead of treating the generated skip as directly ready", target)
+	}
 	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
 		return ""
 	}

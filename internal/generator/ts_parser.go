@@ -896,11 +896,12 @@ func pyExtractClass(node *sitter.Node, source []byte) pyClassInfo {
 			if !pyShouldKeep(methodName) && methodName != "__init__" {
 				continue
 			}
+			fn := pyExtractFunction(child, source, true, false, cls.Name)
 			if methodName == "__init__" {
 				// __init__ 不生成测试，但保留在类信息中
+				cls.Methods = append(cls.Methods, fn)
 				continue
 			}
-			fn := pyExtractFunction(child, source, true, false, cls.Name)
 			cls.Methods = append(cls.Methods, fn)
 
 		case "decorated_definition":

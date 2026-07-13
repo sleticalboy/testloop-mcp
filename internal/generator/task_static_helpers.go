@@ -117,7 +117,20 @@ func coverageTaskComment(task *types.CoverageTestTask) string {
 	if len(task.SuggestedInputs) > 0 {
 		parts = append(parts, strings.Join(task.SuggestedInputs, "; "))
 	}
-	return strings.Join(parts, " | ")
+	return sanitizeCoverageTaskComment(strings.Join(parts, " | "))
+}
+
+func sanitizeCoverageTaskComment(comment string) string {
+	fields := strings.Fields(comment)
+	if len(fields) == 0 {
+		return ""
+	}
+	comment = strings.Join(fields, " ")
+	const maxCoverageTaskCommentLen = 400
+	if len(comment) > maxCoverageTaskCommentLen {
+		comment = strings.TrimSpace(comment[:maxCoverageTaskCommentLen]) + "..."
+	}
+	return comment
 }
 
 func sanitizePythonTestName(name, fallback string) string {

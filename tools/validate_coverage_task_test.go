@@ -344,6 +344,24 @@ func InitCPU() (c Cpu, err error) {
 	}
 }
 
+func TestCoverageTaskEnvironmentReasonAcceptsManualReviewMarker(t *testing.T) {
+	task := &types.CoverageTestTask{
+		Target: "get_binary_stderr",
+	}
+	generated := &types.GenerateTestsOutput{
+		Preview: "def test_get_binary_stderr_covers_gap():\n    pytest.skip(\"manual_review_environment: get_binary_stderr depends on process std stream binary-wrapper state\")\n",
+	}
+	result := &types.TestResult{
+		Status:  "pass",
+		Skipped: 1,
+	}
+
+	reason := coverageTaskEnvironmentReason(task, generated, result)
+	if !strings.Contains(reason, "get_binary_stderr") || !strings.Contains(reason, "OS/runtime environment state") {
+		t.Fatalf("unexpected environment reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksSocketWriteErrorAsProtocolReview(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/protocol\n\ngo 1.23\n"), 0o644); err != nil {
