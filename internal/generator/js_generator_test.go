@@ -778,7 +778,7 @@ class Widget {
 		t.Fatalf("typed params = %+v, want 4 params", typedFn.Params)
 	}
 	if typedFn.Params[0].Name != "text" || typedFn.Params[1].Name != "count" || !typedFn.Params[1].HasDefault ||
-		typedFn.Params[2].Name != "enabled" ||
+		typedFn.Params[2].Name != "enabled" || !typedFn.Params[2].HasDefault ||
 		typedFn.Params[3].Name != "...items" || typedFn.Params[3].IsRest {
 		t.Fatalf("unexpected typed params: %+v", typedFn.Params)
 	}
@@ -788,7 +788,7 @@ class Widget {
 	if typedFn.Analysis.ReturnTypeExpr != "Promise<Array<{ id: number; name: string }>>" {
 		t.Fatalf("typed return type = %q", typedFn.Analysis.ReturnTypeExpr)
 	}
-	if destructuredFn == nil || len(destructuredFn.Params) != 1 || destructuredFn.Params[0].Name != "id" || destructuredFn.Params[0].HasDefault {
+	if destructuredFn == nil || len(destructuredFn.Params) != 1 || destructuredFn.Params[0].Name != "id" || !destructuredFn.Params[0].HasDefault {
 		t.Fatalf("unexpected destructured params: %+v", destructuredFn)
 	}
 
@@ -4794,6 +4794,74 @@ export interface ProducerOptions extends BaseOptions {
 	if value := jsMockValueForTSTypeWithDecls("options", "ProducerOptions", decls); !strings.Contains(value, "endpoints: 'https://example.com'") || !strings.Contains(value, "namespace: 'test'") {
 		t.Fatalf("ProducerOptions mock = %q", value)
 	}
+}
+
+func TestImportedTypeMocksHandleAliasesAndNestedInterfaces(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "session.ts"), []byte(`export interface SessionCredentials {
+  accessKey: string;
+  accessSecret: string;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write session: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "base.ts"), []byte(`import { SessionCredentials } from './session';
+
+export interface BaseOptions {
+  endpoints: string;
+  sessionCredentials?: SessionCredentials;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write base: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "pb.d.ts"), []byte(`export class Settings {
+}
+`), 0o644); err != nil {
+		t.Fatalf("write pb: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "producer.ts")
+	source := `import { BaseOptions } from './base';
+import { Settings as SettingsPB } from './pb';
+
+export interface ProducerOptions extends BaseOptions {
+  topic?: string;
+}
+
+export class Producer {
+  constructor(options: ProducerOptions) {}
+  sync(settings: SettingsPB) {
+    return settings;
+  }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write producer: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "mocha-producer-sync",
+		Framework: "mocha",
+		File:      srcPath,
+		Target:    "Producer.sync",
+		Kind:      "method",
+		LineRange: "9-9",
+		GapType:   "return_path",
+		TestFile:  filepath.Join(srcDir, "producer.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { Settings as SettingsPB } from './pb';",
+		"sessionCredentials: { accessKey: 'test', accessSecret: 'test' }",
+		"new SettingsPB()",
+	}, []string{
+		"import { SettingsPB }",
+		"sessionCredentials: {}",
+	})
 }
 
 func TestIsTestHelper(t *testing.T) {

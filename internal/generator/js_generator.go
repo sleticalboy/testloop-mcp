@@ -1594,11 +1594,12 @@ func jsCoverageTaskStartLine(task *types.CoverageTestTask) int {
 }
 
 type jsImportedTypeMock struct {
-	Name     string
-	Module   string
-	Decl     string
-	IsValue  bool
-	FilePath string
+	Name         string
+	ImportedName string
+	Module       string
+	Decl         string
+	IsValue      bool
+	FilePath     string
 }
 
 type jsNamedImport struct {
@@ -1616,10 +1617,11 @@ func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTyp
 		if !strings.HasPrefix(imported.Module, ".") {
 			if jsLooksLikeConstructableTypeName(localName) {
 				result[localName] = jsImportedTypeMock{
-					Name:    localName,
-					Module:  imported.Module,
-					Decl:    jsConstructorMockKey + fmt.Sprintf("new %s()", localName),
-					IsValue: true,
+					Name:         localName,
+					ImportedName: imported.ImportedName,
+					Module:       imported.Module,
+					Decl:         jsConstructorMockKey + fmt.Sprintf("new %s()", localName),
+					IsValue:      true,
 				}
 			}
 			continue
@@ -1633,9 +1635,14 @@ func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTyp
 			continue
 		}
 		text := string(data)
+		for name, nested := range jsImportedTypeMocks(resolvedPath, text) {
+			if _, exists := result[name]; !exists {
+				result[name] = nested
+			}
+		}
 		if decls := jsExtractTSTypeDecls(text); len(decls) > 0 {
 			if decl, ok := decls[imported.ImportedName]; ok {
-				result[localName] = jsImportedTypeMock{Name: localName, Module: imported.Module, Decl: decl, FilePath: resolvedPath}
+				result[localName] = jsImportedTypeMock{Name: localName, ImportedName: imported.ImportedName, Module: imported.Module, Decl: decl, FilePath: resolvedPath}
 				continue
 			}
 		}
@@ -1645,11 +1652,12 @@ func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTyp
 				continue
 			}
 			result[localName] = jsImportedTypeMock{
-				Name:     localName,
-				Module:   imported.Module,
-				Decl:     jsConstructorMockKey + jsConstructorMockExpression(localName, cls.ConstructorParams),
-				IsValue:  true,
-				FilePath: resolvedPath,
+				Name:         localName,
+				ImportedName: imported.ImportedName,
+				Module:       imported.Module,
+				Decl:         jsConstructorMockKey + jsConstructorMockExpression(localName, cls.ConstructorParams),
+				IsValue:      true,
+				FilePath:     resolvedPath,
 			}
 			break
 		}
@@ -1798,7 +1806,11 @@ func jsConstructorMockExpression(name string, params []jsParamInfo) string {
 	}
 	args := make([]string, len(params))
 	for i, p := range params {
-		args[i] = jsArgValue(p, i)
+		if p.HasDefault {
+			args[i] = "undefined"
+		} else {
+			args[i] = jsArgValue(p, i)
+		}
 	}
 	return fmt.Sprintf("new %s(%s)", name, strings.Join(args, ", "))
 }
@@ -1849,7 +1861,7 @@ func jsTypeValueImportLinesForTargets(funcs []jsFuncInfo, classes []jsClassInfo,
 		if modulePath == "" {
 			continue
 		}
-		byModule[modulePath] = append(byModule[modulePath], name)
+		byModule[modulePath] = append(byModule[modulePath], jsImportSpecifierForMock(name, mock))
 	}
 	if len(byModule) == 0 {
 		return ""
@@ -1867,6 +1879,14 @@ func jsTypeValueImportLinesForTargets(funcs []jsFuncInfo, classes []jsClassInfo,
 	}
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+func jsImportSpecifierForMock(name string, mock jsImportedTypeMock) string {
+	imported := strings.TrimSpace(mock.ImportedName)
+	if imported == "" || imported == name {
+		return name
+	}
+	return imported + " as " + name
 }
 
 func jsTypeValueImportsNeeded(funcs []jsFuncInfo, classes []jsClassInfo, mocks map[string]jsImportedTypeMock) map[string]jsImportedTypeMock {
@@ -1936,7 +1956,7 @@ func jsNamedTypesInTSType(typeExpr string) []string {
 
 func jsBuiltinTSTypeName(name string) bool {
 	switch name {
-	case "string", "number", "boolean", "bigint", "null", "undefined", "void", "unknown", "any", "Map", "Record", "Array", "ReadonlyArray", "Promise", "Date", "Buffer", "Uint8Array":
+	case "string", "number", "boolean", "bigint", "null", "undefined", "void", "unknown", "any", "Map", "Set", "Record", "Array", "ReadonlyArray", "Promise", "Date", "Buffer", "Uint8Array":
 		return true
 	default:
 		return false
@@ -3599,6 +3619,8 @@ func jsBuiltinTSTypeHasMock(typeExpr string) bool {
 		return true
 	case typeExpr == "Map" || strings.HasPrefix(typeExpr, "Map<"):
 		return true
+	case typeExpr == "Set" || strings.HasPrefix(typeExpr, "Set<"):
+		return true
 	default:
 		return false
 	}
@@ -3765,7 +3787,6 @@ func jsArgValue(p jsParamInfo, _ int) string {
 	if p.HasDefault {
 		return "undefined"
 	}
-
 	return "undefined"
 }
 
@@ -4391,6 +4412,12 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 			return "new Map([['key', " + value + "]])"
 		}
 		return "new Map([['key', 'value']])"
+	case strings.HasPrefix(typeExpr, "Set<") || typeExpr == "Set":
+		if args, ok := jsTSGenericArgs(typeExpr, "Set"); ok && len(args) == 1 {
+			value := jsMockValueForTSTypeWithDeclsSeen("value", args[0], decls, seen)
+			return "new Set([" + value + "])"
+		}
+		return "new Set(['value'])"
 	case typeExpr == "number" || typeExpr == "bigint":
 		return "1"
 	case typeExpr == "string":

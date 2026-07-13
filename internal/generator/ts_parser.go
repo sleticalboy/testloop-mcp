@@ -414,7 +414,7 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 			if patternNode != nil {
 				name := jsParamNameFromNode(patternNode, source)
 				if name != "" {
-					params = append(params, jsParamInfo{Name: name, TypeExpr: jsParamTypeExprFromNode(child, source)})
+					params = append(params, jsParamInfo{Name: name, TypeExpr: jsParamTypeExprFromNode(child, source), HasDefault: jsTSParamHasDefault(child.Content(source))})
 				}
 			}
 
@@ -429,6 +429,10 @@ func jsParseParams(node *sitter.Node, source []byte) []jsParamInfo {
 		}
 	}
 	return params
+}
+
+func jsTSParamHasDefault(content string) bool {
+	return strings.Contains(content, "=")
 }
 
 func jsParamTypeExprFromNode(node *sitter.Node, source []byte) string {
