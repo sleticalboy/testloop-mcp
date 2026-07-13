@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -74,6 +77,8 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "manual_review_protocol"
 	} else if metadata["database_dependent"] == true {
 		action = "manual_review_database"
+	} else if metadata["external_service_dependent"] == true {
+		action = "manual_review_external_service"
 	} else if metadata["private_method"] == true {
 		action = "manual_review_private"
 	} else if metadata["internal_symbol"] == true {
@@ -114,6 +119,10 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	if reason := coverageTaskDatabaseReason(task, generated, result); reason != "" {
 		metadata["database_dependent"] = true
 		metadata["database_reason"] = reason
+	}
+	if reason := coverageTaskExternalServiceReason(task, generated, result); reason != "" {
+		metadata["external_service_dependent"] = true
+		metadata["external_service_reason"] = reason
 	}
 	if reason := coverageTaskPrivateMethodReason(task, generated, result); reason != "" {
 		metadata["private_method"] = true
@@ -227,6 +236,67 @@ func coverageTaskDatabaseReason(task *types.CoverageTestTask, generated *types.G
 	return ""
 }
 
+func coverageTaskExternalServiceReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
+	if task == nil || generated == nil || result == nil || result.Status != "fail" {
+		return ""
+	}
+	if !coverageTaskRunLooksExternalServiceDependent(result) {
+		return ""
+	}
+	target := strings.TrimSpace(task.Target)
+	hintsList := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus)+2)
+	hintsList = append(hintsList, task.MissingBranches...)
+	hintsList = append(hintsList, task.SuggestedInputs...)
+	hintsList = append(hintsList, task.AssertionFocus...)
+	hintsList = append(hintsList, target, generated.Preview)
+	hints := strings.ToLower(strings.Join(hintsList, " "))
+	if !coverageTaskLooksExternalServiceTarget(target, hints) {
+		return ""
+	}
+	if target == "" {
+		target = "coverage task"
+	}
+	return fmt.Sprintf("%s depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable", target)
+}
+
+func coverageTaskRunLooksExternalServiceDependent(result *types.TestResult) bool {
+	if result == nil {
+		return false
+	}
+	parts := []string{result.RawOutput}
+	for _, failure := range result.Failures {
+		parts = append(parts, failure.Error)
+	}
+	text := strings.ToLower(strings.Join(parts, "\n"))
+	for _, marker := range []string{
+		"timeout", "timed out", "deadline exceeded", "context deadline",
+		"signal: killed", "econnrefused", "connection refused",
+		"unavailable", "grpc", "too many requests",
+	} {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func coverageTaskLooksExternalServiceTarget(target string, hints string) bool {
+	targetLower := strings.ToLower(strings.TrimSpace(target))
+	if strings.Contains(targetLower, "producer.") {
+		return true
+	}
+	for _, marker := range []string{
+		"rpcclient", "rpc client", "grpc", "endpoint", "endpoints",
+		"sendmessage", "send message", ".send(", "endtransaction",
+		"recoverorphanedtransaction", "route data",
+	} {
+		if strings.Contains(hints, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 func coverageTaskPrivateMethodReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
 	if task == nil || generated == nil || result == nil {
 		return ""
@@ -331,6 +401,11 @@ func validateCoverageTaskRun(ctx context.Context, input validateCoverageTaskInpu
 	if input.IncludeFixSuggestions != nil {
 		includeFixSuggestions = *input.IncludeFixSuggestions
 	}
+	if timeout := validateCoverageTaskTimeout(); timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 	result, _, err := HandleRunTests(ctx, nil, runTestsInput{
 		Path:                  generated.TestFile,
 		Framework:             framework,
@@ -347,6 +422,18 @@ func validateCoverageTaskRun(ctx context.Context, input validateCoverageTaskInpu
 		return nil, fmt.Errorf("解析 run_tests 输出失败: %w", err)
 	}
 	return &out, nil
+}
+
+func validateCoverageTaskTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_TASK_TIMEOUT_SECONDS"))
+	if raw == "" {
+		return 0
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 func coverageTaskValidationResult(out types.CoverageTaskValidationOutput) (*mcp.CallToolResult, any, error) {

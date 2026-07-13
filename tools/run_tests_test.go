@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sleticalboy/testloop-mcp/types"
 )
@@ -792,6 +793,38 @@ func TestHandleRunTestsJSCustomCommandTemplateUsesPackageRootAndRelativePath(t *
 	}
 	if !strings.Contains(logText, "ARGS=egg-bin test --timeout 60000 test/calc.test.js\n") {
 		t.Fatalf("fake npx args log = %q, want custom egg-bin command", logText)
+	}
+}
+
+func TestHandleRunTestsJSCustomCommandTemplateKillsProcessGroupOnTimeout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell process group cancellation is only configured on Unix platforms")
+	}
+	dir := writeTempMochaPackage(t)
+	testFile := filepath.Join(dir, "test", "calc.test.js")
+	t.Setenv("TESTLOOP_JS_TEST_COMMAND", "sh -c 'sleep 5'")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	result, _, err := HandleRunTests(ctx, nil, runTestsInput{
+		Path:      testFile,
+		Framework: "mocha",
+	})
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+	if elapsed > 3*time.Second {
+		t.Fatalf("custom command timeout took %s, child process likely survived context cancellation", elapsed)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Failed != 1 || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected timeout fallback result: %+v", parsed)
 	}
 }
 

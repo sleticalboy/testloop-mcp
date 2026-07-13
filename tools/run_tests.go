@@ -182,7 +182,7 @@ func jsTestCommand(ctx context.Context, framework, path string, verbose, coverag
 		command := expandJSCommandTemplate(template, framework, relPath, coverage)
 		cmd := exec.CommandContext(ctx, "sh", "-c", command)
 		cmd.Dir = root
-		return cmd
+		return configureCommandProcessGroup(cmd)
 	}
 	args := jsTestArgs(framework, path, root, verbose, coverage)
 	cmd := exec.CommandContext(ctx, "npx", args...)

@@ -501,6 +501,78 @@ var _ = errors.New
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksExternalServiceTimeoutAsManualReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "producer.ts")
+	src := `export class Producer {
+  rpcClientManager = {
+    sendMessage: async () => ({ ok: true }),
+  };
+
+  constructor(options: { endpoints?: string } = {}) {
+    void options;
+  }
+
+  async send(message: { topic: string }) {
+    if (message.topic) {
+      return await this.rpcClientManager.sendMessage();
+    }
+    return null;
+  }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeNpxFailure(t, "Error: Timeout of 60000ms exceeded while waiting for gRPC sendMessage")
+	task := types.CoverageTestTask{
+		ID:              "mocha-producer-external",
+		Framework:       "mocha",
+		File:            source,
+		Target:          "Producer.send",
+		Kind:            "method",
+		LineRange:       "11-12",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: message.topic"},
+		SuggestedInputs: []string{"构造满足条件 `message.topic` 的输入", "设置 endpoints 覆盖未执行分支"},
+		Goal:            "为 Producer.send 补充发送路径测试",
+		Command:         "npx mocha producer.ts",
+		TestFile:        filepath.Join(dir, "producer.spec.ts"),
+		TestName:        "covers Producer send external service path",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "mocha",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "manual_review_external_service" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.Metadata["external_service_dependent"] != true {
+		t.Fatalf("expected external service metadata, got %+v", out.Metadata)
+	}
+	reason, _ := out.Metadata["external_service_reason"].(string)
+	if !strings.Contains(reason, "Producer.send") || !strings.Contains(reason, "live RPC/external service") {
+		t.Fatalf("unexpected external service reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
@@ -740,6 +812,17 @@ func installFakeNpxSuccess(t *testing.T, output string) {
 	t.Helper()
 	fakeBin := t.TempDir()
 	script := "#!/usr/bin/env sh\ncat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\nexit 0\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakeNpxFailure(t *testing.T, output string) {
+	t.Helper()
+	fakeBin := t.TempDir()
+	script := "#!/usr/bin/env sh\ncat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\nexit 1\n"
 	path := filepath.Join(fakeBin, "npx")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake npx: %v", err)
