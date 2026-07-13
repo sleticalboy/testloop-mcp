@@ -454,6 +454,18 @@ scripts/validate-js-coverage-top-tasks.sh /path/to/js/project vitest 10 /tmp/tes
 
 JS 脚本会读取 Istanbul `coverage/coverage-final.json`；如果项目覆盖率阈值导致 baseline coverage 命令非零退出，但覆盖率 JSON 已生成，脚本仍会继续解析并验证任务。
 
+Python/pytest 项目可使用：
+
+```bash
+PYTHONPATH=src \
+TESTLOOP_VALIDATE_PY_COVERAGE_COMMAND='python3 -m pytest --cov=src --cov-report=json {args}' \
+scripts/validate-py-coverage-top-tasks.sh /path/to/python/project 20 /tmp/testloop-py-top20.jsonl
+```
+
+Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
+
+真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
+
 ## Roadmap
 
 当前版本已经覆盖 stdio / Streamable HTTP MCP 服务、多语言测试生成、测试执行、失败解析、修复建议、覆盖率解析、Docker 部署和 GitHub Release / Homebrew 分发。
