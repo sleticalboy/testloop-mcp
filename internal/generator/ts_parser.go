@@ -510,6 +510,9 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 		}
 		open := match[1] - 1
 		if typeExpr := jsExtractBracedTypeExpr(source, open); typeExpr != "" {
+			if parents := jsExtractTSInterfaceExtends(source[match[0]:match[1]]); len(parents) > 0 {
+				typeExpr = strings.Join(parents, " & ") + " & " + typeExpr
+			}
 			decls[jsTSTypeDeclKey(name, params)] = typeExpr
 		}
 	}
@@ -530,6 +533,26 @@ func jsExtractTSTypeDecls(source string) map[string]string {
 		return nil
 	}
 	return decls
+}
+
+func jsExtractTSInterfaceExtends(header string) []string {
+	idx := strings.Index(header, "extends")
+	if idx < 0 {
+		return nil
+	}
+	part := header[idx+len("extends"):]
+	if brace := strings.Index(part, "{"); brace >= 0 {
+		part = part[:brace]
+	}
+	parents := jsSplitTopLevelGenericArgs(part)
+	result := make([]string, 0, len(parents))
+	for _, parent := range parents {
+		parent = strings.TrimSpace(parent)
+		if parent != "" {
+			result = append(result, parent)
+		}
+	}
+	return result
 }
 
 func jsTSTypeDeclKey(name, params string) string {

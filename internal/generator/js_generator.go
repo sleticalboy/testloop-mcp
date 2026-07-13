@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -70,6 +71,13 @@ type jsClassInfo struct {
 }
 
 var jsTSIdentifierRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+
+var (
+	jsNamedImportRe      = regexp.MustCompile(`(?m)import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
+	jsExportStarRe       = regexp.MustCompile(`(?m)export\s+\*\s+from\s+['"]([^'"]+)['"]`)
+	jsExportNamedFromRe  = regexp.MustCompile(`(?m)export\s+\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
+	jsConstructorMockKey = "__testloop_constructor_mock__:"
+)
 
 // returnTypeForAssert 返回 JS 类型字符串用于 typeof 断言
 func (a jsFuncAnalysis) returnTypeForAssert() string {
@@ -141,6 +149,8 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	funcs, classes, isESModule := parseJSWithTreeSitter(source, ext)
+	typeMocks := jsImportedTypeMocks(srcPath, string(source))
+	jsAttachImportedTypeMocks(funcs, classes, typeMocks)
 	for i := range funcs {
 		funcs[i].SourceIsESModule = isESModule
 	}
@@ -184,6 +194,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 	if isESModule {
 		if !jsCoverageTaskNeedsDynamicImportOnly(task) {
 			buf.WriteString(jsESMImportLines(funcs, classes, moduleImportPath))
+			buf.WriteString(jsTypeValueImportLinesForTargets(funcs, classes, typeMocks, testPath))
 		}
 	} else {
 		buf.WriteString(fmt.Sprintf("const { %s } = require('./%s');\n\n", joinExportNames(funcs, classes), moduleName))
@@ -1582,6 +1593,356 @@ func jsCoverageTaskStartLine(task *types.CoverageTestTask) int {
 	return n
 }
 
+type jsImportedTypeMock struct {
+	Name     string
+	Module   string
+	Decl     string
+	IsValue  bool
+	FilePath string
+}
+
+type jsNamedImport struct {
+	ImportedName string
+	Module       string
+}
+
+func jsImportedTypeMocks(srcPath string, source string) map[string]jsImportedTypeMock {
+	imports := jsNamedImports(source)
+	if len(imports) == 0 {
+		return nil
+	}
+	result := map[string]jsImportedTypeMock{}
+	for localName, imported := range imports {
+		if !strings.HasPrefix(imported.Module, ".") {
+			if jsLooksLikeConstructableTypeName(localName) {
+				result[localName] = jsImportedTypeMock{
+					Name:    localName,
+					Module:  imported.Module,
+					Decl:    jsConstructorMockKey + fmt.Sprintf("new %s()", localName),
+					IsValue: true,
+				}
+			}
+			continue
+		}
+		resolvedPath, ok := jsResolveImportedSymbolPath(srcPath, imported.Module, imported.ImportedName, nil)
+		if !ok {
+			continue
+		}
+		data, err := os.ReadFile(resolvedPath)
+		if err != nil {
+			continue
+		}
+		text := string(data)
+		if decls := jsExtractTSTypeDecls(text); len(decls) > 0 {
+			if decl, ok := decls[imported.ImportedName]; ok {
+				result[localName] = jsImportedTypeMock{Name: localName, Module: imported.Module, Decl: decl, FilePath: resolvedPath}
+				continue
+			}
+		}
+		_, classes, _ := parseJSWithTreeSitter(data, strings.ToLower(filepath.Ext(resolvedPath)))
+		for _, cls := range classes {
+			if cls.Name != imported.ImportedName || !cls.IsExported {
+				continue
+			}
+			result[localName] = jsImportedTypeMock{
+				Name:     localName,
+				Module:   imported.Module,
+				Decl:     jsConstructorMockKey + jsConstructorMockExpression(localName, cls.ConstructorParams),
+				IsValue:  true,
+				FilePath: resolvedPath,
+			}
+			break
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func jsLooksLikeConstructableTypeName(name string) bool {
+	if name == "" {
+		return false
+	}
+	r := rune(name[0])
+	return r >= 'A' && r <= 'Z'
+}
+
+func jsNamedImports(source string) map[string]jsNamedImport {
+	result := map[string]jsNamedImport{}
+	for _, match := range jsNamedImportRe.FindAllStringSubmatch(source, -1) {
+		if len(match) < 3 {
+			continue
+		}
+		module := strings.TrimSpace(match[2])
+		for _, part := range strings.Split(match[1], ",") {
+			name, local := jsParseImportSpecifier(part)
+			if name != "" && local != "" {
+				result[local] = jsNamedImport{ImportedName: name, Module: module}
+			}
+		}
+	}
+	return result
+}
+
+func jsParseImportSpecifier(spec string) (importedName string, localName string) {
+	spec = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(spec), "type "))
+	if spec == "" {
+		return "", ""
+	}
+	parts := regexp.MustCompile(`\s+as\s+`).Split(spec, 2)
+	importedName = strings.TrimSpace(parts[0])
+	localName = importedName
+	if len(parts) == 2 {
+		localName = strings.TrimSpace(parts[1])
+	}
+	if !jsTSIdentifierRe.MatchString(importedName) || !jsTSIdentifierRe.MatchString(localName) {
+		return "", ""
+	}
+	return importedName, localName
+}
+
+func jsResolveImportedSymbolPath(srcPath string, module string, symbol string, seen map[string]bool) (string, bool) {
+	if !strings.HasPrefix(module, ".") || symbol == "" {
+		return "", false
+	}
+	for _, candidate := range jsImportModuleFileCandidates(srcPath, module) {
+		key := candidate + "#" + symbol
+		if seen != nil && seen[key] {
+			continue
+		}
+		nextSeen := map[string]bool{}
+		for k, v := range seen {
+			nextSeen[k] = v
+		}
+		nextSeen[key] = true
+		data, err := os.ReadFile(candidate)
+		if err != nil {
+			continue
+		}
+		text := string(data)
+		if jsFileExportsSymbol(text, symbol) {
+			return candidate, true
+		}
+		if path, ok := jsResolveReExportedSymbolPath(candidate, text, symbol, nextSeen); ok {
+			return path, true
+		}
+	}
+	return "", false
+}
+
+func jsImportModuleFileCandidates(srcPath string, module string) []string {
+	base := filepath.Clean(filepath.Join(filepath.Dir(srcPath), filepath.FromSlash(module)))
+	if filepath.Ext(base) != "" {
+		return []string{base}
+	}
+	var candidates []string
+	for _, suffix := range []string{".ts", ".tsx", ".d.ts", ".js", ".jsx", ".mjs", ".cjs"} {
+		candidates = append(candidates, base+suffix)
+	}
+	for _, index := range []string{"index.ts", "index.tsx", "index.js", "index.jsx", "index.mjs", "index.cjs"} {
+		candidates = append(candidates, filepath.Join(base, index))
+	}
+	return candidates
+}
+
+func jsFileExportsSymbol(source string, symbol string) bool {
+	if !jsTSIdentifierRe.MatchString(symbol) {
+		return false
+	}
+	pattern := regexp.MustCompile(fmt.Sprintf(`(?m)export\s+(?:abstract\s+)?(?:class|interface|type)\s+%s(?:\s|<|=|\{)`, regexp.QuoteMeta(symbol)))
+	if pattern.MatchString(source) {
+		return true
+	}
+	for _, match := range regexp.MustCompile(`(?m)export\s+\{([^}]*)\}`).FindAllStringSubmatch(source, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		for _, part := range strings.Split(match[1], ",") {
+			name, local := jsParseImportSpecifier(part)
+			if name == symbol || local == symbol {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func jsResolveReExportedSymbolPath(currentPath string, source string, symbol string, seen map[string]bool) (string, bool) {
+	for _, match := range jsExportNamedFromRe.FindAllStringSubmatch(source, -1) {
+		if len(match) < 3 {
+			continue
+		}
+		for _, part := range strings.Split(match[1], ",") {
+			name, local := jsParseImportSpecifier(part)
+			if name == symbol || local == symbol {
+				if path, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[2]), name, seen); ok {
+					return path, true
+				}
+			}
+		}
+	}
+	for _, match := range jsExportStarRe.FindAllStringSubmatch(source, -1) {
+		if len(match) >= 2 {
+			if path, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[1]), symbol, seen); ok {
+				return path, true
+			}
+		}
+	}
+	return "", false
+}
+
+func jsConstructorMockExpression(name string, params []jsParamInfo) string {
+	if len(params) == 0 {
+		return fmt.Sprintf("new %s()", name)
+	}
+	args := make([]string, len(params))
+	for i, p := range params {
+		args[i] = jsArgValue(p, i)
+	}
+	return fmt.Sprintf("new %s(%s)", name, strings.Join(args, ", "))
+}
+
+func jsAttachImportedTypeMocks(funcs []jsFuncInfo, classes []jsClassInfo, mocks map[string]jsImportedTypeMock) {
+	if len(mocks) == 0 {
+		return
+	}
+	decls := map[string]string{}
+	for name, mock := range mocks {
+		decls[name] = mock.Decl
+	}
+	for i := range funcs {
+		funcs[i].Analysis.TSTypeDecls = jsMergeTSTypeDecls(funcs[i].Analysis.TSTypeDecls, decls)
+	}
+	for i := range classes {
+		for j := range classes[i].Methods {
+			classes[i].Methods[j].Analysis.TSTypeDecls = jsMergeTSTypeDecls(classes[i].Methods[j].Analysis.TSTypeDecls, decls)
+		}
+	}
+}
+
+func jsMergeTSTypeDecls(base map[string]string, extra map[string]string) map[string]string {
+	if len(extra) == 0 {
+		return base
+	}
+	merged := map[string]string{}
+	for k, v := range extra {
+		merged[k] = v
+	}
+	for k, v := range base {
+		merged[k] = v
+	}
+	return merged
+}
+
+func jsTypeValueImportLinesForTargets(funcs []jsFuncInfo, classes []jsClassInfo, mocks map[string]jsImportedTypeMock, testPath string) string {
+	needed := jsTypeValueImportsNeeded(funcs, classes, mocks)
+	if len(needed) == 0 {
+		return ""
+	}
+	byModule := map[string][]string{}
+	for name, mock := range needed {
+		modulePath := mock.Module
+		if mock.FilePath != "" {
+			modulePath = jsSourceModuleImportPath(mock.FilePath, testPath)
+		}
+		if modulePath == "" {
+			continue
+		}
+		byModule[modulePath] = append(byModule[modulePath], name)
+	}
+	if len(byModule) == 0 {
+		return ""
+	}
+	modules := make([]string, 0, len(byModule))
+	for module := range byModule {
+		modules = append(modules, module)
+	}
+	sort.Strings(modules)
+	var sb strings.Builder
+	for _, module := range modules {
+		names := byModule[module]
+		sort.Strings(names)
+		sb.WriteString(fmt.Sprintf("import { %s } from '%s';\n", strings.Join(names, ", "), module))
+	}
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func jsTypeValueImportsNeeded(funcs []jsFuncInfo, classes []jsClassInfo, mocks map[string]jsImportedTypeMock) map[string]jsImportedTypeMock {
+	result := map[string]jsImportedTypeMock{}
+	addParams := func(params []jsParamInfo) {
+		for _, p := range params {
+			for _, name := range jsNamedTypesInTSType(p.TypeExpr) {
+				mock, ok := mocks[name]
+				if ok && mock.IsValue {
+					result[name] = mock
+				}
+			}
+		}
+	}
+	for _, fn := range funcs {
+		if fn.SourceIsESModule && !fn.IsExported {
+			continue
+		}
+		addParams(fn.Params)
+	}
+	for _, cls := range classes {
+		for _, method := range cls.Methods {
+			if jsClassRequiresInternalManualReview(cls) || method.IsPrivate || strings.HasPrefix(method.Name, "#") {
+				continue
+			}
+			if cls.Name == "StatusChecker" && method.Name == "check" {
+				continue
+			}
+			if !method.IsStatic {
+				addParams(cls.ConstructorParams)
+			}
+			addParams(method.Params)
+		}
+	}
+	return result
+}
+
+func jsDirectNamedTSType(typeExpr string) string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+		typeExpr = jsUnwrapTSUtilityWrappers(branch)
+	}
+	if jsTSIdentifierRe.MatchString(typeExpr) {
+		return typeExpr
+	}
+	return ""
+}
+
+func jsNamedTypesInTSType(typeExpr string) []string {
+	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
+	matches := regexp.MustCompile(`[A-Za-z_$][A-Za-z0-9_$]*`).FindAllString(typeExpr, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	var result []string
+	for _, name := range matches {
+		if seen[name] || jsBuiltinTSTypeName(name) {
+			continue
+		}
+		seen[name] = true
+		result = append(result, name)
+	}
+	return result
+}
+
+func jsBuiltinTSTypeName(name string) bool {
+	switch name {
+	case "string", "number", "boolean", "bigint", "null", "undefined", "void", "unknown", "any", "Map", "Record", "Array", "ReadonlyArray", "Promise", "Date", "Buffer", "Uint8Array":
+		return true
+	default:
+		return false
+	}
+}
+
 func jsVitestImportNamesForCoverageTask(task *types.CoverageTestTask) string {
 	names := []string{"describe", "it", "expect"}
 	if jsCoverageTaskNeedsVitestVi(task) {
@@ -2512,7 +2873,7 @@ func jsPrivateEntryCandidatesForMethod(cls jsClassInfo, privateName string) []st
 
 func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTestTask) bool {
 	if task != nil && taskTargetMatches(task.Target, method.ClassName, method.Name) {
-		return task.GapType == "error_path"
+		return task.GapType == "error_path" || jsCoverageTaskMentions(task, "if 分支: e") || jsCoverageTaskMentions(task, "if (e)")
 	}
 	return method.Analysis.Throws
 }
@@ -2549,10 +2910,16 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 			args[i] = "'test-server'"
 		case strings.Contains(compact, "devconfig"):
 			args[i] = jsObjectLiteralWithDefaults(options, []string{"enabled: true", "watch: []", "cwd: process.cwd()"})
+		case method.Analysis.TSTypeDecls != nil && jsMockTypeHasDecl(jsNormalizeTSTypeExpr(param.TypeExpr), method.Analysis.TSTypeDecls):
+			args[i], _ = jsTypedParamMockValueWithDecls(param, method.Analysis.TSTypeDecls)
 		case strings.Contains(compact, "config") || strings.Contains(compact, "options"):
 			args[i] = jsObjectLiteralWithDefaults(options, nil)
 		default:
-			args[i] = jsArgValue(param, i)
+			if value, ok := jsTypedParamMockValueWithDecls(param, method.Analysis.TSTypeDecls); ok {
+				args[i] = value
+			} else {
+				args[i] = jsArgValue(param, i)
+			}
 		}
 	}
 	return strings.Join(args, ", ")
@@ -3192,6 +3559,8 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 	for i, p := range params {
 		if value := values[p.Name]; value != "" {
 			args[i] = value
+		} else if value, ok := jsTypedParamMockValue(p, analysis); ok {
+			args[i] = value
 		} else if method := jsInjectedClientMethodForParam(analysis, p.Name); method != "" {
 			args[i] = jsInjectedClientMockWithPayload(method, jsMockPayloadForAnalysisPtr(analysis))
 		} else if jsNameLooksLikeResponseParam(jsCompactName(p.Name)) {
@@ -3201,6 +3570,52 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsTypedParamMockValue(p jsParamInfo, analysis *jsFuncAnalysis) (string, bool) {
+	if analysis == nil || strings.TrimSpace(p.TypeExpr) == "" {
+		return "", false
+	}
+	return jsTypedParamMockValueWithDecls(p, analysis.TSTypeDecls)
+}
+
+func jsTypedParamMockValueWithDecls(p jsParamInfo, decls map[string]string) (string, bool) {
+	if strings.TrimSpace(p.TypeExpr) == "" {
+		return "", false
+	}
+	typeExpr := jsNormalizeTSTypeExpr(p.TypeExpr)
+	if typeExpr == "" {
+		return "", false
+	}
+	if jsMockTypeHasDecl(typeExpr, decls) || jsBuiltinTSTypeHasMock(typeExpr) || strings.HasPrefix(typeExpr, "{") {
+		return jsMockValueForTSTypeWithDecls(p.Name, typeExpr, decls), true
+	}
+	return "", false
+}
+
+func jsBuiltinTSTypeHasMock(typeExpr string) bool {
+	switch {
+	case typeExpr == "Buffer" || typeExpr == "Uint8Array" || typeExpr == "Date":
+		return true
+	case typeExpr == "Map" || strings.HasPrefix(typeExpr, "Map<"):
+		return true
+	default:
+		return false
+	}
+}
+
+func jsMockTypeHasDecl(typeExpr string, decls map[string]string) bool {
+	if len(decls) == 0 {
+		return false
+	}
+	typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
+	if branch, ok := jsPreferredTSTypeUnionBranch(typeExpr); ok {
+		typeExpr = jsUnwrapTSUtilityWrappers(branch)
+	}
+	if _, resolved := jsResolveNamedTSType(typeExpr, decls); resolved != "" {
+		return true
+	}
+	return false
 }
 
 func jsBoundaryForCoverageTask(boundaries []jsBoundary, task *types.CoverageTestTask) *jsBoundary {
@@ -3944,6 +4359,9 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		typeExpr = branch
 		typeExpr = jsUnwrapTSUtilityWrappers(typeExpr)
 	}
+	if value, ok := jsConstructorMockValueForTSType(typeExpr, decls); ok {
+		return value
+	}
 	if value, ok := jsMockValueForTSLiteral(typeExpr); ok {
 		return value
 	}
@@ -3961,6 +4379,18 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 	}
 	compactName := jsCompactName(fieldName)
 	switch {
+	case typeExpr == "Buffer":
+		return "Buffer.from('test')"
+	case typeExpr == "Uint8Array":
+		return "new Uint8Array([1, 2, 3])"
+	case typeExpr == "Date":
+		return "new Date('2026-01-01T00:00:00.000Z')"
+	case strings.HasPrefix(typeExpr, "Map<") || typeExpr == "Map":
+		if args, ok := jsTSGenericArgs(typeExpr, "Map"); ok && len(args) == 2 {
+			value := jsMockValueForTSTypeWithDeclsSeen("value", args[1], decls, seen)
+			return "new Map([['key', " + value + "]])"
+		}
+		return "new Map([['key', 'value']])"
 	case typeExpr == "number" || typeExpr == "bigint":
 		return "1"
 	case typeExpr == "string":
@@ -3991,6 +4421,20 @@ func jsMockValueForTSTypeWithDeclsSeen(fieldName, typeExpr string, decls map[str
 		return object
 	}
 	return "{}"
+}
+
+func jsConstructorMockValueForTSType(typeExpr string, decls map[string]string) (string, bool) {
+	if len(decls) == 0 {
+		return "", false
+	}
+	name, resolved := jsResolveNamedTSType(typeExpr, decls)
+	if resolved == "" || !strings.HasPrefix(resolved, jsConstructorMockKey) {
+		return "", false
+	}
+	if name == "" {
+		return strings.TrimPrefix(resolved, jsConstructorMockKey), true
+	}
+	return strings.TrimPrefix(resolved, jsConstructorMockKey), true
 }
 
 func jsPreferredTSTypeUnionBranch(typeExpr string) (string, bool) {
@@ -4708,6 +5152,9 @@ func generatorTestPath(srcPath string, task *types.CoverageTestTask) string {
 func jsSourceModuleImportPath(srcPath string, testPath string) string {
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	sourceWithoutExt := strings.TrimSuffix(srcPath, filepath.Ext(srcPath))
+	if strings.HasSuffix(strings.ToLower(srcPath), ".d.ts") {
+		sourceWithoutExt = strings.TrimSuffix(srcPath, ".d.ts")
+	}
 	rel, err := filepath.Rel(filepath.Dir(testPath), sourceWithoutExt)
 	if err != nil {
 		rel = stripExt(baseName(srcPath))

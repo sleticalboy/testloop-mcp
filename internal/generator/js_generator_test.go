@@ -4723,6 +4723,79 @@ func TestJSVoidCallAssertionUsesAsyncMochaAssertions(t *testing.T) {
 	}
 }
 
+func TestMochaCoverageTaskUsesImportedClassConstructorMock(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	routeDir := filepath.Join(srcDir, "route")
+	if err := os.MkdirAll(routeDir, 0o755); err != nil {
+		t.Fatalf("mkdir route: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(routeDir, "index.ts"), []byte(`export * from './Endpoints';
+`), 0o644); err != nil {
+		t.Fatalf("write route index: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(routeDir, "Endpoints.ts"), []byte(`export class Endpoints {
+  constructor(value: string) {}
+  getGrpcTarget() { return '127.0.0.1:8081'; }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write endpoints: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "RpcClient.ts")
+	if err := os.WriteFile(srcPath, []byte(`import { Endpoints } from './route';
+
+export class RpcClient {
+  constructor(endpoints: Endpoints, sslEnabled: boolean) {}
+  heartbeat() {
+    return true;
+  }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "mocha-rpc",
+		Framework: "mocha",
+		File:      srcPath,
+		Target:    "RpcClient.heartbeat",
+		Kind:      "method",
+		LineRange: "5-5",
+		GapType:   "return_path",
+		TestFile:  filepath.Join(srcDir, "RpcClient.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { Endpoints } from './route/Endpoints';",
+		"const instance = new RpcClient(new Endpoints('test'), true);",
+	}, []string{
+		"new RpcClient('",
+		"new RpcClient(undefined",
+	})
+}
+
+func TestTSTypeDeclsCaptureInterfaceExtends(t *testing.T) {
+	decls := jsExtractTSTypeDecls(`interface BaseOptions {
+  endpoints: string;
+  namespace: string;
+}
+
+export interface ProducerOptions extends BaseOptions {
+  topic?: string;
+}
+`)
+	if got := decls["ProducerOptions"]; !strings.HasPrefix(got, "BaseOptions &") || !strings.Contains(got, "topic?: string") {
+		t.Fatalf("ProducerOptions decl = %q", got)
+	}
+	if value := jsMockValueForTSTypeWithDecls("options", "ProducerOptions", decls); !strings.Contains(value, "endpoints: 'https://example.com'") || !strings.Contains(value, "namespace: 'test'") {
+		t.Fatalf("ProducerOptions mock = %q", value)
+	}
+}
+
 func TestIsTestHelper(t *testing.T) {
 	helpers := []string{"test", "it", "describe", "beforeEach", "afterAll", "expect", "jest"}
 	for _, h := range helpers {
