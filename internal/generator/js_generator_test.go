@@ -3868,6 +3868,106 @@ func TestJSFuncCoverageTaskInternalFSHelperUsesManualReview(t *testing.T) {
 	})
 }
 
+func TestJSCoverageTaskResponsesProxyHelpers(t *testing.T) {
+	funcs := []jsFuncInfo{
+		{Name: "formatSseEvent", IsExported: false, Params: []jsParamInfo{{Name: "event"}}, Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "string"}},
+		{Name: "startResponsesTestProxy", IsExported: true, IsAsync: true, Params: []jsParamInfo{{Name: "options", TypeExpr: "ResponsesProxyOptions"}}, Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-format-sse",
+		Framework: "jest",
+		Target:    "formatSseEvent",
+		LineRange: "61-61",
+		GapType:   "return_path",
+		TestName:  "covers SSE formatting",
+	}
+	filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(funcs, nil, &task)
+	if len(filteredClasses) != 0 || len(filteredFuncs) != 1 || filteredFuncs[0].Name != "startResponsesTestProxy" {
+		t.Fatalf("formatSseEvent should route through startResponsesTestProxy, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code := genJSFuncTestForCoverageTask(filteredFuncs[0], &task)
+	assertGeneratedJS(t, code, []string{
+		"const http = await import('node:http');",
+		"responseBodies: [",
+		"const requestProxy = (path: string, method: string = 'POST') => new Promise<{ statusCode: number | undefined; body: string }>",
+		"const ok = await requestProxy('/responses');",
+		"expect(ok.body).toContain('event: response.completed');",
+		"expect(proxy.requests[0]!.json.model).toBe('gpt-5');",
+		"const missing = await requestProxy('/missing', 'GET');",
+		"expect(missing.statusCode).toBe(404);",
+		"const exhausted = await requestProxy('/responses');",
+		"expect(exhausted.statusCode).toBe(500);",
+		"await proxy.close();",
+	}, []string{
+		"formatSseEvent(",
+		"startResponsesTestProxy({})",
+		"rejects.toThrow",
+	})
+
+	task.Target = "startResponsesTestProxy"
+	task.LineRange = "140-140"
+	task.TestName = "covers close error"
+	code = genJSFuncTestForCoverageTask(filteredFuncs[0], &task)
+	assertGeneratedJS(t, code, []string{
+		"it.skip('covers close error'",
+		"manual_review_internal: this branch depends on Node server.address()/server.close() internals",
+	}, []string{
+		"startResponsesTestProxy({})",
+	})
+}
+
+func TestJSCoverageTaskResponseFailedReturnsErrorEvent(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:       "responseFailed",
+		IsExported: true,
+		Params:     []jsParamInfo{{Name: "errorMessage", TypeExpr: "string"}},
+		Analysis:   jsFuncAnalysis{HasReturn: true, ReturnType: "object"},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-response-failed",
+		Framework: "jest",
+		Target:    "responseFailed",
+		LineRange: "199-202",
+		GapType:   "error_path",
+		TestName:  "covers response failed event",
+	}
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = responseFailed('too many requests');",
+		"type: 'error',",
+		"error: { code: 'rate_limit_exceeded', message: 'too many requests' },",
+	}, []string{
+		"expect(() => responseFailed",
+		"toThrow",
+	})
+}
+
+func TestJSCoverageTaskUnexportedFunctionUsesManualReview(t *testing.T) {
+	fn := jsFuncInfo{
+		Name:             "formatSseEvent",
+		IsExported:       false,
+		SourceIsESModule: true,
+		Params:           []jsParamInfo{{Name: "event"}},
+		Analysis:         jsFuncAnalysis{HasReturn: true, ReturnType: "string"},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-format-sse",
+		Framework: "jest",
+		Target:    "formatSseEvent",
+		LineRange: "61-61",
+		GapType:   "return_path",
+		TestName:  "covers SSE formatting",
+	}
+	code := genJSFuncTestForCoverageTask(fn, &task)
+	assertGeneratedJS(t, code, []string{
+		"it.skip('covers SSE formatting'",
+		"manual_review_internal: formatSseEvent is not exported from this module",
+	}, []string{
+		"const result = formatSseEvent",
+		"import { formatSseEvent }",
+	})
+}
+
 func TestJSRegularGenerationDedupesDuplicateErrorPathInputs(t *testing.T) {
 	fn := jsFuncInfo{
 		Name:    "fetchData",

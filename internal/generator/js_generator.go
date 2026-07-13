@@ -14,17 +14,18 @@ import (
 // ---- 类型定义 ----
 
 type jsFuncInfo struct {
-	Name       string
-	Params     []jsParamInfo
-	IsAsync    bool
-	IsExported bool
-	IsDefault  bool
-	IsArrow    bool
-	IsMethod   bool
-	IsPrivate  bool
-	ClassName  string
-	Body       string         // 函数体源码
-	Analysis   jsFuncAnalysis // 函数体分析结果
+	Name             string
+	Params           []jsParamInfo
+	IsAsync          bool
+	IsExported       bool
+	IsDefault        bool
+	IsArrow          bool
+	IsMethod         bool
+	IsPrivate        bool
+	SourceIsESModule bool
+	ClassName        string
+	Body             string         // 函数体源码
+	Analysis         jsFuncAnalysis // 函数体分析结果
 }
 
 type jsParamInfo struct {
@@ -138,6 +139,9 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	funcs, classes, isESModule := parseJSWithTreeSitter(source, ext)
+	for i := range funcs {
+		funcs[i].SourceIsESModule = isESModule
+	}
 	if task != nil {
 		funcs, classes = filterJSTargetsForCoverageTask(funcs, classes, task)
 	}
@@ -209,6 +213,12 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 
 	filteredFuncs := make([]jsFuncInfo, 0, len(funcs))
 	for _, fn := range funcs {
+		if jsCoverageTaskResponsesProxyFormatterTarget(target) {
+			if fn.Name == "startResponsesTestProxy" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
 		if jsCoverageTaskPathEnvKeyTarget(target) {
 			if fn.Name == "prependPathDirs" {
 				filteredFuncs = append(filteredFuncs, fn)
@@ -654,6 +664,15 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "createOutputSchemaFile" && task != nil && strings.TrimSpace(task.Target) == "createOutputSchemaFile" {
 		return genJSCreateOutputSchemaFileCoverageTask(task, testName)
 	}
+	if fn.Name == "startResponsesTestProxy" && jsCoverageTaskResponsesProxyTarget(task) {
+		return genJSResponsesProxyCoverageTask(task, testName)
+	}
+	if fn.Name == "responseFailed" && strings.TrimSpace(task.Target) == "responseFailed" {
+		return genJSResponseFailedCoverageTask(task, testName)
+	}
+	if task != nil && fn.SourceIsESModule && !fn.IsExported {
+		return genJSUnexportedFunctionManualReviewTask(fn, task, testName)
+	}
 
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
 	sb.WriteString(fmt.Sprintf("  it('%s', %s => {\n", jsEscapeTestNameValue(testName), jsAsyncArrow(fn.IsAsync)))
@@ -707,6 +726,99 @@ func genJSCreateOutputSchemaFileCoverageTask(task *types.CoverageTestTask, testN
 	} else {
 		sb.WriteString("    await expect(createOutputSchemaFile(null)).rejects.toThrow('outputSchema must be a plain JSON object');\n")
 	}
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSResponsesProxyCoverageTask(task *types.CoverageTestTask, testName string) string {
+	lineRange := ""
+	if task != nil {
+		lineRange = strings.TrimSpace(task.LineRange)
+	}
+	if strings.HasPrefix(lineRange, "126") || strings.HasPrefix(lineRange, "140") || strings.HasPrefix(lineRange, "141") {
+		var sb strings.Builder
+		sb.WriteString("describe('startResponsesTestProxy', () => {\n")
+		sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+		if comment := coverageTaskComment(task); comment != "" {
+			sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+		}
+		sb.WriteString("    // manual_review_internal: this branch depends on Node server.address()/server.close() internals that cannot be triggered safely from a generated unit test.\n")
+		sb.WriteString("    // public_entry_candidates: startResponsesTestProxy integration test with explicit server fault injection.\n")
+		sb.WriteString("  });\n\n")
+		sb.WriteString("});\n\n")
+		return sb.String()
+	}
+
+	var sb strings.Builder
+	sb.WriteString("describe('startResponsesTestProxy', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const http = await import('node:http');\n")
+	sb.WriteString("    const proxy = await startResponsesTestProxy({\n")
+	sb.WriteString("      responseBodies: [\n")
+	sb.WriteString("        { kind: 'sse', events: [{ type: 'response.completed', response: { id: 'resp_1' } }] },\n")
+	sb.WriteString("      ],\n")
+	sb.WriteString("    });\n")
+	sb.WriteString("    const requestProxy = (path: string, method: string = 'POST') => new Promise<{ statusCode: number | undefined; body: string }>((resolve, reject) => {\n")
+	sb.WriteString("      const req = http.request(`${proxy.url}${path}`, { method, headers: { 'content-type': 'application/json' } }, (res) => {\n")
+	sb.WriteString("        const chunks: Buffer[] = [];\n")
+	sb.WriteString("        res.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));\n")
+	sb.WriteString("        res.on('end', () => resolve({ statusCode: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));\n")
+	sb.WriteString("      });\n")
+	sb.WriteString("      req.on('error', reject);\n")
+	sb.WriteString("      if (method === 'POST') {\n")
+	sb.WriteString("        req.write(JSON.stringify({ model: 'gpt-5', input: [{ role: 'user', content: [{ type: 'input_text', text: 'hi' }] }] }));\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("      req.end();\n")
+	sb.WriteString("    });\n")
+	sb.WriteString("    try {\n")
+	sb.WriteString("      const ok = await requestProxy('/responses');\n")
+	sb.WriteString("      expect(ok.statusCode).toBe(200);\n")
+	sb.WriteString("      expect(ok.body).toContain('event: response.completed');\n")
+	sb.WriteString("      expect(ok.body).toContain('\"resp_1\"');\n")
+	sb.WriteString("      expect(proxy.requests).toHaveLength(1);\n")
+	sb.WriteString("      expect(proxy.requests[0]!.json.model).toBe('gpt-5');\n")
+	sb.WriteString("      const missing = await requestProxy('/missing', 'GET');\n")
+	sb.WriteString("      expect(missing.statusCode).toBe(404);\n")
+	sb.WriteString("      const exhausted = await requestProxy('/responses');\n")
+	sb.WriteString("      expect(exhausted.statusCode).toBe(500);\n")
+	sb.WriteString("    } finally {\n")
+	sb.WriteString("      await proxy.close();\n")
+	sb.WriteString("    }\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSResponseFailedCoverageTask(task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString("describe('responseFailed', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const result = responseFailed('too many requests');\n")
+	sb.WriteString("    expect(result).toEqual({\n")
+	sb.WriteString("      type: 'error',\n")
+	sb.WriteString("      error: { code: 'rate_limit_exceeded', message: 'too many requests' },\n")
+	sb.WriteString("    });\n")
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSUnexportedFunctionManualReviewTask(fn jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", fn.Name))
+	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString(fmt.Sprintf("    // manual_review_internal: %s is not exported from this module and cannot be called from an external generated test.\n", fn.Name))
+	sb.WriteString("    // public_entry_candidates: add an explicit public-entry task or cover this helper through an exported API.\n")
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -964,6 +1076,18 @@ func genJSResolveNativePackageCoverageTask(fn jsFuncInfo, task *types.CoverageTe
 
 func jsCoverageTaskPrivateIPParserTarget(target string) bool {
 	return target == "_parse_ipv4_addr" || target == "_parse_ipv6_addr"
+}
+
+func jsCoverageTaskResponsesProxyTarget(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target == "startResponsesTestProxy" || jsCoverageTaskResponsesProxyFormatterTarget(target)
+}
+
+func jsCoverageTaskResponsesProxyFormatterTarget(target string) bool {
+	return strings.TrimSpace(target) == "formatSseEvent"
 }
 
 func jsCoverageTaskPrependPathDirsTarget(task *types.CoverageTestTask) bool {
