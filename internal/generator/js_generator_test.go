@@ -3399,6 +3399,33 @@ func TestJSCoverageTaskThreadPrivateAndTypedArgs(t *testing.T) {
 		"manual_review_private",
 	})
 
+	normalizeTask := types.CoverageTestTask{
+		ID:        "jest-normalize-input",
+		Framework: "jest",
+		Target:    "normalizeInput",
+		LineRange: "147-154",
+		GapType:   "branch",
+		TestName:  "covers structured input",
+	}
+	normalizeFuncs, normalizeClasses := filterJSTargetsForCoverageTask([]jsFuncInfo{{Name: "normalizeInput", IsExported: false}}, []jsClassInfo{cls}, &normalizeTask)
+	if len(normalizeFuncs) != 0 || len(normalizeClasses) != 1 || normalizeClasses[0].Name != "Thread" || len(normalizeClasses[0].Methods) != 1 || normalizeClasses[0].Methods[0].Name != "runStreamedInternal" {
+		t.Fatalf("expected normalizeInput to route through Thread.runStreamedInternal, funcs=%+v classes=%+v", normalizeFuncs, normalizeClasses)
+	}
+	code = genJSClassTestForCoverageTask(normalizeClasses[0], &normalizeTask, "../src/thread")
+	assertGeneratedJS(t, code, []string{
+		"const calls: any[] = [];",
+		"run: async function* (args: any) {",
+		"const { events } = await instance.runStreamed([",
+		"{ type: 'text', text: 'hello' },",
+		"{ type: 'local_image', path: '/tmp/image.png' },",
+		"expect(calls[0].input).toBe('hello\\n\\nworld');",
+		"expect(calls[0].images).toEqual(['/tmp/image.png']);",
+	}, []string{
+		"normalizeInput(",
+		"import { normalizeInput }",
+		"it.skip(",
+	})
+
 	publicTask := types.CoverageTestTask{
 		ID:        "jest-thread-run",
 		Framework: "jest",
@@ -3965,6 +3992,99 @@ func TestJSCoverageTaskUnexportedFunctionUsesManualReview(t *testing.T) {
 	}, []string{
 		"const result = formatSseEvent",
 		"import { formatSseEvent }",
+	})
+}
+
+func TestJSCoverageTaskOutputSchemaInternalJsonObjectUsesPublicEntry(t *testing.T) {
+	funcs := []jsFuncInfo{
+		{Name: "isJsonObject", IsExported: false},
+		{Name: "createOutputSchemaFile", IsExported: true, IsAsync: true, Params: []jsParamInfo{{Name: "schema", TypeExpr: "unknown"}}, Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-json-object",
+		Framework: "jest",
+		Target:    "isJsonObject",
+		LineRange: "39-39",
+		GapType:   "return_path",
+		TestName:  "covers plain object schema",
+	}
+	filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(funcs, nil, &task)
+	if len(filteredClasses) != 0 || len(filteredFuncs) != 1 || filteredFuncs[0].Name != "createOutputSchemaFile" {
+		t.Fatalf("isJsonObject should route through createOutputSchemaFile, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code := genJSFuncTestForCoverageTask(filteredFuncs[0], &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = await createOutputSchemaFile({ type: 'object' });",
+		"expect(result.schemaPath).toContain('schema.json');",
+		"await result.cleanup();",
+	}, []string{
+		"isJsonObject(",
+		"import { isJsonObject }",
+		"it.skip(",
+	})
+}
+
+func TestJSCoverageTaskHasExplicitProviderConfigUsesCreateTestClient(t *testing.T) {
+	funcs := []jsFuncInfo{
+		{Name: "hasExplicitProviderConfig", IsExported: false},
+		{Name: "createTestClient", IsExported: true, Params: []jsParamInfo{{Name: "options", TypeExpr: "CreateTestClientOptions"}}, Analysis: jsFuncAnalysis{HasReturn: true, ReturnType: "object"}},
+	}
+	task := types.CoverageTestTask{
+		ID:        "jest-provider-config",
+		Framework: "jest",
+		Target:    "hasExplicitProviderConfig",
+		LineRange: "90-90",
+		GapType:   "return_path",
+		TestName:  "covers explicit provider config",
+	}
+	filteredFuncs, filteredClasses := filterJSTargetsForCoverageTask(funcs, nil, &task)
+	if len(filteredClasses) != 0 || len(filteredFuncs) != 1 || filteredFuncs[0].Name != "createTestClient" {
+		t.Fatalf("hasExplicitProviderConfig should route through createTestClient, funcs=%+v classes=%+v", filteredFuncs, filteredClasses)
+	}
+	code := genJSFuncTestForCoverageTask(filteredFuncs[0], &task)
+	assertGeneratedJS(t, code, []string{
+		"const result = createTestClient({",
+		"baseUrl: 'http://127.0.0.1:9',",
+		"model_provider: 'mock',",
+		"expect(result.client).toBeDefined();",
+		"result.cleanup();",
+	}, []string{
+		"hasExplicitProviderConfig(",
+		"import { hasExplicitProviderConfig }",
+		"it.skip(",
+	})
+}
+
+func TestGenerateJSCoverageTaskSkipsUnexportedESMNamedImport(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "helper.ts")
+	if err := writeFile(srcPath, `export const visible = 1;
+
+function hidden(value: string): string {
+  return value.toUpperCase();
+}
+`); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "jest-hidden",
+		Framework: "jest",
+		Target:    "hidden",
+		LineRange: "2-2",
+		GapType:   "return_path",
+		TestName:  "covers hidden helper",
+		TestFile:  filepath.Join(dir, "helper.test.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import './helper';",
+		"it.skip('covers hidden helper'",
+		"manual_review_internal: hidden is not exported from this module",
+	}, []string{
+		"import { hidden }",
+		"const result = hidden",
 	})
 }
 

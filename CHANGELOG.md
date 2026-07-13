@@ -34,6 +34,8 @@
 - JS/TS coverage task 会通过 `CodexExec(null)` 公共入口和临时覆盖 `process.platform/process.arch` 覆盖 `findCodexPath` 的 linux/darwin/win32 平台映射分支，将仅依赖平台选择的任务从 `manual_review_internal` 转为 ready。
 - JS/TS coverage task 遇到文件级目标任务时会生成 `manual_review_internal` 草稿，避免回退成全量导入并错误引用未导出的内部 helper。
 - JS/TS coverage task 会通过 `Thread.runStreamed()` 公共入口覆盖 `Thread.runStreamedInternal` private 分支，自动生成 async generator `CodexExec.run` mock、`thread.started` id 更新断言和 JSON parse error 断言，把 Codex SDK `src/thread.ts` top18 的 private skipped 草稿转为真实 ready 测试。
+- JS/TS coverage task 会通过 `Thread.runStreamed()` 公共入口覆盖未导出的 `normalizeInput`，生成 structured text + local image 输入，并断言传给 `CodexExec.run` 的 prompt 合并结果和 images 数组。
+- JS/TS coverage task 会通过 `createOutputSchemaFile()` 覆盖未导出的 `isJsonObject` plain object 分支，并通过 Codex SDK 测试辅助模块的 `createTestClient()` 覆盖未导出的 `hasExplicitProviderConfig` 分支，避免直接 import 内部 helper。
 - JS/TS coverage task 支持 Codex SDK `tests/responsesProxy.ts` 辅助模块：`formatSseEvent` 会通过公开 `startResponsesTestProxy()` 的真实 HTTP POST/404/generator exhausted 行为间接覆盖，`responseFailed()` 会断言返回的 error event 对象；无法稳定触发的 Node `server.address()` / `server.close(err)` 内部分支会生成 `manual_review_internal` 草稿。
 - JS/TS coverage task 在 ESM 源文件中遇到未导出的顶层函数时会生成 `manual_review_internal` 草稿，避免错误生成非法 named import；CommonJS coverage task 仍保留 `require()` 路径。
 - JS/TS parser 会识别 TypeScript `private` / `protected` class method 和 `get` accessor；coverage task 对不可外部调用的 TS private method 会生成 `manual_review_private` 草稿和公共入口候选，对 getter 会生成属性访问而不是错误的函数调用。

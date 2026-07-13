@@ -213,6 +213,21 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 
 	filteredFuncs := make([]jsFuncInfo, 0, len(funcs))
 	for _, fn := range funcs {
+		if jsCoverageTaskNormalizeInputTarget(target) {
+			continue
+		}
+		if jsCoverageTaskIsJsonObjectTarget(target) {
+			if fn.Name == "createOutputSchemaFile" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
+		if jsCoverageTaskExplicitProviderConfigTarget(target) {
+			if fn.Name == "createTestClient" {
+				filteredFuncs = append(filteredFuncs, fn)
+			}
+			continue
+		}
 		if jsCoverageTaskResponsesProxyFormatterTarget(target) {
 			if fn.Name == "startResponsesTestProxy" {
 				filteredFuncs = append(filteredFuncs, fn)
@@ -253,6 +268,10 @@ func filterJSTargetsForCoverageTask(funcs []jsFuncInfo, classes []jsClassInfo, t
 		}
 		methods := make([]jsFuncInfo, 0, len(cls.Methods))
 		for _, method := range cls.Methods {
+			if jsCoverageTaskNormalizeInputTarget(target) && cls.Name == "Thread" && method.Name == "runStreamedInternal" {
+				methods = append(methods, method)
+				continue
+			}
 			if jsCoverageTaskCodexConfigOverridesTarget(target) && cls.Name == "CodexExec" && method.Name == "run" {
 				methods = append(methods, method)
 				continue
@@ -661,8 +680,11 @@ func genJSFuncTestForCoverageTask(fn jsFuncInfo, task *types.CoverageTestTask) s
 	if fn.Name == "resolveNativePackage" && jsCoverageTaskResolveNativePackageTarget(task) {
 		return genJSResolveNativePackageCoverageTask(fn, task, testName)
 	}
-	if fn.Name == "createOutputSchemaFile" && task != nil && strings.TrimSpace(task.Target) == "createOutputSchemaFile" {
+	if fn.Name == "createOutputSchemaFile" && jsCoverageTaskOutputSchemaFileTarget(task) {
 		return genJSCreateOutputSchemaFileCoverageTask(task, testName)
+	}
+	if fn.Name == "createTestClient" && task != nil && jsCoverageTaskExplicitProviderConfigTarget(task.Target) {
+		return genJSCreateTestClientProviderConfigCoverageTask(task, testName)
 	}
 	if fn.Name == "startResponsesTestProxy" && jsCoverageTaskResponsesProxyTarget(task) {
 		return genJSResponsesProxyCoverageTask(task, testName)
@@ -712,7 +734,11 @@ func genJSCreateOutputSchemaFileCoverageTask(task *types.CoverageTestTask, testN
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
 	}
-	if strings.HasPrefix(lineRange, "33") || strings.HasPrefix(lineRange, "34") {
+	if task != nil && strings.TrimSpace(task.Target) == "isJsonObject" {
+		sb.WriteString("    const result = await createOutputSchemaFile({ type: 'object' });\n")
+		sb.WriteString("    expect(result.schemaPath).toContain('schema.json');\n")
+		sb.WriteString("    await result.cleanup();\n")
+	} else if strings.HasPrefix(lineRange, "33") || strings.HasPrefix(lineRange, "34") {
 		sb.WriteString("    const { promises: fs } = await import('node:fs');\n")
 		sb.WriteString("    const { jest } = await import('@jest/globals');\n")
 		sb.WriteString("    const writeError = new Error('write failed');\n")
@@ -726,6 +752,30 @@ func genJSCreateOutputSchemaFileCoverageTask(task *types.CoverageTestTask, testN
 	} else {
 		sb.WriteString("    await expect(createOutputSchemaFile(null)).rejects.toThrow('outputSchema must be a plain JSON object');\n")
 	}
+	sb.WriteString("  });\n\n")
+	sb.WriteString("});\n\n")
+	return sb.String()
+}
+
+func genJSCreateTestClientProviderConfigCoverageTask(task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString("describe('createTestClient', () => {\n")
+	sb.WriteString(fmt.Sprintf("  it('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("    // coverage task: %s\n", comment))
+	}
+	sb.WriteString("    const result = createTestClient({\n")
+	sb.WriteString("      baseUrl: 'http://127.0.0.1:9',\n")
+	sb.WriteString("      inheritEnv: false,\n")
+	sb.WriteString("      config: {\n")
+	sb.WriteString("        model_provider: 'mock',\n")
+	sb.WriteString("        model_providers: {\n")
+	sb.WriteString("          mock: { name: 'Mock', base_url: 'http://127.0.0.1:9', wire_api: 'responses', supports_websockets: false },\n")
+	sb.WriteString("        },\n")
+	sb.WriteString("      },\n")
+	sb.WriteString("    });\n")
+	sb.WriteString("    expect(result.client).toBeDefined();\n")
+	sb.WriteString("    result.cleanup();\n")
 	sb.WriteString("  });\n\n")
 	sb.WriteString("});\n\n")
 	return sb.String()
@@ -1078,6 +1128,26 @@ func jsCoverageTaskPrivateIPParserTarget(target string) bool {
 	return target == "_parse_ipv4_addr" || target == "_parse_ipv6_addr"
 }
 
+func jsCoverageTaskNormalizeInputTarget(target string) bool {
+	return strings.TrimSpace(target) == "normalizeInput"
+}
+
+func jsCoverageTaskIsJsonObjectTarget(target string) bool {
+	return strings.TrimSpace(target) == "isJsonObject"
+}
+
+func jsCoverageTaskOutputSchemaFileTarget(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target == "createOutputSchemaFile" || jsCoverageTaskIsJsonObjectTarget(target)
+}
+
+func jsCoverageTaskExplicitProviderConfigTarget(target string) bool {
+	return strings.TrimSpace(target) == "hasExplicitProviderConfig"
+}
+
 func jsCoverageTaskResponsesProxyTarget(task *types.CoverageTestTask) bool {
 	if task == nil {
 		return false
@@ -1277,6 +1347,9 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 }
 
 func genJSThreadRunStreamedInternalPublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	if task != nil && jsCoverageTaskNormalizeInputTarget(strings.TrimSpace(task.Target)) {
+		return genJSThreadNormalizeInputPublicEntryTest(method, task, testName)
+	}
 	lineRange := ""
 	if task != nil {
 		lineRange = strings.TrimSpace(task.LineRange)
@@ -1307,6 +1380,34 @@ func genJSThreadRunStreamedInternalPublicEntryTest(method jsFuncInfo, task *type
 		sb.WriteString("      expect(instance.id).toBe('thread-123');\n")
 		sb.WriteString("      await expect(events.next()).resolves.toEqual({ done: true, value: undefined });\n")
 	}
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSThreadNormalizeInputPublicEntryTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const calls: any[] = [];\n")
+	sb.WriteString("      const exec = {\n")
+	sb.WriteString("        run: async function* (args: any) {\n")
+	sb.WriteString("          calls.push(args);\n")
+	sb.WriteString("          yield JSON.stringify({ type: 'thread.started', thread_id: 'thread-123' });\n")
+	sb.WriteString("        },\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new Thread(exec as any, {}, {}, null);\n")
+	sb.WriteString("      const { events } = await instance.runStreamed([\n")
+	sb.WriteString("        { type: 'text', text: 'hello' },\n")
+	sb.WriteString("        { type: 'text', text: 'world' },\n")
+	sb.WriteString("        { type: 'local_image', path: '/tmp/image.png' },\n")
+	sb.WriteString("      ] as any);\n")
+	sb.WriteString("      await events.next();\n")
+	sb.WriteString("      expect(calls[0].input).toBe('hello\\n\\nworld');\n")
+	sb.WriteString("      expect(calls[0].images).toEqual(['/tmp/image.png']);\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()
@@ -4248,6 +4349,9 @@ func joinNamedESMExportNames(funcs []jsFuncInfo, classes []jsClassInfo) string {
 	seen := make(map[string]bool)
 	for _, fn := range funcs {
 		if fn.IsMethod || fn.IsDefault {
+			continue
+		}
+		if fn.SourceIsESModule && !fn.IsExported {
 			continue
 		}
 		if !seen[fn.Name] {
