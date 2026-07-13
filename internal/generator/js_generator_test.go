@@ -4778,6 +4778,59 @@ export class RpcClient {
 	})
 }
 
+func TestMochaCoverageTaskUsesRocketMQTopicRouteDataMock(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	routeDir := filepath.Join(srcDir, "route")
+	if err := os.MkdirAll(routeDir, 0o755); err != nil {
+		t.Fatalf("mkdir route: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","devDependencies":{"mocha":"^10.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(routeDir, "TopicRouteData.ts"), []byte(`export class TopicRouteData {
+  readonly messageQueues: any[] = [];
+  constructor(messageQueues: any[]) {}
+}
+`), 0o644); err != nil {
+		t.Fatalf("write TopicRouteData: %v", err)
+	}
+	srcPath := filepath.Join(srcDir, "PublishingLoadBalancer.ts")
+	if err := os.WriteFile(srcPath, []byte(`import { TopicRouteData } from './route/TopicRouteData';
+
+export class PublishingLoadBalancer {
+  constructor(topicRouteData: TopicRouteData, index?: number) {}
+  takeMessageQueues(excluded: Map<string, unknown>, count: number) {
+    return [];
+  }
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "mocha-publishing-load-balancer",
+		Framework: "mocha",
+		File:      srcPath,
+		Target:    "PublishingLoadBalancer.takeMessageQueues",
+		Kind:      "method",
+		LineRange: "6-6",
+		GapType:   "return_path",
+		TestFile:  filepath.Join(srcDir, "PublishingLoadBalancer.spec.ts"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask returned error: %v", err)
+	}
+	assertGeneratedJS(t, code, []string{
+		"import { TopicRouteData } from './route/TopicRouteData';",
+		"const instance = new PublishingLoadBalancer(Object.assign(new TopicRouteData([]), { messageQueues:",
+		"permission: 4",
+		"broker: { name: 'broker-a', endpoints: { facade: '127.0.0.1:8081' } }",
+	}, []string{
+		"new PublishingLoadBalancer(new TopicRouteData([]), undefined)",
+		"Permission.READ_WRITE",
+	})
+}
+
 func TestTSTypeDeclsCaptureInterfaceExtends(t *testing.T) {
 	decls := jsExtractTSTypeDecls(`interface BaseOptions {
   endpoints: string;

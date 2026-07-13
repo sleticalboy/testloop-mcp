@@ -2926,6 +2926,8 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 		switch {
 		case jsParamTypeMentions(param, "CodexExec"):
 			args[i] = jsCodexExecMockForCoverageTask(method, task)
+		case jsRocketMQLoadBalancerClass(cls.Name) && jsParamTypeMentions(param, "TopicRouteData"):
+			args[i] = jsRocketMQTopicRouteDataMock()
 		case strings.Contains(compact, "servername") || compact == "name":
 			args[i] = "'test-server'"
 		case strings.Contains(compact, "devconfig"):
@@ -2943,6 +2945,14 @@ func jsClassConstructorArgsForCoverageTask(cls jsClassInfo, method jsFuncInfo, t
 		}
 	}
 	return strings.Join(args, ", ")
+}
+
+func jsRocketMQLoadBalancerClass(name string) bool {
+	return name == "PublishingLoadBalancer" || name == "SubscriptionLoadBalancer"
+}
+
+func jsRocketMQTopicRouteDataMock() string {
+	return "Object.assign(new TopicRouteData([]), { messageQueues: [{ queueId: 0, permission: 4, broker: { name: 'broker-a', endpoints: { facade: '127.0.0.1:8081' } } }, { queueId: 0, permission: 4, broker: { name: 'broker-b', endpoints: { facade: '127.0.0.1:8082' } } }] })"
 }
 
 func jsCodexExecMockForCoverageTask(method jsFuncInfo, task *types.CoverageTestTask) string {
