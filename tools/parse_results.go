@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -29,10 +28,7 @@ func HandleParseResults(ctx context.Context, req *mcp.CallToolRequest, input par
 	// 调用统一解析接口
 	result := parser.ParseTestOutput(output, framework)
 
-	resultJSON, _ := json.Marshal(result)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-	}, nil, nil
+	return structuredToolResult(result)
 }
 
 // 保留原有函数以兼容

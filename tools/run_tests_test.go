@@ -259,6 +259,10 @@ func TestHandleRunTestsExecutesGoTest(t *testing.T) {
 	if parsed.CoveragePercent != 100 {
 		t.Fatalf("coverage = %.1f, want 100.0", parsed.CoveragePercent)
 	}
+	structured := structuredContentAs[types.TestResult](t, result)
+	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.CoveragePercent != parsed.CoveragePercent {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
+	}
 }
 
 func TestHandleRunTestsParsesGoFailure(t *testing.T) {

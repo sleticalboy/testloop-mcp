@@ -29,6 +29,19 @@ func resultText(t *testing.T, result *mcp.CallToolResult) string {
 	return text.Text
 }
 
+func structuredContentAs[T any](t *testing.T, result *mcp.CallToolResult) T {
+	t.Helper()
+	if result == nil {
+		t.Fatal("expected tool result")
+	}
+	typed, ok := result.StructuredContent.(T)
+	if !ok {
+		var zero T
+		t.Fatalf("structured content type = %T, want %T", result.StructuredContent, zero)
+	}
+	return typed
+}
+
 func assertGenerateTestsProviderError(t *testing.T, result *mcp.CallToolResult, structured any, wantKind, wantAction string) {
 	t.Helper()
 	if result == nil {
@@ -106,6 +119,10 @@ func TestHandleParseResultsDefaultsToGoTest(t *testing.T) {
 	if parsed.Framework != "go-test" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
 		t.Fatalf("unexpected parsed result: %+v", parsed)
 	}
+	structured := structuredContentAs[types.TestResult](t, result)
+	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.Passed != parsed.Passed {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
+	}
 }
 
 func TestHandleParseResultsRequiresOutput(t *testing.T) {
@@ -148,6 +165,10 @@ func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	}
 	if report.Framework != "go-test" || report.TotalPercent != 50 {
 		t.Fatalf("unexpected report: %+v", report)
+	}
+	structured := structuredContentAs[*types.CoverageReport](t, result)
+	if structured.Framework != report.Framework || structured.TotalPercent != report.TotalPercent {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, report)
 	}
 }
 
@@ -865,6 +886,10 @@ func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	}
 	if generated.TestFile != filepath.Join(dir, "calc_test.go") {
 		t.Fatalf("test file = %q, want %q", generated.TestFile, filepath.Join(dir, "calc_test.go"))
+	}
+	structured := structuredContentAs[types.GenerateTestsOutput](t, result)
+	if structured.Status != generated.Status || structured.TestFile != generated.TestFile || structured.Provider != generated.Provider {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, generated)
 	}
 	if _, err := os.Stat(generated.TestFile); err != nil {
 		t.Fatalf("expected generated test file: %v", err)
@@ -2042,6 +2067,10 @@ func TestHandleFixSuggestionsReturnsEmptyForNoFailures(t *testing.T) {
 	}
 	if len(suggestions) != 0 {
 		t.Fatalf("suggestions len = %d, want 0", len(suggestions))
+	}
+	structured := structuredContentAs[[]types.FixSuggestion](t, result)
+	if len(structured) != 0 {
+		t.Fatalf("structured suggestions len = %d, want 0", len(structured))
 	}
 }
 

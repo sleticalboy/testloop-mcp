@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -29,8 +28,5 @@ func HandleParseCoverage(ctx context.Context, req *mcp.CallToolRequest, input pa
 		return nil, nil, fmt.Errorf("解析覆盖率失败: %w", err)
 	}
 
-	reportJSON, _ := json.Marshal(report)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(reportJSON)}},
-	}, nil, nil
+	return structuredToolResult(report)
 }

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -80,10 +79,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		Provider:       provider.Name(),
 	}
 
-	resultJSON, _ := json.Marshal(out)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-	}, nil, nil
+	return structuredToolResult(out)
 }
 
 func targetTestFile(filePath string, task *types.CoverageTestTask) string {
@@ -239,12 +235,11 @@ func generateTestsProviderErrorResult(filePath string, provider generator.TestPr
 	if input.CoverageTask != nil && strings.TrimSpace(input.CoverageTask.TestFile) != "" {
 		out.TestFile = input.CoverageTask.TestFile
 	}
-	resultJSON, _ := json.Marshal(out)
-	return &mcp.CallToolResult{
-		Content:           []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-		StructuredContent: out,
-		IsError:           true,
-	}, out, true
+	result, err := structuredToolResultWithError(out, true)
+	if err != nil {
+		return nil, nil, false
+	}
+	return result, out, true
 }
 
 func formatGenerateTestsError(err error) error {

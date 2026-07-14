@@ -37,10 +37,7 @@ func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input f
 	}
 
 	if len(failures) == 0 {
-		resultJSON, _ := json.Marshal([]types.FixSuggestion{})
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-		}, nil, nil
+		return structuredToolResult([]types.FixSuggestion{})
 	}
 
 	// 读取源代码和测试代码
@@ -57,10 +54,7 @@ func HandleFixSuggestions(ctx context.Context, req *mcp.CallToolRequest, input f
 	// 生成修复建议
 	suggestions := generateFixSuggestions(failures, string(sourceCode), string(testCode), sourceFile, input.TestCode)
 
-	resultJSON, _ := json.Marshal(suggestions)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-	}, nil, nil
+	return structuredToolResult(suggestions)
 }
 
 func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, sourceFile, testFile string) []types.FixSuggestion {

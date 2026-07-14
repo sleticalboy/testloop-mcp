@@ -444,12 +444,11 @@ func validateCoverageTaskTimeout() time.Duration {
 }
 
 func coverageTaskValidationResult(out types.CoverageTaskValidationOutput) (*mcp.CallToolResult, any, error) {
-	resultJSON, _ := json.Marshal(out)
-	return &mcp.CallToolResult{
-		Content:           []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-		StructuredContent: out,
-		IsError:           out.Status == "generation_error" || out.Status == "run_error",
-	}, out, nil
+	result, err := structuredToolResultWithError(out, out.Status == "generation_error" || out.Status == "run_error")
+	if err != nil {
+		return nil, nil, err
+	}
+	return result, out, nil
 }
 
 func decodeToolResult(result *mcp.CallToolResult, out any) error {

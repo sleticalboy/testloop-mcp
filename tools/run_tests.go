@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -128,10 +127,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	if input.IncludeFixSuggestions && result.Status == "fail" && len(result.Failures) > 0 {
 		result.FixSuggestions = generateRunTestFixSuggestions(input, result.Failures)
 	}
-	resultJSON, _ := json.Marshal(result)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(resultJSON)}},
-	}, nil, nil
+	return structuredToolResult(result)
 }
 
 func generateRunTestFixSuggestions(input runTestsInput, failures []types.TestFailure) []types.FixSuggestion {
