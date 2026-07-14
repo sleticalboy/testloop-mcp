@@ -949,6 +949,37 @@ func genPytestClassMethodCustomCoverageTask(cls pyClassInfo, method pyFuncInfo, 
 			return ""
 		}
 	}
+	if cls.Name == "MultiDict" {
+		switch method.Name {
+		case "pop":
+			return strings.Join([]string{
+				"        instance = MultiDict([('a', '123'), ('a', '456'), ('b', '789')])",
+				"        result = instance.pop('a')",
+				"        assert result == '456'",
+				"        assert instance.multi_items() == [('b', '789')]",
+				"",
+			}, "\n")
+		case "popitem":
+			return strings.Join([]string{
+				"        instance = MultiDict([('a', '123'), ('a', '456'), ('b', '789')])",
+				"        result = instance.popitem()",
+				"        assert result == ('b', '789')",
+				"        assert instance.multi_items() == [('a', '123'), ('a', '456')]",
+				"",
+			}, "\n")
+		case "setdefault":
+			return strings.Join([]string{
+				"        instance = MultiDict([('a', '123')])",
+				"        assert instance.setdefault('a', '456') == '123'",
+				"        result = instance.setdefault('b', '456')",
+				"        assert result == '456'",
+				"        assert instance.multi_items() == [('a', '123'), ('b', '456')]",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
 	return ""
 }
 

@@ -1148,6 +1148,68 @@ func TestPytestCoverageTaskUsesStarletteConfigInputs(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesStarletteMultiDictInputs(t *testing.T) {
+	multiDictClass := pyClassInfo{
+		Name: "MultiDict",
+		Methods: []pyFuncInfo{
+			{Name: "pop", Params: []pyParamInfo{{Name: "key"}, {Name: "default", HasDefault: true}}, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"}},
+		},
+	}
+	popTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-multidict-1",
+		Target:    "MultiDict.pop",
+		GapType:   "branch",
+		LineRange: "331-332",
+		TestName:  "test_multidict_pop_covers_gap",
+	}
+	code := genPytestClassTestForCoverageTask(multiDictClass, &popTask)
+	assertPyGenerated(t, code, []string{
+		"instance = MultiDict([('a', '123'), ('a', '456'), ('b', '789')])",
+		"result = instance.pop('a')",
+		"assert result == '456'",
+		"assert instance.multi_items() == [('b', '789')]",
+	}, []string{
+		"MultiDict()",
+		"instance.pop('test', None)",
+	})
+
+	popitemTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-multidict-2",
+		Target:    "MultiDict.popitem",
+		GapType:   "branch",
+		LineRange: "335-337",
+		TestName:  "test_multidict_popitem_covers_gap",
+	}
+	multiDictClass.Methods[0] = pyFuncInfo{Name: "popitem", Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "tuple"}}
+	code = genPytestClassTestForCoverageTask(multiDictClass, &popitemTask)
+	assertPyGenerated(t, code, []string{
+		"result = instance.popitem()",
+		"assert result == ('b', '789')",
+		"assert instance.multi_items() == [('a', '123'), ('a', '456')]",
+	}, []string{
+		"MultiDict()",
+	})
+
+	setdefaultTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-multidict-3",
+		Target:    "MultiDict.setdefault",
+		GapType:   "branch",
+		LineRange: "349-351",
+		TestName:  "test_multidict_setdefault_covers_gap",
+	}
+	multiDictClass.Methods[0] = pyFuncInfo{Name: "setdefault", Params: []pyParamInfo{{Name: "key"}, {Name: "default", HasDefault: true}}, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"}}
+	code = genPytestClassTestForCoverageTask(multiDictClass, &setdefaultTask)
+	assertPyGenerated(t, code, []string{
+		"assert instance.setdefault('a', '456') == '123'",
+		"result = instance.setdefault('b', '456')",
+		"assert result == '456'",
+		"assert instance.multi_items() == [('a', '123'), ('b', '456')]",
+	}, []string{
+		"MultiDict()",
+		"instance.setdefault('test', None)",
+	})
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {
