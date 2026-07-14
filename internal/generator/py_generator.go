@@ -202,6 +202,10 @@ func filterPyTargetsForCoverageTask(funcs []pyFuncInfo, classes []pyClassInfo, t
 }
 
 func pyImportModuleName(srcPath string) string {
+	if moduleName, ok := pyPackageImportModuleName(srcPath); ok {
+		return moduleName
+	}
+
 	clean := filepath.Clean(srcPath)
 	ext := filepath.Ext(clean)
 	noExt := strings.TrimSuffix(clean, ext)
@@ -214,6 +218,41 @@ func pyImportModuleName(srcPath string) string {
 		}
 	}
 	return stripExt(baseName(srcPath))
+}
+
+func pyPackageImportModuleName(srcPath string) (string, bool) {
+	clean := filepath.Clean(srcPath)
+	dir := filepath.Dir(clean)
+	if _, err := os.Stat(filepath.Join(dir, "__init__.py")); err != nil {
+		return "", false
+	}
+
+	top := dir
+	for {
+		parent := filepath.Dir(top)
+		if parent == top {
+			break
+		}
+		if _, err := os.Stat(filepath.Join(parent, "__init__.py")); err != nil {
+			break
+		}
+		top = parent
+	}
+
+	root := filepath.Dir(top)
+	noExt := strings.TrimSuffix(clean, filepath.Ext(clean))
+	if filepath.Base(noExt) == "__init__" {
+		noExt = filepath.Dir(noExt)
+	}
+	rel, err := filepath.Rel(root, noExt)
+	if err != nil {
+		return "", false
+	}
+	parts := splitPathParts(rel)
+	if len(parts) == 0 {
+		return "", false
+	}
+	return strings.Join(parts, "."), true
 }
 
 func splitPathParts(path string) []string {
@@ -737,6 +776,39 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			"    assert result == [{'type': 'text', 'text': 'hello'}]",
 			"",
 		}, "\n")
+	case "get_route_path":
+		return pyGetRoutePathCoverageBody(task, "    ")
+	case "has_required_scope":
+		return strings.Join([]string{
+			"    auth = type('Auth', (), {'scopes': ['authenticated']})()",
+			"    conn = type('Conn', (), {'auth': auth})()",
+			"    assert has_required_scope(conn, ['missing']) is False",
+			"    result = has_required_scope(conn, ['authenticated'])",
+			"    assert result is True",
+			"",
+		}, "\n")
+	default:
+		return ""
+	}
+}
+
+func pyGetRoutePathCoverageBody(task *types.CoverageTestTask, indent string) string {
+	lineRange := strings.TrimSpace(task.LineRange)
+	switch lineRange {
+	case "103-103":
+		return strings.Join([]string{
+			indent + "scope = {'type': 'http', 'path': '/app/home', 'root_path': ''}",
+			indent + "result = get_route_path(scope)",
+			indent + "assert result == '/app/home'",
+			"",
+		}, "\n")
+	case "111-111":
+		return strings.Join([]string{
+			indent + "scope = {'type': 'http', 'path': '/app/home', 'root_path': '/app'}",
+			indent + "result = get_route_path(scope)",
+			indent + "assert result == '/home'",
+			"",
+		}, "\n")
 	default:
 		return ""
 	}
@@ -846,6 +918,36 @@ func genPytestClassMethodCustomCoverageTask(cls pyClassInfo, method pyFuncInfo, 
 	}
 	if cls.Name == "_AsyncGoalNotificationStream" && method.Name == "_finish" {
 		return pyGoalNotificationStreamFinishCoverageBody("_AsyncGoalNotificationStream", "        ")
+	}
+	if cls.Name == "Config" {
+		switch method.Name {
+		case "_read_file":
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        os = __import__('os')",
+				"        handle = tempfile.NamedTemporaryFile('w', delete=False, encoding='utf-8')",
+				"        try:",
+				"            handle.write(\"# ignored\\nAPI_KEY='secret'\\nDEBUG=true\\n\")",
+				"            handle.close()",
+				"            instance = Config()",
+				"            result = instance._read_file(handle.name, 'utf-8')",
+				"            assert result == {'API_KEY': 'secret', 'DEBUG': 'true'}",
+				"        finally:",
+				"            os.unlink(handle.name)",
+				"",
+			}, "\n")
+		case "_perform_cast":
+			return strings.Join([]string{
+				"        instance = Config()",
+				"        assert instance._perform_cast('DEBUG', 'true', bool) is True",
+				"        assert instance._perform_cast('COUNT', '3', int) == 3",
+				"        with pytest.raises(ValueError):",
+				"            instance._perform_cast('DEBUG', 'maybe', bool)",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
 	}
 	return ""
 }

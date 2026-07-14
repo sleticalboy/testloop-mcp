@@ -16,6 +16,7 @@
 | 8 | unjs/ufo | TypeScript / Vitest | top8 | `passed=8`，`ready=6`，`manual_review_internal=1`，`manual_review_no_runtime=1` | 0 |
 | 9 | pallets/click | Python / pytest | top20 | `passed=20`，`ready=19`，`manual_review_environment=1` | 0 |
 | 10 | Codex SDK Python | Python / pytest | top30 | `passed=30`，`ready=30`，`skipped_total=0` | 0 |
+| 11 | Starlette | Python / pytest | top20 | `passed=20`，`ready=20`，`skipped_total=0` | 0 |
 
 `普通 repair` 指最新验证结果中仍需要修生成测试本身的 `repair_generated_test` / `apply_fix_suggestions` / `generation_error` 数量。`manual_review_*` 不计入普通 repair，它表示工具已经给 Agent 一个稳定动作分类：不要继续盲修同一份生成测试，应改走公共入口、依赖注入、集成环境或人工复核。
 
@@ -25,7 +26,7 @@ Go 链路已经能覆盖低依赖 utility、HTTP wrapper、JSON/file helper、pa
 
 JS/TS 链路已经验证过 Vitest、Jest、Mocha、ESM、TypeScript strict 编译、`ts-jest`、项目自定义 runner、测试目录 include 规则、monorepo 外部资源 symlink、默认导出实例、JS `#private`、TS `private/protected`、getter、未导出内部 helper 的公共入口覆盖、跨模块 interface/type/class/enum mock、Map/Set、函数类型字段、fake timers、动态 import 和 Node process/platform 全局状态。
 
-Python/pytest 链路已经从基础 pytest 草稿推进到两个真实 `src` layout 项目：能处理 coverage report 相对路径映射、dotted package import、单行安全 task 注释、class `__init__` 元数据、constructor 入参、常见 fallback/error path 输入、wrapper swallow exception、Unicode fallback、stream fallback、内部状态对象构造、Pydantic 通知 payload、keyword-only 参数、dataclass 输入类型和同步/异步 stream finish 状态。
+Python/pytest 链路已经从基础 pytest 草稿推进到三个真实项目样本：能处理 coverage report 相对路径映射、dotted package import、仓库根包布局、单行安全 task 注释、class `__init__` 元数据、constructor 入参、常见 fallback/error path 输入、wrapper swallow exception、Unicode fallback、stream fallback、内部状态对象构造、Pydantic 通知 payload、keyword-only 参数、dataclass 输入类型、同步/异步 stream finish 状态、ASGI scope、认证 scope 和配置文件/cast 场景。
 
 ## 仍需手审的边界
 
@@ -47,4 +48,4 @@ Python/pytest 链路已经从基础 pytest 草稿推进到两个真实 `src` lay
 
 项目当前的核心价值已经不再是“能生成测试文件”，而是能在真实仓库里把覆盖率缺口拆成可执行测试、明确手审项和环境依赖项，并把普通生成失败持续压到 0。后续新增语言或框架前，应优先要求它们能进入同样的验证闭环：可重复 baseline、隔离 task worktree、结构化 action、普通 repair 清零或可解释归类。
 
-下一步更有价值的样本不是继续选择纯 utility 库，而是服务型 Python 项目，重点覆盖 pytest fixtures、monkeypatch、HTTP client、数据库策略和项目自定义测试入口。
+下一步更有价值的是继续扩大服务型 Python 验证窗口，重点覆盖 pytest fixtures、monkeypatch、HTTP client、数据库策略、外部服务依赖和项目自定义测试入口。

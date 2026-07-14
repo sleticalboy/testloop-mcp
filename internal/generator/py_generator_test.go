@@ -465,6 +465,42 @@ func TestGeneratePytestCoverageTaskUsesPackageImportForSrcLayout(t *testing.T) {
 	}
 }
 
+func TestGeneratePytestCoverageTaskUsesPackageImportForRootPackageLayout(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "starlette", "_utils.py")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "starlette", "__init__.py"), []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	src := `def get_route_path(scope):
+    return scope["path"]
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "pytest-root-package-1",
+		Framework: "pytest",
+		Target:    "get_route_path",
+		LineRange: "2-2",
+		GapType:   "return_path",
+		TestName:  "test_get_route_path_covers_gap",
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "from starlette._utils import get_route_path") {
+		t.Fatalf("expected root-package import, got:\n%s", code)
+	}
+	if strings.Contains(code, "from _utils import") {
+		t.Fatalf("should not use basename import for root package layout:\n%s", code)
+	}
+}
+
 func TestGeneratePytestCoverageTaskSanitizesMultilineComment(t *testing.T) {
 	srcPath := filepath.Join(t.TempDir(), "service.py")
 	src := `def status(value):
@@ -1012,6 +1048,103 @@ func TestPytestCoverageTaskUsesCodexGoalStreamInputs(t *testing.T) {
 	}, []string{
 		"_GoalNotificationStream()",
 		"assert result is not None",
+	})
+}
+
+func TestPytestCoverageTaskUsesStarletteServiceInputs(t *testing.T) {
+	routeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-route-1",
+		Target:    "get_route_path",
+		GapType:   "return_path",
+		LineRange: "111-111",
+		TestName:  "test_get_route_path_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "get_route_path",
+		Params: []pyParamInfo{{Name: "scope"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "str",
+			Returns:    []string{"path", "path[len(root_path) :]"},
+		},
+	}, &routeTask)
+	assertPyGenerated(t, code, []string{
+		"scope = {'type': 'http', 'path': '/app/home', 'root_path': '/app'}",
+		"result = get_route_path(scope)",
+		"assert result == '/home'",
+	}, []string{
+		"get_route_path(None)",
+	})
+
+	scopeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-auth-1",
+		Target:    "has_required_scope",
+		GapType:   "branch",
+		LineRange: "18-22",
+		TestName:  "test_has_required_scope_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "has_required_scope",
+		Params: []pyParamInfo{{Name: "conn"}, {Name: "scopes"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "bool",
+			Returns:    []string{"False", "True"},
+		},
+	}, &scopeTask)
+	assertPyGenerated(t, code, []string{
+		"auth = type('Auth', (), {'scopes': ['authenticated']})()",
+		"conn = type('Conn', (), {'auth': auth})()",
+		"assert has_required_scope(conn, ['missing']) is False",
+		"result = has_required_scope(conn, ['authenticated'])",
+		"assert result is True",
+	}, []string{
+		"has_required_scope(None, None)",
+	})
+}
+
+func TestPytestCoverageTaskUsesStarletteConfigInputs(t *testing.T) {
+	readTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-config-1",
+		Target:    "Config._read_file",
+		GapType:   "branch",
+		LineRange: "111-121",
+		TestName:  "test_config_read_file_covers_gap",
+	}
+	configClass := pyClassInfo{
+		Name: "Config",
+		Methods: []pyFuncInfo{
+			{Name: "_read_file", Params: []pyParamInfo{{Name: "file_name"}, {Name: "encoding"}}, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "dict", Returns: []string{"file_values"}}},
+		},
+	}
+	code := genPytestClassTestForCoverageTask(configClass, &readTask)
+	assertPyGenerated(t, code, []string{
+		"handle = tempfile.NamedTemporaryFile('w', delete=False, encoding='utf-8')",
+		"handle.write(\"# ignored\\nAPI_KEY='secret'\\nDEBUG=true\\n\")",
+		"result = instance._read_file(handle.name, 'utf-8')",
+		"assert result == {'API_KEY': 'secret', 'DEBUG': 'true'}",
+		"os.unlink(handle.name)",
+	}, []string{
+		"Config(None, None, 'test', None)",
+		"instance._read_file('test', None)",
+	})
+
+	castTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-config-2",
+		Target:    "Config._perform_cast",
+		GapType:   "branch",
+		LineRange: "129-140",
+		TestName:  "test_config_perform_cast_covers_gap",
+	}
+	configClass.Methods[0] = pyFuncInfo{Name: "_perform_cast", Params: []pyParamInfo{{Name: "key"}, {Name: "value"}, {Name: "cast", HasDefault: true}}, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true, ReturnType: "unknown"}}
+	code = genPytestClassTestForCoverageTask(configClass, &castTask)
+	assertPyGenerated(t, code, []string{
+		"assert instance._perform_cast('DEBUG', 'true', bool) is True",
+		"assert instance._perform_cast('COUNT', '3', int) == 3",
+		"with pytest.raises(ValueError):",
+		"instance._perform_cast('DEBUG', 'maybe', bool)",
+	}, []string{
+		"instance._perform_cast('test', 'test', None)",
 	})
 }
 
