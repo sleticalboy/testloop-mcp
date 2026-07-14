@@ -259,11 +259,57 @@ func commandPathArg(path, dir string) string {
 }
 
 func pytestCommand(ctx context.Context, path string, verbose, coverage bool) *exec.Cmd {
-	root := findProjectRoot(path, "pyproject.toml", "setup.py", "pytest.ini", "tox.ini", "setup.cfg")
+	root := findPytestProjectRoot(path)
 	args := pytestArgs(path, root, verbose, coverage)
 	cmd := exec.CommandContext(ctx, "python3", args...)
 	cmd.Dir = root
 	return cmd
+}
+
+func findPytestProjectRoot(path string) string {
+	start := getProjectRoot(path)
+	root := findProjectRoot(path, "pyproject.toml", "setup.py", "pytest.ini", "tox.ini", "setup.cfg")
+	if root == start {
+		if parent := pytestTestsParentRoot(start); parent != "" {
+			return parent
+		}
+	}
+	return root
+}
+
+func pytestTestsParentRoot(start string) string {
+	root := start
+	for i := 0; i < 8; i++ {
+		if filepath.Base(root) == "tests" {
+			parent := filepath.Dir(root)
+			if hasPythonPackageChild(parent) {
+				return parent
+			}
+			return ""
+		}
+		parent := filepath.Dir(root)
+		if parent == root {
+			break
+		}
+		root = parent
+	}
+	return ""
+}
+
+func hasPythonPackageChild(root string) bool {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == "tests" {
+			continue
+		}
+		if fileExists(filepath.Join(root, entry.Name(), "__init__.py")) {
+			return true
+		}
+	}
+	return false
 }
 
 func pytestArgs(path, root string, verbose, coverage bool) []string {

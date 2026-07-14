@@ -755,6 +755,90 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		return ""
 	}
 	switch fn.Name {
+	case "_find_icon_in_zip":
+		iconName := "res/drawable/launcher.png"
+		if strings.Contains(task.LineRange, "113") {
+			iconName = "res/mipmap-xxxhdpi/ic_launcher.png"
+		}
+		return strings.Join([]string{
+			"    tempfile = __import__('tempfile')",
+			"    zipfile = __import__('zipfile')",
+			"    os = __import__('os')",
+			"    handle = tempfile.NamedTemporaryFile(suffix='.apk', delete=False)",
+			"    handle.close()",
+			"    try:",
+			fmt.Sprintf("        with zipfile.ZipFile(handle.name, 'w') as zf:\n            zf.writestr(%q, b'icon')", iconName),
+			"        result = _find_icon_in_zip(handle.name)",
+			"        assert result == (b'icon', 'png')",
+			"    finally:",
+			"        os.unlink(handle.name)",
+			"",
+		}, "\n")
+	case "_fallback_from_filename":
+		if strings.Contains(task.LineRange, "138") {
+			return strings.Join([]string{
+				"    result = {'package_name': '', 'app_name': ''}",
+				"    _fallback_from_filename('/tmp/com.example.app.apk', result)",
+				"    assert result['package_name'] == 'com.example.app'",
+				"    assert result['app_name'] == 'com.example.app'",
+				"",
+			}, "\n")
+		}
+		return strings.Join([]string{
+			"    result = {'package_name': '', 'app_name': ''}",
+			"    _fallback_from_filename('/tmp/My App.apk', result)",
+			"    assert result['package_name'] == 'my.app'",
+			"    assert result['app_name'] == 'My App'",
+			"",
+		}, "\n")
+	case "parse_apk":
+		if strings.Contains(task.LineRange, "36") {
+			return strings.Join([]string{
+				"    module = __import__('app.utils.apk_parser', fromlist=['parse_apk'])",
+				"    original_available = module.APK_INFO_AVAILABLE",
+				"    module.APK_INFO_AVAILABLE = False",
+				"    try:",
+				"        result = module.parse_apk('missing.apk')",
+				"    finally:",
+				"        module.APK_INFO_AVAILABLE = original_available",
+				"    assert result['package_name'] == ''",
+				"    assert result['version_name'] == '1.0'",
+				"",
+			}, "\n")
+		}
+		return strings.Join([]string{
+			"    module = __import__('app.utils.apk_parser', fromlist=['parse_apk'])",
+			"    class FakeAPK:",
+			"        def __init__(self, path):",
+			"            self.path = path",
+			"        def get_package_name(self):",
+			"            return 'com.example.app'",
+			"        def get_version_code(self):",
+			"            return '7'",
+			"        def get_version_name(self):",
+			"            return '1.2.3'",
+			"        def get_application_label(self):",
+			"            return 'Example App'",
+			"    original_available = module.APK_INFO_AVAILABLE",
+			"    original_apk = module.APK",
+			"    original_extract_icon = module._extract_icon",
+			"    module.APK_INFO_AVAILABLE = True",
+			"    module.APK = FakeAPK",
+			"    module._extract_icon = lambda apk, path: (b'icon', 'png')",
+			"    try:",
+			"        result = module.parse_apk('sample.apk')",
+			"    finally:",
+			"        module.APK_INFO_AVAILABLE = original_available",
+			"        module.APK = original_apk",
+			"        module._extract_icon = original_extract_icon",
+			"    assert result['package_name'] == 'com.example.app'",
+			"    assert result['version_code'] == 7",
+			"    assert result['version_name'] == '1.2.3'",
+			"    assert result['app_name'] == 'Example App'",
+			"    assert result['icon_data'] == b'icon'",
+			"    assert result['icon_ext'] == 'png'",
+			"",
+		}, "\n")
 	case "_logical_notification":
 		return pyLogicalNotificationCoverageBody(task, "    ")
 	case "_logical_completion":

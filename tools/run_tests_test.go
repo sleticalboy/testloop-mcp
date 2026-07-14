@@ -916,6 +916,42 @@ func TestHandleRunTestsPytestCoverageUsesProjectRootAndRelativePath(t *testing.T
 	}
 }
 
+func TestHandleRunTestsPytestUsesTestsParentWhenNoConfigMarker(t *testing.T) {
+	dir := t.TempDir()
+	appDir := filepath.Join(dir, "app")
+	testsDir := filepath.Join(dir, "tests", "app", "utils")
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatalf("mkdir app: %v", err)
+	}
+	if err := os.MkdirAll(testsDir, 0o755); err != nil {
+		t.Fatalf("mkdir tests: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "__init__.py"), []byte("VALUE = 1\n"), 0o644); err != nil {
+		t.Fatalf("write app init: %v", err)
+	}
+	testFile := filepath.Join(testsDir, "test_app.py")
+	if err := os.WriteFile(testFile, []byte("from app import VALUE\n\ndef test_value():\n    assert VALUE == 1\n"), 0o644); err != nil {
+		t.Fatalf("write pytest file: %v", err)
+	}
+	logPath := installFakePython3Recorder(t, pytestFailureOutput())
+
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "pytest",
+	}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake python3 cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=-m pytest -v tests/app/utils/test_app.py\n") {
+		t.Fatalf("fake python3 args log = %q, want relative pytest args", logText)
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

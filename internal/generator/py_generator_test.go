@@ -1505,6 +1505,117 @@ func TestPytestCoverageTaskUsesStarletteMultipartInputs(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesApkParserInputs(t *testing.T) {
+	findIconFunc := pyFuncInfo{
+		Name:   "_find_icon_in_zip",
+		Params: []pyParamInfo{{Name: "apk_path"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "tuple",
+		},
+	}
+	iconTask := types.CoverageTestTask{
+		ID:        "pytest-apk-icon-1",
+		Target:    "_find_icon_in_zip",
+		GapType:   "branch",
+		LineRange: "113-117",
+		TestName:  "test_find_icon_in_zip_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(findIconFunc, &iconTask)
+	assertPyGenerated(t, code, []string{
+		"handle = tempfile.NamedTemporaryFile(suffix='.apk', delete=False)",
+		"zf.writestr(\"res/mipmap-xxxhdpi/ic_launcher.png\", b'icon')",
+		"result = _find_icon_in_zip(handle.name)",
+		"assert result == (b'icon', 'png')",
+	}, []string{
+		"_find_icon_in_zip('test')",
+	})
+
+	fallbackFunc := pyFuncInfo{
+		Name:   "_fallback_from_filename",
+		Params: []pyParamInfo{{Name: "apk_path"}, {Name: "result"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn: false,
+		},
+	}
+	fallbackTask := types.CoverageTestTask{
+		ID:        "pytest-apk-fallback-1",
+		Target:    "_fallback_from_filename",
+		GapType:   "branch",
+		LineRange: "135-136",
+		TestName:  "test_fallback_from_filename_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(fallbackFunc, &fallbackTask)
+	assertPyGenerated(t, code, []string{
+		"result = {'package_name': '', 'app_name': ''}",
+		"_fallback_from_filename('/tmp/My App.apk', result)",
+		"assert result['package_name'] == 'my.app'",
+		"assert result['app_name'] == 'My App'",
+	}, []string{
+		"_fallback_from_filename('test', None)",
+	})
+
+	packageFallbackTask := types.CoverageTestTask{
+		ID:        "pytest-apk-fallback-2",
+		Target:    "_fallback_from_filename",
+		GapType:   "branch",
+		LineRange: "138-139",
+		TestName:  "test_fallback_from_filename_package_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(fallbackFunc, &packageFallbackTask)
+	assertPyGenerated(t, code, []string{
+		"_fallback_from_filename('/tmp/com.example.app.apk', result)",
+		"assert result['package_name'] == 'com.example.app'",
+	}, []string{
+		"_fallback_from_filename('test', None)",
+	})
+
+	parseFunc := pyFuncInfo{
+		Name:   "parse_apk",
+		Params: []pyParamInfo{{Name: "apk_path"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "dict",
+		},
+	}
+	unavailableTask := types.CoverageTestTask{
+		ID:        "pytest-apk-parse-1",
+		Target:    "parse_apk",
+		GapType:   "branch",
+		LineRange: "36-38",
+		TestName:  "test_parse_apk_unavailable_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(parseFunc, &unavailableTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.utils.apk_parser', fromlist=['parse_apk'])",
+		"module.APK_INFO_AVAILABLE = False",
+		"result = module.parse_apk('missing.apk')",
+		"assert result['version_name'] == '1.0'",
+	}, []string{
+		"parse_apk('test')",
+	})
+
+	parseTask := types.CoverageTestTask{
+		ID:        "pytest-apk-parse-2",
+		Target:    "parse_apk",
+		GapType:   "branch",
+		LineRange: "44-70",
+		TestName:  "test_parse_apk_metadata_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(parseFunc, &parseTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeAPK:",
+		"module.APK = FakeAPK",
+		"module._extract_icon = lambda apk, path: (b'icon', 'png')",
+		"result = module.parse_apk('sample.apk')",
+		"assert result['package_name'] == 'com.example.app'",
+		"assert result['version_code'] == 7",
+		"assert result['icon_data'] == b'icon'",
+	}, []string{
+		"parse_apk('test')",
+	})
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {
