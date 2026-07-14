@@ -787,6 +787,14 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		return pyFastAPIBuildAppOutCoverageBody("    ")
 	case "list_apps":
 		return pyFastAPIListAppsCoverageBody("    ")
+	case "upload_file", "upload_bytes", "get_private_url", "delete_file", "generate_upload_token", "move_file", "download_to_temp":
+		if strings.Contains(task.File, "qiniu_service.py") {
+			return pyFastAPIQiniuStorageCoverageBody(fn.Name, "    ")
+		}
+		if strings.Contains(task.File, "tos_service.py") {
+			return pyFastAPITOSStorageCoverageBody(fn.Name, "    ")
+		}
+		return ""
 	case "get_current_user_by_api_key":
 		if strings.Contains(task.LineRange, "148") {
 			return strings.Join([]string{
@@ -810,6 +818,11 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			"    assert verify_refresh_token('not-a-jwt') is None",
 			"",
 		}, "\n")
+	case "_get_client":
+		if strings.Contains(task.File, "tos_service.py") {
+			return pyFastAPITOSStorageCoverageBody(fn.Name, "    ")
+		}
+		return ""
 	case "list_users":
 		return pyFastAPIAuthListUsersCoverageBody("    ")
 	case "list_api_keys":
@@ -1072,6 +1085,300 @@ func pyFastAPIListAppsCoverageBody(indent string) string {
 		indent + "assert db.limit_value == 20",
 		"",
 	}, "\n")
+}
+
+func pyFastAPIQiniuStorageCoverageBody(name string, indent string) string {
+	prefix := []string{
+		indent + "import sys",
+		indent + "from types import SimpleNamespace",
+		indent + "module = __import__('app.services.qiniu_service', fromlist=['" + name + "'])",
+		indent + "module.settings.QINIU_BUCKET = 'bucket'",
+		indent + "module.settings.QINIU_DOMAIN = 'cdn.example.com'",
+		indent + "module.get_qiniu_auth = lambda: SimpleNamespace(upload_token=lambda *args, **kwargs: 'token', private_download_url=lambda url, expires=None: url + '?signed=1')",
+	}
+	switch name {
+	case "upload_file":
+		return strings.Join(append(prefix,
+			indent+"module._is_qiniu_configured = lambda: False",
+			indent+"ok, message = module.upload_file('/missing/source.apk', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert message",
+			indent+"class Info:",
+			indent+"    status_code = 500",
+			indent+"    text_body = 'remote failed'",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(put_file=lambda *args, **kwargs: ({}, Info()))",
+			indent+"module._is_qiniu_configured = lambda: True",
+			indent+"ok, message = module.upload_file('/missing/source.apk', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert 'remote failed' in message or message",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(put_file=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('remote boom')))",
+			indent+"ok, message = module.upload_file('/missing/source.apk', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert 'remote boom' in message",
+			"",
+		), "\n")
+	case "upload_bytes":
+		return strings.Join(append(prefix,
+			indent+"module._is_qiniu_configured = lambda: False",
+			indent+"module._save_icon_local = lambda key, data: (_ for _ in ()).throw(RuntimeError('local fail'))",
+			indent+"ok, message = module.upload_bytes(b'data', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert 'local fail' in message",
+			indent+"class Info:",
+			indent+"    status_code = 500",
+			indent+"    text_body = 'remote failed'",
+			indent+"module._is_qiniu_configured = lambda: True",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(put_data=lambda *args, **kwargs: ({}, Info()))",
+			indent+"module._save_icon_local = lambda key, data: '/icons/fallback.png'",
+			indent+"ok, message = module.upload_bytes(b'data', 'icons/app/icon.png')",
+			indent+"assert ok is True",
+			indent+"assert message == '/icons/fallback.png'",
+			indent+"module._save_icon_local = lambda key, data: (_ for _ in ()).throw(RuntimeError('local fail'))",
+			indent+"ok, message = module.upload_bytes(b'data', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert 'remote failed' in message and 'local fail' in message",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(put_data=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('remote boom')))",
+			indent+"ok, message = module.upload_bytes(b'data', 'icons/app/icon.png')",
+			indent+"assert ok is False",
+			indent+"assert 'local fail' in message",
+			"",
+		), "\n")
+	case "get_private_url":
+		return strings.Join(append(prefix,
+			indent+"module.get_qiniu_auth = lambda: (_ for _ in ()).throw(RuntimeError('auth fail'))",
+			indent+"result = module.get_private_url('apps/demo.apk', None)",
+			indent+"assert result == 'http://cdn.example.com/apps/demo.apk'",
+			"",
+		), "\n")
+	case "delete_file":
+		return strings.Join(append(prefix,
+			indent+"class Info:",
+			indent+"    status_code = 500",
+			indent+"    text_body = 'delete failed'",
+			indent+"class FakeBucket:",
+			indent+"    def delete(self, *args, **kwargs):",
+			indent+"        return {}, Info()",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: FakeBucket())",
+			indent+"ok, message = module.delete_file('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'delete failed' in message",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: (_ for _ in ()).throw(RuntimeError('bucket boom')))",
+			indent+"ok, message = module.delete_file('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'bucket boom' in message",
+			"",
+		), "\n")
+	case "generate_upload_token":
+		return strings.Join(append(prefix,
+			indent+"module._is_qiniu_configured = lambda: False",
+			indent+"token, message = module.generate_upload_token('apps/demo.apk')",
+			indent+"assert token is None",
+			indent+"module._is_qiniu_configured = lambda: True",
+			indent+"module.get_qiniu_auth = lambda: (_ for _ in ()).throw(RuntimeError('auth fail'))",
+			indent+"token, message = module.generate_upload_token('apps/demo.apk')",
+			indent+"assert token is None",
+			indent+"assert 'auth fail' in message",
+			"",
+		), "\n")
+	case "move_file":
+		return strings.Join(append(prefix,
+			indent+"module._is_qiniu_configured = lambda: False",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is False",
+			indent+"module._is_qiniu_configured = lambda: True",
+			indent+"class Info:",
+			indent+"    status_code = 500",
+			indent+"    text_body = 'move failed'",
+			indent+"class FakeBucket:",
+			indent+"    def stat(self, *args, **kwargs):",
+			indent+"        return object(), SimpleNamespace()",
+			indent+"    def delete(self, *args, **kwargs):",
+			indent+"        return {}, SimpleNamespace(status_code=200, text_body='')",
+			indent+"    def move(self, *args, **kwargs):",
+			indent+"        return {}, Info()",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: FakeBucket())",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'move failed' in message",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: (_ for _ in ()).throw(RuntimeError('bucket boom')))",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'bucket boom' in message",
+			"",
+		), "\n")
+	case "download_to_temp":
+		return strings.Join(append(prefix,
+			indent+"module._is_qiniu_configured = lambda: False",
+			indent+"ok, message = module.download_to_temp('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"module._is_qiniu_configured = lambda: True",
+			indent+"class FakeBucket:",
+			indent+"    pass",
+			indent+"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: FakeBucket())",
+			indent+"original_urlretrieve = __import__('urllib.request').request.urlretrieve",
+			indent+"__import__('urllib.request').request.urlretrieve = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('download fail'))",
+			indent+"try:",
+			indent+"    ok, message = module.download_to_temp('apps/demo.apk')",
+			indent+"finally:",
+			indent+"    __import__('urllib.request').request.urlretrieve = original_urlretrieve",
+			indent+"assert ok is False",
+			indent+"assert 'download fail' in message",
+			"",
+		), "\n")
+	default:
+		return ""
+	}
+}
+
+func pyFastAPITOSStorageCoverageBody(name string, indent string) string {
+	prefix := []string{
+		indent + "import os",
+		indent + "import sys",
+		indent + "import tempfile",
+		indent + "from types import SimpleNamespace",
+		indent + "module = __import__('app.services.tos_service', fromlist=['" + name + "'])",
+		indent + "module.settings.TOS_ACCESS_KEY = 'ak'",
+		indent + "module.settings.TOS_SECRET_KEY = 'sk'",
+		indent + "module.settings.TOS_BUCKET = 'bucket'",
+		indent + "module.settings.TOS_ENDPOINT = 'tos.example.com'",
+		indent + "module.settings.TOS_INTERNAL_ENDPOINT = 'tos-internal.example.com'",
+		indent + "module.settings.TOS_DOMAIN = 'https://cdn.example.com'",
+		indent + "module._client = None",
+		indent + "module._client_int = None",
+	}
+	switch name {
+	case "_get_client":
+		return strings.Join(append(prefix,
+			indent+"sys.modules['tos'] = SimpleNamespace(TosClientV2=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('client boom')))",
+			indent+"assert module._get_client(True) is None",
+			"",
+		), "\n")
+	case "upload_file":
+		return strings.Join(append(prefix,
+			indent+"module._get_client = lambda internal=True: None",
+			indent+"ok, message = module.upload_file('/missing/source.apk', 'apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"class FakeClient:",
+			indent+"    def put_object(self, *args, **kwargs):",
+			indent+"        raise RuntimeError('put failed')",
+			indent+"module._get_client = lambda internal=True: FakeClient()",
+			indent+"handle = tempfile.NamedTemporaryFile(delete=False)",
+			indent+"handle.write(b'data')",
+			indent+"handle.close()",
+			indent+"try:",
+			indent+"    ok, message = module.upload_file(handle.name, 'apps/demo.apk')",
+			indent+"finally:",
+			indent+"    os.unlink(handle.name)",
+			indent+"assert ok is False",
+			indent+"assert 'put failed' in message",
+			"",
+		), "\n")
+	case "upload_bytes":
+		return strings.Join(append(prefix,
+			indent+"module._get_client = lambda internal=True: None",
+			indent+"ok, message = module.upload_bytes(b'data', 'apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"class SuccessClient:",
+			indent+"    def put_object(self, *args, **kwargs):",
+			indent+"        return None",
+			indent+"module._get_client = lambda internal=True: SuccessClient()",
+			indent+"ok, message = module.upload_bytes(b'data', 'apps/demo.apk')",
+			indent+"assert ok is True",
+			indent+"assert message == 'https://cdn.example.com/apps/demo.apk'",
+			indent+"class FailingClient:",
+			indent+"    def put_object(self, *args, **kwargs):",
+			indent+"        raise RuntimeError('put failed')",
+			indent+"module._get_client = lambda internal=True: FailingClient()",
+			indent+"ok, message = module.upload_bytes(b'data', 'apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'put failed' in message",
+			"",
+		), "\n")
+	case "get_private_url":
+		return strings.Join(append(prefix,
+			indent+"assert module.get_private_url('apps/demo.apk', None) == 'https://cdn.example.com/apps/demo.apk'",
+			"",
+		), "\n")
+	case "delete_file":
+		return strings.Join(append(prefix,
+			indent+"module._get_client = lambda internal=True: None",
+			indent+"ok, message = module.delete_file('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"class FailingClient:",
+			indent+"    def delete_object(self, *args, **kwargs):",
+			indent+"        raise RuntimeError('delete failed')",
+			indent+"module._get_client = lambda internal=True: FailingClient()",
+			indent+"ok, message = module.delete_file('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'delete failed' in message",
+			"",
+		), "\n")
+	case "generate_upload_token":
+		return strings.Join(append(prefix,
+			indent+"token, message = module.generate_upload_token('apps/demo.apk')",
+			indent+"assert token is None",
+			indent+"assert '暂未实现' in message",
+			"",
+		), "\n")
+	case "move_file":
+		return strings.Join(append(prefix,
+			indent+"module._get_client = lambda internal=True: None",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is False",
+			indent+"class SuccessClient:",
+			indent+"    def __init__(self):",
+			indent+"        self.deleted = []",
+			indent+"    def delete_object(self, bucket, key):",
+			indent+"        if key == 'new.apk' and not self.deleted:",
+			indent+"            self.deleted.append(key)",
+			indent+"            raise RuntimeError('ignore missing dest')",
+			indent+"        self.deleted.append(key)",
+			indent+"    def copy_object(self, *args, **kwargs):",
+			indent+"        return None",
+			indent+"client = SuccessClient()",
+			indent+"module._get_client = lambda internal=True: client",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is True",
+			indent+"assert message == 'https://cdn.example.com/new.apk'",
+			indent+"class FailingClient:",
+			indent+"    def delete_object(self, *args, **kwargs):",
+			indent+"        return None",
+			indent+"    def copy_object(self, *args, **kwargs):",
+			indent+"        raise RuntimeError('copy failed')",
+			indent+"module._get_client = lambda internal=True: FailingClient()",
+			indent+"ok, message = module.move_file('old.apk', 'new.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'copy failed' in message",
+			"",
+		), "\n")
+	case "download_to_temp":
+		return strings.Join(append(prefix,
+			indent+"module._get_client = lambda internal=True: None",
+			indent+"ok, message = module.download_to_temp('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"class Response:",
+			indent+"    def read(self):",
+			indent+"        return b'data'",
+			indent+"class SuccessClient:",
+			indent+"    def get_object(self, *args, **kwargs):",
+			indent+"        return Response()",
+			indent+"module._get_client = lambda internal=True: SuccessClient()",
+			indent+"ok, path = module.download_to_temp('apps/demo.apk')",
+			indent+"assert ok is True",
+			indent+"assert os.path.exists(path)",
+			indent+"os.unlink(path)",
+			indent+"class FailingClient:",
+			indent+"    def get_object(self, *args, **kwargs):",
+			indent+"        raise RuntimeError('download failed')",
+			indent+"module._get_client = lambda internal=True: FailingClient()",
+			indent+"ok, message = module.download_to_temp('apps/demo.apk')",
+			indent+"assert ok is False",
+			indent+"assert 'download failed' in message",
+			"",
+		), "\n")
+	default:
+		return ""
+	}
 }
 
 func pyFastAPIAuthListUsersCoverageBody(indent string) string {

@@ -2038,6 +2038,128 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesFastAPIStorageInputs(t *testing.T) {
+	uploadBytesFunc := pyFuncInfo{
+		Name: "upload_bytes",
+		Params: []pyParamInfo{
+			{Name: "data"},
+			{Name: "key"},
+			{Name: "mime_type", HasDefault: true},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "tuple", Raises: true},
+	}
+	qiniuUploadTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qiniu-upload-bytes-1",
+		Target:    "upload_bytes",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/qiniu_service.py",
+		LineRange: "118-125",
+		TestName:  "test_upload_bytes_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(uploadBytesFunc, &qiniuUploadTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.qiniu_service', fromlist=['upload_bytes'])",
+		"module._is_qiniu_configured = lambda: True",
+		"sys.modules['qiniu'] = SimpleNamespace(put_data=lambda *args, **kwargs: ({}, Info()))",
+		"assert ok is True",
+		"assert 'remote failed' in message and 'local fail' in message",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"upload_bytes({}, 'test', 'test')",
+	})
+
+	qiniuMoveFunc := pyFuncInfo{
+		Name:     "move_file",
+		Params:   []pyParamInfo{{Name: "src_key"}, {Name: "dest_key"}},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "tuple", Raises: true},
+	}
+	qiniuMoveTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qiniu-move-1",
+		Target:    "move_file",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/qiniu_service.py",
+		LineRange: "243-246",
+		TestName:  "test_move_file_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(qiniuMoveFunc, &qiniuMoveTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.qiniu_service', fromlist=['move_file'])",
+		"def stat(self, *args, **kwargs):",
+		"def move(self, *args, **kwargs):",
+		"assert 'move failed' in message",
+		"assert 'bucket boom' in message",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"move_file('test', 'test')",
+	})
+
+	qiniuDownloadFunc := pyFuncInfo{
+		Name:     "download_to_temp",
+		Params:   []pyParamInfo{{Name: "key"}},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "tuple", Raises: true},
+	}
+	qiniuDownloadTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qiniu-download-1",
+		Target:    "download_to_temp",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/qiniu_service.py",
+		LineRange: "279-282",
+		TestName:  "test_download_to_temp_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(qiniuDownloadFunc, &qiniuDownloadTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.qiniu_service', fromlist=['download_to_temp'])",
+		"class FakeBucket:",
+		"sys.modules['qiniu'] = SimpleNamespace(BucketManager=lambda auth: FakeBucket())",
+		"assert 'download fail' in message",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"download_to_temp('test')",
+	})
+
+	tosClientFunc := pyFuncInfo{
+		Name:     "_get_client",
+		Params:   []pyParamInfo{{Name: "internal", HasDefault: true}},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown", Raises: true},
+	}
+	tosClientTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-tos-client-1",
+		Target:    "_get_client",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/tos_service.py",
+		LineRange: "46-50",
+		TestName:  "test_get_client_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(tosClientFunc, &tosClientTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.tos_service', fromlist=['_get_client'])",
+		"sys.modules['tos'] = SimpleNamespace(TosClientV2=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('client boom')))",
+		"assert module._get_client(True) is None",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"_get_client(None)",
+	})
+
+	tosMoveTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-tos-move-1",
+		Target:    "move_file",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/tos_service.py",
+		LineRange: "160-164",
+		TestName:  "test_move_file_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(qiniuMoveFunc, &tosMoveTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.tos_service', fromlist=['move_file'])",
+		"class SuccessClient:",
+		"assert message == 'https://cdn.example.com/new.apk'",
+		"assert 'copy failed' in message",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"move_file('test', 'test')",
+	})
+}
+
 func TestPytestCoverageTaskUsesFastAPIDatabaseMigrationInputs(t *testing.T) {
 	migrateFunc := pyFuncInfo{
 		Name:     "_migrate_short_code_to_app",
