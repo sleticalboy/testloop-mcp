@@ -1769,6 +1769,125 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 	}
 }
 
+func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
+	apiKeyFunc := pyFuncInfo{
+		Name: "get_current_user_by_api_key",
+		Params: []pyParamInfo{
+			{Name: "request"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	apiKeyTask := types.CoverageTestTask{
+		ID:              "pytest-fastapi-api-key-1",
+		Target:          "get_current_user_by_api_key",
+		GapType:         "branch",
+		LineRange:       "148-150",
+		TestName:        "test_get_current_user_by_api_key_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: not form"},
+	}
+	code := genPytestFuncTestForCoverageTask(apiKeyFunc, &apiKeyTask)
+	assertPyGenerated(t, code, []string{
+		"request = SimpleNamespace(headers={}, query_params={})",
+		"result = get_current_user_by_api_key(request, None)",
+		"assert result is None",
+	}, []string{
+		"get_current_user_by_api_key(None, None)",
+	})
+
+	qrFunc := pyFuncInfo{
+		Name:     "generate_qr_data_url",
+		Params:   []pyParamInfo{{Name: "text"}, {Name: "size", HasDefault: true}},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "str", Raises: true},
+	}
+	qrTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qr-1",
+		Target:    "generate_qr_data_url",
+		GapType:   "error_path",
+		LineRange: "57-59",
+		TestName:  "test_generate_qr_data_url_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(qrFunc, &qrTask)
+	assertPyGenerated(t, code, []string{
+		"def fake_import(name, *args, **kwargs):",
+		"if name == 'qrcode':",
+		"result = generate_qr_data_url('https://example.com/download')",
+		"assert result == ''",
+	}, []string{
+		"with pytest.raises(Exception):",
+		"generate_qr_data_url('test', 1)",
+	})
+
+	lifespanFunc := pyFuncInfo{
+		Name:    "lifespan",
+		Params:  []pyParamInfo{{Name: "app"}},
+		IsAsync: true,
+	}
+	serveTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-frontend-1",
+		Target:    "serve_frontend",
+		GapType:   "branch",
+		LineRange: "86-89",
+		TestName:  "test_serve_frontend_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(lifespanFunc, &serveTask)
+	assertPyGenerated(t, code, []string{
+		"manual_review_environment: serve_frontend is defined only when frontend/dist exists at app import time",
+	}, []string{
+		"asyncio.run(lifespan(None))",
+	})
+}
+
+func TestPytestCoverageTaskUsesFastAPIDatabaseMigrationInputs(t *testing.T) {
+	migrateFunc := pyFuncInfo{
+		Name:     "_migrate_short_code_to_app",
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	for _, tt := range []struct {
+		name      string
+		lineRange string
+		wants     []string
+	}{
+		{
+			name:      "current version already has app code",
+			lineRange: "126-128",
+			wants: []string{
+				"fake_db = FakeDB([(1, 'current-code')], [])",
+				"assert fake_db.updates == []",
+			},
+		},
+		{
+			name:      "latest version already has app code",
+			lineRange: "144-146",
+			wants: []string{
+				"fake_db = FakeDB([], [(2, 'latest-code')])",
+				"assert fake_db.updates == []",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:        "pytest-fastapi-migrate-1",
+				Target:    "_migrate_short_code_to_app",
+				GapType:   "branch",
+				LineRange: tt.lineRange,
+				TestName:  "test_migrate_short_code_to_app_covers_gap",
+			}
+			code := genPytestFuncTestForCoverageTask(migrateFunc, &task)
+			baseWants := []string{
+				"sqlalchemy.inspect = lambda engine: FakeInspector()",
+				"module.SessionLocal = lambda: fake_db",
+				"result = _migrate_short_code_to_app()",
+				"assert result is None",
+				"assert fake_db.committed is True",
+			}
+			assertPyGenerated(t, code, append(baseWants, tt.wants...), []string{
+				"assert result == (#",
+			})
+		})
+	}
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {

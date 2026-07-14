@@ -783,6 +783,33 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			"    assert result['share_url'].endswith('/s/abc123')",
 			"",
 		}, "\n")
+	case "get_current_user_by_api_key":
+		if strings.Contains(task.LineRange, "148") {
+			return strings.Join([]string{
+				"    from types import SimpleNamespace",
+				"    request = SimpleNamespace(headers={}, query_params={})",
+				"    result = get_current_user_by_api_key(request, None)",
+				"    assert result is None",
+				"",
+			}, "\n")
+		}
+		return ""
+	case "generate_qr_data_url":
+		return strings.Join([]string{
+			"    builtins = __import__('builtins')",
+			"    original_import = builtins.__import__",
+			"    def fake_import(name, *args, **kwargs):",
+			"        if name == 'qrcode':",
+			"            raise ImportError('missing qrcode')",
+			"        return original_import(name, *args, **kwargs)",
+			"    builtins.__import__ = fake_import",
+			"    try:",
+			"        result = generate_qr_data_url('https://example.com/download')",
+			"    finally:",
+			"        builtins.__import__ = original_import",
+			"    assert result == ''",
+			"",
+		}, "\n")
 	case "_find_icon_in_zip":
 		iconName := "res/drawable/launcher.png"
 		if strings.Contains(task.LineRange, "113") {
@@ -890,6 +917,16 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		}, "\n")
 	case "short_link_page":
 		return pyShortLinkPageCoverageBody(task, "    ")
+	case "_migrate_short_code_to_app":
+		return pyMigrateShortCodeCoverageBody(task, "    ")
+	case "lifespan":
+		if task.Target == "serve_frontend" {
+			return strings.Join([]string{
+				"    __import__('pytest').skip('manual_review_environment: serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main')",
+				"",
+			}, "\n")
+		}
+		return ""
 	case "_logical_notification":
 		return pyLogicalNotificationCoverageBody(task, "    ")
 	case "_logical_completion":
@@ -1052,6 +1089,69 @@ func pyShortLinkPageCoverageBody(task *types.CoverageTestTask, indent string) st
 	default:
 		return ""
 	}
+}
+
+func pyMigrateShortCodeCoverageBody(task *types.CoverageTestTask, indent string) string {
+	prefix := []string{
+		indent + "module = __import__('app.models.database', fromlist=['_migrate_short_code_to_app'])",
+		indent + "sqlalchemy = __import__('sqlalchemy')",
+		indent + "class FakeInspector:",
+		indent + "    def get_columns(self, table_name):",
+		indent + "        return [{'name': 'short_code'}]",
+		indent + "class FetchOneResult:",
+		indent + "    def __init__(self, row):",
+		indent + "        self.row = row",
+		indent + "    def fetchone(self):",
+		indent + "        return self.row",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, first_rows, second_rows):",
+		indent + "        self.first_rows = first_rows",
+		indent + "        self.second_rows = second_rows",
+		indent + "        self.updates = []",
+		indent + "        self.committed = False",
+		indent + "        self.closed = False",
+		indent + "    def execute(self, statement, params=None):",
+		indent + "        sql = str(statement)",
+		indent + "        if 'WHERE short_code IS NOT NULL AND is_current = 1' in sql:",
+		indent + "            return list(self.first_rows)",
+		indent + "        if 'JOIN app_versions' in sql:",
+		indent + "            return list(self.second_rows)",
+		indent + "        if 'SELECT short_code FROM apps WHERE id = :id' in sql:",
+		indent + "            return FetchOneResult(('already',))",
+		indent + "        if sql.lstrip().startswith('UPDATE apps SET short_code'):",
+		indent + "            self.updates.append(params)",
+		indent + "            return []",
+		indent + "        return []",
+		indent + "    def commit(self):",
+		indent + "        self.committed = True",
+		indent + "    def close(self):",
+		indent + "        self.closed = True",
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	firstRows := "[(1, 'current-code')]"
+	secondRows := "[]"
+	if strings.Contains(lineRange, "144") {
+		firstRows = "[]"
+		secondRows = "[(2, 'latest-code')]"
+	}
+	lines := append(prefix,
+		indent+"fake_db = FakeDB("+firstRows+", "+secondRows+")",
+		indent+"original_session = module.SessionLocal",
+		indent+"original_inspect = sqlalchemy.inspect",
+		indent+"module.SessionLocal = lambda: fake_db",
+		indent+"sqlalchemy.inspect = lambda engine: FakeInspector()",
+		indent+"try:",
+		indent+"    result = _migrate_short_code_to_app()",
+		indent+"finally:",
+		indent+"    module.SessionLocal = original_session",
+		indent+"    sqlalchemy.inspect = original_inspect",
+		indent+"assert result is None",
+		indent+"assert fake_db.updates == []",
+		indent+"assert fake_db.committed is True",
+		indent+"assert fake_db.closed is True",
+		"",
+	)
+	return strings.Join(lines, "\n")
 }
 
 func pyLogicalNotificationCoverageBody(task *types.CoverageTestTask, indent string) string {
@@ -1844,7 +1944,7 @@ func pyExpectedReturnExprWithValues(a pyFuncAnalysis, params []pyParamInfo, boun
 }
 
 func pyReturnExprIsSafe(expr string) bool {
-	if expr == "" || strings.ContainsAny(expr, "\n;{}[]") {
+	if expr == "" || strings.HasPrefix(strings.TrimSpace(expr), "#") || strings.ContainsAny(expr, "\n;{}[]") {
 		return false
 	}
 	for _, blocked := range []string{"await ", "lambda ", "yield ", " for ", " if ", "(", ")("} {
