@@ -2092,6 +2092,26 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 	}, []string{
 		"asyncio.run(lifespan(None))",
 	})
+
+	mainTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-lifespan-1",
+		Target:    "main.py",
+		GapType:   "statement",
+		File:      "/tmp/app/main.py",
+		LineRange: "69-71",
+		TestName:  "test_main_py_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(lifespanFunc, &mainTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.main', fromlist=['lifespan'])",
+		"module.init_db = lambda: calls.append('init_db')",
+		"async def _run_lifespan():",
+		"async with lifespan(None):",
+		"asyncio.run(_run_lifespan())",
+		"assert calls == ['init_db', 'ensure_admin_exists', 'close', 'yielded']",
+	}, []string{
+		"asyncio.run(lifespan(None))",
+	})
 }
 
 func TestPytestCoverageTaskUsesFastAPIStorageInputs(t *testing.T) {

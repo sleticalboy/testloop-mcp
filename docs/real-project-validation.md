@@ -17,7 +17,7 @@
 | 9 | pallets/click | Python / pytest | top20 | `passed=20`，`ready=19`，`manual_review_environment=1` | 0 |
 | 10 | Codex SDK Python | Python / pytest | top30 | `passed=30`，`ready=30`，`skipped_total=0` | 0 |
 | 11 | Starlette | Python / pytest | top50 | `passed=50`，`ready=50`，`skipped_total=0` | 0 |
-| 12 | haoy-apk-station backend | Python / FastAPI + pytest | top240 | `passed=240`，`ready=237`，`manual_review_environment=3` | 0 |
+| 12 | haoy-apk-station backend | Python / FastAPI + pytest | top260 | `passed=260`，`ready=257`，`manual_review_environment=3` | 0 |
 
 `普通 repair` 指最新验证结果中仍需要修生成测试本身的 `repair_generated_test` / `apply_fix_suggestions` / `generation_error` 数量。`manual_review_*` 不计入普通 repair，它表示工具已经给 Agent 一个稳定动作分类：不要继续盲修同一份生成测试，应改走公共入口、依赖注入、集成环境或人工复核。
 
@@ -27,7 +27,7 @@ Go 链路已经能覆盖低依赖 utility、HTTP wrapper、JSON/file helper、pa
 
 JS/TS 链路已经验证过 Vitest、Jest、Mocha、ESM、TypeScript strict 编译、`ts-jest`、项目自定义 runner、测试目录 include 规则、monorepo 外部资源 symlink、默认导出实例、JS `#private`、TS `private/protected`、getter、未导出内部 helper 的公共入口覆盖、跨模块 interface/type/class/enum mock、Map/Set、函数类型字段、fake timers、动态 import 和 Node process/platform 全局状态。
 
-Python/pytest 链路已经从基础 pytest 草稿推进到四个真实项目样本：能处理 coverage report 相对路径映射、dotted package import、仓库根包布局、单行安全 task 注释、class `__init__` 元数据、constructor 入参、常见 fallback/error path 输入、wrapper swallow exception、Unicode fallback、stream fallback、内部状态对象构造、Pydantic 通知 payload、keyword-only 参数、dataclass 输入类型、同步/异步 stream finish 状态、ASGI scope、认证 scope、配置文件/cast 场景、可变多值字典状态断言、文件上传临时流、HTTP header 追加、ASGI endpoint 最小 scope / receive / send、WebSocket decode / dispatch、multipart parser 状态机、无 pyproject 的 `tests/...` 项目根推断、FastAPI TestClient 业务流、SQLAlchemy SQLite 临时库、API Key 上传路径、zip/apk 文件输入、外部 APK parser SDK fake、下载 URL helper、版本详情、下载重定向 fallback、删除图标、隐藏应用、下载统计、短链页面渲染、短链当前版本查询和最终 HTMLResponse 返回路径、auth refresh helper、JWT refresh/access token 分支、API Key request fake、auth service API Key fake DB、认证/API Key 列表 fake DB、应用列表搜索 fake DB、`build_app_out` fallback 版本查询、QR import fallback、数据库迁移 fake Session/inspect、Qiniu 对象存储 helper fallback、storage backend 选择、Qiniu/TOS 对象存储错误返回值、fake SDK/client fallback、本地图标保存临时目录、Qiniu SDK 缺失路径、API Key 唯一性循环 fake DB、JWT `verify_exp=False` 解码分支、对象存储配置状态和 storage facade 返回路径，以及动态前端入口和根静态文件入口的环境手审分类。
+Python/pytest 链路已经从基础 pytest 草稿推进到四个真实项目样本：能处理 coverage report 相对路径映射、dotted package import、仓库根包布局、单行安全 task 注释、class `__init__` 元数据、constructor 入参、常见 fallback/error path 输入、wrapper swallow exception、Unicode fallback、stream fallback、内部状态对象构造、Pydantic 通知 payload、keyword-only 参数、dataclass 输入类型、同步/异步 stream finish 状态、ASGI scope、认证 scope、配置文件/cast 场景、可变多值字典状态断言、文件上传临时流、HTTP header 追加、ASGI endpoint 最小 scope / receive / send、WebSocket decode / dispatch、multipart parser 状态机、无 pyproject 的 `tests/...` 项目根推断、FastAPI TestClient 业务流、SQLAlchemy SQLite 临时库、API Key 上传路径、zip/apk 文件输入、外部 APK parser SDK fake、下载 URL helper、版本详情、下载重定向 fallback、删除图标、隐藏应用、下载统计、短链页面渲染、短链当前版本查询和最终 HTMLResponse 返回路径、auth refresh helper、JWT refresh/access token 分支、API Key request fake、auth service API Key fake DB、认证/API Key 列表 fake DB、应用列表搜索 fake DB、`build_app_out` fallback 版本查询、QR import fallback、数据库迁移 fake Session/inspect、Qiniu 对象存储 helper fallback、storage backend 选择、Qiniu/TOS 对象存储错误返回值、fake SDK/client fallback、本地图标保存临时目录、Qiniu SDK 缺失路径、API Key 唯一性循环 fake DB、JWT `verify_exp=False` 解码分支、对象存储配置状态、storage facade 返回路径、FastAPI `lifespan` async context manager 启动钩子隔离，以及动态前端入口和根静态文件入口的环境手审分类。
 
 ## 仍需手审的边界
 

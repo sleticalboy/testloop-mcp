@@ -976,7 +976,7 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 				"",
 			}, "\n")
 		}
-		return ""
+		return pyFastAPILifespanCoverageBody("    ")
 	case "_logical_notification":
 		return pyLogicalNotificationCoverageBody(task, "    ")
 	case "_logical_completion":
@@ -1012,6 +1012,33 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 	default:
 		return ""
 	}
+}
+
+func pyFastAPILifespanCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "module = __import__('app.main', fromlist=['lifespan'])",
+		indent + "calls = []",
+		indent + "class FakeDB:",
+		indent + "    def close(self):",
+		indent + "        calls.append('close')",
+		indent + "original_init_db = module.init_db",
+		indent + "original_session_local = module.SessionLocal",
+		indent + "original_ensure_admin_exists = module.ensure_admin_exists",
+		indent + "module.init_db = lambda: calls.append('init_db')",
+		indent + "module.SessionLocal = lambda: FakeDB()",
+		indent + "module.ensure_admin_exists = lambda db: calls.append('ensure_admin_exists')",
+		indent + "async def _run_lifespan():",
+		indent + "    async with lifespan(None):",
+		indent + "        calls.append('yielded')",
+		indent + "try:",
+		indent + "    asyncio.run(_run_lifespan())",
+		indent + "finally:",
+		indent + "    module.init_db = original_init_db",
+		indent + "    module.SessionLocal = original_session_local",
+		indent + "    module.ensure_admin_exists = original_ensure_admin_exists",
+		indent + "assert calls == ['init_db', 'ensure_admin_exists', 'close', 'yielded']",
+		"",
+	}, "\n")
 }
 
 func pyFastAPIBuildAppOutCoverageBody(indent string) string {
