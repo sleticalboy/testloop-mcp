@@ -1657,7 +1657,7 @@ func pyShortLinkPageCoverageBody(task *types.CoverageTestTask, indent string) st
 	}
 	lineRange := strings.TrimSpace(task.LineRange)
 	switch lineRange {
-	case "780-782":
+	case "780-782", "782-782":
 		lines := append(prefix,
 			indent+"result = short_link_page('missing', FakeDB(None))",
 			indent+"assert result.status_code == 404",

@@ -1779,6 +1779,15 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 			},
 		},
 		{
+			name:      "missing app return line",
+			lineRange: "782-782",
+			wants: []string{
+				"result = short_link_page('missing', FakeDB(None))",
+				"assert result.status_code == 404",
+				"assert '链接无效' in result.body.decode()",
+			},
+		},
+		{
 			name:      "hidden app",
 			lineRange: "785-786",
 			wants: []string{
