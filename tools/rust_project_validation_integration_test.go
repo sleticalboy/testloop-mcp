@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -195,7 +196,25 @@ func rustCoverageCommand(ctx context.Context) *exec.Cmd {
 	if template == "" {
 		template = "cargo tarpaulin --out Lcov --output-dir target/tarpaulin"
 	}
-	return exec.CommandContext(ctx, "sh", "-c", template)
+	return configureCommandProcessGroup(exec.CommandContext(ctx, "sh", "-c", template))
+}
+
+func TestRustCoverageCommandKillsProcessGroupOnTimeout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell process group cancellation is only configured on Unix platforms")
+	}
+	t.Setenv("TESTLOOP_VALIDATE_RUST_COVERAGE_COMMAND", "sh -c 'sleep 5'")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	cmd := rustCoverageCommand(ctx)
+	cmd.Dir = t.TempDir()
+	_ = cmd.Run()
+	elapsed := time.Since(start)
+	if elapsed > 3*time.Second {
+		t.Fatalf("Rust coverage command timeout took %s, child process likely survived context cancellation", elapsed)
+	}
 }
 
 func filterRustCoverageTasks(tasks []types.CoverageTestTask, filter string) []types.CoverageTestTask {
