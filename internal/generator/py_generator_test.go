@@ -1747,6 +1747,16 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 				"assert 'https://cdn.test/icon.png' in body",
 			},
 		},
+		{
+			name:      "final html response",
+			lineRange: "877-877",
+			wants: []string{
+				"result = short_link_page('rich', FakeDB(app, [version]))",
+				"body = result.body.decode()",
+				"assert result.status_code == 200",
+				"assert '&lt;Example&gt;' in body",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			task := types.CoverageTestTask{

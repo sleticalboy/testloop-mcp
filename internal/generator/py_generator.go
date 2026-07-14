@@ -1069,7 +1069,7 @@ func pyShortLinkPageCoverageBody(task *types.CoverageTestTask, indent string) st
 			"",
 		)
 		return strings.Join(lines, "\n")
-	case "826-832":
+	case "826-832", "877-877":
 		lines := append(prefix,
 			indent+"original_qr = module.generate_qr_data_url",
 			indent+"module.generate_qr_data_url = lambda text: 'data:image/png;base64,test'",
