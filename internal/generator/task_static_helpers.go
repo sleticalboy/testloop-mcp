@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	taskBacktickRe  = regexp.MustCompile("`([^`]+)`")
-	taskConditionRe = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:===|==|=|is)\s*(.+?)\s*$`)
+	taskBacktickRe   = regexp.MustCompile("`([^`]+)`")
+	taskConditionRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:===|==|=|is)\s*(.+?)\s*$`)
+	taskEqualsCallRe = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_.]*)\.equals\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
 )
 
 func taskTargetMatches(target, className, name string) bool {
@@ -40,6 +41,12 @@ func coverageTaskInputValues(task *types.CoverageTestTask, language string) map[
 	hints = append(hints, task.MissingBranches...)
 	for _, hint := range hints {
 		for _, candidate := range taskConditionCandidates(hint) {
+			if language == "java" {
+				if matches := taskEqualsCallRe.FindStringSubmatch(candidate); len(matches) == 3 {
+					values[strings.TrimSpace(matches[2])] = strings.TrimSpace(matches[1])
+					continue
+				}
+			}
 			matches := taskConditionRe.FindStringSubmatch(candidate)
 			if len(matches) != 3 {
 				continue

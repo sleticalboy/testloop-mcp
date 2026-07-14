@@ -1,58 +1,60 @@
 // Generated tests for Calculator.java
 // Run with: mvn test  or  gradle test
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+package com.example;
 
-class CalculatorTest {
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+public class CalculatorTest {
 
     @Test
-    void calculator() {
+    public void calculator() {
         Calculator instance = new Calculator();
-        assertNotNull(instance);
+        Assertions.assertNotNull(instance);
     }
 
     @Test
-    void add() {
+    public void add() {
         Calculator instance = new Calculator();
         int result = instance.add(0, 0);
-        assertEquals(0, result);
+        Assertions.assertEquals(0, result);
     }
 
     @Test
-    void divide() {
+    public void divide() {
         Calculator instance = new Calculator();
         int result = instance.divide(0, 0);
-        assertEquals(0, result);
+        Assertions.assertEquals(0, result);
 
         // Test exception path
-        assertThrows(ArithmeticException.class, () -> {
+        Assertions.assertThrows(ArithmeticException.class, () -> {
             // TODO: call with invalid args
         });
     }
 
     @Test
-    void greet() {
+    public void greet() {
         Calculator instance = new Calculator();
         String result = instance.greet("test");
-        assertNotNull(result);
+        Assertions.assertNotNull(result);
     }
 
     @Test
-    void ispositive() {
+    public void ispositive() {
         Calculator instance = new Calculator();
         boolean result = instance.isPositive(0);
-        assertTrue(result);
+        Assertions.assertTrue(result);
     }
 
     @Test
-    void clear() {
+    public void clear() {
         Calculator instance = new Calculator();
         instance.clear();
     }
 
     @Test
-    void create() {
+    public void create() {
         Calculator result = Calculator.create();
-        assertNotNull(result);
+        Assertions.assertNotNull(result);
     }
 }

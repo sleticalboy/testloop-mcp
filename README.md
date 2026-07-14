@@ -370,7 +370,7 @@ testloop-mcp/
 │   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；支持 Jest/Vitest/Mocha 断言风格）
 │   │   ├── py_generator.go           # Python pytest 测试生成器（def/class/async）
 │   │   ├── rs_generator.go           # Rust 测试生成器
-│   │   └── java_generator.go         # Java JUnit 5 测试生成器
+│   │   └── java_generator.go         # Java JUnit 4/5 测试生成器
 │   ├── parser/
 │   │   ├── parser.go                # 统一解析入口
 │   │   ├── go_parser.go             # go test 输出解析

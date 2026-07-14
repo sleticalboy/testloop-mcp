@@ -181,8 +181,8 @@ func TestJavaInferDefaultValueAndAssert(t *testing.T) {
 
 func TestJavaGeneratorFilterAndNameHelpers(t *testing.T) {
 	funcs := []javaFuncInfo{
-		{Name: "add", ClassName: "Calculator"},
-		{Name: "sub", ClassName: "Calculator"},
+		{Name: "add", ClassName: "Calculator", Line: 2},
+		{Name: "sub", ClassName: "Calculator", Line: 6},
 	}
 
 	got := filterJavaFuncsForCoverageTask(funcs, &types.CoverageTestTask{})
@@ -198,6 +198,15 @@ func TestJavaGeneratorFilterAndNameHelpers(t *testing.T) {
 	got = filterJavaFuncsForCoverageTask(funcs, &types.CoverageTestTask{Target: "missing"})
 	if len(got) != 2 {
 		t.Fatalf("missing target should fall back to all funcs: %+v", got)
+	}
+
+	overloads := []javaFuncInfo{
+		{Name: "Endpoints", ClassName: "Endpoints", Line: 67, IsConstructor: true},
+		{Name: "Endpoints", ClassName: "Endpoints", Line: 129, IsConstructor: true},
+	}
+	got = filterJavaFuncsForCoverageTask(overloads, &types.CoverageTestTask{Target: "Endpoints.Endpoints", LineRange: "129-129"})
+	if len(got) != 1 || got[0].Line != 129 {
+		t.Fatalf("line range should select matching overload, got %+v", got)
 	}
 
 	tests := map[string]string{

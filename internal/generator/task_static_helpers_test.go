@@ -66,6 +66,14 @@ func TestCoverageTaskInputValuesExtractsAndNormalizesHints(t *testing.T) {
 		t.Fatalf("unexpected Java values: %+v", javaValues)
 	}
 
+	equalsTask := types.CoverageTestTask{
+		MissingBranches: []string{"未覆盖 if 分支: AddressScheme.DOMAIN_NAME.equals(scheme"},
+	}
+	javaValues = coverageTaskInputValues(&equalsTask, "java")
+	if javaValues["scheme"] != "AddressScheme.DOMAIN_NAME" {
+		t.Fatalf("unexpected Java equals-call values: %+v", javaValues)
+	}
+
 	if got := coverageTaskInputValues(nil, "python"); len(got) != 0 {
 		t.Fatalf("nil task should produce empty values, got %+v", got)
 	}

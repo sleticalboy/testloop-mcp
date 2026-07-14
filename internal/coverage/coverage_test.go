@@ -1607,6 +1607,52 @@ public class OrderService {
 	}
 }
 
+func TestParseJavaCoverageResolvesNestedMavenModulePaths(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("client", "src", "main", "java", "org", "apache", "rocketmq", "client", "java", "route", "Endpoints.java")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `package org.apache.rocketmq.client.java.route;
+
+public class Endpoints {
+    public String facade(String host) {
+        if (host == null) {
+            return "missing";
+        }
+        return host;
+    }
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<report name="demo">
+  <package name="org/apache/rocketmq/client/java/route">
+    <sourcefile name="Endpoints.java">
+      <line nr="5" mi="1" ci="0"/>
+      <line nr="7" mi="0" ci="1"/>
+      <counter type="LINE" missed="1" covered="1"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="1"/>
+</report>`
+
+	report, err := ParseJaCoCoCoverage(raw)
+	if err != nil {
+		t.Fatalf("ParseJaCoCoCoverage 失败: %v", err)
+	}
+	task := findCoverageTask(report.TestTasks, "Endpoints.facade")
+	if task == nil {
+		t.Fatalf("expected Endpoints.facade task, got %+v", report.TestTasks)
+	}
+	if !containsString(task.MissingBranches, "未覆盖 if 分支: host == null") {
+		t.Fatalf("expected branch hint from nested module source, got %+v", task)
+	}
+}
+
 func TestParseCoverageDispatch(t *testing.T) {
 	// go-test
 	goData := `mode: set

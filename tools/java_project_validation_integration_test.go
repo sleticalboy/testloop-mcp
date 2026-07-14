@@ -71,6 +71,7 @@ func TestValidateJavaCoverageTopTasks(t *testing.T) {
 		logJavaValidationStage(t, "task.copy.done index=%d id=%s", i+1, task.ID)
 		task.File = rewriteJavaValidationPath(baselineRoot, taskRoot, task.File)
 		task.TestFile = rewriteJavaValidationPath(baselineRoot, taskRoot, task.TestFile)
+		task.TestFile = rewriteJavaValidationTestFileForSource(task.File, task.TestFile)
 
 		includeFixSuggestions := false
 		ctx := context.Background()
@@ -259,6 +260,37 @@ func TestRewriteJavaValidationPathMapsJaCoCoPackagePathToMavenSource(t *testing.
 	}
 }
 
+func TestRewriteJavaValidationPathMapsJaCoCoPackagePathToNestedMavenModule(t *testing.T) {
+	baselineRoot := filepath.Join(t.TempDir(), "baseline")
+	taskRoot := filepath.Join(t.TempDir(), "task")
+	source := filepath.Join(taskRoot, "client", "src", "main", "java", "org", "apache", "rocketmq", "client", "java", "route", "Endpoints.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte("class Endpoints {}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	got := rewriteJavaValidationPath(baselineRoot, taskRoot, filepath.FromSlash("org/apache/rocketmq/client/java/route/Endpoints.java"))
+
+	if got != source {
+		t.Fatalf("rewriteJavaValidationPath = %q, want %q", got, source)
+	}
+}
+
+func TestRewriteJavaValidationTestFileForSourceKeepsNestedMavenModule(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "task")
+	source := filepath.Join(root, "client", "src", "main", "java", "org", "apache", "rocketmq", "client", "java", "route", "Endpoints.java")
+	current := filepath.Join(root, "src", "test", "java", "org", "apache", "rocketmq", "client", "java", "route", "EndpointsTest.java")
+	want := filepath.Join(root, "client", "src", "test", "java", "org", "apache", "rocketmq", "client", "java", "route", "EndpointsTest.java")
+
+	got := rewriteJavaValidationTestFileForSource(source, current)
+
+	if got != want {
+		t.Fatalf("rewriteJavaValidationTestFileForSource = %q, want %q", got, want)
+	}
+}
+
 func filterJavaCoverageTasks(tasks []types.CoverageTestTask, filter string) []types.CoverageTestTask {
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
@@ -293,7 +325,47 @@ func rewriteJavaValidationPath(baselineRoot string, taskRoot string, value strin
 			return candidate
 		}
 	}
+	if candidate := findJavaValidationNestedPath(taskRoot, value); candidate != "" {
+		return candidate
+	}
 	return rewritten
+}
+
+func findJavaValidationNestedPath(taskRoot string, value string) string {
+	slash := filepath.ToSlash(value)
+	for _, root := range []string{"src/main/java", "src/test/java"} {
+		patterns := []string{
+			filepath.Join(taskRoot, filepath.FromSlash("*/"+root+"/"+slash)),
+			filepath.Join(taskRoot, filepath.FromSlash("*/*/"+root+"/"+slash)),
+		}
+		for _, pattern := range patterns {
+			matches, err := filepath.Glob(pattern)
+			if err != nil {
+				continue
+			}
+			for _, match := range matches {
+				if fileExists(match) {
+					return match
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func rewriteJavaValidationTestFileForSource(sourceFile string, testFile string) string {
+	sourceSlash := filepath.ToSlash(sourceFile)
+	const marker = "/src/main/java/"
+	idx := strings.Index(sourceSlash, marker)
+	if idx < 0 {
+		return testFile
+	}
+	rel := sourceSlash[idx+len(marker):]
+	if strings.ToLower(filepath.Ext(rel)) != ".java" {
+		return testFile
+	}
+	base := strings.TrimSuffix(rel, filepath.Ext(rel))
+	return filepath.FromSlash(sourceSlash[:idx] + "/src/test/java/" + base + "Test.java")
 }
 
 func logJavaValidationStage(t *testing.T, format string, args ...any) {

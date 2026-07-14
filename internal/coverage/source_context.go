@@ -75,6 +75,9 @@ func resolveSourcePath(path string) string {
 			return candidate
 		}
 	}
+	if candidate := resolveNestedSourcePath(clean); candidate != "" {
+		return candidate
+	}
 	parts := strings.Split(filepath.ToSlash(clean), "/")
 	for i := range parts {
 		candidate := filepath.FromSlash(strings.Join(parts[i:], "/"))
@@ -85,6 +88,31 @@ func resolveSourcePath(path string) string {
 			rooted := filepath.Join(root, candidate)
 			if fileExists(rooted) {
 				return rooted
+			}
+		}
+		if nested := resolveNestedSourcePath(candidate); nested != "" {
+			return nested
+		}
+	}
+	return ""
+}
+
+func resolveNestedSourcePath(clean string) string {
+	slash := filepath.ToSlash(clean)
+	for _, root := range []string{"src/main/java", "src/test/java", "src/main/rust", "src", "crates"} {
+		patterns := []string{
+			filepath.FromSlash("*/" + root + "/" + slash),
+			filepath.FromSlash("*/*/" + root + "/" + slash),
+		}
+		for _, pattern := range patterns {
+			matches, err := filepath.Glob(pattern)
+			if err != nil {
+				continue
+			}
+			for _, match := range matches {
+				if fileExists(match) {
+					return match
+				}
 			}
 		}
 	}

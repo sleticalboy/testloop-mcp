@@ -448,7 +448,10 @@ func getProjectRoot(path string) string {
 	// 简单实现：返回路径所在的目录
 	info, err := os.Stat(path)
 	if err != nil {
-		return "."
+		if strings.TrimSpace(path) == "" {
+			return "."
+		}
+		return filepath.Dir(path)
 	}
 
 	if info.IsDir() {
@@ -459,16 +462,15 @@ func getProjectRoot(path string) string {
 
 func javaTestCommand(ctx context.Context, path string, withCoverage bool) *exec.Cmd {
 	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
-	if fileExists(filepath.Join(root, "mvnw")) {
-		args := javaMavenArgs(withCoverage)
-		cmd := exec.CommandContext(ctx, "./mvnw", args...)
-		cmd.Dir = root
-		return cmd
-	}
 	if fileExists(filepath.Join(root, "pom.xml")) {
-		args := javaMavenArgs(withCoverage)
+		commandRoot, args := javaMavenCommandRootAndArgs(root, withCoverage)
+		if fileExists(filepath.Join(commandRoot, "mvnw")) {
+			cmd := exec.CommandContext(ctx, "./mvnw", args...)
+			cmd.Dir = commandRoot
+			return cmd
+		}
 		cmd := exec.CommandContext(ctx, "mvn", args...)
-		cmd.Dir = root
+		cmd.Dir = commandRoot
 		return cmd
 	}
 	if fileExists(filepath.Join(root, "gradlew")) {
@@ -481,6 +483,45 @@ func javaTestCommand(ctx context.Context, path string, withCoverage bool) *exec.
 	cmd := exec.CommandContext(ctx, "gradle", args...)
 	cmd.Dir = root
 	return cmd
+}
+
+func javaMavenCommandRootAndArgs(moduleRoot string, withCoverage bool) (string, []string) {
+	args := javaMavenArgs(withCoverage)
+	if aggregator := findMavenAggregatorRoot(moduleRoot); aggregator != "" && aggregator != moduleRoot {
+		rel, err := filepath.Rel(aggregator, moduleRoot)
+		if err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			args = append([]string{"-pl", filepath.ToSlash(rel), "-am", "-DfailIfNoTests=false"}, args...)
+			return aggregator, args
+		}
+	}
+	return moduleRoot, args
+}
+
+func findMavenAggregatorRoot(moduleRoot string) string {
+	dir := filepath.Dir(moduleRoot)
+	moduleName := filepath.Base(moduleRoot)
+	for i := 0; i < 8; i++ {
+		pom := filepath.Join(dir, "pom.xml")
+		if fileExists(pom) {
+			data, err := os.ReadFile(pom)
+			if err == nil && mavenPomDeclaresModule(string(data), moduleName) {
+				return dir
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		moduleName = filepath.Join(filepath.Base(dir), moduleName)
+		dir = parent
+	}
+	return ""
+}
+
+func mavenPomDeclaresModule(pom string, modulePath string) bool {
+	normalized := filepath.ToSlash(modulePath)
+	return strings.Contains(pom, "<module>"+normalized+"</module>") ||
+		strings.Contains(pom, "<module>./"+normalized+"</module>")
 }
 
 func javaMavenArgs(withCoverage bool) []string {
@@ -504,7 +545,7 @@ func fileExists(path string) bool {
 
 func findProjectRoot(path string, markers ...string) string {
 	root := getProjectRoot(path)
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 16; i++ {
 		for _, marker := range markers {
 			if fileExists(filepath.Join(root, marker)) {
 				return root

@@ -52,6 +52,52 @@ func TestJavaTestCommandPrefersWrappers(t *testing.T) {
 	}
 }
 
+func TestJavaTestCommandFindsDeepNonexistentMavenTestPath(t *testing.T) {
+	dir := t.TempDir()
+	moduleRoot := filepath.Join(dir, "client")
+	if err := os.MkdirAll(moduleRoot, 0o755); err != nil {
+		t.Fatalf("mkdir module root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(moduleRoot, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatalf("write pom.xml: %v", err)
+	}
+	testFile := filepath.Join(moduleRoot, "src", "test", "java", "org", "apache", "rocketmq", "client", "java", "route", "EndpointsTest.java")
+
+	cmd := javaTestCommand(context.Background(), testFile, false)
+
+	if filepath.Base(cmd.Path) != "mvn" {
+		t.Fatalf("command = %s, want mvn", cmd.Path)
+	}
+	if cmd.Dir != moduleRoot {
+		t.Fatalf("dir = %s, want %s", cmd.Dir, moduleRoot)
+	}
+}
+
+func TestJavaTestCommandRunsMavenModuleFromAggregator(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project><modules><module>client</module></modules></project>"), 0o644); err != nil {
+		t.Fatalf("write root pom.xml: %v", err)
+	}
+	moduleRoot := filepath.Join(dir, "client")
+	if err := os.MkdirAll(moduleRoot, 0o755); err != nil {
+		t.Fatalf("mkdir module root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(moduleRoot, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
+		t.Fatalf("write module pom.xml: %v", err)
+	}
+	testFile := filepath.Join(moduleRoot, "src", "test", "java", "org", "apache", "rocketmq", "client", "java", "route", "EndpointsTest.java")
+
+	cmd := javaTestCommand(context.Background(), testFile, false)
+
+	want := []string{"mvn", "-pl", "client", "-am", "-DfailIfNoTests=false", "test"}
+	if !equalStrings(cmd.Args, want) {
+		t.Fatalf("args = %v, want %v", cmd.Args, want)
+	}
+	if cmd.Dir != dir {
+		t.Fatalf("dir = %s, want %s", cmd.Dir, dir)
+	}
+}
+
 func TestJavaTestCommandPrefersGradleWrapper(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("wrapper command paths are unix-style")
