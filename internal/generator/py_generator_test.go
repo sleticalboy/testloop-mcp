@@ -1930,6 +1930,62 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 		"verify_refresh_token(None)",
 	})
 
+	createAPIKeyFunc := pyFuncInfo{
+		Name: "create_api_key",
+		Params: []pyParamInfo{
+			{Name: "db"},
+			{Name: "user_id"},
+			{Name: "name"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	createAPIKeyTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-create-api-key-1",
+		Target:    "create_api_key",
+		GapType:   "statement",
+		File:      "/tmp/app/services/auth_service.py",
+		LineRange: "126-126",
+		TestName:  "test_create_api_key_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(createAPIKeyFunc, &createAPIKeyTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.auth_service', fromlist=['create_api_key'])",
+		"keys = iter(['sk_duplicate', 'sk_unique'])",
+		"module.generate_api_key = lambda: next(keys)",
+		"result = module.create_api_key(db, 7, 'deploy')",
+		"assert result.key == 'sk_unique'",
+		"assert db.first_calls == 2",
+	}, []string{
+		"create_api_key(None, 1, 'test')",
+	})
+
+	decodeTokenFunc := pyFuncInfo{
+		Name: "decode_token",
+		Params: []pyParamInfo{
+			{Name: "token"},
+			{Name: "verify_exp", HasDefault: true},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	decodeTokenTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-decode-token-1",
+		Target:    "decode_token",
+		GapType:   "statement",
+		File:      "/tmp/app/services/auth_service.py",
+		LineRange: "63-63",
+		TestName:  "test_decode_token_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(decodeTokenFunc, &decodeTokenTask)
+	assertPyGenerated(t, code, []string{
+		"from app.services.auth_service import create_access_token",
+		"token = create_access_token({'sub': 'alice'})",
+		"assert decode_token(token) == 'alice'",
+		"assert decode_token(token, verify_exp=False) == 'alice'",
+		"assert decode_token('not-a-jwt') is None",
+	}, []string{
+		"decode_token(None, None)",
+	})
+
 	listUsersFunc := pyFuncInfo{
 		Name: "list_users",
 		Params: []pyParamInfo{
@@ -2039,6 +2095,56 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 }
 
 func TestPytestCoverageTaskUsesFastAPIStorageInputs(t *testing.T) {
+	saveIconFunc := pyFuncInfo{
+		Name: "_save_icon_local",
+		Params: []pyParamInfo{
+			{Name: "key"},
+			{Name: "data"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "str"},
+	}
+	saveIconTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qiniu-save-icon-1",
+		Target:    "_save_icon_local",
+		GapType:   "return_path",
+		File:      "/tmp/app/services/qiniu_service.py",
+		LineRange: "44-51",
+		TestName:  "test_save_icon_local_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(saveIconFunc, &saveIconTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.qiniu_service', fromlist=['_save_icon_local'])",
+		"with tempfile.TemporaryDirectory() as tmpdir:",
+		"module.LOCAL_ICON_ROOT = tmpdir",
+		"result = module._save_icon_local('icons/com.example.app/ic_launcher.png', b'png-data')",
+		"assert handle.read() == b'png-data'",
+	}, []string{
+		"_save_icon_local('test', {})",
+	})
+
+	qiniuAuthFunc := pyFuncInfo{
+		Name:     "get_qiniu_auth",
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown", Raises: true},
+	}
+	qiniuAuthTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-qiniu-auth-1",
+		Target:    "get_qiniu_auth",
+		GapType:   "error_path",
+		File:      "/tmp/app/services/qiniu_service.py",
+		LineRange: "22-26",
+		TestName:  "test_get_qiniu_auth_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(qiniuAuthFunc, &qiniuAuthTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.services.qiniu_service', fromlist=['get_qiniu_auth'])",
+		"def fake_import(name, *args, **kwargs):",
+		"if name == 'qiniu':",
+		"module.get_qiniu_auth()",
+		"assert 'qiniu SDK' in str(exc)",
+	}, []string{
+		"with pytest.raises(Exception):",
+	})
+
 	uploadBytesFunc := pyFuncInfo{
 		Name: "upload_bytes",
 		Params: []pyParamInfo{
@@ -2056,7 +2162,7 @@ func TestPytestCoverageTaskUsesFastAPIStorageInputs(t *testing.T) {
 		LineRange: "118-125",
 		TestName:  "test_upload_bytes_covers_gap",
 	}
-	code := genPytestFuncTestForCoverageTask(uploadBytesFunc, &qiniuUploadTask)
+	code = genPytestFuncTestForCoverageTask(uploadBytesFunc, &qiniuUploadTask)
 	assertPyGenerated(t, code, []string{
 		"module = __import__('app.services.qiniu_service', fromlist=['upload_bytes'])",
 		"module._is_qiniu_configured = lambda: True",

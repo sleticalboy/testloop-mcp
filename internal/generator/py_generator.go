@@ -795,6 +795,11 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			return pyFastAPITOSStorageCoverageBody(fn.Name, "    ")
 		}
 		return ""
+	case "_save_icon_local", "get_qiniu_auth":
+		if strings.Contains(task.File, "qiniu_service.py") {
+			return pyFastAPIQiniuStorageCoverageBody(fn.Name, "    ")
+		}
+		return ""
 	case "get_current_user_by_api_key":
 		if strings.Contains(task.LineRange, "148") {
 			return strings.Join([]string{
@@ -808,6 +813,17 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		return ""
 	case "get_user_by_api_key":
 		return pyFastAPIAuthServiceGetUserByAPIKeyCoverageBody("    ")
+	case "create_api_key":
+		return pyFastAPIAuthServiceCreateAPIKeyCoverageBody("    ")
+	case "decode_token":
+		return strings.Join([]string{
+			"    from app.services.auth_service import create_access_token",
+			"    token = create_access_token({'sub': 'alice'})",
+			"    assert decode_token(token) == 'alice'",
+			"    assert decode_token(token, verify_exp=False) == 'alice'",
+			"    assert decode_token('not-a-jwt') is None",
+			"",
+		}, "\n")
 	case "verify_refresh_token":
 		return strings.Join([]string{
 			"    from app.services.auth_service import create_access_token, create_refresh_token",
@@ -1097,6 +1113,39 @@ func pyFastAPIQiniuStorageCoverageBody(name string, indent string) string {
 		indent + "module.get_qiniu_auth = lambda: SimpleNamespace(upload_token=lambda *args, **kwargs: 'token', private_download_url=lambda url, expires=None: url + '?signed=1')",
 	}
 	switch name {
+	case "_save_icon_local":
+		return strings.Join(append(prefix,
+			indent+"import os",
+			indent+"import tempfile",
+			indent+"with tempfile.TemporaryDirectory() as tmpdir:",
+			indent+"    module.LOCAL_ICON_ROOT = tmpdir",
+			indent+"    result = module._save_icon_local('icons/com.example.app/ic_launcher.png', b'png-data')",
+			indent+"    assert result == '/icons/com.example.app/ic_launcher.png'",
+			indent+"    with open(os.path.join(tmpdir, 'com.example.app', 'ic_launcher.png'), 'rb') as handle:",
+			indent+"        assert handle.read() == b'png-data'",
+			"",
+		), "\n")
+	case "get_qiniu_auth":
+		return strings.Join([]string{
+			indent + "module = __import__('app.services.qiniu_service', fromlist=['get_qiniu_auth'])",
+			indent + "builtins = __import__('builtins')",
+			indent + "original_import = builtins.__import__",
+			indent + "def fake_import(name, *args, **kwargs):",
+			indent + "    if name == 'qiniu':",
+			indent + "        raise ImportError('missing qiniu')",
+			indent + "    return original_import(name, *args, **kwargs)",
+			indent + "builtins.__import__ = fake_import",
+			indent + "try:",
+			indent + "    try:",
+			indent + "        module.get_qiniu_auth()",
+			indent + "    except RuntimeError as exc:",
+			indent + "        assert 'qiniu SDK' in str(exc)",
+			indent + "    else:",
+			indent + "        raise AssertionError('expected RuntimeError')",
+			indent + "finally:",
+			indent + "    builtins.__import__ = original_import",
+			"",
+		}, "\n")
 	case "upload_file":
 		return strings.Join(append(prefix,
 			indent+"module._is_qiniu_configured = lambda: False",
@@ -1430,6 +1479,48 @@ func pyFastAPIAuthServiceGetUserByAPIKeyCoverageBody(indent string) string {
 		indent + "assert get_user_by_api_key(db, 'sk_live') is user",
 		indent + "assert api_key.last_used_at is not None",
 		indent + "assert db.committed is True",
+		"",
+	}, "\n")
+}
+
+func pyFastAPIAuthServiceCreateAPIKeyCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "module = __import__('app.services.auth_service', fromlist=['create_api_key'])",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, db):",
+		indent + "        self.db = db",
+		indent + "    def filter(self, *args):",
+		indent + "        return self",
+		indent + "    def first(self):",
+		indent + "        self.db.first_calls += 1",
+		indent + "        if self.db.first_calls == 1:",
+		indent + "            return object()",
+		indent + "        return None",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self):",
+		indent + "        self.first_calls = 0",
+		indent + "        self.added = None",
+		indent + "        self.committed = False",
+		indent + "        self.refreshed = None",
+		indent + "    def query(self, model):",
+		indent + "        return FakeQuery(self)",
+		indent + "    def add(self, obj):",
+		indent + "        self.added = obj",
+		indent + "    def commit(self):",
+		indent + "        self.committed = True",
+		indent + "    def refresh(self, obj):",
+		indent + "        self.refreshed = obj",
+		indent + "keys = iter(['sk_duplicate', 'sk_unique'])",
+		indent + "module.generate_api_key = lambda: next(keys)",
+		indent + "db = FakeDB()",
+		indent + "result = module.create_api_key(db, 7, 'deploy')",
+		indent + "assert result.user_id == 7",
+		indent + "assert result.key == 'sk_unique'",
+		indent + "assert result.name == 'deploy'",
+		indent + "assert db.first_calls == 2",
+		indent + "assert db.added is result",
+		indent + "assert db.committed is True",
+		indent + "assert db.refreshed is result",
 		"",
 	}, "\n")
 }
