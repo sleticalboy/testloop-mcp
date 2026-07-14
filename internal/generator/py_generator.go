@@ -798,6 +798,18 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			}, "\n")
 		}
 		return ""
+	case "get_user_by_api_key":
+		return pyFastAPIAuthServiceGetUserByAPIKeyCoverageBody("    ")
+	case "verify_refresh_token":
+		return strings.Join([]string{
+			"    from app.services.auth_service import create_access_token, create_refresh_token",
+			"    access_token = create_access_token({'sub': 'alice'})",
+			"    assert verify_refresh_token(access_token) is None",
+			"    refresh_token = create_refresh_token({'sub': 'alice'})",
+			"    assert verify_refresh_token(refresh_token) == 'alice'",
+			"    assert verify_refresh_token('not-a-jwt') is None",
+			"",
+		}, "\n")
 	case "list_users":
 		return pyFastAPIAuthListUsersCoverageBody("    ")
 	case "list_api_keys":
@@ -1078,6 +1090,39 @@ func pyFastAPIAuthListUsersCoverageBody(indent string) string {
 		indent + "user = SimpleNamespace(id=1, username='admin', is_admin=True)",
 		indent + "result = list_users(user, FakeDB([user]))",
 		indent + "assert result == [user]",
+		"",
+	}, "\n")
+}
+
+func pyFastAPIAuthServiceGetUserByAPIKeyCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "from types import SimpleNamespace",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, value):",
+		indent + "        self.value = value",
+		indent + "        self.filtered = False",
+		indent + "    def filter(self, *args, **kwargs):",
+		indent + "        self.filtered = True",
+		indent + "        return self",
+		indent + "    def first(self):",
+		indent + "        return self.value",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, value):",
+		indent + "        self.query_obj = FakeQuery(value)",
+		indent + "        self.committed = False",
+		indent + "    def query(self, model):",
+		indent + "        return self.query_obj",
+		indent + "    def commit(self):",
+		indent + "        self.committed = True",
+		indent + "missing_db = FakeDB(None)",
+		indent + "assert get_user_by_api_key(missing_db, 'sk_missing') is None",
+		indent + "assert missing_db.query_obj.filtered is True",
+		indent + "user = SimpleNamespace(id=7, username='admin')",
+		indent + "api_key = SimpleNamespace(user=user, last_used_at=None)",
+		indent + "db = FakeDB(api_key)",
+		indent + "assert get_user_by_api_key(db, 'sk_live') is user",
+		indent + "assert api_key.last_used_at is not None",
+		indent + "assert db.committed is True",
 		"",
 	}, "\n")
 }

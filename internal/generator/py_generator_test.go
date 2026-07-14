@@ -1877,6 +1877,59 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 		"get_current_user_by_api_key(None, None)",
 	})
 
+	authServiceAPIKeyFunc := pyFuncInfo{
+		Name: "get_user_by_api_key",
+		Params: []pyParamInfo{
+			{Name: "db"},
+			{Name: "key"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	authServiceAPIKeyTask := types.CoverageTestTask{
+		ID:              "pytest-fastapi-auth-service-api-key-1",
+		Target:          "get_user_by_api_key",
+		GapType:         "branch",
+		LineRange:       "140-141",
+		TestName:        "test_get_user_by_api_key_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: not api_key: return None"},
+	}
+	code = genPytestFuncTestForCoverageTask(authServiceAPIKeyFunc, &authServiceAPIKeyTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeDB:",
+		"missing_db = FakeDB(None)",
+		"assert get_user_by_api_key(missing_db, 'sk_missing') is None",
+		"api_key = SimpleNamespace(user=user, last_used_at=None)",
+		"assert get_user_by_api_key(db, 'sk_live') is user",
+		"assert db.committed is True",
+	}, []string{
+		"get_user_by_api_key(None, 'test')",
+	})
+
+	refreshFunc := pyFuncInfo{
+		Name:     "verify_refresh_token",
+		Params:   []pyParamInfo{{Name: "token"}},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	refreshTask := types.CoverageTestTask{
+		ID:              "pytest-fastapi-refresh-token-1",
+		Target:          "verify_refresh_token",
+		GapType:         "branch",
+		LineRange:       "72-80",
+		TestName:        "test_verify_refresh_token_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: token_type != \"refresh\": return None"},
+	}
+	code = genPytestFuncTestForCoverageTask(refreshFunc, &refreshTask)
+	assertPyGenerated(t, code, []string{
+		"from app.services.auth_service import create_access_token, create_refresh_token",
+		"access_token = create_access_token({'sub': 'alice'})",
+		"assert verify_refresh_token(access_token) is None",
+		"refresh_token = create_refresh_token({'sub': 'alice'})",
+		"assert verify_refresh_token(refresh_token) == 'alice'",
+		"assert verify_refresh_token('not-a-jwt') is None",
+	}, []string{
+		"verify_refresh_token(None)",
+	})
+
 	listUsersFunc := pyFuncInfo{
 		Name: "list_users",
 		Params: []pyParamInfo{
