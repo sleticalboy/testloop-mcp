@@ -980,6 +980,292 @@ func genPytestClassMethodCustomCoverageTask(cls pyClassInfo, method pyFuncInfo, 
 			return ""
 		}
 	}
+	if cls.Name == "UploadFile" {
+		switch method.Name {
+		case "_will_roll":
+			if strings.Contains(task.LineRange, "444") {
+				return strings.Join([]string{
+					"        tempfile = __import__('tempfile')",
+					"        stream = tempfile.SpooledTemporaryFile(max_size=1)",
+					"        stream.write(b'ab')",
+					"        stream.rollover()",
+					"        instance = UploadFile(file=stream, filename='file', size=2)",
+					"        result = instance._will_roll(1)",
+					"        assert result is True",
+					"        stream.close()",
+					"",
+				}, "\n")
+			}
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        stream = tempfile.SpooledTemporaryFile(max_size=4)",
+				"        stream.write(b'abc')",
+				"        instance = UploadFile(file=stream, filename='file', size=3)",
+				"        result = instance._will_roll(2)",
+				"        assert result is True",
+				"        stream.close()",
+				"",
+			}, "\n")
+		case "write":
+			if strings.Contains(task.LineRange, "456") {
+				return strings.Join([]string{
+					"        tempfile = __import__('tempfile')",
+					"        stream = tempfile.SpooledTemporaryFile(max_size=1)",
+					"        instance = UploadFile(file=stream, filename='file', size=0)",
+					"        result = asyncio.run(instance.write(b'hi'))",
+					"        assert result is None",
+					"        assert instance.size == 2",
+					"        assert instance._in_memory is False",
+					"        stream.close()",
+					"",
+				}, "\n")
+			}
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        stream = tempfile.SpooledTemporaryFile(max_size=10)",
+				"        instance = UploadFile(file=stream, filename='file', size=0)",
+				"        result = asyncio.run(instance.write(b'hi'))",
+				"        assert result is None",
+				"        assert instance.size == 2",
+				"        stream.seek(0)",
+				"        assert stream.read() == b'hi'",
+				"        stream.close()",
+				"",
+			}, "\n")
+		case "read":
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        stream = tempfile.SpooledTemporaryFile(max_size=10)",
+				"        stream.write(b'hello')",
+				"        stream.seek(0)",
+				"        instance = UploadFile(file=stream, filename='file', size=5)",
+				"        result = asyncio.run(instance.read(2))",
+				"        assert result == b'he'",
+				"        stream.close()",
+				"",
+			}, "\n")
+		case "seek":
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        stream = tempfile.SpooledTemporaryFile(max_size=10)",
+				"        stream.write(b'hello')",
+				"        instance = UploadFile(file=stream, filename='file', size=5)",
+				"        result = asyncio.run(instance.seek(1))",
+				"        assert result is None",
+				"        assert stream.tell() == 1",
+				"        stream.close()",
+				"",
+			}, "\n")
+		case "close":
+			return strings.Join([]string{
+				"        tempfile = __import__('tempfile')",
+				"        stream = tempfile.SpooledTemporaryFile(max_size=10)",
+				"        instance = UploadFile(file=stream, filename='file', size=0)",
+				"        result = asyncio.run(instance.close())",
+				"        assert result is None",
+				"        assert stream.closed is True",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
+	if cls.Name == "MutableHeaders" && method.Name == "add_vary_header" {
+		return strings.Join([]string{
+			"        instance = MutableHeaders({'vary': 'Accept-Encoding'})",
+			"        result = instance.add_vary_header('Origin')",
+			"        assert result is None",
+			"        assert instance['vary'] == 'Accept-Encoding, Origin'",
+			"",
+		}, "\n")
+	}
+	if cls.Name == "HTTPEndpoint" {
+		switch method.Name {
+		case "dispatch":
+			return strings.Join([]string{
+				"        responses = __import__('starlette.responses', fromlist=['PlainTextResponse'])",
+				"        messages = []",
+				"        async def receive():",
+				"            return {'type': 'http.request', 'body': b'', 'more_body': False}",
+				"        async def send(message):",
+				"            messages.append(message)",
+				"        class AsyncEndpoint(HTTPEndpoint):",
+				"            async def get(self, request):",
+				"                return responses.PlainTextResponse('async-ok')",
+				"        class SyncEndpoint(HTTPEndpoint):",
+				"            def get(self, request):",
+				"                return responses.PlainTextResponse('sync-ok')",
+				"        get_scope = {'type': 'http', 'method': 'GET', 'path': '/', 'headers': []}",
+				"        asyncio.run(AsyncEndpoint(get_scope, receive, send).dispatch())",
+				"        assert messages[0]['status'] == 200",
+				"        messages.clear()",
+				"        head_scope = {'type': 'http', 'method': 'HEAD', 'path': '/', 'headers': []}",
+				"        asyncio.run(SyncEndpoint(head_scope, receive, send).dispatch())",
+				"        assert messages[0]['status'] == 200",
+				"        messages.clear()",
+				"        post_scope = {'type': 'http', 'method': 'POST', 'path': '/', 'headers': []}",
+				"        asyncio.run(HTTPEndpoint(post_scope, receive, send).dispatch())",
+				"        assert messages[0]['status'] == 405",
+				"",
+			}, "\n")
+		case "method_not_allowed":
+			return strings.Join([]string{
+				"        requests = __import__('starlette.requests', fromlist=['Request'])",
+				"        exceptions = __import__('starlette.exceptions', fromlist=['HTTPException'])",
+				"        async def receive():",
+				"            return {'type': 'http.request', 'body': b'', 'more_body': False}",
+				"        async def send(message):",
+				"            return None",
+				"        scope = {'type': 'http', 'method': 'POST', 'path': '/', 'headers': []}",
+				"        instance = HTTPEndpoint(scope, receive, send)",
+				"        request = requests.Request(scope, receive=receive)",
+				"        response = asyncio.run(instance.method_not_allowed(request))",
+				"        assert response.status_code == 405",
+				"        app_scope = dict(scope)",
+				"        app_scope['app'] = object()",
+				"        app_instance = HTTPEndpoint(app_scope, receive, send)",
+				"        app_request = requests.Request(app_scope, receive=receive)",
+				"        try:",
+				"            asyncio.run(app_instance.method_not_allowed(app_request))",
+				"        except exceptions.HTTPException as exc:",
+				"            assert exc.status_code == 405",
+				"        else:",
+				"            assert False, 'expected HTTPException'",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
+	if cls.Name == "WebSocketEndpoint" {
+		switch method.Name {
+		case "decode":
+			return strings.Join([]string{
+				"        class DummyWebSocket:",
+				"            def __init__(self):",
+				"                self.closed = []",
+				"            async def close(self, code=None, reason=None):",
+				"                self.closed.append(code)",
+				"        async def receive():",
+				"            return {'type': 'websocket.disconnect'}",
+				"        async def send(message):",
+				"            return None",
+				"        scope = {'type': 'websocket', 'path': '/', 'headers': []}",
+				"        instance = WebSocketEndpoint(scope, receive, send)",
+				"        websocket = DummyWebSocket()",
+				"        instance.encoding = 'json'",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'text': '{\"ok\": true}'})) == {'ok': True}",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'bytes': b'{\"ok\": true}'})) == {'ok': True}",
+				"        instance.encoding = 'text'",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'text': 'hello'})) == 'hello'",
+				"        try:",
+				"            asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'bytes': b'hello'}))",
+				"        except RuntimeError as exc:",
+				"            assert 'Expected text websocket messages' in str(exc)",
+				"        else:",
+				"            assert False, 'expected text RuntimeError'",
+				"        instance.encoding = 'bytes'",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'bytes': b'hello'})) == b'hello'",
+				"        try:",
+				"            asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'text': 'hello'}))",
+				"        except RuntimeError as exc:",
+				"            assert 'Expected bytes websocket messages' in str(exc)",
+				"        else:",
+				"            assert False, 'expected bytes RuntimeError'",
+				"        instance.encoding = None",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'text': 'plain'})) == 'plain'",
+				"        assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'bytes': b'plain'})) == b'plain'",
+				"        assert websocket.closed == [1003, 1003]",
+				"",
+			}, "\n")
+		case "dispatch":
+			return strings.Join([]string{
+				"        class RecordingEndpoint(WebSocketEndpoint):",
+				"            encoding = 'text'",
+				"            def __init__(self, scope, receive, send):",
+				"                super().__init__(scope, receive, send)",
+				"                self.received = []",
+				"                self.disconnected = []",
+				"            async def on_connect(self, websocket):",
+				"                return None",
+				"            async def on_receive(self, websocket, data):",
+				"                self.received.append(data)",
+				"            async def on_disconnect(self, websocket, close_code):",
+				"                self.disconnected.append(close_code)",
+				"        class FailingEndpoint(RecordingEndpoint):",
+				"            async def on_receive(self, websocket, data):",
+				"                raise RuntimeError('boom')",
+				"        async def send(message):",
+				"            return None",
+				"        scope = {'type': 'websocket', 'path': '/', 'headers': []}",
+				"        messages = iter([",
+				"            {'type': 'websocket.connect'},",
+				"            {'type': 'websocket.receive', 'text': 'hello'},",
+				"            {'type': 'websocket.disconnect', 'code': 1001},",
+				"        ])",
+				"        async def receive():",
+				"            return next(messages)",
+				"        instance = RecordingEndpoint(scope, receive, send)",
+				"        asyncio.run(instance.dispatch())",
+				"        assert instance.received == ['hello']",
+				"        assert instance.disconnected == [1001]",
+				"        failing_messages = iter([",
+				"            {'type': 'websocket.connect'},",
+				"            {'type': 'websocket.receive', 'text': 'boom'},",
+				"        ])",
+				"        async def failing_receive():",
+				"            return next(failing_messages)",
+				"        failing = FailingEndpoint(scope, failing_receive, send)",
+				"        try:",
+				"            asyncio.run(failing.dispatch())",
+				"        except RuntimeError as exc:",
+				"            assert str(exc) == 'boom'",
+				"        else:",
+				"            assert False, 'expected RuntimeError'",
+				"        assert failing.disconnected == [1011]",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
+	if cls.Name == "MultiPartParser" {
+		switch method.Name {
+		case "on_part_data":
+			return strings.Join([]string{
+				"        datastructures = __import__('starlette.datastructures', fromlist=['Headers'])",
+				"        async def stream():",
+				"            yield b''",
+				"        headers = datastructures.Headers({'content-type': 'multipart/form-data; boundary=x'})",
+				"        instance = MultiPartParser(headers, stream(), max_part_size=3)",
+				"        instance.on_part_data(b'ab', 0, 2)",
+				"        assert instance._current_part.data == bytearray(b'ab')",
+				"        try:",
+				"            instance.on_part_data(b'cdef', 0, 4)",
+				"        except Exception as exc:",
+				"            assert 'Part exceeded maximum size' in getattr(exc, 'message', str(exc))",
+				"        else:",
+				"            assert False, 'expected max part size exception'",
+				"",
+			}, "\n")
+		case "on_part_end":
+			return strings.Join([]string{
+				"        datastructures = __import__('starlette.datastructures', fromlist=['Headers'])",
+				"        async def stream():",
+				"            yield b''",
+				"        headers = datastructures.Headers({'content-type': 'multipart/form-data; boundary=x'})",
+				"        instance = MultiPartParser(headers, stream())",
+				"        instance._current_part.field_name = 'field'",
+				"        instance._current_part.data.extend(b'value')",
+				"        result = instance.on_part_end()",
+				"        assert result is None",
+				"        assert instance.items == [('field', 'value')]",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
 	return ""
 }
 

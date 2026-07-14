@@ -1210,6 +1210,301 @@ func TestPytestCoverageTaskUsesStarletteMultiDictInputs(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesStarletteUploadFileInputs(t *testing.T) {
+	uploadClass := pyClassInfo{
+		Name: "UploadFile",
+		Methods: []pyFuncInfo{
+			{Name: "_will_roll", Params: []pyParamInfo{{Name: "size_to_add"}}, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "bool"}},
+		},
+	}
+	willRollDiskTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-1",
+		Target:    "UploadFile._will_roll",
+		GapType:   "branch",
+		LineRange: "444-445",
+		TestName:  "test_upload_file_will_roll_disk_covers_gap",
+	}
+	code := genPytestClassTestForCoverageTask(uploadClass, &willRollDiskTask)
+	assertPyGenerated(t, code, []string{
+		"stream = tempfile.SpooledTemporaryFile(max_size=1)",
+		"stream.rollover()",
+		"instance = UploadFile(file=stream, filename='file', size=2)",
+		"result = instance._will_roll(1)",
+		"assert result is True",
+	}, []string{
+		"UploadFile(None, 1, 'test', None)",
+		"instance._will_roll(None)",
+	})
+
+	willRollSizeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-2",
+		Target:    "UploadFile._will_roll",
+		GapType:   "branch",
+		LineRange: "448-449",
+		TestName:  "test_upload_file_will_roll_size_covers_gap",
+	}
+	code = genPytestClassTestForCoverageTask(uploadClass, &willRollSizeTask)
+	assertPyGenerated(t, code, []string{
+		"stream = tempfile.SpooledTemporaryFile(max_size=4)",
+		"stream.write(b'abc')",
+		"result = instance._will_roll(2)",
+		"assert result is True",
+	}, []string{
+		"stream.rollover()",
+		"UploadFile(None, 1, 'test', None)",
+	})
+
+	writeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-3",
+		Target:    "UploadFile.write",
+		GapType:   "statement",
+		LineRange: "452-454",
+		TestName:  "test_upload_file_write_size_covers_gap",
+	}
+	uploadClass.Methods[0] = pyFuncInfo{Name: "write", Params: []pyParamInfo{{Name: "data"}}, IsAsync: true, Analysis: pyFuncAnalysis{HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(uploadClass, &writeTask)
+	assertPyGenerated(t, code, []string{
+		"instance = UploadFile(file=stream, filename='file', size=0)",
+		"result = asyncio.run(instance.write(b'hi'))",
+		"assert instance.size == 2",
+		"assert stream.read() == b'hi'",
+	}, []string{
+		"instance.write({})",
+		"UploadFile(None, 1, 'test', None)",
+	})
+
+	writeRollTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-4",
+		Target:    "UploadFile.write",
+		GapType:   "branch",
+		LineRange: "456-457",
+		TestName:  "test_upload_file_write_roll_covers_gap",
+	}
+	code = genPytestClassTestForCoverageTask(uploadClass, &writeRollTask)
+	assertPyGenerated(t, code, []string{
+		"stream = tempfile.SpooledTemporaryFile(max_size=1)",
+		"result = asyncio.run(instance.write(b'hi'))",
+		"assert instance._in_memory is False",
+	}, []string{
+		"instance.write({})",
+	})
+
+	readTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-5",
+		Target:    "UploadFile.read",
+		GapType:   "branch",
+		LineRange: "462-464",
+		TestName:  "test_upload_file_read_covers_gap",
+	}
+	uploadClass.Methods[0] = pyFuncInfo{Name: "read", Params: []pyParamInfo{{Name: "size", HasDefault: true}}, IsAsync: true, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "bytes"}}
+	code = genPytestClassTestForCoverageTask(uploadClass, &readTask)
+	assertPyGenerated(t, code, []string{
+		"stream.write(b'hello')",
+		"result = asyncio.run(instance.read(2))",
+		"assert result == b'he'",
+	}, []string{
+		"instance.read(None)",
+	})
+
+	seekTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-6",
+		Target:    "UploadFile.seek",
+		GapType:   "branch",
+		LineRange: "467-468",
+		TestName:  "test_upload_file_seek_covers_gap",
+	}
+	uploadClass.Methods[0] = pyFuncInfo{Name: "seek", Params: []pyParamInfo{{Name: "offset"}}, IsAsync: true, Analysis: pyFuncAnalysis{HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(uploadClass, &seekTask)
+	assertPyGenerated(t, code, []string{
+		"result = asyncio.run(instance.seek(1))",
+		"assert stream.tell() == 1",
+	}, []string{
+		"instance.seek(None)",
+	})
+
+	closeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-upload-7",
+		Target:    "UploadFile.close",
+		GapType:   "branch",
+		LineRange: "473-474",
+		TestName:  "test_upload_file_close_covers_gap",
+	}
+	uploadClass.Methods[0] = pyFuncInfo{Name: "close", IsAsync: true, Analysis: pyFuncAnalysis{HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(uploadClass, &closeTask)
+	assertPyGenerated(t, code, []string{
+		"result = asyncio.run(instance.close())",
+		"assert stream.closed is True",
+	}, []string{
+		"UploadFile(None, 1, 'test', None)",
+	})
+}
+
+func TestPytestCoverageTaskUsesStarletteMutableHeadersInputs(t *testing.T) {
+	headersClass := pyClassInfo{
+		Name: "MutableHeaders",
+		Methods: []pyFuncInfo{
+			{Name: "add_vary_header", Params: []pyParamInfo{{Name: "vary"}}, Analysis: pyFuncAnalysis{HasReturn: false}},
+		},
+	}
+	task := types.CoverageTestTask{
+		ID:        "pytest-starlette-headers-1",
+		Target:    "MutableHeaders.add_vary_header",
+		GapType:   "branch",
+		LineRange: "658-661",
+		TestName:  "test_mutable_headers_add_vary_header_covers_gap",
+	}
+	code := genPytestClassTestForCoverageTask(headersClass, &task)
+	assertPyGenerated(t, code, []string{
+		"instance = MutableHeaders({'vary': 'Accept-Encoding'})",
+		"result = instance.add_vary_header('Origin')",
+		"assert result is None",
+		"assert instance['vary'] == 'Accept-Encoding, Origin'",
+	}, []string{
+		"MutableHeaders()",
+		"add_vary_header(None)",
+	})
+}
+
+func TestPytestCoverageTaskUsesStarletteEndpointInputs(t *testing.T) {
+	httpClass := pyClassInfo{
+		Name: "HTTPEndpoint",
+		Methods: []pyFuncInfo{
+			{Name: "dispatch", IsAsync: true, Analysis: pyFuncAnalysis{HasReturn: false}},
+		},
+	}
+	dispatchTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-endpoint-1",
+		Target:    "HTTPEndpoint.dispatch",
+		GapType:   "branch",
+		LineRange: "32-43",
+		TestName:  "test_http_endpoint_dispatch_covers_gap",
+	}
+	code := genPytestClassTestForCoverageTask(httpClass, &dispatchTask)
+	assertPyGenerated(t, code, []string{
+		"class AsyncEndpoint(HTTPEndpoint):",
+		"class SyncEndpoint(HTTPEndpoint):",
+		"get_scope = {'type': 'http', 'method': 'GET', 'path': '/', 'headers': []}",
+		"head_scope = {'type': 'http', 'method': 'HEAD', 'path': '/', 'headers': []}",
+		"post_scope = {'type': 'http', 'method': 'POST', 'path': '/', 'headers': []}",
+		"assert messages[0]['status'] == 405",
+	}, []string{
+		"HTTPEndpoint(None, None, None)",
+	})
+
+	methodTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-endpoint-2",
+		Target:    "HTTPEndpoint.method_not_allowed",
+		GapType:   "branch",
+		LineRange: "52-55",
+		TestName:  "test_http_endpoint_method_not_allowed_covers_gap",
+	}
+	httpClass.Methods[0] = pyFuncInfo{Name: "method_not_allowed", Params: []pyParamInfo{{Name: "request"}}, IsAsync: true, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true, ReturnType: "Response"}}
+	code = genPytestClassTestForCoverageTask(httpClass, &methodTask)
+	assertPyGenerated(t, code, []string{
+		"request = requests.Request(scope, receive=receive)",
+		"response = asyncio.run(instance.method_not_allowed(request))",
+		"assert response.status_code == 405",
+		"app_scope['app'] = object()",
+		"except exceptions.HTTPException as exc:",
+	}, []string{
+		"HTTPEndpoint(None, None, None)",
+		"method_not_allowed(None)",
+	})
+
+	websocketClass := pyClassInfo{
+		Name: "WebSocketEndpoint",
+		Methods: []pyFuncInfo{
+			{Name: "decode", Params: []pyParamInfo{{Name: "websocket"}, {Name: "message"}}, IsAsync: true, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true, ReturnType: "unknown"}},
+		},
+	}
+	decodeTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-endpoint-3",
+		Target:    "WebSocketEndpoint.decode",
+		GapType:   "branch",
+		LineRange: "91-117",
+		TestName:  "test_websocket_endpoint_decode_covers_gap",
+	}
+	code = genPytestClassTestForCoverageTask(websocketClass, &decodeTask)
+	assertPyGenerated(t, code, []string{
+		"class DummyWebSocket:",
+		"instance.encoding = 'json'",
+		"assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'text': '{\"ok\": true}'})) == {'ok': True}",
+		"assert asyncio.run(instance.decode(websocket, {'type': 'websocket.receive', 'bytes': b'{\"ok\": true}'})) == {'ok': True}",
+		"instance.encoding = 'text'",
+		"instance.encoding = 'bytes'",
+		"assert websocket.closed == [1003, 1003]",
+	}, []string{
+		"WebSocketEndpoint(None, None, None)",
+		"instance.decode(None, 'test')",
+	})
+
+	dispatchWsTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-endpoint-4",
+		Target:    "WebSocketEndpoint.dispatch",
+		GapType:   "branch",
+		LineRange: "76-87",
+		TestName:  "test_websocket_endpoint_dispatch_covers_gap",
+	}
+	websocketClass.Methods[0] = pyFuncInfo{Name: "dispatch", IsAsync: true, Analysis: pyFuncAnalysis{Raises: true, HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(websocketClass, &dispatchWsTask)
+	assertPyGenerated(t, code, []string{
+		"class RecordingEndpoint(WebSocketEndpoint):",
+		"{'type': 'websocket.connect'}",
+		"{'type': 'websocket.receive', 'text': 'hello'}",
+		"{'type': 'websocket.disconnect', 'code': 1001}",
+		"assert instance.received == ['hello']",
+		"assert failing.disconnected == [1011]",
+	}, []string{
+		"WebSocketEndpoint(None, None, None)",
+	})
+}
+
+func TestPytestCoverageTaskUsesStarletteMultipartInputs(t *testing.T) {
+	parserClass := pyClassInfo{
+		Name: "MultiPartParser",
+		Methods: []pyFuncInfo{
+			{Name: "on_part_data", Params: []pyParamInfo{{Name: "data"}, {Name: "start"}, {Name: "end"}}, Analysis: pyFuncAnalysis{Raises: true, HasReturn: false}},
+		},
+	}
+	dataTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-multipart-1",
+		Target:    "MultiPartParser.on_part_data",
+		GapType:   "branch",
+		LineRange: "182-186",
+		TestName:  "test_multipart_parser_on_part_data_covers_gap",
+	}
+	code := genPytestClassTestForCoverageTask(parserClass, &dataTask)
+	assertPyGenerated(t, code, []string{
+		"headers = datastructures.Headers({'content-type': 'multipart/form-data; boundary=x'})",
+		"instance = MultiPartParser(headers, stream(), max_part_size=3)",
+		"instance.on_part_data(b'ab', 0, 2)",
+		"assert instance._current_part.data == bytearray(b'ab')",
+		"instance.on_part_data(b'cdef', 0, 4)",
+	}, []string{
+		"MultiPartParser(None, __import__('io').BytesIO(b'test'), None, None, 1)",
+		"on_part_data({}, None, None)",
+	})
+
+	endTask := types.CoverageTestTask{
+		ID:        "pytest-starlette-multipart-2",
+		Target:    "MultiPartParser.on_part_end",
+		GapType:   "branch",
+		LineRange: "191-192",
+		TestName:  "test_multipart_parser_on_part_end_covers_gap",
+	}
+	parserClass.Methods[0] = pyFuncInfo{Name: "on_part_end", Analysis: pyFuncAnalysis{HasReturn: false}}
+	code = genPytestClassTestForCoverageTask(parserClass, &endTask)
+	assertPyGenerated(t, code, []string{
+		"instance = MultiPartParser(headers, stream())",
+		"instance._current_part.field_name = 'field'",
+		"instance._current_part.data.extend(b'value')",
+		"result = instance.on_part_end()",
+		"assert instance.items == [('field', 'value')]",
+	}, []string{
+		"MultiPartParser(None, __import__('io').BytesIO(b'test'), None, None, 1)",
+	})
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {
