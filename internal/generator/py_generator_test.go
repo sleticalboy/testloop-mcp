@@ -1616,6 +1616,159 @@ func TestPytestCoverageTaskUsesApkParserInputs(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
+	versionFunc := pyFuncInfo{
+		Name: "build_version_out",
+		Params: []pyParamInfo{
+			{Name: "version"},
+			{Name: "app_short_code", HasDefault: true},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "dict"},
+	}
+	versionTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-version-1",
+		Target:    "build_version_out",
+		GapType:   "branch",
+		LineRange: "68-70",
+		TestName:  "test_build_version_out_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(versionFunc, &versionTask)
+	assertPyGenerated(t, code, []string{
+		"class DetachedVersion:",
+		"def app(self):",
+		"raise RuntimeError('detached')",
+		"result = build_version_out(DetachedVersion())",
+		"assert result['short_code'] is None",
+		"assert result['share_url'] is None",
+	}, []string{
+		"build_version_out(None, None)",
+	})
+
+	deleteFunc := pyFuncInfo{
+		Name:     "_delete_icon_file",
+		Params:   []pyParamInfo{{Name: "icon_url"}},
+		Analysis: pyFuncAnalysis{HasReturn: false},
+	}
+	deleteEmptyTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-delete-1",
+		Target:    "_delete_icon_file",
+		GapType:   "branch",
+		LineRange: "682-684",
+		TestName:  "test_delete_icon_file_empty_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(deleteFunc, &deleteEmptyTask)
+	assertPyGenerated(t, code, []string{
+		"result = _delete_icon_file('')",
+		"assert result is None",
+	}, []string{
+		"_delete_icon_file('https://example.com')",
+	})
+
+	deleteKeyTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-delete-2",
+		Target:    "_delete_icon_file",
+		GapType:   "branch",
+		LineRange: "691-700",
+		TestName:  "test_delete_icon_file_key_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(deleteFunc, &deleteKeyTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.api.apps', fromlist=['delete_file'])",
+		"module.delete_file = lambda key: calls.append(key)",
+		"_delete_icon_file('https://cdn.test/apps/example-icon.png')",
+		"assert calls == ['apps/example-icon.png']",
+	}, []string{
+		"assert isinstance(result, int)",
+	})
+
+	shortLinkFunc := pyFuncInfo{
+		Name: "short_link_page",
+		Params: []pyParamInfo{
+			{Name: "short_code"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	for _, tt := range []struct {
+		name      string
+		lineRange string
+		wants     []string
+	}{
+		{
+			name:      "missing app",
+			lineRange: "780-782",
+			wants: []string{
+				"result = short_link_page('missing', FakeDB(None))",
+				"assert result.status_code == 404",
+				"assert '链接无效' in result.body.decode()",
+			},
+		},
+		{
+			name:      "hidden app",
+			lineRange: "785-786",
+			wants: []string{
+				"app = SimpleNamespace(id=1, app_name='Hidden App', icon_url='', is_hidden=True)",
+				"result = short_link_page('hidden', FakeDB(app))",
+				"assert result.status_code == 410",
+			},
+		},
+		{
+			name:      "latest fallback",
+			lineRange: "815-816",
+			wants: []string{
+				"result = short_link_page('abc123', FakeDB(app, [None, version]))",
+				"assert result.status_code == 200",
+			},
+		},
+		{
+			name:      "no versions",
+			lineRange: "819-820",
+			wants: []string{
+				"result = short_link_page('empty', FakeDB(app, [None, None]))",
+				"assert '暂无可用版本' in result.body.decode()",
+			},
+		},
+		{
+			name:      "file size fallback",
+			lineRange: "822-824",
+			wants: []string{
+				"version = SimpleNamespace(id=10, version_name='2.0.0', version_code=8, file_size=None, release_notes='')",
+				"assert '大小：? MB' in body",
+				"assert '/api/versions/10/download' in body",
+			},
+		},
+		{
+			name:      "rich html fields",
+			lineRange: "826-832",
+			wants: []string{
+				"app = SimpleNamespace(id=1, app_name='<Example>', icon_url='https://cdn.test/icon.png', is_hidden=False)",
+				"version = SimpleNamespace(id=11, version_name='3.0.0', version_code=9, file_size=2097152, release_notes='one\\ntwo')",
+				"assert '&lt;Example&gt;' in body",
+				"assert 'https://cdn.test/icon.png' in body",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			task := types.CoverageTestTask{
+				ID:        "pytest-fastapi-short-link",
+				Target:    "short_link_page",
+				GapType:   "branch",
+				LineRange: tt.lineRange,
+				TestName:  "test_short_link_page_covers_gap",
+			}
+			code := genPytestFuncTestForCoverageTask(shortLinkFunc, &task)
+			baseWants := []string{
+				"class FakeQuery:",
+				"class FakeDB:",
+				"def query(self, model):",
+			}
+			assertPyGenerated(t, code, append(baseWants, tt.wants...), []string{
+				"short_link_page(None, None)",
+			})
+		})
+	}
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {

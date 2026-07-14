@@ -755,6 +755,34 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		return ""
 	}
 	switch fn.Name {
+	case "build_version_out":
+		return strings.Join([]string{
+			"    from types import SimpleNamespace",
+			"    class DetachedVersion:",
+			"        id = 7",
+			"        app_id = 3",
+			"        version_code = 42",
+			"        version_name = '1.2.3'",
+			"        build_version = None",
+			"        file_size = 1234",
+			"        file_key = 'apps/example.apk'",
+			"        release_notes = 'notes'",
+			"        download_count = 0",
+			"        is_current = True",
+			"        created_at = None",
+			"        @property",
+			"        def app(self):",
+			"            raise RuntimeError('detached')",
+			"    result = build_version_out(DetachedVersion())",
+			"    assert result['id'] == 7",
+			"    assert result['short_code'] is None",
+			"    assert result['share_url'] is None",
+			"    assert result['qrcode_url'] is None",
+			"    result = build_version_out(SimpleNamespace(id=8, app_id=3, version_code=43, version_name='1.2.4', build_version='b1', file_size=1, file_key='apps/example2.apk', release_notes='', download_count=0, is_current=False, created_at=None), app_short_code='abc123')",
+			"    assert result['short_code'] == 'abc123'",
+			"    assert result['share_url'].endswith('/s/abc123')",
+			"",
+		}, "\n")
 	case "_find_icon_in_zip":
 		iconName := "res/drawable/launcher.png"
 		if strings.Contains(task.LineRange, "113") {
@@ -839,6 +867,29 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			"    assert result['icon_ext'] == 'png'",
 			"",
 		}, "\n")
+	case "_delete_icon_file":
+		if strings.Contains(task.LineRange, "682") {
+			return strings.Join([]string{
+				"    result = _delete_icon_file('')",
+				"    assert result is None",
+				"",
+			}, "\n")
+		}
+		return strings.Join([]string{
+			"    module = __import__('app.api.apps', fromlist=['delete_file'])",
+			"    calls = []",
+			"    original_delete_file = module.delete_file",
+			"    module.delete_file = lambda key: calls.append(key)",
+			"    try:",
+			"        result = _delete_icon_file('https://cdn.test/apps/example-icon.png')",
+			"    finally:",
+			"        module.delete_file = original_delete_file",
+			"    assert result is None",
+			"    assert calls == ['apps/example-icon.png']",
+			"",
+		}, "\n")
+	case "short_link_page":
+		return pyShortLinkPageCoverageBody(task, "    ")
 	case "_logical_notification":
 		return pyLogicalNotificationCoverageBody(task, "    ")
 	case "_logical_completion":
@@ -893,6 +944,111 @@ func pyGetRoutePathCoverageBody(task *types.CoverageTestTask, indent string) str
 			indent + "assert result == '/home'",
 			"",
 		}, "\n")
+	default:
+		return ""
+	}
+}
+
+func pyShortLinkPageCoverageBody(task *types.CoverageTestTask, indent string) string {
+	prefix := []string{
+		indent + "from types import SimpleNamespace",
+		indent + "module = __import__('app.api.apps', fromlist=['generate_qr_data_url'])",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, values):",
+		indent + "        self.values = list(values)",
+		indent + "    def filter(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def order_by(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def first(self):",
+		indent + "        return self.values.pop(0) if self.values else None",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, app, version_results=()):",
+		indent + "        self.app = app",
+		indent + "        self.version_results = list(version_results)",
+		indent + "    def query(self, model):",
+		indent + "        if getattr(model, '__name__', '') == 'App':",
+		indent + "            return FakeQuery([self.app])",
+		indent + "        value = self.version_results.pop(0) if self.version_results else None",
+		indent + "        return FakeQuery([value])",
+	}
+	lineRange := strings.TrimSpace(task.LineRange)
+	switch lineRange {
+	case "780-782":
+		lines := append(prefix,
+			indent+"result = short_link_page('missing', FakeDB(None))",
+			indent+"assert result.status_code == 404",
+			indent+"assert '链接无效' in result.body.decode()",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "785-786":
+		lines := append(prefix,
+			indent+"app = SimpleNamespace(id=1, app_name='Hidden App', icon_url='', is_hidden=True)",
+			indent+"result = short_link_page('hidden', FakeDB(app))",
+			indent+"assert result.status_code == 410",
+			indent+"assert '该应用已下架' in result.body.decode()",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "815-816":
+		lines := append(prefix,
+			indent+"original_qr = module.generate_qr_data_url",
+			indent+"module.generate_qr_data_url = lambda text: 'data:image/png;base64,test'",
+			indent+"try:",
+			indent+"    app = SimpleNamespace(id=1, app_name='Example App', icon_url='', is_hidden=False)",
+			indent+"    version = SimpleNamespace(id=9, version_name='1.2.3', version_code=7, file_size=1048576, release_notes='')",
+			indent+"    result = short_link_page('abc123', FakeDB(app, [None, version]))",
+			indent+"finally:",
+			indent+"    module.generate_qr_data_url = original_qr",
+			indent+"assert result.status_code == 200",
+			indent+"assert 'Example App' in result.body.decode()",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "819-820":
+		lines := append(prefix,
+			indent+"app = SimpleNamespace(id=1, app_name='Empty App', icon_url='', is_hidden=False)",
+			indent+"result = short_link_page('empty', FakeDB(app, [None, None]))",
+			indent+"assert result.status_code == 404",
+			indent+"assert '暂无可用版本' in result.body.decode()",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "822-824":
+		lines := append(prefix,
+			indent+"original_qr = module.generate_qr_data_url",
+			indent+"module.generate_qr_data_url = lambda text: 'data:image/png;base64,test'",
+			indent+"try:",
+			indent+"    app = SimpleNamespace(id=1, app_name='Sized App', icon_url='', is_hidden=False)",
+			indent+"    version = SimpleNamespace(id=10, version_name='2.0.0', version_code=8, file_size=None, release_notes='')",
+			indent+"    result = short_link_page('sized', FakeDB(app, [version]))",
+			indent+"finally:",
+			indent+"    module.generate_qr_data_url = original_qr",
+			indent+"body = result.body.decode()",
+			indent+"assert result.status_code == 200",
+			indent+"assert '大小：? MB' in body",
+			indent+"assert '/api/versions/10/download' in body",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "826-832":
+		lines := append(prefix,
+			indent+"original_qr = module.generate_qr_data_url",
+			indent+"module.generate_qr_data_url = lambda text: 'data:image/png;base64,test'",
+			indent+"try:",
+			indent+"    app = SimpleNamespace(id=1, app_name='<Example>', icon_url='https://cdn.test/icon.png', is_hidden=False)",
+			indent+"    version = SimpleNamespace(id=11, version_name='3.0.0', version_code=9, file_size=2097152, release_notes='one\\ntwo')",
+			indent+"    result = short_link_page('rich', FakeDB(app, [version]))",
+			indent+"finally:",
+			indent+"    module.generate_qr_data_url = original_qr",
+			indent+"body = result.body.decode()",
+			indent+"assert result.status_code == 200",
+			indent+"assert '&lt;Example&gt;' in body",
+			indent+"assert 'https://cdn.test/icon.png' in body",
+			"",
+		)
+		return strings.Join(lines, "\n")
 	default:
 		return ""
 	}
