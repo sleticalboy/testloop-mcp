@@ -464,6 +464,24 @@ scripts/validate-py-coverage-top-tasks.sh /path/to/python/project 20 /tmp/testlo
 
 Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
 
+Rust/Cargo 项目可使用：
+
+```bash
+TESTLOOP_VALIDATE_RUST_COVERAGE_COMMAND='cargo llvm-cov --lcov --output-path target/llvm-cov/lcov.info' \
+TESTLOOP_VALIDATE_RUST_COVERAGE_FILE='target/llvm-cov/lcov.info' \
+scripts/validate-rust-coverage-top-tasks.sh /path/to/rust/project 20 /tmp/testloop-rust-top20.jsonl
+```
+
+Rust 脚本会读取 LCOV 文件，默认命令为 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin`。当前也支持通过环境变量接入 `cargo llvm-cov` 或项目自定义覆盖率命令。
+
+Java/Maven 或 Gradle 项目可使用：
+
+```bash
+scripts/validate-java-coverage-top-tasks.sh /path/to/java/project 20 /tmp/testloop-java-top20.jsonl
+```
+
+Java 脚本会读取 JaCoCo XML，默认检测 `target/site/jacoco/jacoco.xml` 或 `build/reports/jacoco/test/jacocoTestReport.xml`。常用变量包括 `TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND`、`TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE`、`TESTLOOP_VALIDATE_JAVA_FILE_FILTER`、`TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS`。
+
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
 ## Roadmap
