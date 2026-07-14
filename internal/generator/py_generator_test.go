@@ -1783,6 +1783,15 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 			},
 		},
 		{
+			name:      "current version query",
+			lineRange: "811-811",
+			wants: []string{
+				"result = short_link_page('rich', FakeDB(app, [version]))",
+				"assert result.status_code == 200",
+				"assert '&lt;Example&gt;' in body",
+			},
+		},
+		{
 			name:      "file size fallback",
 			lineRange: "822-824",
 			wants: []string{
@@ -1799,6 +1808,15 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 				"version = SimpleNamespace(id=11, version_name='3.0.0', version_code=9, file_size=2097152, release_notes='one\\ntwo')",
 				"assert '&lt;Example&gt;' in body",
 				"assert 'https://cdn.test/icon.png' in body",
+			},
+		},
+		{
+			name:      "html content assignment",
+			lineRange: "835-835",
+			wants: []string{
+				"result = short_link_page('rich', FakeDB(app, [version]))",
+				"body = result.body.decode()",
+				"assert result.status_code == 200",
 			},
 		},
 		{
