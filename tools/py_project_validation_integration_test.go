@@ -35,7 +35,7 @@ func TestValidatePyCoverageTopTasks(t *testing.T) {
 	}
 	baselineRoot := filepath.Join(t.TempDir(), "baseline")
 	logPyValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
-	if err := copyTree(projectDir, baselineRoot); err != nil {
+	if err := copyPyProjectTree(projectDir, baselineRoot); err != nil {
 		t.Fatalf("copy baseline project: %v", err)
 	}
 	logPyValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
@@ -64,7 +64,7 @@ func TestValidatePyCoverageTopTasks(t *testing.T) {
 		task := tasks[i]
 		taskRoot := filepath.Join(t.TempDir(), fmt.Sprintf("task-%02d", i+1))
 		logPyValidationStage(t, "task.copy.start index=%d id=%s target=%s root=%s", i+1, task.ID, task.Target, taskRoot)
-		if err := copyTree(projectDir, taskRoot); err != nil {
+		if err := copyPyProjectTree(projectDir, taskRoot); err != nil {
 			t.Fatalf("copy task worktree for %s: %v", task.ID, err)
 		}
 		logPyValidationStage(t, "task.copy.done index=%d id=%s", i+1, task.ID)
@@ -228,6 +228,21 @@ func filterPyCoverageTasks(tasks []types.CoverageTestTask, filter string) []type
 		}
 	}
 	return filtered
+}
+
+func copyPyProjectTree(src string, dst string) error {
+	return copyTreeSkipping(src, dst, map[string]bool{
+		".git":          true,
+		".mypy_cache":   true,
+		".pytest_cache": true,
+		".ruff_cache":   true,
+		".tox":          true,
+		".venv":         true,
+		"__pycache__":   true,
+		"coverage.json": true,
+		"htmlcov":       true,
+		"venv":          true,
+	})
 }
 
 func rewritePyValidationPath(baselineRoot string, taskRoot string, value string) string {

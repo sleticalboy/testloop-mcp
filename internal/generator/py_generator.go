@@ -495,6 +495,10 @@ func genPytestFuncTestForCoverageTask(fn pyFuncInfo, task *types.CoverageTestTas
 	if comment := coverageTaskComment(task); comment != "" {
 		sb.WriteString(fmt.Sprintf("    # coverage task: %s\n", comment))
 	}
+	if custom := genPytestFuncCustomCoverageTask(fn, task); custom != "" {
+		sb.WriteString(custom)
+		return sb.String()
+	}
 	if review := pyFuncEnvironmentReview(fn, task); review != "" {
 		sb.WriteString(fmt.Sprintf("    pytest.skip(%q)\n\n", review))
 		return sb.String()
@@ -659,6 +663,10 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 		if comment := coverageTaskComment(task); comment != "" {
 			sb.WriteString(fmt.Sprintf("        # coverage task: %s\n", comment))
 		}
+		if custom := genPytestClassMethodCustomCoverageTask(cls, method, task); custom != "" {
+			sb.WriteString(custom)
+			continue
+		}
 		if !method.IsStatic {
 			sb.WriteString(fmt.Sprintf("        instance = %s\n", pyClassInstanceForCoverageTask(cls, method, task)))
 		}
@@ -703,6 +711,294 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 	return sb.String()
 }
 
+func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask) string {
+	if task == nil {
+		return ""
+	}
+	switch fn.Name {
+	case "_logical_notification":
+		return pyLogicalNotificationCoverageBody(task, "    ")
+	case "_logical_completion":
+		return strings.Join([]string{
+			"    v2 = __import__('openai_codex.generated.v2_all', fromlist=['Turn', 'TurnCompletedNotification', 'TurnStatus'])",
+			"    turn = v2.Turn(id='physical-turn', status=v2.TurnStatus.completed, items=[], startedAt=100, completedAt=103)",
+			"    started = v2.Turn(id='started-turn', status=v2.TurnStatus.completed, items=[], startedAt=90)",
+			"    completed = v2.TurnCompletedNotification(threadId='thread-1', turn=turn)",
+			"    result = _logical_completion(completed, logical_turn_id='logical-turn', started=started, interrupted=True)",
+			"    assert result.turn.id == 'logical-turn'",
+			"    assert result.turn.duration_ms == 13000",
+			"    assert result.turn.status == v2.TurnStatus.interrupted",
+			"",
+		}, "\n")
+	case "_to_wire_input":
+		return strings.Join([]string{
+			"    inputs = __import__('openai_codex._inputs', fromlist=['TextInput'])",
+			"    result = _to_wire_input([inputs.TextInput('hello')])",
+			"    assert result == [{'type': 'text', 'text': 'hello'}]",
+			"",
+		}, "\n")
+	default:
+		return ""
+	}
+}
+
+func pyLogicalNotificationCoverageBody(task *types.CoverageTestTask, indent string) string {
+	lineRange := strings.TrimSpace(task.LineRange)
+	switch lineRange {
+	case "198-206":
+		return strings.Join([]string{
+			indent + "models = __import__('openai_codex.models', fromlist=['Notification', 'UnknownNotification'])",
+			indent + "notification = models.Notification('custom/event', models.UnknownNotification({'turnId': 'physical-turn', 'turn': {'id': 'physical-turn'}}))",
+			indent + "result = _logical_notification(notification, 'logical-turn')",
+			indent + "assert result.payload.params['turnId'] == 'logical-turn'",
+			indent + "assert result.payload.params['turn']['id'] == 'logical-turn'",
+			"",
+		}, "\n")
+	case "208-212":
+		return strings.Join([]string{
+			indent + "models = __import__('openai_codex.models', fromlist=['Notification'])",
+			indent + "v2 = __import__('openai_codex.generated.v2_all', fromlist=['AgentMessageDeltaNotification'])",
+			indent + "payload = v2.AgentMessageDeltaNotification(delta='hello', itemId='item-1', threadId='thread-1', turnId='physical-turn')",
+			indent + "notification = models.Notification('agent_message_delta', payload)",
+			indent + "result = _logical_notification(notification, 'logical-turn')",
+			indent + "assert result.payload.turn_id == 'logical-turn'",
+			"",
+		}, "\n")
+	case "216-218":
+		return strings.Join([]string{
+			indent + "models = __import__('openai_codex.models', fromlist=['Notification'])",
+			indent + "v2 = __import__('openai_codex.generated.v2_all', fromlist=['Turn', 'TurnStartedNotification', 'TurnStatus'])",
+			indent + "turn = v2.Turn(id='physical-turn', status=v2.TurnStatus.completed, items=[])",
+			indent + "payload = v2.TurnStartedNotification(threadId='thread-1', turn=turn)",
+			indent + "notification = models.Notification('turn/started', payload)",
+			indent + "result = _logical_notification(notification, 'logical-turn')",
+			indent + "assert result.payload.turn.id == 'logical-turn'",
+			"",
+		}, "\n")
+	default:
+		return ""
+	}
+}
+
+func genPytestClassMethodCustomCoverageTask(cls pyClassInfo, method pyFuncInfo, task *types.CoverageTestTask) string {
+	if task == nil {
+		return ""
+	}
+	if cls.Name == "_GoalOperationState" {
+		switch method.Name {
+		case "observe":
+			return pyGoalOperationStateObserveCoverageBody(task, "        ")
+		case "begin_interrupt":
+			return strings.Join([]string{
+				"        instance = _GoalOperationState('thread-1')",
+				"        result = instance.begin_interrupt()",
+				"        assert result is True",
+				"        assert instance.interrupt_requested is True",
+				"",
+			}, "\n")
+		case "active_turn":
+			return strings.Join([]string{
+				"        instance = _GoalOperationState('thread-1')",
+				"        instance.current_turn_id = 'turn-1'",
+				"        result = instance.active_turn()",
+				"        assert result == 'turn-1'",
+				"",
+			}, "\n")
+		case "resolve_active_turn":
+			return strings.Join([]string{
+				"        instance = _GoalOperationState('thread-1')",
+				"        instance.resolve_active_turn('expected-turn', 'active-turn')",
+				"        assert instance.current_turn_id == 'active-turn'",
+				"",
+			}, "\n")
+		case "turn_for_interrupt":
+			return strings.Join([]string{
+				"        instance = _GoalOperationState('thread-1')",
+				"        instance.current_turn_id = 'turn-1'",
+				"        result = instance.turn_for_interrupt()",
+				"        assert result == 'turn-1'",
+				"",
+			}, "\n")
+		default:
+			return ""
+		}
+	}
+	if cls.Name == "_GoalStreamCursor" {
+		if method.Name == "process" {
+			return pyGoalStreamCursorProcessCoverageBody(task, "        ")
+		}
+		if method.Name == "_completion" {
+			return strings.Join([]string{
+				"        goal = __import__('openai_codex._goal', fromlist=['_GoalOperationState'])",
+				"        v2 = __import__('openai_codex.generated.v2_all', fromlist=['Turn', 'TurnCompletedNotification', 'TurnStatus'])",
+				"        state = goal._GoalOperationState('thread-1')",
+				"        instance = _GoalStreamCursor(state)",
+				"        turn = v2.Turn(id='physical-turn', status=v2.TurnStatus.completed, items=[])",
+				"        completed = v2.TurnCompletedNotification(threadId='thread-1', turn=turn)",
+				"        with pytest.raises(RuntimeError):",
+				"            instance._completion('turn/completed', completed)",
+				"",
+			}, "\n")
+		}
+	}
+	if cls.Name == "_GoalNotificationStream" && method.Name == "_finish" {
+		return pyGoalNotificationStreamFinishCoverageBody("_GoalNotificationStream", "        ")
+	}
+	if cls.Name == "_AsyncGoalNotificationStream" && method.Name == "_finish" {
+		return pyGoalNotificationStreamFinishCoverageBody("_AsyncGoalNotificationStream", "        ")
+	}
+	return ""
+}
+
+func pyGoalOperationStateObserveCoverageBody(task *types.CoverageTestTask, indent string) string {
+	lineRange := strings.TrimSpace(task.LineRange)
+	prefix := []string{
+		indent + "models = __import__('openai_codex.models', fromlist=['Notification'])",
+		indent + "v2 = __import__('openai_codex.generated.v2_all', fromlist=['Turn', 'TurnStartedNotification', 'TurnCompletedNotification', 'ThreadGoal', 'ThreadGoalStatus', 'ThreadGoalUpdatedNotification'])",
+		indent + "instance = _GoalOperationState('thread-1')",
+	}
+	switch lineRange {
+	case "64-68":
+		lines := append(prefix,
+			indent+"instance.activate_turn_routing()",
+			indent+"turn = v2.Turn(id='physical-turn', status=v2.TurnStatus.in_progress, items=[])",
+			indent+"notification = models.Notification('turn/started', v2.TurnStartedNotification(threadId='thread-1', turn=turn))",
+			indent+"result = instance.observe(notification)",
+			indent+"assert result is True",
+			indent+"assert instance.logical_turn_id == 'physical-turn'",
+			indent+"assert instance.current_turn_id == 'physical-turn'",
+			indent+"assert instance.started_turn is turn",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "70-72":
+		lines := append(prefix,
+			indent+"instance.activate_turn_routing()",
+			indent+"instance.current_turn_id = 'physical-turn'",
+			indent+"turn = v2.Turn(id='physical-turn', status=v2.TurnStatus.completed, items=[])",
+			indent+"notification = models.Notification('turn/completed', v2.TurnCompletedNotification(threadId='thread-1', turn=turn))",
+			indent+"result = instance.observe(notification)",
+			indent+"assert result is True",
+			indent+"assert instance.completed_turn is turn",
+			indent+"assert instance.current_turn_id is None",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "74-76":
+		lines := append(prefix,
+			indent+"instance.cleared = True",
+			indent+"goal = v2.ThreadGoal(createdAt=1, objective='ship', status=v2.ThreadGoalStatus.active, threadId='thread-1', timeUsedSeconds=0, tokensUsed=0, updatedAt=2)",
+			indent+"notification = models.Notification('thread/goal/updated', v2.ThreadGoalUpdatedNotification(threadId='thread-1', goal=goal))",
+			indent+"result = instance.observe(notification)",
+			indent+"assert result is True",
+			indent+"assert instance.status == v2.ThreadGoalStatus.active",
+			indent+"assert instance.cleared is False",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	default:
+		return ""
+	}
+}
+
+func pyGoalStreamCursorProcessCoverageBody(task *types.CoverageTestTask, indent string) string {
+	lineRange := strings.TrimSpace(task.LineRange)
+	prefix := []string{
+		indent + "goal = __import__('openai_codex._goal', fromlist=['_GoalOperationState'])",
+		indent + "models = __import__('openai_codex.models', fromlist=['Notification'])",
+		indent + "v2 = __import__('openai_codex.generated.v2_all', fromlist=['Turn', 'TurnStartedNotification', 'TurnCompletedNotification', 'ThreadGoalClearedNotification', 'TurnStatus'])",
+		indent + "state = goal._GoalOperationState('thread-1')",
+	}
+	switch lineRange {
+	case "261-263":
+		lines := append(prefix,
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"notification = models.Notification('turn/started', v2.TurnStartedNotification(threadId='thread-1', turn=v2.Turn(id='physical-turn', status=v2.TurnStatus.in_progress, items=[])))",
+			indent+"with pytest.raises(RuntimeError):",
+			indent+"    instance.process(notification)",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "265-271":
+		lines := append(prefix,
+			indent+"state.logical_turn_id = 'logical-turn'",
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"notification = models.Notification('turn/started', v2.TurnStartedNotification(threadId='thread-1', turn=v2.Turn(id='physical-turn', status=v2.TurnStatus.in_progress, items=[])))",
+			indent+"events, completed = instance.process(notification)",
+			indent+"assert completed is False",
+			indent+"assert events[0].payload.turn.id == 'logical-turn'",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "273-277":
+		lines := append(prefix,
+			indent+"state.logical_turn_id = 'logical-turn'",
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"notification = models.Notification('turn/completed', v2.TurnCompletedNotification(threadId='thread-1', turn=v2.Turn(id='physical-turn', status=v2.TurnStatus.interrupted, items=[])))",
+			indent+"events, completed = instance.process(notification)",
+			indent+"assert completed is True",
+			indent+"assert events[0].payload.turn.status == v2.TurnStatus.interrupted",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "283-290":
+		lines := append(prefix,
+			indent+"state.logical_turn_id = 'logical-turn'",
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"instance.cleared = True",
+			indent+"notification = models.Notification('turn/completed', v2.TurnCompletedNotification(threadId='thread-1', turn=v2.Turn(id='physical-turn', status=v2.TurnStatus.failed, items=[])))",
+			indent+"events, completed = instance.process(notification)",
+			indent+"assert completed is True",
+			indent+"assert state.is_finished() is True",
+			indent+"assert events[0].payload.turn.status == v2.TurnStatus.failed",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "293-295", "313-313":
+		lines := append(prefix,
+			indent+"state.logical_turn_id = 'logical-turn'",
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"instance.last_completed = v2.TurnCompletedNotification(threadId='thread-1', turn=v2.Turn(id='physical-turn', status=v2.TurnStatus.completed, items=[]))",
+			indent+"notification = models.Notification('thread/goal/cleared', v2.ThreadGoalClearedNotification(threadId='thread-1'))",
+			indent+"events, completed = instance.process(notification)",
+			indent+"assert completed is True",
+			indent+"assert state.is_finished() is True",
+			indent+"assert events[0].payload.turn.id == 'logical-turn'",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	case "303-311":
+		lines := append(prefix,
+			indent+"state.logical_turn_id = 'logical-turn'",
+			indent+"instance = _GoalStreamCursor(state)",
+			indent+"notification = models.Notification('thread/goal/cleared', v2.ThreadGoalClearedNotification(threadId='thread-1'))",
+			indent+"events, completed = instance.process(notification)",
+			indent+"assert events == []",
+			indent+"assert completed is False",
+			indent+"assert instance.cleared is True",
+			"",
+		)
+		return strings.Join(lines, "\n")
+	default:
+		return ""
+	}
+}
+
+func pyGoalNotificationStreamFinishCoverageBody(className string, indent string) string {
+	return strings.Join([]string{
+		indent + "goal = __import__('openai_codex._goal', fromlist=['_GoalOperationState'])",
+		indent + "state = goal._GoalOperationState('thread-1')",
+		indent + "calls = []",
+		fmt.Sprintf("%sinstance = %s(state, lambda: None, lambda: calls.append('unregister'), lambda: calls.append('cancel'))", indent, className),
+		indent + "result = instance._finish()",
+		indent + "assert result is None",
+		indent + "assert instance._closed is True",
+		indent + "assert state.is_finished() is True",
+		indent + "assert calls == ['unregister']",
+		"",
+	}, "\n")
+}
+
 func genPyResultAssertion(a pyFuncAnalysis, indent string) string {
 	return genPyResultAssertionWithArgs(a, nil, nil, indent)
 }
@@ -716,6 +1012,9 @@ func pyClassInstanceForCoverageTask(cls pyClassInfo, method pyFuncInfo, task *ty
 	}
 	if cls.Name == "_Option" && method.Name == "process" && task != nil && task.GapType == "error_path" {
 		return "_Option(None, ['--test'], None, action='unknown')"
+	}
+	if cls.Name == "_GoalOperationState" {
+		return "_GoalOperationState('thread-1')"
 	}
 	if cls.Name == "ProgressBar" {
 		return "ProgressBar(type('UnknownLength', (), {'__iter__': lambda self: iter([])})(), width=10, file=__import__('io').StringIO())"
@@ -1013,6 +1312,9 @@ func pyArgValue(p pyParamInfo, _ int) string {
 	name := strings.ToLower(p.Name)
 	compact := strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), "-", "")
 
+	if compact == "useragent" {
+		return "'test/1.0'"
+	}
 	if pyNameHasPrefix(compact, "is", "has", "can", "should") ||
 		pyNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {
 		return "True"

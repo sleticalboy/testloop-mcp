@@ -801,6 +801,220 @@ func TestPytestClassCoverageTaskUsesRealProjectInstances(t *testing.T) {
 	})
 }
 
+func TestPytestCoverageTaskUsesCodexGoalStateInputs(t *testing.T) {
+	goalTask := types.CoverageTestTask{
+		ID:              "pytest-goal-1",
+		Target:          "_GoalOperationState.active_turn",
+		GapType:         "branch",
+		LineRange:       "156-166",
+		TestName:        "test_goaloperationstate_active_turn_covers_gap",
+		MissingBranches: []string{"未覆盖 if 分支: self.current_turn_id is not None and self.current_turn_id != after: return self.current_turn_id"},
+	}
+	goalClass := pyClassInfo{
+		Name: "_GoalOperationState",
+		Methods: []pyFuncInfo{
+			{Name: "active_turn", Params: []pyParamInfo{{Name: "after", HasDefault: true}}, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true, ReturnType: "unknown", Returns: []string{"self.current_turn_id"}}},
+		},
+	}
+	code := genPytestClassTestForCoverageTask(goalClass, &goalTask)
+	assertPyGenerated(t, code, []string{
+		"instance = _GoalOperationState('thread-1')",
+		"instance.current_turn_id = 'turn-1'",
+		"result = instance.active_turn()",
+		"assert result == 'turn-1'",
+	}, []string{
+		"_GoalOperationState()",
+		"with pytest.raises(Exception):",
+		"instance.active_turn(None)",
+	})
+
+	beginTask := types.CoverageTestTask{
+		ID:        "pytest-goal-2",
+		Target:    "_GoalOperationState.begin_interrupt",
+		GapType:   "branch",
+		LineRange: "131-135",
+		TestName:  "test_goaloperationstate_begin_interrupt_covers_gap",
+	}
+	goalClass.Methods[0] = pyFuncInfo{Name: "begin_interrupt", Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "bool", Returns: []string{"False", "True"}}}
+	code = genPytestClassTestForCoverageTask(goalClass, &beginTask)
+	assertPyGenerated(t, code, []string{
+		"result = instance.begin_interrupt()",
+		"assert result is True",
+		"assert instance.interrupt_requested is True",
+	}, []string{
+		"_GoalOperationState()",
+	})
+
+	observeTask := types.CoverageTestTask{
+		ID:        "pytest-goal-3",
+		Target:    "_GoalOperationState.observe",
+		GapType:   "branch",
+		LineRange: "64-68",
+		TestName:  "test_goaloperationstate_observe_covers_gap",
+	}
+	goalClass.Methods[0] = pyFuncInfo{Name: "observe", Params: []pyParamInfo{{Name: "notification"}}, Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "bool", Returns: []string{"True"}}}
+	code = genPytestClassTestForCoverageTask(goalClass, &observeTask)
+	assertPyGenerated(t, code, []string{
+		"models.Notification('turn/started'",
+		"v2.TurnStartedNotification",
+		"result = instance.observe(notification)",
+		"assert instance.logical_turn_id == 'physical-turn'",
+	}, []string{
+		"instance.observe(None)",
+		"_GoalOperationState()",
+	})
+}
+
+func TestPytestCoverageTaskUsesCodexGoalNotificationInputs(t *testing.T) {
+	notificationTask := types.CoverageTestTask{
+		ID:        "pytest-goal-notification-1",
+		Target:    "_logical_notification",
+		GapType:   "branch",
+		LineRange: "208-212",
+		TestName:  "test_logical_notification_covers_gap",
+	}
+	code := genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "_logical_notification",
+		Params: []pyParamInfo{{Name: "notification"}, {Name: "logical_turn_id"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "unknown",
+			Returns:    []string{"notification"},
+		},
+	}, &notificationTask)
+	assertPyGenerated(t, code, []string{
+		"v2.AgentMessageDeltaNotification",
+		"models.Notification('agent_message_delta', payload)",
+		"result = _logical_notification(notification, 'logical-turn')",
+		"assert result.payload.turn_id == 'logical-turn'",
+	}, []string{
+		"_logical_notification(None, 1)",
+	})
+
+	completionTask := types.CoverageTestTask{
+		ID:        "pytest-goal-completion-1",
+		Target:    "_logical_completion",
+		GapType:   "branch",
+		LineRange: "243-245",
+		TestName:  "test_logical_completion_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name: "_logical_completion",
+		Params: []pyParamInfo{
+			{Name: "completed"},
+			{Name: "logical_turn_id"},
+			{Name: "started"},
+			{Name: "interrupted"},
+		},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "unknown",
+			Returns:    []string{"completed.model_copy(update={\"turn\": final_turn.model_copy(update=updates)})"},
+		},
+	}, &completionTask)
+	assertPyGenerated(t, code, []string{
+		"completed = v2.TurnCompletedNotification(threadId='thread-1', turn=turn)",
+		"_logical_completion(completed, logical_turn_id='logical-turn', started=started, interrupted=True)",
+		"assert result.turn.status == v2.TurnStatus.interrupted",
+	}, []string{
+		"_logical_completion(None, 1, None, None)",
+	})
+
+	wireTask := types.CoverageTestTask{
+		ID:        "pytest-wire-input-1",
+		Target:    "_to_wire_input",
+		GapType:   "branch",
+		LineRange: "65-67",
+		TestName:  "test_to_wire_input_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(pyFuncInfo{
+		Name:   "_to_wire_input",
+		Params: []pyParamInfo{{Name: "input"}},
+		Analysis: pyFuncAnalysis{
+			HasReturn:  true,
+			ReturnType: "list",
+			Returns:    []string{"[_to_wire_item(i) for i in input]", "[_to_wire_item(input)]"},
+		},
+	}, &wireTask)
+	assertPyGenerated(t, code, []string{
+		"inputs = __import__('openai_codex._inputs', fromlist=['TextInput'])",
+		"result = _to_wire_input([inputs.TextInput('hello')])",
+		"assert result == [{'type': 'text', 'text': 'hello'}]",
+	}, []string{
+		"_to_wire_input(None)",
+	})
+}
+
+func TestPytestCoverageTaskUsesCodexGoalStreamInputs(t *testing.T) {
+	processTask := types.CoverageTestTask{
+		ID:        "pytest-goal-cursor-1",
+		Target:    "_GoalStreamCursor.process",
+		GapType:   "branch",
+		LineRange: "265-271",
+		TestName:  "test_goalstreamcursor_process_covers_gap",
+	}
+	cursorClass := pyClassInfo{
+		Name: "_GoalStreamCursor",
+		Methods: []pyFuncInfo{
+			{Name: "process", Params: []pyParamInfo{{Name: "notification"}}, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true}},
+		},
+	}
+	code := genPytestClassTestForCoverageTask(cursorClass, &processTask)
+	assertPyGenerated(t, code, []string{
+		"state = goal._GoalOperationState('thread-1')",
+		"state.logical_turn_id = 'logical-turn'",
+		"instance = _GoalStreamCursor(state)",
+		"v2.TurnStartedNotification",
+		"events, completed = instance.process(notification)",
+		"assert events[0].payload.turn.id == 'logical-turn'",
+	}, []string{
+		"_GoalStreamCursor()",
+		"instance.process(None)",
+	})
+
+	completionTask := types.CoverageTestTask{
+		ID:        "pytest-goal-cursor-2",
+		Target:    "_GoalStreamCursor._completion",
+		GapType:   "branch",
+		LineRange: "333-336",
+		TestName:  "test_goalstreamcursor_completion_covers_gap",
+	}
+	cursorClass.Methods[0] = pyFuncInfo{Name: "_completion", Params: []pyParamInfo{{Name: "method"}, {Name: "payload"}}, Analysis: pyFuncAnalysis{Raises: true, HasReturn: true}}
+	code = genPytestClassTestForCoverageTask(cursorClass, &completionTask)
+	assertPyGenerated(t, code, []string{
+		"instance = _GoalStreamCursor(state)",
+		"with pytest.raises(RuntimeError):",
+		"instance._completion('turn/completed', completed)",
+	}, []string{
+		"_GoalStreamCursor()",
+		"instance._completion(None, {})",
+	})
+
+	finishTask := types.CoverageTestTask{
+		ID:        "pytest-goal-stream-1",
+		Target:    "_GoalNotificationStream._finish",
+		GapType:   "branch",
+		LineRange: "388-393",
+		TestName:  "test_goalnotificationstream_finish_covers_gap",
+	}
+	streamClass := pyClassInfo{
+		Name: "_GoalNotificationStream",
+		Methods: []pyFuncInfo{
+			{Name: "_finish", Analysis: pyFuncAnalysis{HasReturn: false}},
+		},
+	}
+	code = genPytestClassTestForCoverageTask(streamClass, &finishTask)
+	assertPyGenerated(t, code, []string{
+		"instance = _GoalNotificationStream(state, lambda: None, lambda: calls.append('unregister'), lambda: calls.append('cancel'))",
+		"result = instance._finish()",
+		"assert instance._closed is True",
+		"assert calls == ['unregister']",
+	}, []string{
+		"_GoalNotificationStream()",
+		"assert result is not None",
+	})
+}
+
 func assertPyGenerated(t *testing.T, code string, wants []string, forbidden []string) {
 	t.Helper()
 	for _, want := range wants {
