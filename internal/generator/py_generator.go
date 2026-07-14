@@ -528,6 +528,10 @@ func genPytestFuncTestForCoverageTask(fn pyFuncInfo, task *types.CoverageTestTas
 	args := pyArgListForCoverageTask(fn.Params, task, boundary)
 	if fn.Name == "_unpack_args" && task != nil && task.GapType == "error_path" {
 		args = "['a'], [-1, -1]"
+	} else if fn.Name == "_v4_sub_compare" {
+		args = "b'\\x01\\x02\\x03\\x04', b'\\x04\\x03\\x02\\x01', 0"
+	} else if fn.Name == "ip_sub_compare" {
+		args = "b'\\x01\\x02', b'\\x01\\x02', 0"
 	}
 
 	sb.WriteString(fmt.Sprintf("def %s():\n", testName))
@@ -765,6 +769,13 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 		return ""
 	}
 	switch fn.Name {
+	case "version_from_header":
+		return strings.Join([]string{
+			"    header = type('Header', (), {'version': 3, 'ipVersion': 4})()",
+			"    result = version_from_header(header)",
+			"    assert result is not None",
+			"",
+		}, "\n")
 	case "build_version_out":
 		return strings.Join([]string{
 			"    from types import SimpleNamespace",
@@ -2719,6 +2730,25 @@ func pyArgValue(p pyParamInfo, _ int) string {
 
 	if compact == "useragent" {
 		return "'test/1.0'"
+	}
+	if compact == "header" {
+		return "type('Header', (), {'version': 3, 'ipVersion': 0})()"
+	}
+	if compact == "version" {
+		return "type('VersionLike', (), {'byte_num': 4, 'name': 'IPv4', 'index_size': 14, 'ip_sub_compare': lambda self, ip, buff, offset: 0})()"
+	}
+	if compact == "ipcompare" || compact == "compare" || strings.HasSuffix(compact, "compare") {
+		return "lambda ip1, buff, offset=0: 0"
+	}
+	if compact == "ip1" || compact == "ip2" || compact == "ipbytes" ||
+		pyNameHasAny(compact, "buff", "buffer") || compact == "vectorindex" {
+		return "b'\\x01\\x02\\x03\\x04'"
+	}
+	if compact == "ip" || strings.HasSuffix(compact, "ip") {
+		return "'1.2.3.4'"
+	}
+	if compact == "offset" {
+		return "0"
 	}
 	if pyNameHasPrefix(compact, "is", "has", "can", "should") ||
 		pyNameHasAny(compact, "enabled", "active", "valid", "visible", "flag", "checked") {

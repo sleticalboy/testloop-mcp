@@ -432,6 +432,136 @@ def sub(a, b):
 	}
 }
 
+func TestGeneratePytestCoverageTaskUsesConcreteBytesForCompareHelpers(t *testing.T) {
+	src := `def ip_sub_compare(ip1, buff, offset):
+    ip2 = buff[offset:offset+len(ip1)]
+    if ip1 > ip2:
+        return 1
+    elif ip1 < ip2:
+        return -1
+    return 0
+
+def _v4_sub_compare(ip1, buff, offset):
+    j = offset + len(ip1) - 1
+    for i in range(len(ip1)):
+        i1 = ip1[i]
+        i2 = buff[j]
+        if i1 < i2:
+            return -1
+        if i1 > i2:
+            return 1
+        j = j - 1
+    return 0
+`
+	srcPath := filepath.Join(t.TempDir(), "util.py")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "pytest-compare",
+		Framework: "pytest",
+		Target:    "_v4_sub_compare",
+		LineRange: "18-18",
+		GapType:   "return_path",
+		TestName:  "test_v4_sub_compare_covers_gap",
+	})
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "result = _v4_sub_compare(b'\\x01\\x02\\x03\\x04', b'\\x04\\x03\\x02\\x01', 0)") {
+		t.Fatalf("expected concrete reversed IPv4 bytes, got:\n%s", code)
+	}
+
+	code, err = GeneratePytestTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "pytest-compare",
+		Framework: "pytest",
+		Target:    "ip_sub_compare",
+		LineRange: "7-7",
+		GapType:   "return_path",
+		TestName:  "test_ip_sub_compare_covers_gap",
+	})
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "result = ip_sub_compare(b'\\x01\\x02', b'\\x01\\x02', 0)") {
+		t.Fatalf("expected concrete bytes compare args, got:\n%s", code)
+	}
+}
+
+func TestGeneratePytestCoverageTaskUsesHeaderObjectForVersionFromHeader(t *testing.T) {
+	src := `def version_from_header(header):
+    if header.version < 3:
+        return "IPv4"
+    if header.ipVersion == 4:
+        return "IPv4"
+    if header.ipVersion == 6:
+        return "IPv6"
+    return None
+`
+	srcPath := filepath.Join(t.TempDir(), "util.py")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "pytest-header",
+		Framework: "pytest",
+		Target:    "version_from_header",
+		LineRange: "4-4",
+		GapType:   "return_path",
+		TestName:  "test_version_from_header_covers_gap",
+	})
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"header = type('Header', (), {'version': 3, 'ipVersion': 4})()",
+		"result = version_from_header(header)",
+		"assert result is not None",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
+func TestGeneratePytestCoverageTaskUsesConstructibleClassDefaults(t *testing.T) {
+	src := `class Searcher:
+    def __init__(self, version, db_path, vector_index, c_buffer):
+        self.version = version
+        self.c_buffer = c_buffer
+
+    def search(self, ip):
+        if not isinstance(ip, str):
+            raise ValueError("bad")
+        return ""
+`
+	srcPath := filepath.Join(t.TempDir(), "searcher.py")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:        "pytest-searcher",
+		Framework: "pytest",
+		Target:    "Searcher.search",
+		LineRange: "7-7",
+		GapType:   "error_path",
+		TestName:  "test_searcher_search_covers_gap",
+	})
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"instance = Searcher(type('VersionLike'",
+		"b'\\x01\\x02\\x03\\x04')",
+		"instance.search('1.2.3.4')",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
 func TestGeneratePytestCoverageTaskUsesPackageImportForSrcLayout(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "src", "click", "utils.py")

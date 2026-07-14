@@ -20,6 +20,10 @@ Environment:
                                       Optional shell command template for baseline coverage.
                                       Use {args} for TESTLOOP_VALIDATE_PY_TEST_ARGS, e.g.
                                       "python3 -m pytest --cov=src --cov-report=json {args}".
+  TESTLOOP_PYTEST_COMMAND             Optional shell command template used by run_tests for
+                                      each generated pytest task. Use {path}, {verbose},
+                                      and {coverage}, e.g.
+                                      ".venv/bin/python -m pytest {verbose} {coverage} {path}".
   TESTLOOP_VALIDATE_PY_FILE_FILTER  Optional substring filter for task source files
   TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS
                                       Optional timeout in seconds used as the default for

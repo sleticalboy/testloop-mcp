@@ -916,6 +916,30 @@ func TestHandleRunTestsPytestCoverageUsesProjectRootAndRelativePath(t *testing.T
 	}
 }
 
+func TestHandleRunTestsPytestCustomCommandTemplateUsesProjectRootAndRelativePath(t *testing.T) {
+	dir := writeTempNestedPytestPackage(t)
+	testFile := filepath.Join(dir, "tests", "test_calc.py")
+	t.Setenv("TESTLOOP_PYTEST_COMMAND", "python3 -m pytest {verbose} {coverage} {path}")
+	logPath := installFakePython3Recorder(t, pytestFailureOutput())
+
+	if _, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      testFile,
+		Framework: "pytest",
+		Coverage:  true,
+	}); err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake python3 cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=-m pytest -v --cov tests/test_calc.py\n") {
+		t.Fatalf("fake python3 args log = %q, want custom pytest command", logText)
+	}
+}
+
 func TestHandleRunTestsPytestUsesTestsParentWhenNoConfigMarker(t *testing.T) {
 	dir := t.TempDir()
 	appDir := filepath.Join(dir, "app")

@@ -260,10 +260,41 @@ func commandPathArg(path, dir string) string {
 
 func pytestCommand(ctx context.Context, path string, verbose, coverage bool) *exec.Cmd {
 	root := findPytestProjectRoot(path)
+	if template := strings.TrimSpace(os.Getenv("TESTLOOP_PYTEST_COMMAND")); template != "" {
+		relPath := commandPathArg(path, root)
+		command := expandPytestCommandTemplate(template, relPath, verbose, coverage)
+		cmd := exec.CommandContext(ctx, "sh", "-c", command)
+		cmd.Dir = root
+		return configureCommandProcessGroup(cmd)
+	}
 	args := pytestArgs(path, root, verbose, coverage)
 	cmd := exec.CommandContext(ctx, "python3", args...)
 	cmd.Dir = root
 	return cmd
+}
+
+func expandPytestCommandTemplate(template, relPath string, verbose, coverage bool) string {
+	verboseArg := ""
+	if verbose {
+		verboseArg = "-v"
+	}
+	coverageArg := ""
+	if coverage {
+		coverageArg = "--cov"
+	}
+	replacements := map[string]string{
+		"{path}":     shellQuote(relPath),
+		"{verbose}":  verboseArg,
+		"{coverage}": coverageArg,
+	}
+	command := template
+	for placeholder, value := range replacements {
+		command = strings.ReplaceAll(command, placeholder, value)
+	}
+	if !strings.Contains(template, "{path}") && relPath != "." {
+		command = strings.TrimSpace(command + " " + shellQuote(relPath))
+	}
+	return strings.Join(strings.Fields(command), " ")
 }
 
 func findPytestProjectRoot(path string) string {
