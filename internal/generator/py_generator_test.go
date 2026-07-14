@@ -1644,6 +1644,60 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 		"build_version_out(None, None)",
 	})
 
+	buildAppFunc := pyFuncInfo{
+		Name: "build_app_out",
+		Params: []pyParamInfo{
+			{Name: "app"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "dict"},
+	}
+	buildAppTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-build-app-1",
+		Target:    "build_app_out",
+		GapType:   "statement",
+		LineRange: "101-101",
+		TestName:  "test_build_app_out_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(buildAppFunc, &buildAppTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeDB:",
+		"result = build_app_out(app, FakeDB([None, version], 5))",
+		"assert result['latest_version'] == '1.2.3'",
+		"assert result['total_downloads'] == 5",
+	}, []string{
+		"build_app_out(None, None)",
+	})
+
+	listAppsFunc := pyFuncInfo{
+		Name: "list_apps",
+		Params: []pyParamInfo{
+			{Name: "page", HasDefault: true},
+			{Name: "page_size", HasDefault: true},
+			{Name: "search", HasDefault: true},
+			{Name: "current_user"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "dict"},
+	}
+	listAppsTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-list-apps-1",
+		Target:    "list_apps",
+		GapType:   "statement",
+		LineRange: "410-410",
+		TestName:  "test_list_apps_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(listAppsFunc, &listAppsTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeDB:",
+		"result = list_apps(1, 20, 'Example', SimpleNamespace(id=1), db)",
+		"assert result['total'] == 1",
+		"assert result['items'][0]['latest_version'] == '1.2.3'",
+		"assert db.filtered is True",
+	}, []string{
+		"list_apps(1, 1, None, {}, None)",
+	})
+
 	deleteFunc := pyFuncInfo{
 		Name:     "_delete_icon_file",
 		Params:   []pyParamInfo{{Name: "icon_url"}},
@@ -1805,6 +1859,57 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 		"get_current_user_by_api_key(None, None)",
 	})
 
+	listUsersFunc := pyFuncInfo{
+		Name: "list_users",
+		Params: []pyParamInfo{
+			{Name: "current_user"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "list"},
+	}
+	listUsersTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-list-users-1",
+		Target:    "list_users",
+		GapType:   "return_path",
+		LineRange: "84-84",
+		TestName:  "test_list_users_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(listUsersFunc, &listUsersTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeDB:",
+		"user = SimpleNamespace(id=1, username='admin', is_admin=True)",
+		"result = list_users(user, FakeDB([user]))",
+		"assert result == [user]",
+	}, []string{
+		"list_users({}, None)",
+	})
+
+	listAPIKeysFunc := pyFuncInfo{
+		Name: "list_api_keys",
+		Params: []pyParamInfo{
+			{Name: "current_user"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "list"},
+	}
+	listAPIKeysTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-list-api-keys-1",
+		Target:    "list_api_keys",
+		GapType:   "return_path",
+		LineRange: "192-192",
+		TestName:  "test_list_api_keys_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(listAPIKeysFunc, &listAPIKeysTask)
+	assertPyGenerated(t, code, []string{
+		"class FakeDB:",
+		"api_key = SimpleNamespace(id=1, user_id=7, name='ci', key='secret', is_active=True, last_used_at=None, created_at=None)",
+		"result = list_api_keys(user, db)",
+		"assert result == [api_key]",
+		"assert db.query_obj.filtered is True",
+	}, []string{
+		"list_api_keys({}, None)",
+	})
+
 	qrFunc := pyFuncInfo{
 		Name:     "generate_qr_data_url",
 		Params:   []pyParamInfo{{Name: "text"}, {Name: "size", HasDefault: true}},
@@ -1843,6 +1948,20 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 	code = genPytestFuncTestForCoverageTask(lifespanFunc, &serveTask)
 	assertPyGenerated(t, code, []string{
 		"manual_review_environment: serve_frontend is defined only when frontend/dist exists at app import time",
+	}, []string{
+		"asyncio.run(lifespan(None))",
+	})
+
+	serveRootTask := types.CoverageTestTask{
+		ID:        "pytest-fastapi-frontend-2",
+		Target:    "serve_root_file",
+		GapType:   "return_path",
+		LineRange: "73-79",
+		TestName:  "test_serve_root_file_covers_gap",
+	}
+	code = genPytestFuncTestForCoverageTask(lifespanFunc, &serveRootTask)
+	assertPyGenerated(t, code, []string{
+		"manual_review_environment: serve_root_file is defined only when frontend/dist exists at app import time",
 	}, []string{
 		"asyncio.run(lifespan(None))",
 	})

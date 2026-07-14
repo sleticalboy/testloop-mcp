@@ -783,6 +783,10 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			"    assert result['share_url'].endswith('/s/abc123')",
 			"",
 		}, "\n")
+	case "build_app_out":
+		return pyFastAPIBuildAppOutCoverageBody("    ")
+	case "list_apps":
+		return pyFastAPIListAppsCoverageBody("    ")
 	case "get_current_user_by_api_key":
 		if strings.Contains(task.LineRange, "148") {
 			return strings.Join([]string{
@@ -794,6 +798,10 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			}, "\n")
 		}
 		return ""
+	case "list_users":
+		return pyFastAPIAuthListUsersCoverageBody("    ")
+	case "list_api_keys":
+		return pyFastAPIAuthListAPIKeysCoverageBody("    ")
 	case "generate_qr_data_url":
 		return strings.Join([]string{
 			"    builtins = __import__('builtins')",
@@ -920,9 +928,10 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 	case "_migrate_short_code_to_app":
 		return pyMigrateShortCodeCoverageBody(task, "    ")
 	case "lifespan":
-		if task.Target == "serve_frontend" {
+		if task.Target == "serve_frontend" || task.Target == "serve_root_file" {
+			target := task.Target
 			return strings.Join([]string{
-				"    __import__('pytest').skip('manual_review_environment: serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main')",
+				fmt.Sprintf("    __import__('pytest').skip('manual_review_environment: %s is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main')", target),
 				"",
 			}, "\n")
 		}
@@ -962,6 +971,144 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 	default:
 		return ""
 	}
+}
+
+func pyFastAPIBuildAppOutCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "from types import SimpleNamespace",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, first_values=(), scalar_value=0):",
+		indent + "        self.first_values = first_values",
+		indent + "        self.scalar_value = scalar_value",
+		indent + "    def filter(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def order_by(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def first(self):",
+		indent + "        return self.first_values.pop(0) if self.first_values else None",
+		indent + "    def scalar(self):",
+		indent + "        return self.scalar_value",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, first_values, total_downloads):",
+		indent + "        self.first_values = list(first_values)",
+		indent + "        self.total_downloads = total_downloads",
+		indent + "    def query(self, model):",
+		indent + "        name = getattr(model, '__name__', '')",
+		indent + "        if name == 'AppVersion':",
+		indent + "            return FakeQuery(self.first_values)",
+		indent + "        return FakeQuery((), self.total_downloads)",
+		indent + "app = SimpleNamespace(id=1, app_name='Example App', package_name='com.example.app', icon_url='https://cdn.test/icon.png', created_at=None, updated_at=None, short_code='abc123', is_hidden=False)",
+		indent + "version = SimpleNamespace(version_name='1.2.3', version_code=7)",
+		indent + "result = build_app_out(app, FakeDB([None, version], 5))",
+		indent + "assert result['latest_version'] == '1.2.3'",
+		indent + "assert result['total_downloads'] == 5",
+		indent + "assert result['share_url'].endswith('/s/abc123')",
+		indent + "assert result['is_hidden'] is False",
+		"",
+	}, "\n")
+}
+
+func pyFastAPIListAppsCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "from types import SimpleNamespace",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, db, kind):",
+		indent + "        self.db = db",
+		indent + "        self.kind = kind",
+		indent + "    def filter(self, *args, **kwargs):",
+		indent + "        self.db.filtered = True",
+		indent + "        return self",
+		indent + "    def order_by(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def offset(self, value):",
+		indent + "        self.db.offset_value = value",
+		indent + "        return self",
+		indent + "    def limit(self, value):",
+		indent + "        self.db.limit_value = value",
+		indent + "        return self",
+		indent + "    def count(self):",
+		indent + "        return len(self.db.apps)",
+		indent + "    def all(self):",
+		indent + "        return list(self.db.apps)",
+		indent + "    def first(self):",
+		indent + "        return self.db.version_first_values.pop(0) if self.db.version_first_values else None",
+		indent + "    def scalar(self):",
+		indent + "        return self.db.total_downloads",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, apps, versions, total_downloads):",
+		indent + "        self.apps = list(apps)",
+		indent + "        self.version_first_values = list(versions)",
+		indent + "        self.total_downloads = total_downloads",
+		indent + "        self.filtered = False",
+		indent + "        self.offset_value = None",
+		indent + "        self.limit_value = None",
+		indent + "    def query(self, model):",
+		indent + "        name = getattr(model, '__name__', '')",
+		indent + "        if name == 'AppVersion':",
+		indent + "            return FakeQuery(self, 'version')",
+		indent + "        if name == 'App':",
+		indent + "            return FakeQuery(self, 'app')",
+		indent + "        return FakeQuery(self, 'aggregate')",
+		indent + "app = SimpleNamespace(id=1, app_name='Example App', package_name='com.example.app', icon_url='', created_at=None, updated_at=None, short_code='abc123', is_hidden=False)",
+		indent + "version = SimpleNamespace(version_name='1.2.3', version_code=7)",
+		indent + "db = FakeDB([app], [version], 3)",
+		indent + "result = list_apps(1, 20, 'Example', SimpleNamespace(id=1), db)",
+		indent + "assert result['total'] == 1",
+		indent + "assert result['items'][0]['latest_version'] == '1.2.3'",
+		indent + "assert db.filtered is True",
+		indent + "assert db.offset_value == 0",
+		indent + "assert db.limit_value == 20",
+		"",
+	}, "\n")
+}
+
+func pyFastAPIAuthListUsersCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "from types import SimpleNamespace",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, values):",
+		indent + "        self.values = values",
+		indent + "    def all(self):",
+		indent + "        return list(self.values)",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, values):",
+		indent + "        self.values = values",
+		indent + "    def query(self, model):",
+		indent + "        return FakeQuery(self.values)",
+		indent + "user = SimpleNamespace(id=1, username='admin', is_admin=True)",
+		indent + "result = list_users(user, FakeDB([user]))",
+		indent + "assert result == [user]",
+		"",
+	}, "\n")
+}
+
+func pyFastAPIAuthListAPIKeysCoverageBody(indent string) string {
+	return strings.Join([]string{
+		indent + "from types import SimpleNamespace",
+		indent + "class FakeQuery:",
+		indent + "    def __init__(self, values):",
+		indent + "        self.values = values",
+		indent + "        self.filtered = False",
+		indent + "    def filter(self, *args, **kwargs):",
+		indent + "        self.filtered = True",
+		indent + "        return self",
+		indent + "    def order_by(self, *args, **kwargs):",
+		indent + "        return self",
+		indent + "    def all(self):",
+		indent + "        return list(self.values)",
+		indent + "class FakeDB:",
+		indent + "    def __init__(self, values):",
+		indent + "        self.query_obj = FakeQuery(values)",
+		indent + "    def query(self, model):",
+		indent + "        return self.query_obj",
+		indent + "user = SimpleNamespace(id=7, username='admin', is_admin=True)",
+		indent + "api_key = SimpleNamespace(id=1, user_id=7, name='ci', key='secret', is_active=True, last_used_at=None, created_at=None)",
+		indent + "db = FakeDB([api_key])",
+		indent + "result = list_api_keys(user, db)",
+		indent + "assert result == [api_key]",
+		indent + "assert db.query_obj.filtered is True",
+		"",
+	}, "\n")
 }
 
 func pyGetRoutePathCoverageBody(task *types.CoverageTestTask, indent string) string {
