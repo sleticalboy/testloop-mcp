@@ -119,8 +119,8 @@ class Outer {
 		t.Fatalf("unexpected inner class method: %+v", nested)
 	}
 	for _, helper := range []string{"getName", "setName", "equals"} {
-		if got := findJavaFunc(funcs, helper); got != nil {
-			t.Fatalf("helper %s should be skipped, got %+v in funcs %+v", helper, got, funcs)
+		if got := findJavaFunc(funcs, helper); got == nil {
+			t.Fatalf("helper %s should remain parseable for coverage tasks, funcs %+v", helper, funcs)
 		}
 	}
 }

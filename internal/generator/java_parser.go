@@ -68,16 +68,12 @@ func javaWalk(node *sitter.Node, source []byte, funcs *[]javaFuncInfo, classes *
 		javaWalkClassBody(node, source, funcs, &info)
 		return
 	case "method_declaration":
-		if info := javaExtractMethodInfo(node, source); !javaIsTestHelper(info.Name) {
-			*funcs = append(*funcs, info)
-		}
+		*funcs = append(*funcs, javaExtractMethodInfo(node, source))
 		return
 	case "constructor_declaration":
 		info := javaExtractConstructorInfo(node, source)
 		info.IsConstructor = true
-		if !javaIsTestHelper(info.Name) {
-			*funcs = append(*funcs, info)
-		}
+		*funcs = append(*funcs, info)
 		return
 	}
 
@@ -96,11 +92,10 @@ func javaWalkClassBody(node *sitter.Node, source []byte, funcs *[]javaFuncInfo, 
 		child := body.Child(i)
 		switch child.Type() {
 		case "method_declaration":
-			if info := javaExtractMethodInfo(child, source); !javaIsTestHelper(info.Name) {
-				// 标记是否属于当前类（通过 IsStatic 等方式无法区分，这里简单处理）
-				info.ClassName = classInfo.Name
-				*funcs = append(*funcs, info)
-			}
+			info := javaExtractMethodInfo(child, source)
+			// 标记是否属于当前类（通过 IsStatic 等方式无法区分，这里简单处理）
+			info.ClassName = classInfo.Name
+			*funcs = append(*funcs, info)
 		case "constructor_declaration":
 			info := javaExtractConstructorInfo(child, source)
 			info.Name = classInfo.Name

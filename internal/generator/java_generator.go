@@ -29,6 +29,7 @@ func GenerateJavaTestsForCoverageTask(source []byte, filePath string, task *type
 
 func generateJavaTests(source []byte, filePath string, task *types.CoverageTestTask) (string, string, error) {
 	funcs, classes := parseJavaWithTreeSitter(source)
+	allFuncs := funcs
 	if task != nil {
 		funcs = filterJavaFuncsForCoverageTask(funcs, task)
 	}
@@ -74,9 +75,13 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	b.WriteString(fmt.Sprintf("public class %sTest {\n", className))
 
 	// 为每个方法生成测试
+	constructors := javaConstructorsByClass(allFuncs)
 	usedNames := map[string]int{}
 	for _, m := range funcs {
 		if !m.IsPublic {
+			continue
+		}
+		if task == nil && javaIsTestHelper(m.Name) {
 			continue
 		}
 		testName := javaCoverageTaskMethodName(m, task)
@@ -84,7 +89,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 		if usedNames[testName] > 1 {
 			testName = fmt.Sprintf("%s%d", testName, usedNames[testName])
 		}
-		javaWriteMethodTestForCoverageTaskWithName(&b, m, className, task, testName, style)
+		javaWriteMethodTestForCoverageTaskWithName(&b, m, className, task, testName, style, constructors)
 	}
 
 	b.WriteString("}\n")
@@ -121,10 +126,10 @@ func javaWriteMethodTest(b *strings.Builder, m javaFuncInfo, className string) {
 }
 
 func javaWriteMethodTestForCoverageTask(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask) {
-	javaWriteMethodTestForCoverageTaskWithName(b, m, className, task, javaCoverageTaskMethodName(m, task), javaJUnit5)
+	javaWriteMethodTestForCoverageTaskWithName(b, m, className, task, javaCoverageTaskMethodName(m, task), javaJUnit5, nil)
 }
 
-func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask, testName string, style javaJUnitStyle) {
+func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask, testName string, style javaJUnitStyle, constructors map[string][]javaFuncInfo) {
 	indent := "    "
 	assertions := javaAssertionsQualifier(style)
 
@@ -143,7 +148,8 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 
 	if m.IsConstructor {
 		// 构造函数测试
-		if !javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) {
+		if !javaWriteProtobufEndpointsConstructorTask(b, m, task, callClassName, assertions, indent) &&
+			!javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) {
 			b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, args))
 			b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
 		}
@@ -153,7 +159,16 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		javaWriteCallAndAssert(b, callExpr, m, indent, assertions)
 	} else {
 		// 实例方法：先创建实例
-		b.WriteString(fmt.Sprintf("%s    %s instance = new %s();\n", indent, callClassName, callClassName))
+		instanceExpr := javaInstanceConstruction(callClassName, constructors, task)
+		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
+		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteHashCodeTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		callExpr := fmt.Sprintf("instance.%s(%s)", m.Name, args)
 		javaWriteCallAndAssert(b, callExpr, m, indent, assertions)
 	}
@@ -219,7 +234,13 @@ func javaInferCoverageTaskValue(param javaParamInfo, task *types.CoverageTestTas
 		return ""
 	}
 	if param.Name == "addresses" && (param.Type == "List<Address>" || param.Type == "java.util.List<Address>") && javaTaskMentions(task, "addresses") {
+		if javaTaskMentions(task, "addresses.isEmpty") {
+			return "java.util.Collections.emptyList()"
+		}
 		return `java.util.Arrays.asList(new Address("example.com", 80), new Address("example.org", 81))`
+	}
+	if param.Name == "scheme" && strings.HasSuffix(param.Type, "Scheme") && javaTaskMentions(task, "addresses.isEmpty") {
+		return param.Type + ".IPv4"
 	}
 	return ""
 }
@@ -229,6 +250,12 @@ func javaConstructorShouldAssertThrows(m javaFuncInfo, task *types.CoverageTestT
 		return false
 	}
 	if javaTaskMentions(task, ".equals(") && javaTaskMentions(task, "addresses") {
+		return true
+	}
+	if javaTaskMentions(task, "addresses.isEmpty") {
+		return true
+	}
+	if javaTaskMentions(task, "空值") && javaTaskMentions(task, "addresses") {
 		return true
 	}
 	return false
@@ -241,10 +268,15 @@ func javaWriteConstructorAssertThrows(b *strings.Builder, m javaFuncInfo, task *
 	values := coverageTaskInputValues(task, "java")
 	hasAddressList := false
 	schemeValue := ""
+	useEmptyAddresses := javaTaskMentions(task, "addresses.isEmpty")
+	useNullAddresses := javaTaskMentions(task, "空值") && javaTaskMentions(task, "addresses")
 	for _, param := range m.Params {
 		switch param.Name {
 		case "scheme":
 			schemeValue = values[param.Name]
+			if schemeValue == "" && strings.HasSuffix(param.Type, "Scheme") {
+				schemeValue = param.Type + ".IPv4"
+			}
 		case "addresses":
 			hasAddressList = param.Type == "List<Address>" || param.Type == "java.util.List<Address>"
 		}
@@ -252,10 +284,107 @@ func javaWriteConstructorAssertThrows(b *strings.Builder, m javaFuncInfo, task *
 	if !hasAddressList || schemeValue == "" {
 		return false
 	}
-	b.WriteString(fmt.Sprintf("%s    final java.util.List<Address> addresses = java.util.Arrays.asList(\n", indent))
-	b.WriteString(fmt.Sprintf("%s            new Address(\"example.com\", 80), new Address(\"example.org\", 81));\n", indent))
+	if useNullAddresses {
+		b.WriteString(fmt.Sprintf("%s    final java.util.List<Address> addresses = null;\n", indent))
+	} else if useEmptyAddresses {
+		b.WriteString(fmt.Sprintf("%s    final java.util.List<Address> addresses = java.util.Collections.emptyList();\n", indent))
+	} else {
+		b.WriteString(fmt.Sprintf("%s    final java.util.List<Address> addresses = java.util.Arrays.asList(\n", indent))
+		b.WriteString(fmt.Sprintf("%s            new Address(\"example.com\", 80), new Address(\"example.org\", 81));\n", indent))
+	}
 	b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () ->\n", indent, assertions))
 	b.WriteString(fmt.Sprintf("%s            new %s(%s, addresses));\n", indent, className, schemeValue))
+	return true
+}
+
+func javaWriteProtobufEndpointsConstructorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || !m.IsConstructor || len(m.Params) != 1 || m.Params[0].Type != "apache.rocketmq.v2.Endpoints" {
+		return false
+	}
+	switch {
+	case javaTaskMentions(task, "addresses.isEmpty"):
+		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.IPv4)\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
+		return true
+	case javaTaskMentions(task, "addresses.size"):
+		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.DOMAIN_NAME)\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"a.example\").setPort(80))\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"b.example\").setPort(81))\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
+		return true
+	case javaTaskMentions(task, "switch/case"):
+		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.IPv4)\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"127.0.0.1\").setPort(80))\n", indent))
+		b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s instance = new %s(endpoints);\n", indent, className, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
+}
+
+func javaConstructorsByClass(funcs []javaFuncInfo) map[string][]javaFuncInfo {
+	constructors := map[string][]javaFuncInfo{}
+	for _, fn := range funcs {
+		if fn.IsConstructor && fn.ClassName != "" {
+			constructors[fn.ClassName] = append(constructors[fn.ClassName], fn)
+		}
+	}
+	return constructors
+}
+
+func javaInstanceConstruction(className string, constructors map[string][]javaFuncInfo, task *types.CoverageTestTask) string {
+	for _, constructor := range constructors[className] {
+		if len(constructor.Params) == 0 {
+			return fmt.Sprintf("new %s()", className)
+		}
+	}
+	if javaTaskMentions(task, "DOMAIN_NAME") {
+		for _, constructor := range constructors[className] {
+			if len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
+				return fmt.Sprintf("new %s(\"example.com:80\")", className)
+			}
+		}
+	}
+	for _, constructor := range constructors[className] {
+		if len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
+			return fmt.Sprintf("new %s(\"127.0.0.1:80\")", className)
+		}
+	}
+	if len(constructors[className]) > 0 {
+		constructor := constructors[className][0]
+		return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task))
+	}
+	return fmt.Sprintf("new %s()", className)
+}
+
+func javaWriteEqualsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.Name != "equals" || len(m.Params) != 1 {
+		return false
+	}
+	if javaTaskMentions(task, "this == o") {
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(instance.equals(instance));\n", indent, assertions))
+		return true
+	}
+	if javaTaskMentions(task, "o == null") {
+		b.WriteString(fmt.Sprintf("%s    %s.assertFalse(instance.equals(null));\n", indent, assertions))
+		return true
+	}
+	return false
+}
+
+func javaWriteHashCodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.Name != "hashCode" || m.ReturnType != "int" || !javaTaskMentions(task, "hash == 0") {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    int result = instance.hashCode();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertNotEquals(0, result);\n", indent, assertions))
 	return true
 }
 
@@ -440,7 +569,7 @@ func javaAssertionsQualifier(style javaJUnitStyle) string {
 }
 
 func javaQualifyAssertion(assertion string, assertions string) string {
-	for _, name := range []string{"assertEquals", "assertTrue", "assertNotNull", "assertThrows"} {
+	for _, name := range []string{"assertEquals", "assertNotEquals", "assertTrue", "assertFalse", "assertNotNull", "assertThrows"} {
 		if strings.HasPrefix(assertion, name+"(") {
 			return assertions + "." + assertion
 		}

@@ -192,6 +192,246 @@ public class Endpoints {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskUsesEmptyAddressConstructorBranch(t *testing.T) {
+	source := []byte(`package com.example;
+
+import java.util.List;
+
+public class Endpoints {
+    public Endpoints(AddressScheme scheme, List<Address> addresses) {
+        if (addresses.isEmpty()) {
+            throw new UnsupportedOperationException("No available address");
+        }
+    }
+}
+`)
+	task := types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "7-7",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖 if 分支: addresses.isEmpty"},
+		SuggestedInputs: []string{"设置 scheme 覆盖未执行分支", "设置 addresses 覆盖未执行分支"},
+	}
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &task)
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"final java.util.List<Address> addresses = java.util.Collections.emptyList();",
+		"Assertions.assertThrows(RuntimeException.class, () ->",
+		"new Endpoints(AddressScheme.IPv4, addresses));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new AddressScheme()") || strings.Contains(code, "new Address(\"example.com\"") {
+		t.Fatalf("empty address branch should use enum constant and empty list:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskTargetsGetterAndEquals(t *testing.T) {
+	source := []byte(`public class Endpoints {
+    private final String facade;
+
+    public Endpoints(String endpoints) {
+        this.facade = endpoints;
+    }
+
+    public String getGrpcTarget() {
+        return facade;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        return false;
+    }
+}
+`)
+
+	_, getterCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.getGrpcTarget",
+		LineRange:       "8-8",
+		TestName:        "shouldCoverEndpointsGetGrpcTargetGap",
+		MissingBranches: []string{"未覆盖 if 分支: AddressScheme.DOMAIN_NAME.equals(scheme"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(getter) error = %v", err)
+	}
+	for _, want := range []string{
+		"Endpoints instance = new Endpoints(\"example.com:80\");",
+		"String result = instance.getGrpcTarget();",
+	} {
+		if !strings.Contains(getterCode, want) {
+			t.Fatalf("expected %q in getter code:\n%s", want, getterCode)
+		}
+	}
+	if strings.Contains(getterCode, "instance.equals(") {
+		t.Fatalf("getter coverage task should not fall back to all helpers:\n%s", getterCode)
+	}
+
+	_, equalsCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.equals",
+		LineRange:       "13-13",
+		TestName:        "shouldCoverEndpointsEqualsGap",
+		MissingBranches: []string{"未覆盖 if 分支: this == o"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(equals) error = %v", err)
+	}
+	for _, want := range []string{
+		"Endpoints instance = new Endpoints(\"127.0.0.1:80\");",
+		"Assertions.assertTrue(instance.equals(instance));",
+	} {
+		if !strings.Contains(equalsCode, want) {
+			t.Fatalf("expected %q in equals code:\n%s", want, equalsCode)
+		}
+	}
+	if strings.Contains(equalsCode, "getGrpcTarget") {
+		t.Fatalf("equals coverage task should not fall back to all helpers:\n%s", equalsCode)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesHashCodeAndProtobufConstructors(t *testing.T) {
+	source := []byte(`public class Endpoints {
+    private int hash;
+
+    public Endpoints(apache.rocketmq.v2.Endpoints endpoints) {
+    }
+
+    public int hashCode() {
+        if (hash == 0) {
+            hash = 1;
+        }
+        return hash;
+    }
+}
+`)
+
+	_, hashCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.hashCode",
+		LineRange:       "8-8",
+		TestName:        "shouldCoverEndpointsHashCodeGap",
+		MissingBranches: []string{"未覆盖 if 分支: hash == 0"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(hashCode) error = %v", err)
+	}
+	for _, want := range []string{
+		"int result = instance.hashCode();",
+		"Assertions.assertNotEquals(0, result);",
+	} {
+		if !strings.Contains(hashCode, want) {
+			t.Fatalf("expected %q in hashCode task:\n%s", want, hashCode)
+		}
+	}
+	if strings.Contains(hashCode, "Assertions.assertEquals(0, result);") {
+		t.Fatalf("hashCode branch should not assert the initial zero value:\n%s", hashCode)
+	}
+
+	_, emptyCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖 if 分支: addresses.isEmpty"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(empty protobuf) error = %v", err)
+	}
+	for _, want := range []string{
+		"final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()",
+		".setScheme(apache.rocketmq.v2.AddressScheme.IPv4)",
+		".build();",
+		"Assertions.assertThrows(RuntimeException.class, () -> new Endpoints(endpoints));",
+	} {
+		if !strings.Contains(emptyCode, want) {
+			t.Fatalf("expected %q in empty protobuf task:\n%s", want, emptyCode)
+		}
+	}
+
+	_, switchCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖 switch/case 分支"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(switch protobuf) error = %v", err)
+	}
+	for _, want := range []string{
+		".setScheme(apache.rocketmq.v2.AddressScheme.IPv4)",
+		".addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"127.0.0.1\").setPort(80))",
+		"Endpoints instance = new Endpoints(endpoints);",
+	} {
+		if !strings.Contains(switchCode, want) {
+			t.Fatalf("expected %q in switch protobuf task:\n%s", want, switchCode)
+		}
+	}
+
+	_, sizeCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖 if 分支: addresses.size"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(size protobuf) error = %v", err)
+	}
+	for _, want := range []string{
+		".setScheme(apache.rocketmq.v2.AddressScheme.DOMAIN_NAME)",
+		".addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"a.example\").setPort(80))",
+		".addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"b.example\").setPort(81))",
+		"Assertions.assertThrows(RuntimeException.class, () -> new Endpoints(endpoints));",
+	} {
+		if !strings.Contains(sizeCode, want) {
+			t.Fatalf("expected %q in size protobuf task:\n%s", want, sizeCode)
+		}
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskUsesNullAddressListForErrorPath(t *testing.T) {
+	source := []byte(`package com.example;
+
+import java.util.List;
+
+public class Endpoints {
+    public Endpoints(AddressScheme scheme, List<Address> addresses) {
+        if (addresses == null) {
+            throw new NullPointerException("addresses");
+        }
+    }
+}
+`)
+	task := types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "7-7",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+		SuggestedInputs: []string{"设置 scheme 覆盖未执行分支", "设置 addresses 覆盖未执行分支"},
+	}
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &task)
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"final java.util.List<Address> addresses = null;",
+		"Assertions.assertThrows(RuntimeException.class, () ->",
+		"new Endpoints(AddressScheme.IPv4, addresses));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new AddressScheme()") || strings.Contains(code, "java.util.Arrays.asList") {
+		t.Fatalf("null-address branch should use enum constant and null list:\n%s", code)
+	}
+}
+
 func TestCoverageTaskInputValuesPreservesJavaScriptUndefined(t *testing.T) {
 	task := types.CoverageTestTask{
 		SuggestedInputs: []string{"构造满足条件 `value === undefined` 的输入"},
