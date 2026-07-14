@@ -631,6 +631,27 @@ func TestPytestClassCoverageTaskCoversNormalAndErrorMethods(t *testing.T) {
 	}
 }
 
+func TestPytestClassCoverageTaskKeepsEmptyClassExecutable(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:        "pytest-pydantic-dto",
+		Target:    "ReleaseNotesUpdate",
+		LineRange: "entire file",
+		TestName:  "test_release_notes_update_covers_gap",
+	}
+	cls := pyClassInfo{Name: "ReleaseNotesUpdate"}
+
+	code := genPytestClassTestForCoverageTask(cls, &task)
+	assertPyGenerated(t, code, []string{
+		"class TestReleaseNotesUpdate:",
+		"def test_release_notes_update_covers_gap(self):",
+		"coverage task: pytest-pydantic-dto | lines entire file",
+		"assert ReleaseNotesUpdate is not None",
+	}, []string{
+		"class TestReleaseNotesUpdate:\n}",
+		"class TestReleaseNotesUpdate:\n\n",
+	})
+}
+
 func TestPytestCoverageTaskUsesConstructorAndErrorPathInputs(t *testing.T) {
 	optionTask := types.CoverageTestTask{
 		ID:              "pytest-option-1",
@@ -1822,6 +1843,16 @@ func TestPytestCoverageTaskUsesFastAPIAppInputs(t *testing.T) {
 		{
 			name:      "final html response",
 			lineRange: "877-877",
+			wants: []string{
+				"result = short_link_page('rich', FakeDB(app, [version]))",
+				"body = result.body.decode()",
+				"assert result.status_code == 200",
+				"assert '&lt;Example&gt;' in body",
+			},
+		},
+		{
+			name:      "file-level default",
+			lineRange: "entire file",
 			wants: []string{
 				"result = short_link_page('rich', FakeDB(app, [version]))",
 				"body = result.body.decode()",

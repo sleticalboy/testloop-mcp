@@ -689,10 +689,12 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("class Test%s:\n", cls.Name))
+	emitted := false
 	for _, method := range cls.Methods {
 		if method.Name == "__init__" {
 			continue
 		}
+		emitted = true
 
 		testName := sanitizePythonTestName(task.TestName, "test_"+method.Name+"_covers_gap")
 		boundary := pyBoundaryForCoverageTask(method.Analysis.Boundaries, task)
@@ -745,6 +747,14 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 			sb.WriteString(genPyResultAssertionWithTaskArgs(method.Analysis, method.Params, boundary, coverageTaskInputValues(task, "python"), "        "))
 		}
 		sb.WriteString("\n")
+	}
+	if !emitted {
+		testName := sanitizePythonTestName(task.TestName, "test_"+cls.Name+"_is_importable")
+		sb.WriteString(fmt.Sprintf("    def %s(self):\n", testName))
+		if comment := coverageTaskComment(task); comment != "" {
+			sb.WriteString(fmt.Sprintf("        # coverage task: %s\n", comment))
+		}
+		sb.WriteString(fmt.Sprintf("        assert %s is not None\n\n", cls.Name))
 	}
 
 	return sb.String()
@@ -1686,7 +1696,7 @@ func pyShortLinkPageCoverageBody(task *types.CoverageTestTask, indent string) st
 			"",
 		)
 		return strings.Join(lines, "\n")
-	case "811-811", "826-832", "835-835", "877-877":
+	case "811-811", "826-832", "835-835", "877-877", "entire file":
 		lines := append(prefix,
 			indent+"original_qr = module.generate_qr_data_url",
 			indent+"module.generate_qr_data_url = lambda text: 'data:image/png;base64,test'",
