@@ -301,6 +301,16 @@ func countLinePrefixes(code string, prefixes ...string) int {
 }
 
 func writeGeneratedTestFile(testFile string, code string, sourceExt string) (string, error) {
+	if sourceExt == ".rs" {
+		merged, err := mergeRustGeneratedTestFile(testFile, code)
+		if err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(testFile, []byte(merged), 0644); err != nil {
+			return "", err
+		}
+		return merged, nil
+	}
 	if sourceExt != ".go" {
 		if err := os.WriteFile(testFile, []byte(code), 0644); err != nil {
 			return "", err
@@ -315,6 +325,25 @@ func writeGeneratedTestFile(testFile string, code string, sourceExt string) (str
 		return "", err
 	}
 	return merged, nil
+}
+
+func mergeRustGeneratedTestFile(testFile string, generated string) (string, error) {
+	existing, err := os.ReadFile(testFile)
+	if os.IsNotExist(err) {
+		return generated, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	existingText := strings.TrimRight(string(existing), "\n")
+	generatedText := strings.TrimSpace(generated)
+	if existingText == "" {
+		return generatedText + "\n", nil
+	}
+	if strings.Contains(existingText, generatedText) {
+		return existingText + "\n", nil
+	}
+	return existingText + "\n\n" + generatedText + "\n", nil
 }
 
 func mergeGoGeneratedTestFile(testFile string, generated string) (string, error) {

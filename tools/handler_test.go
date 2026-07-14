@@ -1954,6 +1954,50 @@ func TestHandleGenerateTestsUsesRustCoverageTaskTestFile(t *testing.T) {
 	assertGeneratedCoverageTaskOutput(t, result, task, "fn test_add_gap()")
 }
 
+func TestHandleGenerateTestsAppendsRustCoverageTaskToSourceFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "lib.rs")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	original := "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n"
+	if err := os.WriteFile(source, []byte(original), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:              "cargo-add-gap",
+		Framework:       "cargo-test",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "1-3",
+		GapType:         "branch",
+		TestFile:        source,
+		TestName:        "test_add_gap",
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	generated := assertGeneratedCoverageTaskOutput(t, result, task, "fn test_add_gap()")
+	content := readTextFile(t, source)
+	if !strings.Contains(content, original) {
+		t.Fatalf("Rust source was not preserved:\n%s", content)
+	}
+	if !strings.Contains(content, "#[cfg(test)]") || !strings.Contains(content, "use super::*;") {
+		t.Fatalf("Rust generated inline test module missing:\n%s", content)
+	}
+	if generated.GeneratedCases == 0 {
+		t.Fatalf("generated cases should count appended Rust tests: %+v", generated)
+	}
+}
+
 func TestCountGeneratedCasesByLanguage(t *testing.T) {
 	tests := []struct {
 		name string
