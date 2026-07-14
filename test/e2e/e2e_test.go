@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -66,6 +67,13 @@ func callTool(t *testing.T, session *mcp.ClientSession, name string, args map[st
 	if err := json.Unmarshal([]byte(textContent.Text), &payload); err != nil {
 		t.Fatalf("CallTool(%s) failed to parse JSON: %v\nraw: %s", name, err, textContent.Text)
 	}
+	var structured map[string]any
+	if err := json.Unmarshal(toolStructuredContentJSON(t, name, result), &structured); err != nil {
+		t.Fatalf("CallTool(%s) failed to parse structuredContent JSON: %v\nraw: %v", name, err, result.StructuredContent)
+	}
+	if !reflect.DeepEqual(structured, payload) {
+		t.Fatalf("CallTool(%s) structuredContent mismatch\nstructured: %#v\ntext: %#v", name, structured, payload)
+	}
 	return payload
 }
 
@@ -95,7 +103,29 @@ func callToolRaw(t *testing.T, session *mcp.ClientSession, name string, args map
 		}
 		t.Fatalf("CallTool(%s) returned object, not array: %v", name, obj)
 	}
+	var structured []any
+	if err := json.Unmarshal(toolStructuredContentJSON(t, name, result), &structured); err != nil {
+		t.Fatalf("CallTool(%s) failed to parse structuredContent JSON: %v\nraw: %v", name, err, result.StructuredContent)
+	}
+	if !reflect.DeepEqual(structured, arr) {
+		t.Fatalf("CallTool(%s) structuredContent mismatch\nstructured: %#v\ntext: %#v", name, structured, arr)
+	}
 	return arr
+}
+
+func toolStructuredContentJSON(t *testing.T, name string, result *mcp.CallToolResult) []byte {
+	t.Helper()
+	if result.StructuredContent == nil {
+		t.Fatalf("CallTool(%s) returned nil structuredContent", name)
+	}
+	if raw, ok := result.StructuredContent.(json.RawMessage); ok {
+		return raw
+	}
+	data, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("CallTool(%s) failed to marshal structuredContent %T: %v", name, result.StructuredContent, err)
+	}
+	return data
 }
 
 // projectRoot 返回项目根目录（从 test/e2e/ 向上两级）
