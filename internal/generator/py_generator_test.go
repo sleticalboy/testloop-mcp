@@ -1908,6 +1908,36 @@ func TestPytestCoverageTaskUsesFastAPIAuthAndMainInputs(t *testing.T) {
 		"get_current_user_by_api_key(None, None)",
 	})
 
+	authWithoutRaiseFunc := pyFuncInfo{
+		Name: "get_current_user_without_raise",
+		Params: []pyParamInfo{
+			{Name: "token"},
+			{Name: "db"},
+		},
+		Analysis: pyFuncAnalysis{HasReturn: true, ReturnType: "unknown"},
+	}
+	authWithoutRaiseTask := types.CoverageTestTask{
+		ID:              "pytest-fastapi-auth-without-raise-1",
+		Target:          "get_current_user_without_raise",
+		GapType:         "error_path",
+		LineRange:       "136-138",
+		TestName:        "test_get_current_user_without_raise_covers_gap",
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+	}
+	code = genPytestFuncTestForCoverageTask(authWithoutRaiseFunc, &authWithoutRaiseTask)
+	assertPyGenerated(t, code, []string{
+		"module = __import__('app.api.auth', fromlist=['get_current_user_without_raise'])",
+		"assert get_current_user_without_raise(None, None) is None",
+		"module.decode_token = lambda token: (_ for _ in ()).throw(RuntimeError('bad token'))",
+		"assert get_current_user_without_raise('bad-token', object()) is None",
+		"module.decode_token = lambda token: 'alice'",
+		"module.get_user_by_username = lambda db, username: SimpleNamespace(username=username)",
+		"result = get_current_user_without_raise('good-token', object())",
+		"assert result.username == 'alice'",
+	}, []string{
+		"with pytest.raises(Exception):",
+	})
+
 	authServiceAPIKeyFunc := pyFuncInfo{
 		Name: "get_user_by_api_key",
 		Params: []pyParamInfo{

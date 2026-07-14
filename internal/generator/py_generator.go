@@ -821,6 +821,25 @@ func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask
 			}, "\n")
 		}
 		return ""
+	case "get_current_user_without_raise":
+		return strings.Join([]string{
+			"    from types import SimpleNamespace",
+			"    module = __import__('app.api.auth', fromlist=['get_current_user_without_raise'])",
+			"    assert get_current_user_without_raise(None, None) is None",
+			"    original_decode = module.decode_token",
+			"    original_get_user = module.get_user_by_username",
+			"    try:",
+			"        module.decode_token = lambda token: (_ for _ in ()).throw(RuntimeError('bad token'))",
+			"        assert get_current_user_without_raise('bad-token', object()) is None",
+			"        module.decode_token = lambda token: 'alice'",
+			"        module.get_user_by_username = lambda db, username: SimpleNamespace(username=username)",
+			"        result = get_current_user_without_raise('good-token', object())",
+			"        assert result.username == 'alice'",
+			"    finally:",
+			"        module.decode_token = original_decode",
+			"        module.get_user_by_username = original_get_user",
+			"",
+		}, "\n")
 	case "get_user_by_api_key":
 		return pyFastAPIAuthServiceGetUserByAPIKeyCoverageBody("    ")
 	case "create_api_key":
