@@ -762,6 +762,95 @@ func TestGenerateJavaTestsForCoverageTaskHandlesEnumMethodBranches(t *testing.T)
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesInflightRequestCountInterceptor(t *testing.T) {
+	source := []byte(`public class InflightRequestCountInterceptor implements MessageInterceptor {
+    @Override
+    public void doBefore(MessageInterceptorContext context, java.util.List<GeneralMessage> messages) {
+        if (context.getMessageHookPoints() == MessageHookPoints.RECEIVE) {
+            inflightReceiveRequestCount.incrementAndGet();
+        }
+    }
+
+    @Override
+    public void doAfter(MessageInterceptorContext context, java.util.List<GeneralMessage> messages) {
+        if (context.getMessageHookPoints() == MessageHookPoints.RECEIVE) {
+            inflightReceiveRequestCount.decrementAndGet();
+        }
+    }
+
+    public long getInflightReceiveRequestCount() {
+        return inflightReceiveRequestCount.get();
+    }
+}
+`)
+
+	_, beforeCode, err := GenerateJavaTestsForCoverageTask(source, "InflightRequestCountInterceptor.java", &types.CoverageTestTask{
+		Target:          "InflightRequestCountInterceptor.doBefore",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverInflightRequestCountInterceptorDoBeforeGap",
+		MissingBranches: []string{"未覆盖 if 分支: context.getMessageHookPoints"},
+		SuggestedInputs: []string{"构造满足条件 `context.getMessageHookPoints` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(doBefore) error = %v", err)
+	}
+	for _, want := range []string{
+		"MessageInterceptorContext context = new MessageInterceptorContextImpl(MessageHookPoints.RECEIVE);",
+		"instance.doBefore(context, java.util.Collections.emptyList());",
+		"Assertions.assertEquals(1L, instance.getInflightReceiveRequestCount());",
+	} {
+		if !strings.Contains(beforeCode, want) {
+			t.Fatalf("expected %q in doBefore generated code:\n%s", want, beforeCode)
+		}
+	}
+	if strings.Contains(beforeCode, "new MessageInterceptorContext()") {
+		t.Fatalf("interface context should not be instantiated directly:\n%s", beforeCode)
+	}
+
+	_, afterCode, err := GenerateJavaTestsForCoverageTask(source, "InflightRequestCountInterceptor.java", &types.CoverageTestTask{
+		Target:          "InflightRequestCountInterceptor.doAfter",
+		LineRange:       "10-10",
+		TestName:        "shouldCoverInflightRequestCountInterceptorDoAfterGap",
+		MissingBranches: []string{"未覆盖 if 分支: context.getMessageHookPoints"},
+		SuggestedInputs: []string{"构造满足条件 `context.getMessageHookPoints` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(doAfter) error = %v", err)
+	}
+	for _, want := range []string{
+		"instance.doBefore(context, java.util.Collections.emptyList());",
+		"Assertions.assertEquals(1L, instance.getInflightReceiveRequestCount());",
+		"instance.doAfter(context, java.util.Collections.emptyList());",
+		"Assertions.assertEquals(0L, instance.getInflightReceiveRequestCount());",
+	} {
+		if !strings.Contains(afterCode, want) {
+			t.Fatalf("expected %q in doAfter generated code:\n%s", want, afterCode)
+		}
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
+	source := []byte(`public class NoopHook {
+    public void run() {
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "NoopHook.java", &types.CoverageTestTask{
+		Target:   "NoopHook.run",
+		TestName: "shouldCoverNoopHookRunGap",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if strings.Contains(code, "import org.junit.jupiter.api.Assertions;") || strings.Contains(code, "import org.junit.Assert;") {
+		t.Fatalf("unused assertion import should be removed:\n%s", code)
+	}
+	if !strings.Contains(code, "import org.junit.jupiter.api.Test;") {
+		t.Fatalf("test import should stay:\n%s", code)
+	}
+}
+
 func TestCoverageTaskInputValuesPreservesJavaScriptUndefined(t *testing.T) {
 	task := types.CoverageTestTask{
 		SuggestedInputs: []string{"构造满足条件 `value === undefined` 的输入"},

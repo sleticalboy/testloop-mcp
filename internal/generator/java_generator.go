@@ -169,6 +169,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteInflightRequestCountInterceptorTask(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		instanceExpr := javaInstanceConstruction(callClassName, constructors, factories, task)
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
@@ -560,6 +564,30 @@ func javaWriteStatusCheckerCheckTask(b *strings.Builder, m javaFuncInfo, task *t
 	return true
 }
 
+func javaWriteInflightRequestCountInterceptorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "InflightRequestCountInterceptor" || len(m.Params) != 2 || !javaTaskMentions(task, "context.getMessageHookPoints") {
+		return false
+	}
+	switch m.Name {
+	case "doBefore":
+		b.WriteString(fmt.Sprintf("%s    InflightRequestCountInterceptor instance = new InflightRequestCountInterceptor();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    MessageInterceptorContext context = new MessageInterceptorContextImpl(MessageHookPoints.RECEIVE);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    instance.doBefore(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(1L, instance.getInflightReceiveRequestCount());\n", indent, assertions))
+		return true
+	case "doAfter":
+		b.WriteString(fmt.Sprintf("%s    InflightRequestCountInterceptor instance = new InflightRequestCountInterceptor();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    MessageInterceptorContext context = new MessageInterceptorContextImpl(MessageHookPoints.RECEIVE);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    instance.doBefore(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(1L, instance.getInflightReceiveRequestCount());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    instance.doAfter(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(0L, instance.getInflightReceiveRequestCount());\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
+}
+
 func javaWriteEnumMethodTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
 	if !m.IsEnum || m.ClassName == "" || m.Name == "" || m.ReturnType == "" {
 		return false
@@ -711,6 +739,7 @@ func javaPackageName(source []byte) string {
 }
 
 func javaAddGeneratedImports(code string) string {
+	code = javaRemoveUnusedAssertionImports(code)
 	var additions []string
 	if strings.Contains(code, "InetSocketAddress") && !strings.Contains(code, "import java.net.InetSocketAddress;") {
 		additions = append(additions, "import java.net.InetSocketAddress;")
@@ -725,6 +754,16 @@ func javaAddGeneratedImports(code string) string {
 		if idx := strings.Index(code, marker); idx >= 0 {
 			return code[:idx] + strings.Join(additions, "\n") + "\n" + code[idx:]
 		}
+	}
+	return code
+}
+
+func javaRemoveUnusedAssertionImports(code string) string {
+	if !strings.Contains(code, "Assert.") {
+		code = strings.ReplaceAll(code, "import org.junit.Assert;\n", "")
+	}
+	if !strings.Contains(code, "Assertions.") {
+		code = strings.ReplaceAll(code, "import org.junit.jupiter.api.Assertions;\n", "")
 	}
 	return code
 }
