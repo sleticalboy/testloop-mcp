@@ -432,6 +432,180 @@ public class Endpoints {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskDisambiguatesProtobufEndpointErrorLines(t *testing.T) {
+	source := []byte(`public class Endpoints {
+    public Endpoints(apache.rocketmq.v2.Endpoints endpoints) {
+        if (addresses.isEmpty()) {
+            throw new UnsupportedOperationException("No available address");
+        }
+    }
+
+    public Endpoints(String endpoints) {
+    }
+}
+`)
+	task := types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "3-3",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+		SuggestedInputs: []string{"设置 endpoints 覆盖未执行分支"},
+	}
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &task)
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()",
+		".setScheme(apache.rocketmq.v2.AddressScheme.IPv4)",
+		"Assertions.assertThrows(RuntimeException.class, () -> new Endpoints(endpoints));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new Endpoints(null)") {
+		t.Fatalf("protobuf constructor task should not emit ambiguous null overload call:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskUsesLineRangeForEqualsBranches(t *testing.T) {
+	source := []byte(`public class Endpoints {
+    public Endpoints(String endpoints) {
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Endpoints endpoints = (Endpoints) o;
+        return true;
+    }
+}
+`)
+
+	tests := []struct {
+		lineRange string
+		want      string
+	}{
+		{lineRange: "8-8", want: "Assertions.assertTrue(instance.equals(instance));"},
+		{lineRange: "11-11", want: "Assertions.assertFalse(instance.equals(new Object()));"},
+		{lineRange: "14-14", want: "Endpoints other = new Endpoints(\"127.0.0.1:80\");"},
+	}
+	for _, tt := range tests {
+		_, code, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+			Target:          "Endpoints.equals",
+			LineRange:       tt.lineRange,
+			TestName:        "shouldCoverEndpointsEqualsGap",
+			MissingBranches: []string{"未覆盖返回路径"},
+		})
+		if err != nil {
+			t.Fatalf("GenerateJavaTestsForCoverageTask(%s) error = %v", tt.lineRange, err)
+		}
+		if !strings.Contains(code, tt.want) {
+			t.Fatalf("expected %q in generated code for %s:\n%s", tt.want, tt.lineRange, code)
+		}
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesToSocketAddressesBranches(t *testing.T) {
+	source := []byte(`public class Endpoints {
+    public Endpoints(String endpoints) {
+    }
+
+    public List<InetSocketAddress> toSocketAddresses() {
+        switch (scheme) {
+            case DOMAIN_NAME:
+                return null;
+            default:
+                return new ArrayList<>();
+        }
+    }
+}
+`)
+	_, switchCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.toSocketAddresses",
+		LineRange:       "6-6",
+		TestName:        "shouldCoverEndpointsToSocketAddressesGap",
+		MissingBranches: []string{"未覆盖 switch/case 分支"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(switch) error = %v", err)
+	}
+	for _, want := range []string{
+		"import java.util.List;",
+		"import java.net.InetSocketAddress;",
+		"List<InetSocketAddress> result = instance.toSocketAddresses();",
+		"Assertions.assertFalse(result.isEmpty());",
+	} {
+		if !strings.Contains(switchCode, want) {
+			t.Fatalf("expected %q in switch code:\n%s", want, switchCode)
+		}
+	}
+
+	_, nullCode, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &types.CoverageTestTask{
+		Target:          "Endpoints.toSocketAddresses",
+		LineRange:       "8-8",
+		TestName:        "shouldCoverEndpointsToSocketAddressesGap",
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(null) error = %v", err)
+	}
+	for _, want := range []string{
+		"Endpoints domainInstance = new Endpoints(\"example.com:80\");",
+		"List<InetSocketAddress> result = domainInstance.toSocketAddresses();",
+		"Assertions.assertNull(result);",
+	} {
+		if !strings.Contains(nullCode, want) {
+			t.Fatalf("expected %q in null code:\n%s", want, nullCode)
+		}
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskSplitsAddressListConstructorSuccess(t *testing.T) {
+	source := []byte(`package com.example;
+
+import java.util.List;
+
+public class Endpoints {
+    public Endpoints(AddressScheme scheme, List<Address> addresses) {
+        checkNotNull(addresses, "addresses");
+    }
+}
+`)
+	task := types.CoverageTestTask{
+		Target:          "Endpoints.Endpoints",
+		LineRange:       "6-6",
+		TestName:        "shouldCoverEndpointsEndpointsGap",
+		MissingBranches: []string{"未覆盖普通语句块"},
+		SuggestedInputs: []string{"设置 scheme 覆盖未执行分支", "设置 addresses 覆盖未执行分支"},
+	}
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Endpoints.java", &task)
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"final java.util.List<Address> addresses = java.util.Arrays.asList(",
+		"new Address(\"127.0.0.1\", 80),",
+		"new Address(\"127.0.0.2\", 81));",
+		"Endpoints instance = new Endpoints(AddressScheme.IPv4, addresses);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new Endpoints(new AddressScheme()") {
+		t.Fatalf("constructor success branch should use enum constant and split addresses:\n%s", code)
+	}
+}
+
 func TestCoverageTaskInputValuesPreservesJavaScriptUndefined(t *testing.T) {
 	task := types.CoverageTestTask{
 		SuggestedInputs: []string{"构造满足条件 `value === undefined` 的输入"},

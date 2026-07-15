@@ -94,7 +94,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 
 	b.WriteString("}\n")
 
-	return testFileName, b.String(), nil
+	return testFileName, javaAddGeneratedImports(b.String()), nil
 }
 
 func filterJavaFuncsForCoverageTask(funcs []javaFuncInfo, task *types.CoverageTestTask) []javaFuncInfo {
@@ -149,7 +149,8 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	if m.IsConstructor {
 		// 构造函数测试
 		if !javaWriteProtobufEndpointsConstructorTask(b, m, task, callClassName, assertions, indent) &&
-			!javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) {
+			!javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) &&
+			!javaWriteAddressListConstructorTask(b, m, task, callClassName, assertions, indent) {
 			b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, args))
 			b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
 		}
@@ -166,6 +167,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		if javaWriteHashCodeTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteToSocketAddressesTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
 		}
@@ -223,10 +228,18 @@ func javaBuildArgsForCoverageTask(params []javaParamInfo, task *types.CoverageTe
 		} else if value := javaInferCoverageTaskValue(p, task); value != "" {
 			parts = append(parts, value)
 		} else {
-			parts = append(parts, javaInferDefaultValue(p.Type))
+			parts = append(parts, javaInferDefaultArgValue(p.Type))
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+func javaInferDefaultArgValue(typ string) string {
+	value := javaInferDefaultValue(typ)
+	if value == "null" && strings.TrimSpace(typ) != "" {
+		return fmt.Sprintf("(%s) null", typ)
+	}
+	return value
 }
 
 func javaInferCoverageTaskValue(param javaParamInfo, task *types.CoverageTestTask) string {
@@ -297,25 +310,44 @@ func javaWriteConstructorAssertThrows(b *strings.Builder, m javaFuncInfo, task *
 	return true
 }
 
+func javaWriteAddressListConstructorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || !m.IsConstructor || !javaTaskMentions(task, "scheme") || !javaTaskMentions(task, "addresses") {
+		return false
+	}
+	hasScheme := false
+	hasAddressList := false
+	schemeValue := ""
+	for _, param := range m.Params {
+		switch param.Name {
+		case "scheme":
+			hasScheme = strings.HasSuffix(param.Type, "Scheme")
+			if hasScheme {
+				schemeValue = param.Type + ".IPv4"
+			}
+		case "addresses":
+			hasAddressList = param.Type == "List<Address>" || param.Type == "java.util.List<Address>"
+		}
+	}
+	if !hasScheme || !hasAddressList || schemeValue == "" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    final java.util.List<Address> addresses = java.util.Arrays.asList(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new Address(\"127.0.0.1\", 80),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new Address(\"127.0.0.2\", 81));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s, addresses);\n", indent, className, className, schemeValue))
+	b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
+	return true
+}
+
 func javaWriteProtobufEndpointsConstructorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
 	if task == nil || !m.IsConstructor || len(m.Params) != 1 || m.Params[0].Type != "apache.rocketmq.v2.Endpoints" {
 		return false
 	}
 	switch {
 	case javaTaskMentions(task, "addresses.isEmpty"):
-		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.IPv4)\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
-		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
-		return true
+		return javaWriteProtobufEndpointsEmptyTask(b, className, assertions, indent)
 	case javaTaskMentions(task, "addresses.size"):
-		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.DOMAIN_NAME)\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"a.example\").setPort(80))\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"b.example\").setPort(81))\n", indent))
-		b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
-		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
-		return true
+		return javaWriteProtobufEndpointsDomainMultiAddressTask(b, className, assertions, indent)
 	case javaTaskMentions(task, "switch/case"):
 		b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
 		b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.IPv4)\n", indent))
@@ -325,8 +357,34 @@ func javaWriteProtobufEndpointsConstructorTask(b *strings.Builder, m javaFuncInf
 		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
 		return true
 	default:
+		if start, _, ok := javaCoverageTaskLineRange(task); ok {
+			switch {
+			case start <= m.Line+6:
+				return javaWriteProtobufEndpointsEmptyTask(b, className, assertions, indent)
+			case start >= m.Line+20:
+				return javaWriteProtobufEndpointsDomainMultiAddressTask(b, className, assertions, indent)
+			}
+		}
 		return false
 	}
+}
+
+func javaWriteProtobufEndpointsEmptyTask(b *strings.Builder, className string, assertions string, indent string) bool {
+	b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.IPv4)\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
+	return true
+}
+
+func javaWriteProtobufEndpointsDomainMultiAddressTask(b *strings.Builder, className string, assertions string, indent string) bool {
+	b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Endpoints endpoints = apache.rocketmq.v2.Endpoints.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setScheme(apache.rocketmq.v2.AddressScheme.DOMAIN_NAME)\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"a.example\").setPort(80))\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .addAddresses(apache.rocketmq.v2.Address.newBuilder().setHost(\"b.example\").setPort(81))\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertThrows(RuntimeException.class, () -> new %s(endpoints));\n", indent, assertions, className))
+	return true
 }
 
 func javaConstructorsByClass(funcs []javaFuncInfo) map[string][]javaFuncInfo {
@@ -368,6 +426,24 @@ func javaWriteEqualsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *type
 	if m.Name != "equals" || len(m.Params) != 1 {
 		return false
 	}
+	if start, _, ok := javaCoverageTaskLineRange(task); ok {
+		switch {
+		case start <= m.Line+3:
+			b.WriteString(fmt.Sprintf("%s    %s.assertTrue(instance.equals(instance));\n", indent, assertions))
+			return true
+		case start <= m.Line+6:
+			b.WriteString(fmt.Sprintf("%s    %s.assertFalse(instance.equals(new Object()));\n", indent, assertions))
+			return true
+		default:
+			className := m.ClassName
+			if className == "" {
+				className = "Endpoints"
+			}
+			b.WriteString(fmt.Sprintf("%s    %s other = new %s(\"127.0.0.1:80\");\n", indent, className, className))
+			b.WriteString(fmt.Sprintf("%s    %s.assertTrue(instance.equals(other));\n", indent, assertions))
+			return true
+		}
+	}
 	if javaTaskMentions(task, "this == o") {
 		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(instance.equals(instance));\n", indent, assertions))
 		return true
@@ -377,6 +453,32 @@ func javaWriteEqualsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *type
 		return true
 	}
 	return false
+}
+
+func javaWriteToSocketAddressesTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.Name != "toSocketAddresses" || m.ReturnType != "List<InetSocketAddress>" {
+		return false
+	}
+	className := m.ClassName
+	if className == "" {
+		className = "Endpoints"
+	}
+	if start, _, ok := javaCoverageTaskLineRange(task); ok && start >= m.Line+3 {
+		b.WriteString(fmt.Sprintf("%s    %s domainInstance = new %s(\"example.com:80\");\n", indent, className, className))
+		b.WriteString(fmt.Sprintf("%s    List<InetSocketAddress> result = domainInstance.toSocketAddresses();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNull(result);\n", indent, assertions))
+		return true
+	}
+	if javaTaskMentions(task, "空值") || javaTaskMentions(task, "null") || javaTaskMentions(task, "DOMAIN_NAME") {
+		b.WriteString(fmt.Sprintf("%s    %s domainInstance = new %s(\"example.com:80\");\n", indent, className, className))
+		b.WriteString(fmt.Sprintf("%s    List<InetSocketAddress> result = domainInstance.toSocketAddresses();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNull(result);\n", indent, assertions))
+		return true
+	}
+	b.WriteString(fmt.Sprintf("%s    List<InetSocketAddress> result = instance.toSocketAddresses();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+	return true
 }
 
 func javaWriteHashCodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
@@ -494,6 +596,25 @@ func javaPackageName(source []byte) string {
 	return ""
 }
 
+func javaAddGeneratedImports(code string) string {
+	var additions []string
+	if strings.Contains(code, "InetSocketAddress") && !strings.Contains(code, "import java.net.InetSocketAddress;") {
+		additions = append(additions, "import java.net.InetSocketAddress;")
+	}
+	if strings.Contains(code, "List<InetSocketAddress>") && !strings.Contains(code, "import java.util.List;") {
+		additions = append(additions, "import java.util.List;")
+	}
+	if len(additions) == 0 {
+		return code
+	}
+	for _, marker := range []string{"import org.junit.", "import org.junit.jupiter."} {
+		if idx := strings.Index(code, marker); idx >= 0 {
+			return code[:idx] + strings.Join(additions, "\n") + "\n" + code[idx:]
+		}
+	}
+	return code
+}
+
 func javaLeadingBlockComment(source []byte) string {
 	text := strings.TrimLeft(string(source), "\ufeff \t\r\n")
 	if !strings.HasPrefix(text, "/*") {
@@ -569,7 +690,7 @@ func javaAssertionsQualifier(style javaJUnitStyle) string {
 }
 
 func javaQualifyAssertion(assertion string, assertions string) string {
-	for _, name := range []string{"assertEquals", "assertNotEquals", "assertTrue", "assertFalse", "assertNotNull", "assertThrows"} {
+	for _, name := range []string{"assertEquals", "assertNotEquals", "assertTrue", "assertFalse", "assertNotNull", "assertNull", "assertThrows"} {
 		if strings.HasPrefix(assertion, name+"(") {
 			return assertions + "." + assertion
 		}
