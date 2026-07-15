@@ -829,6 +829,73 @@ func TestGenerateJavaTestsForCoverageTaskHandlesInflightRequestCountInterceptor(
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesCompositedMessageInterceptor(t *testing.T) {
+	source := []byte(`public class CompositedMessageInterceptor implements MessageInterceptor {
+    public CompositedMessageInterceptor(java.util.List<MessageInterceptor> interceptors) {
+    }
+
+    @Override
+    public void doBefore(MessageInterceptorContext context0, java.util.List<GeneralMessage> messages) {
+        if (context0 instanceof MessageInterceptorContextImpl) {
+            ((MessageInterceptorContextImpl) context0).getAttributes().forEach(context::putAttribute);
+        }
+    }
+
+    @Override
+    public void doAfter(MessageInterceptorContext context0, java.util.List<GeneralMessage> messages) {
+        if (context0 instanceof MessageInterceptorContextImpl) {
+            ((MessageInterceptorContextImpl) context0).getAttributes().forEach(context::putAttribute);
+        }
+    }
+}
+`)
+
+	_, beforeCode, err := GenerateJavaTestsForCoverageTask(source, "CompositedMessageInterceptor.java", &types.CoverageTestTask{
+		Target:          "CompositedMessageInterceptor.doBefore",
+		LineRange:       "7-7",
+		TestName:        "shouldCoverCompositedMessageInterceptorDoBeforeGap",
+		MissingBranches: []string{"未覆盖 if 分支: context0 instanceof MessageInterceptorContextImpl"},
+		SuggestedInputs: []string{"构造满足条件 `context0 instanceof MessageInterceptorContextImpl` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(doBefore) error = %v", err)
+	}
+	for _, want := range []string{
+		"MessageInterceptor interceptor = new MessageInterceptor() {",
+		"new CompositedMessageInterceptor(java.util.Collections.singletonList(interceptor));",
+		"MessageInterceptorContextImpl context = new MessageInterceptorContextImpl(",
+		"instance.doBefore(context, java.util.Collections.emptyList());",
+		"Assertions.assertTrue(called[0]);",
+	} {
+		if !strings.Contains(beforeCode, want) {
+			t.Fatalf("expected %q in doBefore generated code:\n%s", want, beforeCode)
+		}
+	}
+	if strings.Contains(beforeCode, "new MessageInterceptorContext()") {
+		t.Fatalf("interface context should not be instantiated directly:\n%s", beforeCode)
+	}
+
+	_, afterCode, err := GenerateJavaTestsForCoverageTask(source, "CompositedMessageInterceptor.java", &types.CoverageTestTask{
+		Target:          "CompositedMessageInterceptor.doAfter",
+		LineRange:       "14-14",
+		TestName:        "shouldCoverCompositedMessageInterceptorDoAfterGap",
+		MissingBranches: []string{"未覆盖 if 分支: context0 instanceof MessageInterceptorContextImpl"},
+		SuggestedInputs: []string{"构造满足条件 `context0 instanceof MessageInterceptorContextImpl` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(doAfter) error = %v", err)
+	}
+	for _, want := range []string{
+		"instance.doBefore(context, java.util.Collections.emptyList());",
+		"instance.doAfter(context, java.util.Collections.emptyList());",
+		"Assertions.assertTrue(called[1]);",
+	} {
+		if !strings.Contains(afterCode, want) {
+			t.Fatalf("expected %q in doAfter generated code:\n%s", want, afterCode)
+		}
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
 	source := []byte(`public class NoopHook {
     public void run() {

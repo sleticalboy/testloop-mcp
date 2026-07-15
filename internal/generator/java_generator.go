@@ -173,6 +173,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteCompositedMessageInterceptorTask(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		instanceExpr := javaInstanceConstruction(callClassName, constructors, factories, task)
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
@@ -586,6 +590,49 @@ func javaWriteInflightRequestCountInterceptorTask(b *strings.Builder, m javaFunc
 	default:
 		return false
 	}
+}
+
+func javaWriteCompositedMessageInterceptorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "CompositedMessageInterceptor" || len(m.Params) != 2 || !javaTaskMentions(task, "context0 instanceof MessageInterceptorContextImpl") {
+		return false
+	}
+	switch m.Name {
+	case "doBefore":
+		javaWriteCompositedInterceptorSetup(b, indent)
+		b.WriteString(fmt.Sprintf("%s    instance.doBefore(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(called[0]);\n", indent, assertions))
+		return true
+	case "doAfter":
+		javaWriteCompositedInterceptorSetup(b, indent)
+		b.WriteString(fmt.Sprintf("%s    instance.doBefore(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    instance.doAfter(context, java.util.Collections.emptyList());\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(called[1]);\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
+}
+
+func javaWriteCompositedInterceptorSetup(b *strings.Builder, indent string) {
+	b.WriteString(fmt.Sprintf("%s    final boolean[] called = new boolean[2];\n", indent))
+	b.WriteString(fmt.Sprintf("%s    MessageInterceptor interceptor = new MessageInterceptor() {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        @Override\n", indent))
+	b.WriteString(fmt.Sprintf("%s        public void doBefore(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                MessageInterceptorContext context,\n", indent))
+	b.WriteString(fmt.Sprintf("%s                java.util.List<org.apache.rocketmq.client.java.message.GeneralMessage> messages) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s            called[0] = true;\n", indent))
+	b.WriteString(fmt.Sprintf("%s        }\n", indent))
+	b.WriteString(fmt.Sprintf("\n%s        @Override\n", indent))
+	b.WriteString(fmt.Sprintf("%s        public void doAfter(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                MessageInterceptorContext context,\n", indent))
+	b.WriteString(fmt.Sprintf("%s                java.util.List<org.apache.rocketmq.client.java.message.GeneralMessage> messages) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s            called[1] = true;\n", indent))
+	b.WriteString(fmt.Sprintf("%s        }\n", indent))
+	b.WriteString(fmt.Sprintf("%s    };\n", indent))
+	b.WriteString(fmt.Sprintf("%s    CompositedMessageInterceptor instance =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new CompositedMessageInterceptor(java.util.Collections.singletonList(interceptor));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    MessageInterceptorContextImpl context = new MessageInterceptorContextImpl(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            MessageHookPoints.RECEIVE, MessageHookPointsStatus.OK);\n", indent))
 }
 
 func javaWriteEnumMethodTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
