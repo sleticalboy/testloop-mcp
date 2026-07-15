@@ -969,6 +969,50 @@ func TestGenerateJavaTestsForCoverageTaskMarksUnconstructibleJavaInstanceManualR
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskUsesNullForUnknownJavaConstructorArg(t *testing.T) {
+	source := []byte(`public class Assignment {
+    private final MessageQueueImpl messageQueue;
+
+    public Assignment(MessageQueueImpl messageQueue) {
+        this.messageQueue = messageQueue;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return true;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Assignment.java", &types.CoverageTestTask{
+		Target:          "Assignment.equals",
+		LineRange:       "9-9",
+		TestName:        "shouldCoverAssignmentEqualsGap",
+		MissingBranches: []string{"未覆盖 if 分支: this == o"},
+		SuggestedInputs: []string{"构造满足条件 `this == o` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"Assignment instance = new Assignment(null);",
+		"Assertions.assertTrue(instance.equals(instance));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new MessageQueueImpl()") || strings.Contains(code, "(MessageQueueImpl) null") {
+		t.Fatalf("unknown constructor arg should not require missing imports:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
 	source := []byte(`public class NoopHook {
     public void run() {

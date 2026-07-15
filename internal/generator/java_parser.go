@@ -320,11 +320,7 @@ func javaInferDefaultValue(typ string) string {
 	case typ == "Optional", strings.HasPrefix(typ, "Optional<"):
 		return "java.util.Optional.empty()"
 	default:
-		// 自定义类型，尝试 new
-		if strings.Contains(typ, ".") {
-			return "null" // 外部类型，不好推断
-		}
-		return fmt.Sprintf("new %s()", typ)
+		return "null"
 	}
 }
 

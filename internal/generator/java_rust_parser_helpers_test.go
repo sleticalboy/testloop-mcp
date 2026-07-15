@@ -151,7 +151,7 @@ func TestJavaInferDefaultValueAndAssert(t *testing.T) {
 		"Set<Long>":           "java.util.Collections.emptySet()",
 		"Optional<String>":    "java.util.Optional.empty()",
 		"com.example.User":    "null",
-		"User":                "new User()",
+		"User":                "null",
 	}
 	for typ, want := range defaults {
 		t.Run("default_"+typ, func(t *testing.T) {

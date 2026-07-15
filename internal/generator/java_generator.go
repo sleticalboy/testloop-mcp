@@ -330,6 +330,9 @@ func javaBuildArgsForCoverageTask(params []javaParamInfo, task *types.CoverageTe
 func javaInferDefaultArgValue(typ string) string {
 	value := javaInferDefaultValue(typ)
 	if value == "null" && strings.TrimSpace(typ) != "" {
+		if !strings.Contains(typ, ".") {
+			return "null"
+		}
 		return fmt.Sprintf("(%s) null", typ)
 	}
 	return value
