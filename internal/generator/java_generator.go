@@ -95,6 +95,9 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 				if javaWriteConsumerImplChangeInvisibleDurationTask(&b, m, task, testName, style) {
 					continue
 				}
+				if javaWriteConsumerImplReceiveMessageTask(&b, m, task, testName, style) {
+					continue
+				}
 				if javaWriteConsumerImplReceiveMessageRequestTask(&b, m, task, testName, style) {
 					continue
 				}
@@ -263,6 +266,7 @@ func javaNeedsRocketMQTestBase(m javaFuncInfo, task *types.CoverageTestTask) boo
 		m.ClassName == "ConsumerImpl" && m.Name == "wrapFilterExpression" ||
 		m.ClassName == "ConsumerImpl" && m.Name == "ackMessage" ||
 		m.ClassName == "ConsumerImpl" && m.Name == "changeInvisibleDuration" ||
+		m.ClassName == "ConsumerImpl" && m.Name == "receiveMessage" ||
 		m.ClassName == "ConsumerImpl" && m.Name == "wrapReceiveMessageRequest")
 }
 
@@ -890,6 +894,52 @@ func javaWriteConsumerImplReceiveMessageRequestTask(b *strings.Builder, m javaFu
 	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\n", indent, assertions))
 	b.WriteString(fmt.Sprintf("%s            apache.rocketmq.v2.FilterType.TAG,\n", indent))
 	b.WriteString(fmt.Sprintf("%s            request.getFilterExpression().getType());\n", indent))
+	b.WriteString("    }\n")
+	return true
+}
+
+func javaWriteConsumerImplReceiveMessageTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, testName string, style javaJUnitStyle) bool {
+	if task == nil || m.ClassName != "ConsumerImpl" || m.Name != "receiveMessage" {
+		return false
+	}
+	indent := "    "
+	assertions := javaAssertionsQualifier(style)
+	javaWriteConsumerImplRpcSetup(b, indent, task, testName)
+	b.WriteString(fmt.Sprintf("%s    final MessageQueueImpl mq = fakeMessageQueueImpl(FAKE_TOPIC_0);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ReceiveMessageRequest request = consumer.wrapReceiveMessageRequest(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            1, mq, new FilterExpression(), Duration.ofSeconds(15), \"attempt-id\");\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final List<ReceiveMessageResponse> responses = new java.util.ArrayList<>();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    responses.add(ReceiveMessageResponse.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setStatus(apache.rocketmq.v2.Status.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    .setCode(apache.rocketmq.v2.Code.OK)\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    .build())\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .build());\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final com.google.protobuf.Timestamp deliveryTimestamp =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            com.google.protobuf.Timestamp.newBuilder().setSeconds(123L).build();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    responses.add(ReceiveMessageResponse.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setDeliveryTimestamp(deliveryTimestamp)\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .build());\n", indent))
+	b.WriteString(fmt.Sprintf("%s    responses.add(ReceiveMessageResponse.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setMessage(fakePbMessage(FAKE_TOPIC_0))\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .build());\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final RpcFuture<ReceiveMessageRequest, List<ReceiveMessageResponse>> future =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new RpcFuture<>(fakeRpcContext(), request,\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    com.google.common.util.concurrent.Futures.immediateFuture(responses));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    org.mockito.Mockito.doReturn(future).when(clientManager).receiveMessage(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Endpoints.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(ReceiveMessageRequest.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Duration.class));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final com.google.common.util.concurrent.ListenableFuture<ReceiveMessageResult> resultFuture =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            consumer.receiveMessage(request, mq, Duration.ofSeconds(15));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        final ReceiveMessageResult result = resultFuture.get();\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertEquals(1, result.getMessageViews().size());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s        final MessageViewImpl message = result.getMessageViewImpls().get(0);\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertTrue(message.getTransportDeliveryTimestamp().isPresent());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s        %s.assertEquals(Long.valueOf(123000L), message.getTransportDeliveryTimestamp().get());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception e) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
 	b.WriteString("    }\n")
 	return true
 }

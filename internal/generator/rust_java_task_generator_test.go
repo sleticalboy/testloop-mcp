@@ -1110,6 +1110,60 @@ abstract class ConsumerImpl {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplReceiveMessageResponses(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.ReceiveMessageRequest;
+import apache.rocketmq.v2.ReceiveMessageResponse;
+import com.google.common.util.concurrent.ListenableFuture;
+import java.time.Duration;
+import java.util.List;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.apis.consumer.FilterExpression;
+import org.apache.rocketmq.client.java.impl.ClientManager;
+import org.apache.rocketmq.client.java.message.MessageViewImpl;
+import org.apache.rocketmq.client.java.route.Endpoints;
+import org.apache.rocketmq.client.java.route.MessageQueueImpl;
+import org.apache.rocketmq.client.java.rpc.RpcFuture;
+
+abstract class ConsumerImpl {
+    protected ListenableFuture<ReceiveMessageResult> receiveMessage(ReceiveMessageRequest request,
+        MessageQueueImpl mq, Duration awaitDuration) {
+        return null;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:          "ConsumerImpl.receiveMessage",
+		LineRange:       "104-106",
+		TestName:        "shouldCoverConsumerImplReceiveMessageDeliveryTimestampGap",
+		MissingBranches: []string{"未覆盖 switch/case 分支: DELIVERY_TIMESTAMP"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public class ConsumerImplTest extends TestBase",
+		"final PushConsumerImpl consumer = org.mockito.Mockito.spy(new PushConsumerImpl(",
+		"final List<ReceiveMessageResponse> responses = new java.util.ArrayList<>();",
+		".setDeliveryTimestamp(deliveryTimestamp)",
+		"new RpcFuture<>(fakeRpcContext(), request,",
+		"clientManager).receiveMessage(",
+		"consumer.receiveMessage(request, mq, Duration.ofSeconds(15))",
+		"final MessageViewImpl message = result.getMessageViewImpls().get(0);",
+		"Assertions.assertTrue(message.getTransportDeliveryTimestamp().isPresent());",
+		"Assertions.assertEquals(Long.valueOf(123000L), message.getTransportDeliveryTimestamp().get());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("receiveMessage task should use ClientManager mock path, got manual review:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplAckMessageViaClientManagerMock(t *testing.T) {
 	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
 
