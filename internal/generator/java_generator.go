@@ -76,6 +76,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 
 	// 为每个方法生成测试
 	constructors := javaConstructorsByClass(allFuncs)
+	factories := javaStaticFactoriesByClass(allFuncs)
 	usedNames := map[string]int{}
 	for _, m := range funcs {
 		if !m.IsPublic {
@@ -89,7 +90,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 		if usedNames[testName] > 1 {
 			testName = fmt.Sprintf("%s%d", testName, usedNames[testName])
 		}
-		javaWriteMethodTestForCoverageTaskWithName(&b, m, className, task, testName, style, constructors)
+		javaWriteMethodTestForCoverageTaskWithName(&b, m, className, task, testName, style, constructors, factories)
 	}
 
 	b.WriteString("}\n")
@@ -126,10 +127,10 @@ func javaWriteMethodTest(b *strings.Builder, m javaFuncInfo, className string) {
 }
 
 func javaWriteMethodTestForCoverageTask(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask) {
-	javaWriteMethodTestForCoverageTaskWithName(b, m, className, task, javaCoverageTaskMethodName(m, task), javaJUnit5, nil)
+	javaWriteMethodTestForCoverageTaskWithName(b, m, className, task, javaCoverageTaskMethodName(m, task), javaJUnit5, nil, nil)
 }
 
-func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask, testName string, style javaJUnitStyle, constructors map[string][]javaFuncInfo) {
+func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncInfo, className string, task *types.CoverageTestTask, testName string, style javaJUnitStyle, constructors map[string][]javaFuncInfo, factories map[string][]javaFuncInfo) {
 	indent := "    "
 	assertions := javaAssertionsQualifier(style)
 
@@ -164,7 +165,11 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		javaWriteCallAndAssert(b, callExpr, m, indent, assertions)
 	} else {
 		// 实例方法：先创建实例
-		instanceExpr := javaInstanceConstruction(callClassName, constructors, task)
+		if javaWriteEnumMethodTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		instanceExpr := javaInstanceConstruction(callClassName, constructors, factories, task)
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
@@ -401,27 +406,63 @@ func javaConstructorsByClass(funcs []javaFuncInfo) map[string][]javaFuncInfo {
 	return constructors
 }
 
-func javaInstanceConstruction(className string, constructors map[string][]javaFuncInfo, task *types.CoverageTestTask) string {
+func javaStaticFactoriesByClass(funcs []javaFuncInfo) map[string][]javaFuncInfo {
+	factories := map[string][]javaFuncInfo{}
+	for _, fn := range funcs {
+		if !fn.IsPublic || !fn.IsStatic || fn.IsConstructor || fn.ClassName == "" {
+			continue
+		}
+		if !javaFactoryReturnsClass(fn.ReturnType, fn.ClassName) {
+			continue
+		}
+		switch fn.Name {
+		case "create", "of", "from", "valueOf":
+			factories[fn.ClassName] = append(factories[fn.ClassName], fn)
+		}
+	}
+	return factories
+}
+
+func javaFactoryReturnsClass(returnType string, className string) bool {
+	return javaRawTypeName(returnType) == className
+}
+
+func javaRawTypeName(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if idx := strings.Index(typ, "<"); idx >= 0 {
+		typ = typ[:idx]
+	}
+	if idx := strings.LastIndex(typ, "."); idx >= 0 {
+		typ = typ[idx+1:]
+	}
+	return strings.TrimSpace(typ)
+}
+
+func javaInstanceConstruction(className string, constructors map[string][]javaFuncInfo, factories map[string][]javaFuncInfo, task *types.CoverageTestTask) string {
 	for _, constructor := range constructors[className] {
-		if len(constructor.Params) == 0 {
+		if constructor.IsPublic && len(constructor.Params) == 0 {
 			return fmt.Sprintf("new %s()", className)
 		}
 	}
 	if javaTaskMentions(task, "DOMAIN_NAME") {
 		for _, constructor := range constructors[className] {
-			if len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
+			if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
 				return fmt.Sprintf("new %s(\"example.com:80\")", className)
 			}
 		}
 	}
 	for _, constructor := range constructors[className] {
-		if len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
+		if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
 			return fmt.Sprintf("new %s(\"127.0.0.1:80\")", className)
 		}
 	}
-	if len(constructors[className]) > 0 {
-		constructor := constructors[className][0]
-		return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task))
+	for _, factory := range factories[className] {
+		return fmt.Sprintf("%s.%s(%s)", className, factory.Name, javaBuildArgsForCoverageTask(factory.Params, task))
+	}
+	for _, constructor := range constructors[className] {
+		if constructor.IsPublic {
+			return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task))
+		}
 	}
 	return fmt.Sprintf("new %s()", className)
 }
@@ -517,6 +558,41 @@ func javaWriteStatusCheckerCheckTask(b *strings.Builder, m javaFuncInfo, task *t
 	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
 	b.WriteString(fmt.Sprintf("%s    }\n", indent))
 	return true
+}
+
+func javaWriteEnumMethodTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if !m.IsEnum || m.ClassName == "" || m.Name == "" || m.ReturnType == "" {
+		return false
+	}
+	constant := javaCoverageTaskEnumConstant(task)
+	if constant == "" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    %s result = %s.%s.%s();\n", indent, m.ReturnType, m.ClassName, constant, m.Name))
+	expectedPrefix := m.ReturnType
+	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(%s.%s, result);\n", indent, assertions, expectedPrefix, constant))
+	return true
+}
+
+func javaCoverageTaskEnumConstant(task *types.CoverageTestTask) string {
+	if task == nil {
+		return ""
+	}
+	for _, values := range [][]string{task.MissingBranches, task.SuggestedInputs, task.AssertionFocus} {
+		for _, value := range values {
+			for _, token := range strings.FieldsFunc(value, func(r rune) bool {
+				return !(r == '_' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
+			}) {
+				if token == "" {
+					continue
+				}
+				if token == "PRODUCER" || token == strings.ToUpper(token) && strings.Contains(token, "_") {
+					return token
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func javaWriteHashCodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

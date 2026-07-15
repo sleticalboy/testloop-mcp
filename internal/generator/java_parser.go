@@ -24,6 +24,7 @@ type javaFuncInfo struct {
 	IsConstructor bool
 	Throws        []string // throws 的异常类型列表
 	IsGeneric     bool     // 是否是泛型方法
+	IsEnum        bool
 	Line          int
 }
 
@@ -38,6 +39,7 @@ type javaClassInfo struct {
 	IsPublic       bool
 	HasConstructor bool
 	Constructors   []javaFuncInfo
+	IsEnum         bool
 	Line           int
 }
 
@@ -89,29 +91,43 @@ func javaWalkClassBody(node *sitter.Node, source []byte, funcs *[]javaFuncInfo, 
 		return
 	}
 	for i := 0; i < int(body.ChildCount()); i++ {
-		child := body.Child(i)
-		switch child.Type() {
-		case "method_declaration":
-			info := javaExtractMethodInfo(child, source)
-			// 标记是否属于当前类（通过 IsStatic 等方式无法区分，这里简单处理）
-			info.ClassName = classInfo.Name
-			*funcs = append(*funcs, info)
-		case "constructor_declaration":
-			info := javaExtractConstructorInfo(child, source)
-			info.Name = classInfo.Name
-			info.ClassName = classInfo.Name
-			info.IsConstructor = true
-			*funcs = append(*funcs, info)
-		case "class_declaration", "enum_declaration", "interface_declaration":
-			// 内部类，递归处理
-			javaWalk(child, source, funcs, &[]javaClassInfo{})
-		}
+		javaWalkClassMember(body.Child(i), source, funcs, classInfo)
+	}
+}
+
+func javaWalkClassMember(node *sitter.Node, source []byte, funcs *[]javaFuncInfo, classInfo *javaClassInfo) {
+	if node == nil {
+		return
+	}
+	switch node.Type() {
+	case "method_declaration":
+		info := javaExtractMethodInfo(node, source)
+		// 标记是否属于当前类（通过 IsStatic 等方式无法区分，这里简单处理）
+		info.ClassName = classInfo.Name
+		info.IsEnum = classInfo.IsEnum
+		*funcs = append(*funcs, info)
+		return
+	case "constructor_declaration":
+		info := javaExtractConstructorInfo(node, source)
+		info.Name = classInfo.Name
+		info.ClassName = classInfo.Name
+		info.IsConstructor = true
+		info.IsEnum = classInfo.IsEnum
+		*funcs = append(*funcs, info)
+		return
+	case "class_declaration", "enum_declaration", "interface_declaration":
+		// 内部类，递归处理
+		javaWalk(node, source, funcs, &[]javaClassInfo{})
+		return
+	}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		javaWalkClassMember(node.Child(i), source, funcs, classInfo)
 	}
 }
 
 // javaExtractClassInfo 提取类信息
 func javaExtractClassInfo(node *sitter.Node, source []byte) javaClassInfo {
-	info := javaClassInfo{Line: int(node.StartPoint().Row) + 1}
+	info := javaClassInfo{Line: int(node.StartPoint().Row) + 1, IsEnum: node.Type() == "enum_declaration"}
 	nameNode := node.ChildByFieldName("name")
 	if nameNode != nil {
 		info.Name = nameNode.Content(source)

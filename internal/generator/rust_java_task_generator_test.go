@@ -676,6 +676,92 @@ public class StatusChecker {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskUsesStaticFactoryForPrivateConstructor(t *testing.T) {
+	source := []byte(`public class AttributeKey<T> {
+    private AttributeKey(String name) {
+    }
+
+    public static <T> AttributeKey<T> create(String name) {
+        return new AttributeKey<>(name);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return true;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "AttributeKey.java", &types.CoverageTestTask{
+		Target:          "AttributeKey.equals",
+		LineRange:       "11-11",
+		TestName:        "shouldCoverAttributeKeyEqualsGap",
+		MissingBranches: []string{"未覆盖 if 分支: this == o"},
+		SuggestedInputs: []string{"构造满足条件 `this == o` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"AttributeKey instance = AttributeKey.create(\"test\");",
+		"Assertions.assertTrue(instance.equals(instance));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new AttributeKey(") {
+		t.Fatalf("private constructor should not be called directly:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesEnumMethodBranches(t *testing.T) {
+	source := []byte(`public enum ClientType {
+    PRODUCER,
+    PUSH_CONSUMER;
+
+    public apache.rocketmq.v2.ClientType toProtobuf() {
+        if (PRODUCER.equals(this)) {
+            return apache.rocketmq.v2.ClientType.PRODUCER;
+        }
+        if (PUSH_CONSUMER.equals(this)) {
+            return apache.rocketmq.v2.ClientType.PUSH_CONSUMER;
+        }
+        return apache.rocketmq.v2.ClientType.CLIENT_TYPE_UNSPECIFIED;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ClientType.java", &types.CoverageTestTask{
+		Target:          "ClientType.toProtobuf",
+		LineRange:       "6-6",
+		TestName:        "shouldCoverClientTypeToProtobufGap",
+		MissingBranches: []string{"未覆盖 if 分支: PRODUCER.equals(this"},
+		SuggestedInputs: []string{"构造满足条件 `PRODUCER.equals(this` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public void shouldCoverClientTypeToProtobufGap()",
+		"apache.rocketmq.v2.ClientType result = ClientType.PRODUCER.toProtobuf();",
+		"Assertions.assertEquals(apache.rocketmq.v2.ClientType.PRODUCER, result);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new ClientType") {
+		t.Fatalf("enum method task should use enum constants, not constructors:\n%s", code)
+	}
+}
+
 func TestCoverageTaskInputValuesPreservesJavaScriptUndefined(t *testing.T) {
 	task := types.CoverageTestTask{
 		SuggestedInputs: []string{"构造满足条件 `value === undefined` 的输入"},
