@@ -36,6 +36,9 @@ Environment:
   TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS
                                     Optional timeout in seconds for each generated task
                                     validation only.
+  TESTLOOP_VALIDATE_JAVA_GO_TEST_TIMEOUT
+                                    Optional go test timeout for this integration helper.
+                                    Default: 30m.
 USAGE
 }
 
@@ -75,4 +78,5 @@ if [[ -n "$output" ]]; then
   export TESTLOOP_VALIDATE_JAVA_OUTPUT="$output"
 fi
 
-go test ./tools -run '^TestValidateJavaCoverageTopTasks$' -count=1 -v
+go_test_timeout="${TESTLOOP_VALIDATE_JAVA_GO_TEST_TIMEOUT:-30m}"
+go test ./tools -run '^TestValidateJavaCoverageTopTasks$' -count=1 -timeout "$go_test_timeout" -v

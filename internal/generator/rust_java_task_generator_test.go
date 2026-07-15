@@ -989,6 +989,127 @@ abstract class ConsumerImpl {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplFilterExpressionTagPath(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.ReceiveMessageRequest;
+import java.time.Duration;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.apis.consumer.FilterExpression;
+
+abstract class ConsumerImpl {
+    private apache.rocketmq.v2.FilterExpression wrapFilterExpression(FilterExpression filterExpression) {
+        switch (filterExpression.getFilterExpressionType()) {
+            case SQL92:
+                return apache.rocketmq.v2.FilterExpression.newBuilder()
+                    .setType(apache.rocketmq.v2.FilterType.SQL).build();
+            case TAG:
+            default:
+                return apache.rocketmq.v2.FilterExpression.newBuilder()
+                    .setType(apache.rocketmq.v2.FilterType.TAG).build();
+        }
+    }
+
+    ReceiveMessageRequest wrapReceiveMessageRequest(int batchSize, Object mq,
+        FilterExpression filterExpression, Duration longPollingTimeout, String attemptId) {
+        return ReceiveMessageRequest.newBuilder()
+            .setFilterExpression(wrapFilterExpression(filterExpression)).build();
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:    "ConsumerImpl.wrapFilterExpression",
+		LineRange: "255-255",
+		TestName:  "shouldCoverConsumerImplWrapFilterExpressionTagGap",
+		GapType:   "return",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"final FilterExpression filterExpression = new FilterExpression();",
+		"apache.rocketmq.v2.FilterType.TAG",
+		"consumer.wrapReceiveMessageRequest(",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "FilterExpressionType.SQL92") || strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("tag path should not use SQL branch or manual review:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplReceiveMessageRequestOverloads(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.ReceiveMessageRequest;
+import com.google.protobuf.util.Durations;
+import java.time.Duration;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.apis.consumer.FilterExpression;
+
+abstract class ConsumerImpl {
+    ReceiveMessageRequest wrapReceiveMessageRequest(int batchSize, Object mq,
+        FilterExpression filterExpression, Duration longPollingTimeout, String attemptId) {
+        return ReceiveMessageRequest.newBuilder().setAutoRenew(true).setAttemptId(attemptId).build();
+    }
+
+    ReceiveMessageRequest wrapReceiveMessageRequest(int batchSize, Object mq,
+        FilterExpression filterExpression, Duration invisibleDuration, Duration longPollingTimeout) {
+        return ReceiveMessageRequest.newBuilder()
+            .setAutoRenew(false)
+            .setInvisibleDuration(Durations.fromNanos(invisibleDuration.toNanos()))
+            .build();
+    }
+}
+`)
+
+	_, autoRenewCode, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:    "ConsumerImpl.wrapReceiveMessageRequest",
+		LineRange: "12-12",
+		TestName:  "shouldCoverConsumerImplWrapReceiveMessageRequestAutoRenewGap",
+		GapType:   "return",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(auto renew) error = %v", err)
+	}
+	for _, want := range []string{
+		"consumer.wrapReceiveMessageRequest(",
+		"Duration.ofSeconds(30), \"attempt-id\");",
+		"Assertions.assertTrue(request.getAutoRenew());",
+		"Assertions.assertEquals(\"attempt-id\", request.getAttemptId());",
+	} {
+		if !strings.Contains(autoRenewCode, want) {
+			t.Fatalf("expected %q in auto-renew generated code:\n%s", want, autoRenewCode)
+		}
+	}
+
+	_, invisibleCode, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:    "ConsumerImpl.wrapReceiveMessageRequest",
+		LineRange: "18-18",
+		TestName:  "shouldCoverConsumerImplWrapReceiveMessageRequestInvisibleGap",
+		GapType:   "return",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(invisible) error = %v", err)
+	}
+	for _, want := range []string{
+		"final Duration invisibleDuration = Duration.ofSeconds(45);",
+		"invisibleDuration, Duration.ofSeconds(30));",
+		"Assertions.assertFalse(request.getAutoRenew());",
+		"Durations.fromNanos(invisibleDuration.toNanos())",
+	} {
+		if !strings.Contains(invisibleCode, want) {
+			t.Fatalf("expected %q in invisible generated code:\n%s", want, invisibleCode)
+		}
+	}
+	if strings.Contains(autoRenewCode, "manual_review_internal:") || strings.Contains(invisibleCode, "manual_review_internal:") {
+		t.Fatalf("wrapReceiveMessageRequest tasks should not use manual review:\nauto:\n%s\ninvisible:\n%s", autoRenewCode, invisibleCode)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplAckMessageViaClientManagerMock(t *testing.T) {
 	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
 

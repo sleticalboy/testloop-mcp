@@ -95,6 +95,9 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 				if javaWriteConsumerImplChangeInvisibleDurationTask(&b, m, task, testName, style) {
 					continue
 				}
+				if javaWriteConsumerImplReceiveMessageRequestTask(&b, m, task, testName, style) {
+					continue
+				}
 				javaWriteInternalManualReviewTest(&b, m, task, testName, style)
 			}
 			continue
@@ -259,7 +262,8 @@ func javaNeedsRocketMQTestBase(m javaFuncInfo, task *types.CoverageTestTask) boo
 		m.ClassName == "ConsumeService" && m.Name == "consume" ||
 		m.ClassName == "ConsumerImpl" && m.Name == "wrapFilterExpression" ||
 		m.ClassName == "ConsumerImpl" && m.Name == "ackMessage" ||
-		m.ClassName == "ConsumerImpl" && m.Name == "changeInvisibleDuration")
+		m.ClassName == "ConsumerImpl" && m.Name == "changeInvisibleDuration" ||
+		m.ClassName == "ConsumerImpl" && m.Name == "wrapReceiveMessageRequest")
 }
 
 func javaWriteManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
@@ -818,6 +822,14 @@ func javaWriteConsumerImplFilterExpressionTask(b *strings.Builder, m javaFuncInf
 	}
 	indent := "    "
 	assertions := javaAssertionsQualifier(style)
+	lineStart, _, hasLine := javaCoverageTaskLineRange(task)
+	useTagPath := hasLine && lineStart >= 253
+	filterExpression := "new FilterExpression(\n" + indent + "            \"a > 1\",\n" + indent + "            org.apache.rocketmq.client.apis.consumer.FilterExpressionType.SQL92)"
+	expectedFilterType := "apache.rocketmq.v2.FilterType.SQL"
+	if useTagPath {
+		filterExpression = "new FilterExpression()"
+		expectedFilterType = "apache.rocketmq.v2.FilterType.TAG"
+	}
 	b.WriteString(fmt.Sprintf("\n    @Test\n"))
 	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
 	if comment := coverageTaskComment(task); comment != "" {
@@ -829,14 +841,54 @@ func javaWriteConsumerImplFilterExpressionTask(b *strings.Builder, m javaFuncInf
 	b.WriteString(fmt.Sprintf("%s            createSubscriptionExpressions(FAKE_TOPIC_0),\n", indent))
 	b.WriteString(fmt.Sprintf("%s            messageView -> org.apache.rocketmq.client.apis.consumer.ConsumeResult.SUCCESS,\n", indent))
 	b.WriteString(fmt.Sprintf("%s            8, 1024, 4);\n", indent))
-	b.WriteString(fmt.Sprintf("%s    final FilterExpression filterExpression = new FilterExpression(\n", indent))
-	b.WriteString(fmt.Sprintf("%s            \"a > 1\",\n", indent))
-	b.WriteString(fmt.Sprintf("%s            org.apache.rocketmq.client.apis.consumer.FilterExpressionType.SQL92);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final FilterExpression filterExpression = %s;\n", indent, filterExpression))
 	b.WriteString(fmt.Sprintf("%s    final ReceiveMessageRequest request = consumer.wrapReceiveMessageRequest(\n", indent))
 	b.WriteString(fmt.Sprintf("%s            1, fakeMessageQueueImpl(FAKE_TOPIC_0), filterExpression,\n", indent))
 	b.WriteString(fmt.Sprintf("%s            Duration.ofSeconds(15), \"attempt-id\");\n", indent))
 	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\n", indent, assertions))
-	b.WriteString(fmt.Sprintf("%s            apache.rocketmq.v2.FilterType.SQL,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            %s,\n", indent, expectedFilterType))
+	b.WriteString(fmt.Sprintf("%s            request.getFilterExpression().getType());\n", indent))
+	b.WriteString("    }\n")
+	return true
+}
+
+func javaWriteConsumerImplReceiveMessageRequestTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, testName string, style javaJUnitStyle) bool {
+	if task == nil || m.ClassName != "ConsumerImpl" || m.Name != "wrapReceiveMessageRequest" {
+		return false
+	}
+	indent := "    "
+	assertions := javaAssertionsQualifier(style)
+	useInvisibleDurationOverload := len(m.Params) >= 5 && m.Params[3].Name == "invisibleDuration"
+	b.WriteString(fmt.Sprintf("\n    @Test\n"))
+	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
+	}
+	b.WriteString(fmt.Sprintf("%s    final PushConsumerImpl consumer = new PushConsumerImpl(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            ClientConfiguration.newBuilder().setEndpoints(FAKE_ENDPOINTS).build(),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            FAKE_CONSUMER_GROUP_0,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            createSubscriptionExpressions(FAKE_TOPIC_0),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            messageView -> org.apache.rocketmq.client.apis.consumer.ConsumeResult.SUCCESS,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            8, 1024, 4);\n", indent))
+	if useInvisibleDurationOverload {
+		b.WriteString(fmt.Sprintf("%s    final Duration invisibleDuration = Duration.ofSeconds(45);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final ReceiveMessageRequest request = consumer.wrapReceiveMessageRequest(\n", indent))
+		b.WriteString(fmt.Sprintf("%s            2, fakeMessageQueueImpl(FAKE_TOPIC_0), new FilterExpression(),\n", indent))
+		b.WriteString(fmt.Sprintf("%s            invisibleDuration, Duration.ofSeconds(30));\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertFalse(request.getAutoRenew());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s            Durations.fromNanos(invisibleDuration.toNanos()),\n", indent))
+		b.WriteString(fmt.Sprintf("%s            request.getInvisibleDuration());\n", indent))
+	} else {
+		b.WriteString(fmt.Sprintf("%s    final ReceiveMessageRequest request = consumer.wrapReceiveMessageRequest(\n", indent))
+		b.WriteString(fmt.Sprintf("%s            2, fakeMessageQueueImpl(FAKE_TOPIC_0), new FilterExpression(),\n", indent))
+		b.WriteString(fmt.Sprintf("%s            Duration.ofSeconds(30), \"attempt-id\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(request.getAutoRenew());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"attempt-id\", request.getAttemptId());\n", indent, assertions))
+	}
+	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(2, request.getBatchSize());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s            apache.rocketmq.v2.FilterType.TAG,\n", indent))
 	b.WriteString(fmt.Sprintf("%s            request.getFilterExpression().getType());\n", indent))
 	b.WriteString("    }\n")
 	return true
