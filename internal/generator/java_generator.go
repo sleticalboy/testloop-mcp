@@ -207,7 +207,8 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 
 	if m.IsConstructor {
 		// 构造函数测试
-		if !javaWriteProtobufEndpointsConstructorTask(b, m, task, callClassName, assertions, indent) &&
+		if !javaWriteHmacUtilsConstructorTask(b, m, task, callClassName, assertions, indent) &&
+			!javaWriteProtobufEndpointsConstructorTask(b, m, task, callClassName, assertions, indent) &&
 			!javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) &&
 			!javaWriteAddressListConstructorTask(b, m, task, callClassName, assertions, indent) {
 			b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, javaBuildConstructorArgsForCoverageTask(m.Params, task)))
@@ -216,6 +217,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
 		if javaWriteRuleGetInstanceTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteHmacUtilsIsAvailableTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
 		}
@@ -252,6 +257,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		if javaWriteRulePhonemeTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteHmacUtilsDigestTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
 		}
@@ -619,6 +628,100 @@ func javaDigestUtilsShakeInput(typ string) string {
 		return "new java.io.ByteArrayInputStream(new byte[] { 97, 98, 99 })"
 	case "String", "java.lang.String":
 		return "\"abc\""
+	default:
+		return ""
+	}
+}
+
+func javaWriteHmacUtilsIsAvailableTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "HmacUtils" || m.Name != "isAvailable" || len(m.Params) != 1 {
+		return false
+	}
+	var input string
+	switch strings.TrimSpace(m.Params[0].Type) {
+	case "HmacAlgorithms":
+		input = "HmacAlgorithms.HMAC_SHA_256"
+	case "String", "java.lang.String":
+		input = "HmacAlgorithms.HMAC_SHA_256.getName()"
+	default:
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    boolean result = HmacUtils.isAvailable(%s);\n", indent, input))
+	b.WriteString(fmt.Sprintf("%s    %s.assertTrue(result);\n", indent, assertions))
+	return true
+}
+
+func javaWriteHmacUtilsConstructorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if m.ClassName != "HmacUtils" || !m.IsConstructor {
+		return false
+	}
+	args := javaHmacUtilsConstructorArgs(m.Params)
+	if args == "" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, className, className, args))
+	b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
+	return true
+}
+
+func javaHmacUtilsConstructorArgs(params []javaParamInfo) string {
+	if len(params) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(params))
+	for _, param := range params {
+		switch strings.TrimSpace(param.Type) {
+		case "HmacAlgorithms":
+			parts = append(parts, "HmacAlgorithms.HMAC_SHA_256")
+		case "String", "java.lang.String":
+			if strings.EqualFold(param.Name, "algorithm") {
+				parts = append(parts, "HmacAlgorithms.HMAC_SHA_256.getName()")
+			} else {
+				parts = append(parts, "\"secret\"")
+			}
+		case "byte[]":
+			parts = append(parts, "new byte[] { 115, 101, 99, 114, 101, 116 }")
+		default:
+			return ""
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+func javaWriteHmacUtilsDigestTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "HmacUtils" || (m.Name != "hmac" && m.Name != "hmacHex") || len(m.Params) != 1 {
+		return false
+	}
+	input := javaHmacUtilsDigestInput(m.Params[0].Type)
+	if input == "" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    HmacUtils instance = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, \"secret\");\n", indent))
+	switch strings.TrimSpace(m.ReturnType) {
+	case "byte[]":
+		b.WriteString(fmt.Sprintf("%s    byte[] result = instance.%s(%s);\n", indent, m.Name, input))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(result.length > 0);\n", indent, assertions))
+	case "String", "java.lang.String":
+		b.WriteString(fmt.Sprintf("%s    String result = instance.%s(%s);\n", indent, m.Name, input))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+	default:
+		return false
+	}
+	return true
+}
+
+func javaHmacUtilsDigestInput(typ string) string {
+	switch strings.TrimSpace(typ) {
+	case "byte[]":
+		return "new byte[] { 97, 98, 99 }"
+	case "ByteBuffer", "java.nio.ByteBuffer":
+		return "java.nio.ByteBuffer.wrap(new byte[] { 97, 98, 99 })"
+	case "String", "java.lang.String":
+		return "\"abc\""
+	case "InputStream", "java.io.InputStream":
+		return "new java.io.ByteArrayInputStream(new byte[] { 97, 98, 99 })"
 	default:
 		return ""
 	}

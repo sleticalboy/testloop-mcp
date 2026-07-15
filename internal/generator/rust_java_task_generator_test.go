@@ -252,6 +252,125 @@ public class DigestUtils {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesHmacUtilsInputs(t *testing.T) {
+	source := []byte(`import java.nio.ByteBuffer;
+
+public class HmacUtils {
+    public static boolean isAvailable(String name) {
+        return true;
+    }
+
+    public HmacUtils() {
+        this(null);
+    }
+
+    public HmacUtils(String algorithm, String key) {
+    }
+
+    public HmacUtils(HmacAlgorithms algorithm, String key) {
+    }
+
+    public byte[] hmac(ByteBuffer valueToDigest) {
+        return new byte[] {1};
+    }
+
+    public String hmacHex(ByteBuffer valueToDigest) {
+        return "01";
+    }
+}
+
+enum HmacAlgorithms {
+    HMAC_SHA_256;
+
+    public String getName() {
+        return "HmacSHA256";
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "HmacUtils.java", &types.CoverageTestTask{
+		ID:              "junit-58",
+		Framework:       "junit",
+		Target:          "HmacUtils.isAvailable",
+		LineRange:       "5-5",
+		TestName:        "shouldCoverHmacUtilsIsAvailableGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{5},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "boolean result = HmacUtils.isAvailable(HmacAlgorithms.HMAC_SHA_256.getName());") ||
+		!strings.Contains(code, "Assertions.assertTrue(result);") ||
+		strings.Contains(code, "isAvailable(\"test\")") {
+		t.Fatalf("HmacUtils.isAvailable should use a real HMAC algorithm:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "HmacUtils.java", &types.CoverageTestTask{
+		ID:              "junit-110",
+		Framework:       "junit",
+		Target:          "HmacUtils.HmacUtils",
+		LineRange:       "12-12",
+		TestName:        "shouldCoverHmacUtilsHmacUtilsGap",
+		AssertionFocus:  []string{"断言未覆盖语句执行后的可观察结果"},
+		UncoveredLines:  []int{12},
+		MissingBranches: []string{"未覆盖普通语句块"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "new HmacUtils(HmacAlgorithms.HMAC_SHA_256.getName(), \"secret\")") ||
+		strings.Contains(code, "new HmacUtils(\"test\", \"test\")") {
+		t.Fatalf("HmacUtils String constructor should use a valid algorithm name and key:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "HmacUtils.java", &types.CoverageTestTask{
+		ID:              "junit-111",
+		Framework:       "junit",
+		Target:          "HmacUtils.hmac",
+		LineRange:       "18-18",
+		TestName:        "shouldCoverHmacUtilsHmacGap",
+		AssertionFocus:  []string{"断言未覆盖语句执行后的可观察结果"},
+		UncoveredLines:  []int{18},
+		MissingBranches: []string{"未覆盖普通语句块"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"HmacUtils instance = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, \"secret\");",
+		"byte[] result = instance.hmac(java.nio.ByteBuffer.wrap(new byte[] { 97, 98, 99 }));",
+		"Assertions.assertTrue(result.length > 0);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated HmacUtils.hmac test:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "instance.hmac(null)") || strings.Contains(code, "new HmacUtils();") {
+		t.Fatalf("HmacUtils.hmac should not use ambiguous null or a default instance:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "HmacUtils.java", &types.CoverageTestTask{
+		ID:              "junit-60",
+		Framework:       "junit",
+		Target:          "HmacUtils.hmacHex",
+		LineRange:       "22-22",
+		TestName:        "shouldCoverHmacUtilsHmacHexGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{22},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "String result = instance.hmacHex(java.nio.ByteBuffer.wrap(new byte[] { 97, 98, 99 }));") ||
+		!strings.Contains(code, "Assertions.assertFalse(result.isEmpty());") ||
+		strings.Contains(code, "instance.hmacHex(null)") {
+		t.Fatalf("HmacUtils.hmacHex should use typed ByteBuffer input and a non-empty assertion:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesRulePhonemeAndGetInstance(t *testing.T) {
 	source := []byte(`import java.util.List;
 
