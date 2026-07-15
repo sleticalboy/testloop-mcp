@@ -5,6 +5,7 @@
 ### Changed
 
 - Go coverage task 写入测试文件前会扫描同包所有 `*_test.go`，当任务推荐的 `test_name` 已在其它测试文件中存在时，也会自动追加稳定后缀，避免生成后 `go test` 因包级 `Test*` 重名构建失败。
+- Java coverage task 支持 Commons Codec `DigestUtils.sha` 重载和 `getShake*Digest` 运行时兼容路径：生成 typed `byte[]` / `InputStream` / `String` 输入，避免裸 `null` 重载歧义；SHAKE MessageDigest 不可用时断言 `IllegalArgumentException` 信息而不是误报生成失败。
 - Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil；变参函数的参数校验分支也会进入同一生成路径。
 - Go coverage task 分支匹配会优先使用 `line_range` 区分同一函数内重复的 `err != nil` 分支，并对 `net.Dial("unix", socketPath)` 连接失败分支生成缺失 socket 路径测试输入，避免把后续协议读写错误误判为连接失败。
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。

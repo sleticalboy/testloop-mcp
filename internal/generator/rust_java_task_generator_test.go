@@ -252,6 +252,93 @@ public class DigestUtils {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesDigestUtilsShaOverloads(t *testing.T) {
+	source := []byte(`import java.io.IOException;
+import java.io.InputStream;
+
+public class DigestUtils {
+    public static byte[] sha(byte[] data) {
+        return data;
+    }
+
+    public static byte[] sha(InputStream data) throws IOException {
+        return data.readAllBytes();
+    }
+
+    public static byte[] sha(String data) {
+        return data.getBytes();
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "DigestUtils.java", &types.CoverageTestTask{
+		ID:              "junit-55",
+		Framework:       "junit",
+		Target:          "DigestUtils.sha",
+		LineRange:       "5-5",
+		TestName:        "shouldCoverDigestUtilsShaGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{5},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"byte[] result = DigestUtils.sha(new byte[] { 97, 98, 99 });",
+		"Assertions.assertNotNull(result);",
+		"Assertions.assertTrue(result.length > 0);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated DigestUtils.sha test:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "DigestUtils.sha(null)") || strings.Contains(code, "assertThrows(IOException.class") {
+		t.Fatalf("DigestUtils.sha generation should not emit ambiguous null or empty IOException assertion:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesDigestUtilsGetShakeDigest(t *testing.T) {
+	source := []byte(`import java.security.MessageDigest;
+
+public class DigestUtils {
+    public static MessageDigest getShake128_256Digest() {
+        throw new IllegalArgumentException("SHAKE128-256 MessageDigest not available");
+    }
+
+    public static MessageDigest getShake256_512Digest() {
+        throw new IllegalArgumentException("SHAKE256-512 MessageDigest not available");
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "DigestUtils.java", &types.CoverageTestTask{
+		ID:              "junit-108",
+		Framework:       "junit",
+		Target:          "DigestUtils.getShake128_256Digest",
+		LineRange:       "5-5",
+		TestName:        "shouldCoverDigestUtilsGetShake128256DigestGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{5},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"MessageDigest result = DigestUtils.getShake128_256Digest();",
+		"} catch (IllegalArgumentException ex) {",
+		"Assertions.assertTrue(ex.getMessage().contains(\"SHAKE\"));",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated DigestUtils.getShake*Digest test:\n%s", want, code)
+		}
+	}
+	if !strings.Contains(code, "Assertions.fail(ex);") {
+		t.Fatalf("getShake*Digest generation should fail unexpected exceptions:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesHmacUtilsInputs(t *testing.T) {
 	source := []byte(`import java.nio.ByteBuffer;
 

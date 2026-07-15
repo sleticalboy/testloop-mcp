@@ -224,6 +224,14 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteDigestUtilsGetShakeDigestTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteDigestUtilsShaTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteDigestUtilsShakeTaskAssertion(b, m, task, callClassName, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -631,6 +639,55 @@ func javaDigestUtilsShakeInput(typ string) string {
 	default:
 		return ""
 	}
+}
+
+func javaWriteDigestUtilsShaTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if m.ClassName != "DigestUtils" || m.Name != "sha" || len(m.Params) != 1 {
+		return false
+	}
+	input := javaDigestUtilsByteDigestInput(m.Params[0].Type)
+	if input == "" || strings.TrimSpace(m.ReturnType) != "byte[]" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        byte[] result = %s.sha(%s);\n", indent, className, input))
+	b.WriteString(fmt.Sprintf("%s        %s.assertNotNull(result);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s        %s.assertTrue(result.length > 0);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception ex) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(ex);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	return true
+}
+
+func javaDigestUtilsByteDigestInput(typ string) string {
+	switch strings.TrimSpace(typ) {
+	case "byte[]":
+		return "new byte[] { 97, 98, 99 }"
+	case "InputStream", "java.io.InputStream":
+		return "new java.io.ByteArrayInputStream(new byte[] { 97, 98, 99 })"
+	case "String", "java.lang.String":
+		return "\"abc\""
+	default:
+		return ""
+	}
+}
+
+func javaWriteDigestUtilsGetShakeDigestTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if m.ClassName != "DigestUtils" || !strings.HasPrefix(m.Name, "getShake") || !strings.HasSuffix(m.Name, "Digest") || len(m.Params) != 0 {
+		return false
+	}
+	if strings.TrimSpace(m.ReturnType) != "MessageDigest" && strings.TrimSpace(m.ReturnType) != "java.security.MessageDigest" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        MessageDigest result = %s.%s();\n", indent, className, m.Name))
+	b.WriteString(fmt.Sprintf("%s        %s.assertNotNull(result);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (IllegalArgumentException ex) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertTrue(ex.getMessage().contains(\"SHAKE\"));\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception ex) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(ex);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	return true
 }
 
 func javaWriteHmacUtilsIsAvailableTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
