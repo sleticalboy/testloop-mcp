@@ -185,7 +185,13 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
-		instanceExpr := javaInstanceConstruction(callClassName, constructors, factories, task)
+		instanceExpr, canConstruct := javaInstanceConstructionForCoverageTask(callClassName, constructors, factories, task)
+		if !canConstruct && task != nil {
+			javaWriteManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
+				"requires complex constructor state; cover it through a public entry point or review manually.")
+			b.WriteString("    }\n")
+			return
+		}
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
@@ -217,16 +223,51 @@ func javaWriteInternalManualReviewTest(b *strings.Builder, m javaFuncInfo, task 
 	if comment := coverageTaskComment(task); comment != "" {
 		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
 	}
+	javaWriteManualReviewAssumption(b, indent, style, target,
+		"is private/internal; cover it through a public entry point or review manually.")
+	b.WriteString("    }\n")
+}
+
+func javaWriteManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
 	b.WriteString(fmt.Sprintf("%s    final String target = \"%s\";\n", indent, javaEscapeStringLiteral(target)))
 	b.WriteString(fmt.Sprintf("%s    final String reason =\n", indent))
-	b.WriteString(fmt.Sprintf("%s            \"manual_review_internal: \" + target + \" is private/internal; \"\n", indent))
-	b.WriteString(fmt.Sprintf("%s                    + \"cover it through a public entry point or review manually.\";\n", indent))
+	b.WriteString(fmt.Sprintf("%s            \"manual_review_internal: \" + target\n", indent))
+	segments := javaManualReviewDetailSegments(detail)
+	for i, segment := range segments {
+		suffix := ""
+		if i == len(segments)-1 {
+			suffix = ";"
+		}
+		b.WriteString(fmt.Sprintf("%s                    + \"%s\"%s\n", indent, javaEscapeStringLiteral(segment), suffix))
+	}
 	if style == javaJUnit4 {
 		b.WriteString(fmt.Sprintf("%s    org.junit.Assume.assumeTrue(reason, false);\n", indent))
 	} else {
 		b.WriteString(fmt.Sprintf("%s    org.junit.jupiter.api.Assumptions.assumeTrue(false, reason);\n", indent))
 	}
-	b.WriteString("    }\n")
+}
+
+func javaManualReviewDetailSegments(detail string) []string {
+	parts := strings.Split(detail, ";")
+	segments := make([]string, 0, len(parts))
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		prefix := " "
+		if i > 0 {
+			prefix = ""
+		}
+		if i < len(parts)-1 {
+			part += "; "
+		}
+		segments = append(segments, prefix+part)
+	}
+	if len(segments) == 0 {
+		return []string{" requires manual review."}
+	}
+	return segments
 }
 
 func javaCoverageTaskMethodName(m javaFuncInfo, task *types.CoverageTestTask) string {
@@ -482,32 +523,40 @@ func javaRawTypeName(typ string) string {
 }
 
 func javaInstanceConstruction(className string, constructors map[string][]javaFuncInfo, factories map[string][]javaFuncInfo, task *types.CoverageTestTask) string {
+	instanceExpr, _ := javaInstanceConstructionForCoverageTask(className, constructors, factories, task)
+	return instanceExpr
+}
+
+func javaInstanceConstructionForCoverageTask(className string, constructors map[string][]javaFuncInfo, factories map[string][]javaFuncInfo, task *types.CoverageTestTask) (string, bool) {
 	for _, constructor := range constructors[className] {
 		if constructor.IsPublic && len(constructor.Params) == 0 {
-			return fmt.Sprintf("new %s()", className)
+			return fmt.Sprintf("new %s()", className), true
 		}
 	}
 	if javaTaskMentions(task, "DOMAIN_NAME") {
 		for _, constructor := range constructors[className] {
 			if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
-				return fmt.Sprintf("new %s(\"example.com:80\")", className)
+				return fmt.Sprintf("new %s(\"example.com:80\")", className), true
 			}
 		}
 	}
 	for _, constructor := range constructors[className] {
 		if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
-			return fmt.Sprintf("new %s(\"127.0.0.1:80\")", className)
+			return fmt.Sprintf("new %s(\"127.0.0.1:80\")", className), true
 		}
 	}
 	for _, factory := range factories[className] {
-		return fmt.Sprintf("%s.%s(%s)", className, factory.Name, javaBuildArgsForCoverageTask(factory.Params, task))
+		return fmt.Sprintf("%s.%s(%s)", className, factory.Name, javaBuildArgsForCoverageTask(factory.Params, task)), true
 	}
 	for _, constructor := range constructors[className] {
 		if constructor.IsPublic {
-			return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task))
+			return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task)), true
 		}
 	}
-	return fmt.Sprintf("new %s()", className)
+	if len(constructors[className]) > 0 {
+		return "", false
+	}
+	return fmt.Sprintf("new %s()", className), true
 }
 
 func javaWriteEqualsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

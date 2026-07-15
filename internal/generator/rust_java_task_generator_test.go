@@ -931,6 +931,44 @@ func TestGenerateJavaTestsForCoverageTaskMarksPrivateJavaMethodManualReview(t *t
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskMarksUnconstructibleJavaInstanceManualReview(t *testing.T) {
+	source := []byte(`public class ClientSessionImpl {
+    protected ClientSessionImpl(ClientSessionHandler sessionHandler, Duration tolerance, Endpoints endpoints) {
+    }
+
+    public void release() {
+        if (requestObserver == null) {
+            return;
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ClientSessionImpl.java", &types.CoverageTestTask{
+		Target:          "ClientSessionImpl.release",
+		LineRange:       "6-6",
+		TestName:        "shouldCoverClientSessionImplReleaseGap",
+		MissingBranches: []string{"未覆盖 if 分支: null == requestObserver"},
+		SuggestedInputs: []string{"构造满足条件 `null == requestObserver` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public void shouldCoverClientSessionImplReleaseGap()",
+		"manual_review_internal: ",
+		"ClientSessionImpl.release",
+		"requires complex constructor state",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new ClientSessionImpl()") || strings.Contains(code, "instance.release()") {
+		t.Fatalf("unconstructible instance task should not emit invalid direct construction/call:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
 	source := []byte(`public class NoopHook {
     public void run() {
