@@ -72,7 +72,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	}
 	b.WriteString("\n")
 
-	b.WriteString(fmt.Sprintf("public class %sTest {\n", className))
+	b.WriteString(fmt.Sprintf("public class %sTest%s {\n", className, javaTestClassExtends(funcs, task)))
 
 	// 为每个方法生成测试
 	constructors := javaConstructorsByClass(allFuncs)
@@ -103,7 +103,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 
 	b.WriteString("}\n")
 
-	return testFileName, javaAddGeneratedImports(b.String()), nil
+	return testFileName, javaAddGeneratedImports(b.String(), source), nil
 }
 
 func filterJavaFuncsForCoverageTask(funcs []javaFuncInfo, task *types.CoverageTestTask) []javaFuncInfo {
@@ -185,6 +185,14 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteConsumeTaskCallTask(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteConsumeServiceConsumeTask(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		instanceExpr, canConstruct := javaInstanceConstructionForCoverageTask(callClassName, constructors, factories, task)
 		if !canConstruct && task != nil {
 			javaWriteManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
@@ -226,6 +234,20 @@ func javaWriteInternalManualReviewTest(b *strings.Builder, m javaFuncInfo, task 
 	javaWriteManualReviewAssumption(b, indent, style, target,
 		"is private/internal; cover it through a public entry point or review manually.")
 	b.WriteString("    }\n")
+}
+
+func javaTestClassExtends(funcs []javaFuncInfo, task *types.CoverageTestTask) string {
+	for _, m := range funcs {
+		if javaNeedsRocketMQTestBase(m, task) {
+			return " extends TestBase"
+		}
+	}
+	return ""
+}
+
+func javaNeedsRocketMQTestBase(m javaFuncInfo, task *types.CoverageTestTask) bool {
+	return task != nil && (m.ClassName == "ConsumeTask" && m.Name == "call" ||
+		m.ClassName == "ConsumeService" && m.Name == "consume")
 }
 
 func javaWriteManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
@@ -722,6 +744,62 @@ func javaWriteCompositedInterceptorSetup(b *strings.Builder, indent string) {
 	b.WriteString(fmt.Sprintf("%s            MessageHookPoints.RECEIVE, MessageHookPointsStatus.OK);\n", indent))
 }
 
+func javaWriteConsumeTaskCallTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if !javaNeedsRocketMQTestBase(m, task) {
+		return false
+	}
+	if m.ClassName != "ConsumeTask" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    ClientId clientId = new ClientId();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageViewImpl messageView = fakeMessageViewImpl();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageListener messageListener = message -> ConsumeResult.FAILURE;\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageInterceptor messageInterceptor =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.Mockito.mock(MessageInterceptor.class);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ConsumeTask instance = new ConsumeTask(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            clientId, messageListener, messageView, messageInterceptor);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ConsumeResult result = instance.call();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(ConsumeResult.FAILURE, result);\n", indent, assertions))
+	return true
+}
+
+func javaWriteConsumeServiceConsumeTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if !javaNeedsRocketMQTestBase(m, task) || m.ClassName != "ConsumeService" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    ClientId clientId = new ClientId();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageInterceptor interceptor =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.Mockito.mock(MessageInterceptor.class);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ThreadPoolExecutor consumptionExecutor = new ThreadPoolExecutor(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            1, 1, 0L, TimeUnit.MILLISECONDS,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new java.util.concurrent.LinkedBlockingQueue<>(),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new org.apache.rocketmq.client.java.misc.ThreadFactoryImpl(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    \"TestMessageConsumption\"));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ScheduledExecutorService scheduler =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new java.util.concurrent.ScheduledThreadPoolExecutor(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    1, new org.apache.rocketmq.client.java.misc.ThreadFactoryImpl(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                            \"TestScheduler\"));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageListener messageListener = messageView -> ConsumeResult.SUCCESS;\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ConsumeService instance = new ConsumeService(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            clientId, messageListener, consumptionExecutor, interceptor, scheduler) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        @Override\n", indent))
+	b.WriteString(fmt.Sprintf("%s        public void consume(ProcessQueue pq, List<MessageViewImpl> messageViews) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        }\n", indent))
+	b.WriteString(fmt.Sprintf("%s    };\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageViewImpl messageView = fakeMessageViewImpl();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ListenableFuture<ConsumeResult> future = instance.consume(messageView);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        final ConsumeResult result = future.get(1000, TimeUnit.MILLISECONDS);\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertEquals(ConsumeResult.SUCCESS, result);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception e) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } finally {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        consumptionExecutor.shutdownNow();\n", indent))
+	b.WriteString(fmt.Sprintf("%s        scheduler.shutdownNow();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	return true
+}
+
 func javaWriteEnumMethodTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
 	if !m.IsEnum || m.ClassName == "" || m.Name == "" || m.ReturnType == "" {
 		return false
@@ -872,9 +950,18 @@ func javaPackageName(source []byte) string {
 	return ""
 }
 
-func javaAddGeneratedImports(code string) string {
+func javaAddGeneratedImports(code string, source []byte) string {
 	code = javaRemoveUnusedAssertionImports(code)
 	var additions []string
+	for _, importLine := range javaReferencedSourceImports(source, code) {
+		if !strings.Contains(code, importLine) {
+			additions = append(additions, importLine)
+		}
+	}
+	if strings.Contains(code, "extends TestBase") &&
+		!strings.Contains(code, "import org.apache.rocketmq.client.java.tool.TestBase;") {
+		additions = append(additions, "import org.apache.rocketmq.client.java.tool.TestBase;")
+	}
 	if strings.Contains(code, "InetSocketAddress") && !strings.Contains(code, "import java.net.InetSocketAddress;") {
 		additions = append(additions, "import java.net.InetSocketAddress;")
 	}
@@ -890,6 +977,80 @@ func javaAddGeneratedImports(code string) string {
 		}
 	}
 	return code
+}
+
+func javaReferencedSourceImports(source []byte, code string) []string {
+	imports := javaSourceImportLines(source)
+	referenceCode := javaCodeWithoutLineComments(code)
+	referenced := make([]string, 0, len(imports))
+	for _, importLine := range imports {
+		simpleName := javaImportSimpleName(importLine)
+		if simpleName == "" {
+			continue
+		}
+		if javaCodeReferencesIdentifier(referenceCode, simpleName) {
+			referenced = append(referenced, importLine)
+		}
+	}
+	return referenced
+}
+
+func javaCodeWithoutLineComments(code string) string {
+	lines := strings.Split(code, "\n")
+	for i, line := range lines {
+		if idx := strings.Index(line, "//"); idx >= 0 {
+			lines[i] = line[:idx]
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func javaSourceImportLines(source []byte) []string {
+	var imports []string
+	for _, line := range strings.Split(string(source), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "import ") || strings.HasPrefix(line, "import static ") {
+			continue
+		}
+		if !strings.HasSuffix(line, ";") {
+			continue
+		}
+		imports = append(imports, line)
+	}
+	return imports
+}
+
+func javaImportSimpleName(importLine string) string {
+	name := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(importLine, "import "), ";"))
+	if strings.HasSuffix(name, ".*") || name == "" {
+		return ""
+	}
+	if idx := strings.LastIndex(name, "."); idx >= 0 {
+		return name[idx+1:]
+	}
+	return name
+}
+
+func javaCodeReferencesIdentifier(code string, identifier string) bool {
+	for i := 0; i < len(code); i++ {
+		idx := strings.Index(code[i:], identifier)
+		if idx < 0 {
+			return false
+		}
+		start := i + idx
+		end := start + len(identifier)
+		beforeOK := start == 0 || (!isJavaIdentifierPart(rune(code[start-1])) && code[start-1] != '.')
+		afterOK := end == len(code) || !isJavaIdentifierPart(rune(code[end]))
+		if beforeOK && afterOK {
+			return true
+		}
+		i = end
+	}
+	return false
+}
+
+func isJavaIdentifierPart(r rune) bool {
+	return r == '_' || r == '$' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func javaRemoveUnusedAssertionImports(code string) string {

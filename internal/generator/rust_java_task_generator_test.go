@@ -1013,6 +1013,169 @@ func TestGenerateJavaTestsForCoverageTaskUsesNullForUnknownJavaConstructorArg(t 
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskAddsReferencedSourceImports(t *testing.T) {
+	source := []byte(`import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
+
+public class ConsumeTask {
+    public ConsumeResult call() {
+        return ConsumeResult.SUCCESS;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumeTask.java", &types.CoverageTestTask{
+		Target:          "ConsumeTask.call",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverConsumeTaskCallGap",
+		MissingBranches: []string{"未覆盖 if 分支: !ConsumeResult.SUCCESS.equals(consumeResult"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import org.apache.rocketmq.client.apis.consumer.ConsumeResult;",
+		"ConsumeResult result = instance.call();",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskDoesNotImportCommentOnlyTypes(t *testing.T) {
+	source := []byte(`import java.time.Duration;
+
+public class Worker {
+    public Object run(Object value) {
+        return value;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Worker.java", &types.CoverageTestTask{
+		Target:          "Worker.run",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverWorkerRunGap",
+		MissingBranches: []string{"未覆盖 if 分支: Duration.ZERO.compareTo(delay"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if strings.Contains(code, "import java.time.Duration;") {
+		t.Fatalf("comment-only source import should not be copied:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesRocketMQConsumeTaskCall(t *testing.T) {
+	source := []byte(`import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
+import org.apache.rocketmq.client.apis.consumer.MessageListener;
+import org.apache.rocketmq.client.java.hook.MessageInterceptor;
+import org.apache.rocketmq.client.java.message.MessageViewImpl;
+import org.apache.rocketmq.client.java.misc.ClientId;
+
+public class ConsumeTask {
+    public ConsumeTask(ClientId clientId, MessageListener messageListener, MessageViewImpl messageView,
+        MessageInterceptor messageInterceptor) {
+    }
+
+    public ConsumeResult call() {
+        return ConsumeResult.FAILURE;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumeTask.java", &types.CoverageTestTask{
+		Target:          "ConsumeTask.call",
+		LineRange:       "13-13",
+		TestName:        "shouldCoverConsumeTaskCallGap",
+		MissingBranches: []string{"未覆盖 if 分支: !ConsumeResult.SUCCESS.equals(consumeResult"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"import org.apache.rocketmq.client.java.tool.TestBase;",
+		"public class ConsumeTaskTest extends TestBase {",
+		"final MessageViewImpl messageView = fakeMessageViewImpl();",
+		"final MessageListener messageListener = message -> ConsumeResult.FAILURE;",
+		"org.mockito.Mockito.mock(MessageInterceptor.class);",
+		"Assertions.assertEquals(ConsumeResult.FAILURE, result);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new ConsumeTask(null") {
+		t.Fatalf("ConsumeTask task should use real fakes instead of null constructor args:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesRocketMQConsumeServiceConsume(t *testing.T) {
+	source := []byte(`import com.google.common.util.concurrent.ListenableFuture;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
+import org.apache.rocketmq.client.apis.consumer.MessageListener;
+import org.apache.rocketmq.client.java.hook.MessageInterceptor;
+import org.apache.rocketmq.client.java.message.MessageViewImpl;
+import org.apache.rocketmq.client.java.misc.ClientId;
+import org.apache.rocketmq.client.java.misc.ThreadFactoryImpl;
+
+public abstract class ConsumeService {
+    public ConsumeService(ClientId clientId, MessageListener messageListener,
+        ThreadPoolExecutor consumptionExecutor, MessageInterceptor interceptor,
+        ScheduledExecutorService scheduler) {
+    }
+
+    public abstract void consume(ProcessQueue pq, List<MessageViewImpl> messageViews);
+
+    public ListenableFuture<ConsumeResult> consume(MessageViewImpl messageView) {
+        return null;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumeService.java", &types.CoverageTestTask{
+		Target:          "ConsumeService.consume",
+		LineRange:       "23-23",
+		TestName:        "shouldCoverConsumeServiceConsumeGap",
+		MissingBranches: []string{"未覆盖 if 分支: Duration.ZERO.compareTo(delay"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public class ConsumeServiceTest extends TestBase {",
+		"final ThreadPoolExecutor consumptionExecutor = new ThreadPoolExecutor(",
+		"new java.util.concurrent.LinkedBlockingQueue<>()",
+		"new java.util.concurrent.ScheduledThreadPoolExecutor(",
+		"final ConsumeService instance = new ConsumeService(",
+		"public void consume(ProcessQueue pq, List<MessageViewImpl> messageViews) {",
+		"final ListenableFuture<ConsumeResult> future = instance.consume(messageView);",
+		"Assertions.assertEquals(ConsumeResult.SUCCESS, result);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new ConsumeService(null") || strings.Contains(code, "instance.consume(null, null)") {
+		t.Fatalf("ConsumeService task should avoid abstract construction and null overload ambiguity:\n%s", code)
+	}
+	for _, forbidden := range []string{
+		"import java.util.concurrent.LinkedBlockingQueue;",
+		"import java.util.concurrent.ScheduledThreadPoolExecutor;",
+		"import org.apache.rocketmq.client.java.misc.ThreadFactoryImpl;",
+	} {
+		if strings.Contains(code, forbidden) {
+			t.Fatalf("fully qualified helper should not copy unused import %q:\n%s", forbidden, code)
+		}
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
 	source := []byte(`public class NoopHook {
     public void run() {
