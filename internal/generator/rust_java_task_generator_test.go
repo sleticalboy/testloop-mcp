@@ -606,6 +606,76 @@ public class Endpoints {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesStatusCheckerCheck(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.exception;
+
+import apache.rocketmq.v2.Status;
+import org.apache.rocketmq.client.apis.ClientException;
+import org.apache.rocketmq.client.java.rpc.RpcFuture;
+
+public class StatusChecker {
+    public static void check(Status status, RpcFuture<?, ?> future) throws ClientException {
+        switch (status.getCode()) {
+            case OK:
+                return;
+            case MESSAGE_NOT_FOUND:
+                if (future.getRequest() instanceof apache.rocketmq.v2.ReceiveMessageRequest) {
+                    return;
+                }
+            default:
+                throw new ClientException("failed");
+        }
+    }
+}
+`)
+
+	_, okCode, err := GenerateJavaTestsForCoverageTask(source, "StatusChecker.java", &types.CoverageTestTask{
+		Target:          "StatusChecker.check",
+		LineRange:       "9-9",
+		TestName:        "shouldCoverStatusCheckerCheckGap",
+		MissingBranches: []string{"未覆盖 switch/case 分支"},
+		SuggestedInputs: []string{"设置 status 覆盖未执行分支", "设置 future 覆盖未执行分支"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(ok) error = %v", err)
+	}
+	for _, want := range []string{
+		".setCode(apache.rocketmq.v2.Code.OK)",
+		"final Object request = new Object();",
+		"new org.apache.rocketmq.client.java.rpc.Context(",
+		"new org.apache.rocketmq.client.java.rpc.RpcFuture<>(context, request,",
+		"StatusChecker.check(status, future);",
+		"Assertions.fail(e.getMessage());",
+	} {
+		if !strings.Contains(okCode, want) {
+			t.Fatalf("expected %q in OK generated code:\n%s", want, okCode)
+		}
+	}
+	if strings.Contains(okCode, "new Status()") || strings.Contains(okCode, "new RpcFuture") && strings.Contains(okCode, "new RpcFuture<?, ?>()") {
+		t.Fatalf("StatusChecker task should not use invalid default constructors:\n%s", okCode)
+	}
+
+	_, receiveCode, err := GenerateJavaTestsForCoverageTask(source, "StatusChecker.java", &types.CoverageTestTask{
+		Target:          "StatusChecker.check",
+		LineRange:       "13-13",
+		TestName:        "shouldCoverStatusCheckerCheckGap",
+		MissingBranches: []string{"未覆盖 if 分支: future.getRequest"},
+		SuggestedInputs: []string{"构造满足条件 `future.getRequest` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(receive) error = %v", err)
+	}
+	for _, want := range []string{
+		".setCode(apache.rocketmq.v2.Code.MESSAGE_NOT_FOUND)",
+		"final Object request = apache.rocketmq.v2.ReceiveMessageRequest.newBuilder().build();",
+		"StatusChecker.check(status, future);",
+	} {
+		if !strings.Contains(receiveCode, want) {
+			t.Fatalf("expected %q in receive generated code:\n%s", want, receiveCode)
+		}
+	}
+}
+
 func TestCoverageTaskInputValuesPreservesJavaScriptUndefined(t *testing.T) {
 	task := types.CoverageTestTask{
 		SuggestedInputs: []string{"构造满足条件 `value === undefined` 的输入"},

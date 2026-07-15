@@ -176,6 +176,15 @@ func envPositiveInt(t *testing.T, name string, fallback int) int {
 	return value
 }
 
+func envBool(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
+	case "1", "true", "yes", "y", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 func copyTree(src string, dst string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {

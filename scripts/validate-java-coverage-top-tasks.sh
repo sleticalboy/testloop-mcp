@@ -25,6 +25,9 @@ Environment:
                                     build/reports/jacoco/test/jacocoTestReport.xml.
   TESTLOOP_VALIDATE_JAVA_FILE_FILTER
                                     Optional substring filter for task source files.
+  TESTLOOP_VALIDATE_JAVA_LIST_TASKS_ONLY
+                                    If true, only writes selected coverage tasks to
+                                    output-jsonl and skips per-task validation.
   TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS
                                     Optional timeout in seconds used as the default for
                                     baseline coverage and each task validation stage.

@@ -145,6 +145,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	if m.ClassName != "" {
 		callClassName = m.ClassName
 	}
+	if javaWriteStatusCheckerCheckTask(b, m, task, assertions, indent) {
+		b.WriteString("    }\n")
+		return
+	}
 
 	if m.IsConstructor {
 		// 构造函数测试
@@ -478,6 +482,40 @@ func javaWriteToSocketAddressesTaskAssertion(b *strings.Builder, m javaFuncInfo,
 	b.WriteString(fmt.Sprintf("%s    List<InetSocketAddress> result = instance.toSocketAddresses();\n", indent))
 	b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
 	b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+	return true
+}
+
+func javaWriteStatusCheckerCheckTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "StatusChecker" || m.Name != "check" || len(m.Params) != 2 {
+		return false
+	}
+	code := "apache.rocketmq.v2.Code.OK"
+	request := "new Object()"
+	if javaTaskMentions(task, "future.getRequest") {
+		code = "apache.rocketmq.v2.Code.MESSAGE_NOT_FOUND"
+		request = "apache.rocketmq.v2.ReceiveMessageRequest.newBuilder().build()"
+	}
+	b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Status status = apache.rocketmq.v2.Status.newBuilder()\n", indent))
+	b.WriteString(fmt.Sprintf("%s            .setCode(%s)\n", indent, code))
+	b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final Object request = %s;\n", indent, request))
+	b.WriteString(fmt.Sprintf("%s    final io.grpc.Metadata metadata = new io.grpc.Metadata();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    metadata.put(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            io.grpc.Metadata.Key.of(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    org.apache.rocketmq.client.java.rpc.Signature.REQUEST_ID_KEY,\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    io.grpc.Metadata.ASCII_STRING_MARSHALLER),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            \"request-id\");\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final org.apache.rocketmq.client.java.rpc.Context context =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new org.apache.rocketmq.client.java.rpc.Context(\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    new org.apache.rocketmq.client.java.route.Endpoints(\"127.0.0.1:80\"), metadata);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final org.apache.rocketmq.client.java.rpc.RpcFuture<Object, Object> future =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new org.apache.rocketmq.client.java.rpc.RpcFuture<>(context, request,\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    com.google.common.util.concurrent.Futures.immediateFuture(new Object()));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        StatusChecker.check(status, future);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    } catch (org.apache.rocketmq.client.apis.ClientException e) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
 	return true
 }
 
