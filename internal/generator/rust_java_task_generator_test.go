@@ -183,6 +183,75 @@ func TestGenerateJavaTestsForCoverageTaskUsesNestedJavaClassTarget(t *testing.T)
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesDigestUtilsShakeMethods(t *testing.T) {
+	source := []byte(`import java.io.IOException;
+import java.io.InputStream;
+
+public class DigestUtils {
+    public static byte[] shake128_256(byte[] data) {
+        return data;
+    }
+
+    public static byte[] shake128_256(InputStream data) throws IOException {
+        return data.readAllBytes();
+    }
+
+    public static String shake256_512Hex(String data) {
+        return data;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "DigestUtils.java", &types.CoverageTestTask{
+		ID:              "junit-43",
+		Framework:       "junit",
+		Target:          "DigestUtils.shake128_256",
+		LineRange:       "5-5",
+		TestName:        "shouldCoverDigestUtilsShake128256Gap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{5},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"byte[] result = DigestUtils.shake128_256(new byte[] { 97, 98, 99 });",
+		"Assertions.assertTrue(result.length > 0);",
+		"} catch (IllegalArgumentException ex) {",
+		"Assertions.assertTrue(ex.getMessage().contains(\"SHAKE\"));",
+		"} catch (Exception ex) {",
+		"Assertions.fail(ex);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "shake128_256(null)") || strings.Contains(code, "assertThrows(IOException.class") {
+		t.Fatalf("SHAKE generation should not emit ambiguous null or empty IOException assertion:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "DigestUtils.java", &types.CoverageTestTask{
+		ID:              "junit-44",
+		Framework:       "junit",
+		Target:          "DigestUtils.shake128_256",
+		LineRange:       "9-9",
+		TestName:        "shouldCoverDigestUtilsShake128256InputStreamGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{9},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "DigestUtils.shake128_256(new java.io.ByteArrayInputStream(new byte[] { 97, 98, 99 }))") {
+		t.Fatalf("InputStream SHAKE overload should use typed ByteArrayInputStream input:\n%s", code)
+	}
+	if strings.Contains(code, "shake128_256(null)") {
+		t.Fatalf("InputStream SHAKE overload should not emit ambiguous null:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskCastsNullForOverloadedCollectionConstructor(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray(String source) {

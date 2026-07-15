@@ -215,6 +215,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		}
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
+		if javaWriteDigestUtilsShakeTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteXMLTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -570,6 +574,46 @@ func javaHasParamType(m javaFuncInfo, typ string) bool {
 		}
 	}
 	return false
+}
+
+func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if m.ClassName != "DigestUtils" || !strings.HasPrefix(m.Name, "shake") || len(m.Params) != 1 {
+		return false
+	}
+	input := javaDigestUtilsShakeInput(m.Params[0].Type)
+	if input == "" {
+		return false
+	}
+	resultType := strings.TrimSpace(m.ReturnType)
+	if resultType == "" {
+		return false
+	}
+	call := fmt.Sprintf("%s.%s(%s)", className, m.Name, input)
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s result = %s;\n", indent, resultType, call))
+	b.WriteString(fmt.Sprintf("%s        %s.assertNotNull(result);\n", indent, assertions))
+	if resultType == "byte[]" {
+		b.WriteString(fmt.Sprintf("%s        %s.assertTrue(result.length > 0);\n", indent, assertions))
+	}
+	b.WriteString(fmt.Sprintf("%s    } catch (IllegalArgumentException ex) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertTrue(ex.getMessage().contains(\"SHAKE\"));\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception ex) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(ex);\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	return true
+}
+
+func javaDigestUtilsShakeInput(typ string) string {
+	switch strings.TrimSpace(typ) {
+	case "byte[]":
+		return "new byte[] { 97, 98, 99 }"
+	case "InputStream", "java.io.InputStream":
+		return "new java.io.ByteArrayInputStream(new byte[] { 97, 98, 99 })"
+	case "String", "java.lang.String":
+		return "\"abc\""
+	default:
+		return ""
+	}
 }
 
 func javaWriteXMLTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
