@@ -896,6 +896,41 @@ func TestGenerateJavaTestsForCoverageTaskHandlesCompositedMessageInterceptor(t *
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskMarksPrivateJavaMethodManualReview(t *testing.T) {
+	source := []byte(`public class ClientManagerImpl {
+    private void clearIdleRpcClients() throws InterruptedException {
+        if (idleDuration.compareTo(RPC_CLIENT_MAX_IDLE_DURATION) > 0) {
+            rpcClient.shutdown();
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ClientManagerImpl.java", &types.CoverageTestTask{
+		Target:          "ClientManagerImpl.clearIdleRpcClients",
+		LineRange:       "3-3",
+		TestName:        "shouldCoverClientManagerImplClearIdleRpcClientsGap",
+		MissingBranches: []string{"未覆盖 if 分支: idleDuration.compareTo(RPC_CLIENT_MAX_IDLE_DURATION"},
+		SuggestedInputs: []string{"构造满足条件 `idleDuration.compareTo(RPC_CLIENT_MAX_IDLE_DURATION` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public void shouldCoverClientManagerImplClearIdleRpcClientsGap()",
+		"manual_review_internal: ",
+		"ClientManagerImpl.clearIdleRpcClients",
+		"org.junit.jupiter.api.Assumptions.assumeTrue(false, reason);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "public class ClientManagerImplTest {\n}") {
+		t.Fatalf("private task should not generate an empty test class:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskRemovesUnusedAssertionImport(t *testing.T) {
 	source := []byte(`public class NoopHook {
     public void run() {

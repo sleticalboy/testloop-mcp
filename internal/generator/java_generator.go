@@ -80,6 +80,14 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	usedNames := map[string]int{}
 	for _, m := range funcs {
 		if !m.IsPublic {
+			if task != nil {
+				testName := javaCoverageTaskMethodName(m, task)
+				usedNames[testName]++
+				if usedNames[testName] > 1 {
+					testName = fmt.Sprintf("%s%d", testName, usedNames[testName])
+				}
+				javaWriteInternalManualReviewTest(&b, m, task, testName, style)
+			}
 			continue
 		}
 		if task == nil && javaIsTestHelper(m.Name) {
@@ -198,12 +206,39 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	b.WriteString("    }\n")
 }
 
+func javaWriteInternalManualReviewTest(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, testName string, style javaJUnitStyle) {
+	indent := "    "
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = strings.TrimSpace(m.ClassName + "." + m.Name)
+	}
+	b.WriteString(fmt.Sprintf("\n    @Test\n"))
+	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
+	}
+	b.WriteString(fmt.Sprintf("%s    final String target = \"%s\";\n", indent, javaEscapeStringLiteral(target)))
+	b.WriteString(fmt.Sprintf("%s    final String reason =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            \"manual_review_internal: \" + target + \" is private/internal; \"\n", indent))
+	b.WriteString(fmt.Sprintf("%s                    + \"cover it through a public entry point or review manually.\";\n", indent))
+	if style == javaJUnit4 {
+		b.WriteString(fmt.Sprintf("%s    org.junit.Assume.assumeTrue(reason, false);\n", indent))
+	} else {
+		b.WriteString(fmt.Sprintf("%s    org.junit.jupiter.api.Assumptions.assumeTrue(false, reason);\n", indent))
+	}
+	b.WriteString("    }\n")
+}
+
 func javaCoverageTaskMethodName(m javaFuncInfo, task *types.CoverageTestTask) string {
 	testName := javaTestMethodName(m.Name)
 	if task != nil && strings.TrimSpace(task.TestName) != "" {
 		testName = sanitizeJavaTestMethodName(task.TestName, testName)
 	}
 	return testName
+}
+
+func javaEscapeStringLiteral(value string) string {
+	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"", "\n", "\\n", "\r", "\\r").Replace(value)
 }
 
 // javaWriteCallAndAssert 写调用表达式和断言
