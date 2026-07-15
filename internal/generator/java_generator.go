@@ -89,6 +89,12 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 				if javaWriteConsumerImplFilterExpressionTask(&b, m, task, testName, style) {
 					continue
 				}
+				if javaWriteConsumerImplAckMessageTask(&b, m, task, testName, style) {
+					continue
+				}
+				if javaWriteConsumerImplChangeInvisibleDurationTask(&b, m, task, testName, style) {
+					continue
+				}
 				javaWriteInternalManualReviewTest(&b, m, task, testName, style)
 			}
 			continue
@@ -251,7 +257,9 @@ func javaTestClassExtends(funcs []javaFuncInfo, task *types.CoverageTestTask) st
 func javaNeedsRocketMQTestBase(m javaFuncInfo, task *types.CoverageTestTask) bool {
 	return task != nil && (m.ClassName == "ConsumeTask" && m.Name == "call" ||
 		m.ClassName == "ConsumeService" && m.Name == "consume" ||
-		m.ClassName == "ConsumerImpl" && m.Name == "wrapFilterExpression")
+		m.ClassName == "ConsumerImpl" && m.Name == "wrapFilterExpression" ||
+		m.ClassName == "ConsumerImpl" && m.Name == "ackMessage" ||
+		m.ClassName == "ConsumerImpl" && m.Name == "changeInvisibleDuration")
 }
 
 func javaWriteManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
@@ -832,6 +840,86 @@ func javaWriteConsumerImplFilterExpressionTask(b *strings.Builder, m javaFuncInf
 	b.WriteString(fmt.Sprintf("%s            request.getFilterExpression().getType());\n", indent))
 	b.WriteString("    }\n")
 	return true
+}
+
+func javaWriteConsumerImplAckMessageTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, testName string, style javaJUnitStyle) bool {
+	if task == nil || m.ClassName != "ConsumerImpl" || m.Name != "ackMessage" {
+		return false
+	}
+	indent := "    "
+	assertions := javaAssertionsQualifier(style)
+	javaWriteConsumerImplRpcSetup(b, indent, task, testName)
+	b.WriteString(fmt.Sprintf("%s    final RpcFuture<AckMessageRequest, AckMessageResponse> future =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            okAckMessageResponseFuture();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    org.mockito.Mockito.doReturn(future).when(clientManager).ackMessage(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Endpoints.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(AckMessageRequest.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Duration.class));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageViewImpl messageView = fakeMessageViewImpl();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final RpcFuture<AckMessageRequest, AckMessageResponse> result =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            consumer.ackMessage(messageView);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.assertEquals(future.get(), result.get());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    } catch (Exception e) {\n", indent))
+	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+	b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	b.WriteString("    }\n")
+	return true
+}
+
+func javaWriteConsumerImplChangeInvisibleDurationTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, testName string, style javaJUnitStyle) bool {
+	if task == nil || m.ClassName != "ConsumerImpl" || m.Name != "changeInvisibleDuration" {
+		return false
+	}
+	indent := "    "
+	assertions := javaAssertionsQualifier(style)
+	javaWriteConsumerImplRpcSetup(b, indent, task, testName)
+	lineStart, _, hasLine := javaCoverageTaskLineRange(task)
+	failurePath := hasLine && lineStart >= 217 && lineStart <= 224
+	if failurePath {
+		b.WriteString(fmt.Sprintf("%s    final RpcFuture<ChangeInvisibleDurationRequest, ChangeInvisibleDurationResponse> future =\n", indent))
+		b.WriteString(fmt.Sprintf("%s            new RpcFuture<>(new RuntimeException(\"change invisible failed\"));\n", indent))
+	} else if javaTaskMentions(task, "!Code.OK.equals") || (hasLine && lineStart >= 208 && lineStart <= 210) {
+		b.WriteString(fmt.Sprintf("%s    final RpcFuture<ChangeInvisibleDurationRequest, ChangeInvisibleDurationResponse> future =\n", indent))
+		b.WriteString(fmt.Sprintf("%s            changInvisibleDurationCtxFuture(apache.rocketmq.v2.Code.INTERNAL_SERVER_ERROR);\n", indent))
+	} else {
+		b.WriteString(fmt.Sprintf("%s    final RpcFuture<ChangeInvisibleDurationRequest, ChangeInvisibleDurationResponse> future =\n", indent))
+		b.WriteString(fmt.Sprintf("%s            okChangeInvisibleDurationCtxFuture();\n", indent))
+	}
+	b.WriteString(fmt.Sprintf("%s    org.mockito.Mockito.doReturn(future).when(clientManager).changeInvisibleDuration(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Endpoints.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(ChangeInvisibleDurationRequest.class),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            org.mockito.ArgumentMatchers.any(Duration.class));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final MessageViewImpl messageView = fakeMessageViewImpl();\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final RpcFuture<ChangeInvisibleDurationRequest, ChangeInvisibleDurationResponse> result =\n", indent))
+	b.WriteString(fmt.Sprintf("%s            consumer.changeInvisibleDuration(messageView, Duration.ofSeconds(15));\n", indent))
+	if failurePath {
+		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(Exception.class, () -> result.get());\n", indent, assertions))
+	} else {
+		b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+		b.WriteString(fmt.Sprintf("%s        %s.assertEquals(future.get(), result.get());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    } catch (Exception e) {\n", indent))
+		b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    }\n", indent))
+	}
+	b.WriteString("    }\n")
+	return true
+}
+
+func javaWriteConsumerImplRpcSetup(b *strings.Builder, indent string, task *types.CoverageTestTask, testName string) {
+	b.WriteString(fmt.Sprintf("\n    @Test\n"))
+	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
+	}
+	b.WriteString(fmt.Sprintf("%s    final PushConsumerImpl consumer = org.mockito.Mockito.spy(new PushConsumerImpl(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            ClientConfiguration.newBuilder().setEndpoints(FAKE_ENDPOINTS).build(),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            FAKE_CONSUMER_GROUP_0,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            createSubscriptionExpressions(FAKE_TOPIC_0),\n", indent))
+	b.WriteString(fmt.Sprintf("%s            messageView -> org.apache.rocketmq.client.apis.consumer.ConsumeResult.SUCCESS,\n", indent))
+	b.WriteString(fmt.Sprintf("%s            8, 1024, 4));\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final ClientManager clientManager = org.mockito.Mockito.mock(ClientManager.class);\n", indent))
+	b.WriteString(fmt.Sprintf("%s    org.mockito.Mockito.doReturn(clientManager).when(consumer).getClientManager();\n", indent))
 }
 
 func javaWriteEnumMethodTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

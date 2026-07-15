@@ -989,6 +989,97 @@ abstract class ConsumerImpl {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplAckMessageViaClientManagerMock(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.AckMessageRequest;
+import apache.rocketmq.v2.AckMessageResponse;
+import java.time.Duration;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.java.impl.ClientManager;
+import org.apache.rocketmq.client.java.message.MessageViewImpl;
+import org.apache.rocketmq.client.java.route.Endpoints;
+import org.apache.rocketmq.client.java.rpc.RpcFuture;
+
+abstract class ConsumerImpl {
+    protected RpcFuture<AckMessageRequest, AckMessageResponse> ackMessage(MessageViewImpl messageView) {
+        return this.getClientManager().ackMessage(messageView.getEndpoints(), null, Duration.ofSeconds(3));
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:    "ConsumerImpl.ackMessage",
+		LineRange: "13-13",
+		TestName:  "shouldCoverConsumerImplAckMessageGap",
+		GapType:   "return",
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public class ConsumerImplTest extends TestBase",
+		"final PushConsumerImpl consumer = org.mockito.Mockito.spy(new PushConsumerImpl(",
+		"final ClientManager clientManager = org.mockito.Mockito.mock(ClientManager.class);",
+		"okAckMessageResponseFuture()",
+		"clientManager).ackMessage(",
+		"consumer.ackMessage(messageView)",
+		"Assertions.assertEquals(future.get(), result.get());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("ackMessage task should use ClientManager mock path, got manual review:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplChangeInvisibleDurationErrorPath(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.ChangeInvisibleDurationRequest;
+import apache.rocketmq.v2.ChangeInvisibleDurationResponse;
+import java.time.Duration;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.java.impl.ClientManager;
+import org.apache.rocketmq.client.java.message.MessageViewImpl;
+import org.apache.rocketmq.client.java.route.Endpoints;
+import org.apache.rocketmq.client.java.rpc.RpcFuture;
+
+abstract class ConsumerImpl {
+    RpcFuture<ChangeInvisibleDurationRequest, ChangeInvisibleDurationResponse> changeInvisibleDuration(
+        MessageViewImpl messageView, Duration invisibleDuration) {
+        return this.getClientManager().changeInvisibleDuration(messageView.getEndpoints(), null, invisibleDuration);
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:          "ConsumerImpl.changeInvisibleDuration",
+		LineRange:       "209-209",
+		TestName:        "shouldCoverConsumerImplChangeInvisibleDurationGap",
+		MissingBranches: []string{"未覆盖 if 分支: !Code.OK.equals(code"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public class ConsumerImplTest extends TestBase",
+		"changInvisibleDurationCtxFuture(apache.rocketmq.v2.Code.INTERNAL_SERVER_ERROR)",
+		"clientManager).changeInvisibleDuration(",
+		"consumer.changeInvisibleDuration(messageView, Duration.ofSeconds(15))",
+		"Assertions.assertEquals(future.get(), result.get());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("changeInvisibleDuration task should use ClientManager mock path, got manual review:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskMarksUnconstructibleJavaInstanceManualReview(t *testing.T) {
 	source := []byte(`public class ClientSessionImpl {
     protected ClientSessionImpl(ClientSessionHandler sessionHandler, Duration tolerance, Endpoints endpoints) {
