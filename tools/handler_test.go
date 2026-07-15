@@ -1943,6 +1943,63 @@ func TestHandleGenerateTestsUsesJavaCoverageTaskTestFile(t *testing.T) {
 	assertGeneratedCoverageTaskOutput(t, result, task, "void shouldCoverCalculatorAddGap()")
 }
 
+func TestHandleGenerateTestsAvoidsExistingJavaCoverageTaskTestFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "main", "java", "org", "example", "Base64.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte("package org.example;\n\npublic class Base64 {\n    public byte[] encode(byte[] in) {\n        return in;\n    }\n}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	testFile := filepath.Join(dir, "src", "test", "java", "org", "example", "Base64Test.java")
+	if err := os.MkdirAll(filepath.Dir(testFile), 0o755); err != nil {
+		t.Fatalf("create test dir: %v", err)
+	}
+	existing := "package org.example;\n\npublic class Base64Test {\n    static final String EXISTING_HELPER = \"keep\";\n}\n"
+	if err := os.WriteFile(testFile, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write existing test: %v", err)
+	}
+	task := &types.CoverageTestTask{
+		ID:        "junit-base64-encode",
+		Framework: "junit",
+		File:      source,
+		Target:    "Base64.encode",
+		Kind:      "method",
+		LineRange: "4-4",
+		TestFile:  testFile,
+		TestName:  "shouldCoverBase64EncodeGap",
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		CoverageTask: task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	wantTestFile := filepath.Join(dir, "src", "test", "java", "org", "example", "Base64TestLoopTest.java")
+	if generated.TestFile != wantTestFile {
+		t.Fatalf("test file = %q, want %q", generated.TestFile, wantTestFile)
+	}
+	if generated.CoverageTask == nil || generated.CoverageTask.TestFile != wantTestFile ||
+		generated.Context == nil || generated.Context.CoverageTask == nil || generated.Context.CoverageTask.TestFile != wantTestFile {
+		t.Fatalf("coverage task test file was not rewritten consistently: %+v", generated)
+	}
+	content := readTextFile(t, wantTestFile)
+	if !strings.Contains(content, "public class Base64TestLoopTest") || !strings.Contains(content, "void shouldCoverBase64EncodeGap()") {
+		t.Fatalf("generated collision-free Java test missing expected content:\n%s", content)
+	}
+	if got := readTextFile(t, testFile); got != existing {
+		t.Fatalf("existing Java test file was overwritten:\n%s", got)
+	}
+}
+
 func TestHandleGenerateTestsUsesRustCoverageTaskTestFile(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "src", "lib.rs")

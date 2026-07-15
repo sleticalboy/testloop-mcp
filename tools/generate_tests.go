@@ -85,13 +85,24 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 func targetTestFile(filePath string, task *types.CoverageTestTask) string {
 	testFile := generator.TestFileName(filePath)
 	if task != nil && strings.TrimSpace(task.TestFile) != "" {
-		return task.TestFile
+		testFile = task.TestFile
+	}
+	if task != nil && filepath.Ext(filePath) == ".java" {
+		return nonCollidingJavaCoverageTestFile(testFile)
 	}
 	return testFile
 }
 
 func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTestTask) (*types.CoverageTestTask, error) {
-	if task == nil || filepath.Ext(filePath) != ".go" || strings.TrimSpace(task.TestName) == "" {
+	if task == nil {
+		return task, nil
+	}
+	if strings.TrimSpace(task.TestFile) != testFile {
+		adjusted := *task
+		adjusted.TestFile = testFile
+		task = &adjusted
+	}
+	if filepath.Ext(filePath) != ".go" || strings.TrimSpace(task.TestName) == "" {
 		return task, nil
 	}
 	existing, err := existingGoPackageTestNames(testFile)
@@ -105,6 +116,27 @@ func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTe
 	adjusted := *task
 	adjusted.TestName = uniqueGoCoverageTaskTestName(name, &adjusted, existing)
 	return &adjusted, nil
+}
+
+func nonCollidingJavaCoverageTestFile(testFile string) string {
+	if strings.TrimSpace(testFile) == "" || filepath.Ext(testFile) != ".java" {
+		return testFile
+	}
+	info, err := os.Stat(testFile)
+	if err != nil || info.IsDir() {
+		return testFile
+	}
+	base := strings.TrimSuffix(testFile, filepath.Ext(testFile))
+	for i := 0; i < 100; i++ {
+		candidate := base + "LoopTest.java"
+		if i > 0 {
+			candidate = fmt.Sprintf("%sLoopTest%d.java", base, i+1)
+		}
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+	}
+	return base + "LoopTest.java"
 }
 
 func existingGoPackageTestNames(testFile string) (map[string]bool, error) {

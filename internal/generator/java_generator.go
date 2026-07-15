@@ -44,7 +44,8 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	if len(className) > 0 {
 		className = strings.ToUpper(className[:1]) + className[1:]
 	}
-	testFileName := className + "Test.java"
+	testClassName := javaGeneratedTestClassName(className, task)
+	testFileName := testClassName + ".java"
 
 	var b strings.Builder
 
@@ -72,7 +73,7 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	}
 	b.WriteString("\n")
 
-	b.WriteString(fmt.Sprintf("public class %sTest%s {\n", className, javaTestClassExtends(funcs, task)))
+	b.WriteString(fmt.Sprintf("public class %s%s {\n", testClassName, javaTestClassExtends(funcs, task)))
 
 	// 为每个方法生成测试
 	constructors := javaConstructorsByClass(allFuncs)
@@ -119,6 +120,34 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	b.WriteString("}\n")
 
 	return testFileName, javaAddGeneratedImports(b.String(), source), nil
+}
+
+func javaGeneratedTestClassName(sourceClassName string, task *types.CoverageTestTask) string {
+	if task != nil && strings.TrimSpace(task.TestFile) != "" {
+		name := strings.TrimSuffix(filepath.Base(task.TestFile), ".java")
+		if javaValidIdentifier(name) {
+			return name
+		}
+	}
+	return sourceClassName + "Test"
+}
+
+func javaValidIdentifier(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i, r := range name {
+		if i == 0 {
+			if r != '_' && r != '$' && !unicode.IsLetter(r) {
+				return false
+			}
+			continue
+		}
+		if !isJavaIdentifierPart(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func filterJavaFuncsForCoverageTask(funcs []javaFuncInfo, task *types.CoverageTestTask) []javaFuncInfo {
@@ -169,10 +198,12 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	if m.ClassName != "" {
 		callClassName = m.ClassName
 	}
+	callClassName = javaCoverageTaskCallClassName(callClassName, m, task)
 	if javaWriteStatusCheckerCheckTask(b, m, task, assertions, indent) {
 		b.WriteString("    }\n")
 		return
 	}
+	m = javaMethodInfoWithQualifiedNestedReturnType(m, callClassName)
 
 	if m.IsConstructor {
 		// 构造函数测试
@@ -397,6 +428,35 @@ func javaBuildConstructorArgsForCoverageTask(params []javaParamInfo, task *types
 	return strings.Join(parts, ", ")
 }
 
+func javaCoverageTaskCallClassName(defaultClassName string, m javaFuncInfo, task *types.CoverageTestTask) string {
+	if task == nil || m.Name == "" {
+		return defaultClassName
+	}
+	target := strings.TrimSpace(task.Target)
+	suffix := "." + m.Name
+	if !strings.HasSuffix(target, suffix) {
+		return defaultClassName
+	}
+	prefix := strings.TrimSuffix(target, suffix)
+	if prefix == "" {
+		return defaultClassName
+	}
+	if m.ClassName == "" || prefix == m.ClassName || strings.HasSuffix(prefix, "."+m.ClassName) {
+		return prefix
+	}
+	return defaultClassName
+}
+
+func javaMethodInfoWithQualifiedNestedReturnType(m javaFuncInfo, callClassName string) javaFuncInfo {
+	if m.ReturnType == "" || !strings.Contains(callClassName, ".") {
+		return m
+	}
+	if strings.HasSuffix(callClassName, "."+m.ReturnType) {
+		m.ReturnType = callClassName
+	}
+	return m
+}
+
 func javaConstructorArgNeedsTypedNull(typ string) bool {
 	typ = strings.TrimSpace(typ)
 	if typ == "" {
@@ -442,6 +502,19 @@ func javaInferCoverageTaskValue(param javaParamInfo, task *types.CoverageTestTas
 	}
 	if param.Name == "scheme" && strings.HasSuffix(param.Type, "Scheme") && javaTaskMentions(task, "addresses.isEmpty") {
 		return param.Type + ".IPv4"
+	}
+	if param.Name == "format" && param.Type == "DecodeTableFormat" && strings.Contains(task.Target, ".Builder.setDecodeTableFormat") {
+		start, _, ok := javaCoverageTaskLineRange(task)
+		switch {
+		case ok && start == 136:
+			return "Base64.DecodeTableFormat.STANDARD"
+		case ok && start == 138:
+			return "Base64.DecodeTableFormat.URL_SAFE"
+		case ok && start >= 140:
+			return "Base64.DecodeTableFormat.MIXED"
+		default:
+			return "null"
+		}
 	}
 	return ""
 }

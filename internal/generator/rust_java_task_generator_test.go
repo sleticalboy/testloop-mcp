@@ -101,6 +101,88 @@ func TestGenerateJavaTestsForCoverageTaskTargetsMethod(t *testing.T) {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskUsesTaskTestFileClassName(t *testing.T) {
+	source := []byte(`public class Base64 {
+    public byte[] encode(byte[] in) {
+        return in;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Base64.java", &types.CoverageTestTask{
+		ID:        "junit-10",
+		Framework: "junit",
+		Target:    "Base64.encode",
+		LineRange: "3-3",
+		TestName:  "shouldCoverBase64EncodeGap",
+		TestFile:  filepath.Join("src", "test", "java", "org", "example", "Base64TestLoopTest.java"),
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "public class Base64TestLoopTest") {
+		t.Fatalf("expected generated class to match task test file:\n%s", code)
+	}
+	if strings.Contains(code, "public class Base64Test ") {
+		t.Fatalf("generated class should not use source-derived test class when task test file is set:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskUsesNestedJavaClassTarget(t *testing.T) {
+	source := []byte(`public class Base64 {
+    public static class Builder {
+        public Builder setDecodeTableFormat(DecodeTableFormat format) {
+            if (format == null) {
+                return this;
+            }
+            switch (format) {
+                case STANDARD:
+                    return this;
+                case URL_SAFE:
+                    return this;
+                case MIXED:
+                default:
+                    return this;
+            }
+        }
+    }
+
+    public enum DecodeTableFormat {
+        STANDARD,
+        URL_SAFE,
+        MIXED
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Base64.java", &types.CoverageTestTask{
+		ID:              "junit-38",
+		Framework:       "junit",
+		Target:          "Base64.Builder.setDecodeTableFormat",
+		LineRange:       "141-141",
+		TestName:        "shouldCoverBase64BuilderSetDecodeTableFormatGap",
+		TestFile:        filepath.Join("src", "test", "java", "org", "example", "Base64TestLoopTest.java"),
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{141},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"Base64.Builder instance = new Base64.Builder();",
+		"Base64.Builder result = instance.setDecodeTableFormat(Base64.DecodeTableFormat.MIXED);",
+		"Assertions.assertNotNull(result);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "Builder instance = new Builder()") || strings.Contains(code, "setDecodeTableFormat(null)") {
+		t.Fatalf("nested Base64.Builder task should use qualified class and line-specific enum value:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskCastsNullForOverloadedCollectionConstructor(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray(String source) {
