@@ -252,6 +252,102 @@ public class DigestUtils {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesRulePhonemeAndGetInstance(t *testing.T) {
+	source := []byte(`import java.util.List;
+
+public class Rule {
+    public static final class Phoneme {
+        public Phoneme(CharSequence phonemeText, Languages.LanguageSet languages) {
+        }
+
+        public Phoneme join(Phoneme right) {
+            return right;
+        }
+
+        public CharSequence getPhonemeText() {
+            return "ab";
+        }
+
+        public String toString() {
+            return "abc[any]";
+        }
+    }
+
+    public static List<Rule> getInstance(NameType nameType, RuleType rt, Languages.LanguageSet langs) {
+        return java.util.Collections.singletonList(new Rule());
+    }
+
+    public static List<Rule> getInstance(NameType nameType, RuleType rt, String lang) {
+        return java.util.Collections.singletonList(new Rule());
+    }
+}
+
+class Languages {
+    static final LanguageSet ANY_LANGUAGE = null;
+    static class LanguageSet {
+        static LanguageSet from(java.util.Set<String> languages) {
+            return null;
+        }
+    }
+}
+
+enum NameType {
+    GENERIC
+}
+
+enum RuleType {
+    RULES
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Rule.java", &types.CoverageTestTask{
+		ID:              "junit-78",
+		Framework:       "junit",
+		Target:          "Rule.Phoneme.join",
+		LineRange:       "8-8",
+		TestName:        "shouldCoverRulePhonemeJoinGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{8},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"Rule.Phoneme instance = new Rule.Phoneme(\"a\", Languages.ANY_LANGUAGE);",
+		"Rule.Phoneme right = new Rule.Phoneme(\"b\", Languages.ANY_LANGUAGE);",
+		"Rule.Phoneme result = instance.join(right);",
+		"Assertions.assertEquals(\"ab\", result.getPhonemeText().toString());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new Rule.Phoneme()") || strings.Contains(code, "join(null)") {
+		t.Fatalf("Rule.Phoneme join should not use no-arg constructor or null right:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "Rule.java", &types.CoverageTestTask{
+		ID:              "junit-80",
+		Framework:       "junit",
+		Target:          "Rule.getInstance",
+		LineRange:       "24-24",
+		TestName:        "shouldCoverRuleGetInstanceGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{24},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "Rule.getInstance(NameType.GENERIC, RuleType.RULES, Languages.LanguageSet.from(new java.util.HashSet<>(java.util.Arrays.asList(\"english\"))))") {
+		t.Fatalf("Rule.getInstance LanguageSet overload should use real enum and language inputs:\n%s", code)
+	}
+	if strings.Contains(code, "Rule.getInstance(null") {
+		t.Fatalf("Rule.getInstance should not use null enum inputs:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskCastsNullForOverloadedCollectionConstructor(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray(String source) {

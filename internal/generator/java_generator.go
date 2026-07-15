@@ -215,6 +215,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		}
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
+		if javaWriteRuleGetInstanceTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteDigestUtilsShakeTaskAssertion(b, m, task, callClassName, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -244,6 +248,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		if javaWriteConsumeServiceConsumeTask(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteRulePhonemeTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
 		}
@@ -613,6 +621,46 @@ func javaDigestUtilsShakeInput(typ string) string {
 		return "\"abc\""
 	default:
 		return ""
+	}
+}
+
+func javaWriteRuleGetInstanceTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "Rule" || m.Name != "getInstance" || len(m.Params) != 3 {
+		return false
+	}
+	var call string
+	switch strings.TrimSpace(m.Params[2].Type) {
+	case "Languages.LanguageSet", "LanguageSet":
+		call = "Rule.getInstance(NameType.GENERIC, RuleType.RULES, " +
+			"Languages.LanguageSet.from(new java.util.HashSet<>(java.util.Arrays.asList(\"english\"))))"
+	case "String", "java.lang.String":
+		call = "Rule.getInstance(NameType.GENERIC, RuleType.RULES, \"english\")"
+	default:
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    java.util.List<Rule> result = %s;\n", indent, call))
+	b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+	return true
+}
+
+func javaWriteRulePhonemeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "Phoneme" || !strings.HasPrefix(strings.TrimSpace(task.Target), "Rule.Phoneme.") {
+		return false
+	}
+	switch m.Name {
+	case "join":
+		b.WriteString(fmt.Sprintf("%s    Rule.Phoneme instance = new Rule.Phoneme(\"a\", Languages.ANY_LANGUAGE);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    Rule.Phoneme right = new Rule.Phoneme(\"b\", Languages.ANY_LANGUAGE);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    Rule.Phoneme result = instance.join(right);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"ab\", result.getPhonemeText().toString());\n", indent, assertions))
+		return true
+	case "toString":
+		b.WriteString(fmt.Sprintf("%s    Rule.Phoneme instance = new Rule.Phoneme(\"abc\", Languages.ANY_LANGUAGE);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    String result = instance.toString();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(result.startsWith(\"abc[\"));\n", indent, assertions))
+		return true
+	default:
+		return false
 	}
 }
 
