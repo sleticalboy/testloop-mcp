@@ -184,6 +184,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		}
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
+		if javaWriteXMLTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		callExpr := fmt.Sprintf("%s.%s(%s)", callClassName, m.Name, args)
 		javaWriteCallAndAssert(b, callExpr, m, indent, assertions)
 	} else {
@@ -489,6 +493,46 @@ func javaWriteJSONArrayTaskAssertion(b *strings.Builder, m javaFuncInfo, task *t
 func javaHasParamType(m javaFuncInfo, typ string) bool {
 	for _, param := range m.Params {
 		if param.Type == typ || strings.HasSuffix(param.Type, "."+typ) {
+			return true
+		}
+	}
+	return false
+}
+
+func javaWriteXMLTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "XML" {
+		return false
+	}
+	switch m.Name {
+	case "toJSONObject":
+		if javaHasParamType(m, "Reader") && javaHasBoolParam(m, "keepNumberAsString") && javaTaskMentions(task, "keepNumberAsString") {
+			b.WriteString(fmt.Sprintf("%s    final java.io.Reader reader = new java.io.StringReader(\"<root>42</root>\");\n", indent))
+			b.WriteString(fmt.Sprintf("%s    JSONObject result = XML.toJSONObject(reader, true, false);\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"42\", result.get(\"root\"));\n", indent, assertions))
+			return true
+		}
+		if javaHasParamType(m, "Reader") && javaHasBoolParam(m, "keepBooleanAsString") && javaTaskMentions(task, "keepBooleanAsString") {
+			b.WriteString(fmt.Sprintf("%s    final java.io.Reader reader = new java.io.StringReader(\"<root>true</root>\");\n", indent))
+			b.WriteString(fmt.Sprintf("%s    JSONObject result = XML.toJSONObject(reader, false, true);\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"true\", result.get(\"root\"));\n", indent, assertions))
+			return true
+		}
+	case "noSpace":
+		if javaTaskMentions(task, "空值") || javaTaskMentions(task, "错误") || javaTaskMentions(task, "225") {
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(JSONException.class, () -> XML.noSpace(\"\"));\n", indent, assertions))
+			return true
+		}
+		if javaTaskMentions(task, "space") || javaTaskMentions(task, "Whitespace") || javaTaskMentions(task, "228") {
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(JSONException.class, () -> XML.noSpace(\"has space\"));\n", indent, assertions))
+			return true
+		}
+	}
+	return false
+}
+
+func javaHasBoolParam(m javaFuncInfo, name string) bool {
+	for _, param := range m.Params {
+		if param.Name == name && param.Type == "boolean" {
 			return true
 		}
 	}

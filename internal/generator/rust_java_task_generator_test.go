@@ -283,6 +283,109 @@ public class JSONArray {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskBuildsXMLToJSONObjectFlags(t *testing.T) {
+	source := []byte(`import java.io.Reader;
+
+public class XML {
+    public static JSONObject toJSONObject(Reader reader, boolean keepNumberAsString, boolean keepBooleanAsString) throws JSONException {
+        if (keepNumberAsString) {
+            return new JSONObject();
+        }
+        if (keepBooleanAsString) {
+            return new JSONObject();
+        }
+        return new JSONObject();
+    }
+}
+`)
+
+	tests := []struct {
+		name string
+		task types.CoverageTestTask
+		want []string
+	}{
+		{
+			name: "keep number as string",
+			task: types.CoverageTestTask{
+				ID:              "junit-14",
+				Framework:       "junit",
+				Target:          "XML.toJSONObject",
+				LineRange:       "5-5",
+				TestName:        "shouldCoverXMLToJSONObjectGap",
+				MissingBranches: []string{"未覆盖 if 分支: keepNumberAsString"},
+			},
+			want: []string{
+				"final java.io.Reader reader = new java.io.StringReader(\"<root>42</root>\");",
+				"JSONObject result = XML.toJSONObject(reader, true, false);",
+				"Assertions.assertEquals(\"42\", result.get(\"root\"));",
+			},
+		},
+		{
+			name: "keep boolean as string",
+			task: types.CoverageTestTask{
+				ID:              "junit-15",
+				Framework:       "junit",
+				Target:          "XML.toJSONObject",
+				LineRange:       "8-8",
+				TestName:        "shouldCoverXMLToJSONObjectGap",
+				MissingBranches: []string{"未覆盖 if 分支: keepBooleanAsString"},
+			},
+			want: []string{
+				"final java.io.Reader reader = new java.io.StringReader(\"<root>true</root>\");",
+				"JSONObject result = XML.toJSONObject(reader, false, true);",
+				"Assertions.assertEquals(\"true\", result.get(\"root\"));",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "XML.java", &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			if strings.Contains(code, "XML.toJSONObject(null") {
+				t.Fatalf("XML.toJSONObject task should not use null XML input:\n%s", code)
+			}
+		})
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskBuildsXMLNoSpaceErrorPath(t *testing.T) {
+	source := []byte(`public class XML {
+    public static void noSpace(String string) throws JSONException {
+        if (string.length() == 0) {
+            throw new JSONException("Empty string.");
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "XML.java", &types.CoverageTestTask{
+		ID:             "junit-82",
+		Framework:      "junit",
+		Target:         "XML.noSpace",
+		LineRange:      "3-3",
+		TestName:       "shouldCoverXMLNoSpaceGap",
+		AssertionFocus: []string{"断言错误、异常或空值路径"},
+		UncoveredLines: []int{225},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "Assertions.assertThrows(JSONException.class, () -> XML.noSpace(\"\"));") {
+		t.Fatalf("XML.noSpace empty string task should assert exception:\n%s", code)
+	}
+	if strings.Contains(code, "XML.noSpace(\"test\");") {
+		t.Fatalf("XML.noSpace error task should not use valid default string:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskUsesPackageAndJUnit4ProjectStyle(t *testing.T) {
 	root := t.TempDir()
 	srcPath := filepath.Join(root, "client", "src", "main", "java", "com", "example", "Calculator.java")
