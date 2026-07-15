@@ -179,7 +179,7 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		if !javaWriteProtobufEndpointsConstructorTask(b, m, task, callClassName, assertions, indent) &&
 			!javaWriteConstructorAssertThrows(b, m, task, callClassName, assertions, indent) &&
 			!javaWriteAddressListConstructorTask(b, m, task, callClassName, assertions, indent) {
-			b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, args))
+			b.WriteString(fmt.Sprintf("%s    %s instance = new %s(%s);\n", indent, callClassName, callClassName, javaBuildConstructorArgsForCoverageTask(m.Params, task)))
 			b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(instance);\n", indent, assertions))
 		}
 	} else if m.IsStatic {
@@ -225,6 +225,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		if javaWriteToSocketAddressesTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWriteJSONArrayTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
 		}
@@ -369,6 +373,48 @@ func javaBuildArgsForCoverageTask(params []javaParamInfo, task *types.CoverageTe
 	return strings.Join(parts, ", ")
 }
 
+func javaBuildConstructorArgsForCoverageTask(params []javaParamInfo, task *types.CoverageTestTask) string {
+	values := coverageTaskInputValues(task, "java")
+	var parts []string
+	for _, p := range params {
+		value := ""
+		if values[p.Name] != "" {
+			value = values[p.Name]
+		} else if inferred := javaInferCoverageTaskValue(p, task); inferred != "" {
+			value = inferred
+		} else {
+			value = javaInferDefaultArgValue(p.Type)
+		}
+		if value == "null" && javaConstructorArgNeedsTypedNull(p.Type) {
+			value = fmt.Sprintf("(%s) null", strings.TrimSpace(p.Type))
+		}
+		parts = append(parts, value)
+	}
+	return strings.Join(parts, ", ")
+}
+
+func javaConstructorArgNeedsTypedNull(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	if typ == "" {
+		return false
+	}
+	switch {
+	case strings.Contains(typ, "?"):
+		return true
+	case strings.HasPrefix(typ, "Iterable"):
+		return true
+	case strings.HasPrefix(typ, "Collection"):
+		return true
+	case strings.HasPrefix(typ, "List"):
+		return true
+	case strings.HasPrefix(typ, "Map"):
+		return true
+	case strings.HasPrefix(typ, "Set"):
+		return true
+	}
+	return false
+}
+
 func javaInferDefaultArgValue(typ string) string {
 	value := javaInferDefaultValue(typ)
 	if value == "null" && strings.TrimSpace(typ) != "" {
@@ -394,6 +440,59 @@ func javaInferCoverageTaskValue(param javaParamInfo, task *types.CoverageTestTas
 		return param.Type + ".IPv4"
 	}
 	return ""
+}
+
+func javaWriteJSONArrayTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "JSONArray" {
+		return false
+	}
+	switch m.Name {
+	case "getNumber":
+		if javaTaskMentions(task, "object instanceof Number") {
+			b.WriteString(fmt.Sprintf("%s    instance.put(1);\n", indent))
+			b.WriteString(fmt.Sprintf("%s    Number result = instance.getNumber(0);\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(1, result.intValue());\n", indent, assertions))
+			return true
+		}
+		if javaTaskMentions(task, "错误") || javaTaskMentions(task, "wrongValueFormatException") || javaTaskMentions(task, "422") || javaTaskMentions(task, "423") {
+			b.WriteString(fmt.Sprintf("%s    instance.put(new Object());\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(JSONException.class, () -> instance.getNumber(0));\n", indent, assertions))
+			return true
+		}
+	case "getFloat":
+		if javaTaskMentions(task, "错误") || javaTaskMentions(task, "wrongValueFormatException") || javaTaskMentions(task, "400") || javaTaskMentions(task, "401") {
+			b.WriteString(fmt.Sprintf("%s    instance.put(new Object());\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(JSONException.class, () -> instance.getFloat(0));\n", indent, assertions))
+			return true
+		}
+	case "optNumber":
+		if javaTaskMentions(task, "错误") || javaTaskMentions(task, "空值") || javaTaskMentions(task, "1153") {
+			b.WriteString(fmt.Sprintf("%s    instance.put(\"not-a-number\");\n", indent))
+			b.WriteString(fmt.Sprintf("%s    Number result = instance.optNumber(0, 7);\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(7, result.intValue());\n", indent, assertions))
+			return true
+		}
+	case "write":
+		if javaHasParamType(m, "Writer") && (javaTaskMentions(task, "IOException") || javaTaskMentions(task, "错误") || javaTaskMentions(task, "1835") || javaTaskMentions(task, "1836")) {
+			b.WriteString(fmt.Sprintf("%s    final java.io.Writer writer = new java.io.Writer() {\n", indent))
+			b.WriteString(fmt.Sprintf("%s        @Override public void write(char[] cbuf, int off, int len) throws java.io.IOException { throw new java.io.IOException(\"boom\"); }\n", indent))
+			b.WriteString(fmt.Sprintf("%s        @Override public void flush() throws java.io.IOException { }\n", indent))
+			b.WriteString(fmt.Sprintf("%s        @Override public void close() throws java.io.IOException { }\n", indent))
+			b.WriteString(fmt.Sprintf("%s    };\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(JSONException.class, () -> instance.write(writer, 0, 0));\n", indent, assertions))
+			return true
+		}
+	}
+	return false
+}
+
+func javaHasParamType(m javaFuncInfo, typ string) bool {
+	for _, param := range m.Params {
+		if param.Type == typ || strings.HasSuffix(param.Type, "."+typ) {
+			return true
+		}
+	}
+	return false
 }
 
 func javaConstructorShouldAssertThrows(m javaFuncInfo, task *types.CoverageTestTask) bool {

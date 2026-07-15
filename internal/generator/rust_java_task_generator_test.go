@@ -101,6 +101,188 @@ func TestGenerateJavaTestsForCoverageTaskTargetsMethod(t *testing.T) {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskCastsNullForOverloadedCollectionConstructor(t *testing.T) {
+	source := []byte(`public class JSONArray {
+    public JSONArray(String source) {
+    }
+
+    public JSONArray(JSONArray array) {
+    }
+
+    public JSONArray(Iterable<?> iter) {
+        if (iter == null) {
+            return;
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "JSONArray.java", &types.CoverageTestTask{
+		ID:              "junit-2",
+		Framework:       "junit",
+		Target:          "JSONArray.JSONArray",
+		LineRange:       "8-8",
+		TestName:        "shouldCoverJSONArrayJSONArrayGap",
+		MissingBranches: []string{"未覆盖 if 分支: iter == null"},
+		SuggestedInputs: []string{"构造满足条件 `iter == null` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "JSONArray instance = new JSONArray((Iterable<?>) null);") {
+		t.Fatalf("overloaded collection constructor should cast null arg:\n%s", code)
+	}
+	if strings.Contains(code, "new JSONArray(null)") {
+		t.Fatalf("overloaded collection constructor should not emit ambiguous null:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayNumberState(t *testing.T) {
+	source := []byte(`public class JSONArray {
+    public JSONArray() {
+    }
+
+    public JSONArray put(Object value) {
+        return this;
+    }
+
+    public Number getNumber(int index) throws JSONException {
+        Object object = this.get(index);
+        if (object instanceof Number) {
+            return (Number) object;
+        }
+        throw new JSONException("bad");
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "JSONArray.java", &types.CoverageTestTask{
+		ID:              "junit-3",
+		Framework:       "junit",
+		Target:          "JSONArray.getNumber",
+		LineRange:       "10-10",
+		TestName:        "shouldCoverJSONArrayGetNumberGap",
+		MissingBranches: []string{"未覆盖 if 分支: object instanceof Number"},
+		SuggestedInputs: []string{"构造满足条件 `object instanceof Number` 的输入"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"JSONArray instance = new JSONArray();",
+		"instance.put(1);",
+		"Number result = instance.getNumber(0);",
+		"Assertions.assertEquals(1, result.intValue());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "Number result = instance.getNumber(0);\n        Assertions.assertNotNull(result);") {
+		t.Fatalf("JSONArray number task should not call getter on empty instance:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayErrorPaths(t *testing.T) {
+	source := []byte(`import java.io.Writer;
+
+public class JSONArray {
+    public JSONArray() {
+    }
+
+    public JSONArray put(Object value) {
+        return this;
+    }
+
+    public Number optNumber(int index, Number defaultValue) {
+        return defaultValue;
+    }
+
+    public float getFloat(int index) throws JSONException {
+        throw new JSONException("bad");
+    }
+
+    public Writer write(Writer writer, int indentFactor, int indent) throws JSONException {
+        return writer;
+    }
+}
+`)
+
+	tests := []struct {
+		name string
+		task types.CoverageTestTask
+		want []string
+	}{
+		{
+			name: "optNumber invalid string default",
+			task: types.CoverageTestTask{
+				ID:             "junit-21",
+				Framework:      "junit",
+				Target:         "JSONArray.optNumber",
+				LineRange:      "11-11",
+				TestName:       "shouldCoverJSONArrayOptNumberGap",
+				AssertionFocus: []string{"断言错误、异常或空值路径"},
+				UncoveredLines: []int{1153},
+			},
+			want: []string{
+				"instance.put(\"not-a-number\");",
+				"Number result = instance.optNumber(0, 7);",
+				"Assertions.assertEquals(7, result.intValue());",
+			},
+		},
+		{
+			name: "getFloat conversion error",
+			task: types.CoverageTestTask{
+				ID:             "junit-26",
+				Framework:      "junit",
+				Target:         "JSONArray.getFloat",
+				LineRange:      "15-15",
+				TestName:       "shouldCoverJSONArrayGetFloatGap",
+				AssertionFocus: []string{"断言错误、异常或空值路径"},
+				UncoveredLines: []int{400, 401},
+			},
+			want: []string{
+				"instance.put(new Object());",
+				"Assertions.assertThrows(JSONException.class, () -> instance.getFloat(0));",
+			},
+		},
+		{
+			name: "write IOException wrapper",
+			task: types.CoverageTestTask{
+				ID:             "junit-23",
+				Framework:      "junit",
+				Target:         "JSONArray.write",
+				LineRange:      "19-19",
+				TestName:       "shouldCoverJSONArrayWriteGap",
+				AssertionFocus: []string{"断言错误、异常或空值路径"},
+				UncoveredLines: []int{1835, 1836},
+			},
+			want: []string{
+				"final java.io.Writer writer = new java.io.Writer()",
+				"throw new java.io.IOException(\"boom\");",
+				"Assertions.assertThrows(JSONException.class, () -> instance.write(writer, 0, 0));",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "JSONArray.java", &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			if strings.Contains(code, "instance.write(null") || strings.Contains(code, "instance.getFloat(0);\n        Assertions.assertEquals") {
+				t.Fatalf("JSONArray error task should not emit empty/default failing call:\n%s", code)
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskUsesPackageAndJUnit4ProjectStyle(t *testing.T) {
 	root := t.TempDir()
 	srcPath := filepath.Join(root, "client", "src", "main", "java", "com", "example", "Calculator.java")
