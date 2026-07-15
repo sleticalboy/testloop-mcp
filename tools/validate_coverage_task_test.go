@@ -755,6 +755,26 @@ export default class CacheFacade {
 	}
 }
 
+func TestCoverageTaskInternalSymbolReasonUsesJavaWording(t *testing.T) {
+	reason := coverageTaskInternalSymbolReason(
+		&types.CoverageTestTask{
+			Framework: "junit",
+			File:      "src/main/java/example/Client.java",
+			Target:    "Client.hidden",
+		},
+		&types.GenerateTestsOutput{
+			Preview: "manual_review_internal: Client.hidden",
+			Context: &types.TestGenerationContext{Framework: "junit"},
+		},
+		&types.TestResult{Status: "pass"},
+	)
+	if !strings.Contains(reason, "Client.hidden") ||
+		!strings.Contains(reason, "private/internal Java code") ||
+		strings.Contains(reason, "JavaScript module") {
+		t.Fatalf("unexpected Java internal reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksTypeOnlyTSFileAsNoRuntimeManualReview(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {

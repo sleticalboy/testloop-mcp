@@ -362,6 +362,14 @@ func coverageTaskInternalSymbolReason(task *types.CoverageTestTask, generated *t
 	if target == "" {
 		target = "target"
 	}
+	contextFramework := ""
+	if generated.Context != nil {
+		contextFramework = generated.Context.Framework
+	}
+	framework := strings.ToLower(strings.TrimSpace(firstNonEmpty(task.Framework, contextFramework)))
+	if framework == "junit" || strings.HasSuffix(strings.ToLower(task.File), ".java") {
+		return fmt.Sprintf("%s is private/internal Java code; cover it through a visible public or package entry point, add a test seam, or review manually", target)
+	}
 	return fmt.Sprintf("%s is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually", target)
 }
 

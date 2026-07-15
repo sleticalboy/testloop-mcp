@@ -931,6 +931,64 @@ func TestGenerateJavaTestsForCoverageTaskMarksPrivateJavaMethodManualReview(t *t
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskCoversConsumerImplFilterExpressionViaRequest(t *testing.T) {
+	source := []byte(`package org.apache.rocketmq.client.java.impl.consumer;
+
+import apache.rocketmq.v2.ReceiveMessageRequest;
+import java.time.Duration;
+import org.apache.rocketmq.client.apis.ClientConfiguration;
+import org.apache.rocketmq.client.apis.consumer.FilterExpression;
+
+abstract class ConsumerImpl {
+    private apache.rocketmq.v2.FilterExpression wrapFilterExpression(FilterExpression filterExpression) {
+        switch (filterExpression.getFilterExpressionType()) {
+            case SQL92:
+                return apache.rocketmq.v2.FilterExpression.newBuilder()
+                    .setType(apache.rocketmq.v2.FilterType.SQL).build();
+            case TAG:
+            default:
+                return apache.rocketmq.v2.FilterExpression.newBuilder()
+                    .setType(apache.rocketmq.v2.FilterType.TAG).build();
+        }
+    }
+
+    ReceiveMessageRequest wrapReceiveMessageRequest(int batchSize, Object mq,
+        FilterExpression filterExpression, Duration longPollingTimeout, String attemptId) {
+        return ReceiveMessageRequest.newBuilder()
+            .setFilterExpression(wrapFilterExpression(filterExpression)).build();
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ConsumerImpl.java", &types.CoverageTestTask{
+		Target:          "ConsumerImpl.wrapFilterExpression",
+		LineRange:       "10-10",
+		TestName:        "shouldCoverConsumerImplWrapFilterExpressionGap",
+		MissingBranches: []string{"未覆盖 switch/case 分支"},
+		SuggestedInputs: []string{"设置 filterExpression 覆盖未执行分支"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"public class ConsumerImplTest extends TestBase",
+		"import org.apache.rocketmq.client.java.tool.TestBase;",
+		"final PushConsumerImpl consumer = new PushConsumerImpl(",
+		"new FilterExpression(",
+		"FilterExpressionType.SQL92",
+		"consumer.wrapReceiveMessageRequest(",
+		"Assertions.assertEquals(",
+		"apache.rocketmq.v2.FilterType.SQL",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("filter expression task should use public request path, got manual review:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskMarksUnconstructibleJavaInstanceManualReview(t *testing.T) {
 	source := []byte(`public class ClientSessionImpl {
     protected ClientSessionImpl(ClientSessionHandler sessionHandler, Duration tolerance, Endpoints endpoints) {
