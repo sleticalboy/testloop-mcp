@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/sleticalboy/testloop-mcp/internal/coverage"
 	"github.com/sleticalboy/testloop-mcp/types"
 )
 
@@ -69,6 +71,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	coverageTask := validationCoverageTask(input.CoverageTask, generated)
 	metadata := coverageTaskValidationMetadata(framework, generated, runResult, coverageTask)
 	action := coverageTaskValidationAction(runResult)
+	status := coverageTaskValidationStatus(runResult)
 	if metadata["unreachable"] == true {
 		action = "manual_review_unreachable"
 	} else if metadata["environment_dependent"] == true {
@@ -86,8 +89,12 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	} else if metadata["no_runtime"] == true {
 		action = "manual_review_no_runtime"
 	}
+	if action == "ready" && metadata["coverage_target_hit"] == false {
+		action = "needs_better_input"
+		status = "failed"
+	}
 	out := types.CoverageTaskValidationOutput{
-		Status:       coverageTaskValidationStatus(runResult),
+		Status:       status,
 		Action:       action,
 		CoverageTask: coverageTask,
 		Generated:    generated,
@@ -103,6 +110,16 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 	}
 	if generated != nil {
 		metadata["test_file"] = generated.TestFile
+	}
+	if hit, reportPath, hitLines, missedLines, ok := coverageTaskTargetLineHit(framework, generated, result, task); ok {
+		metadata["coverage_report"] = reportPath
+		metadata["coverage_target_lines"] = append(append([]int{}, hitLines...), missedLines...)
+		metadata["coverage_hit_lines"] = hitLines
+		metadata["coverage_missed_lines"] = missedLines
+		metadata["coverage_target_hit"] = hit
+		if !hit {
+			metadata["coverage_miss_reason"] = fmt.Sprintf("%s did not cover target line range %s; generate stronger inputs or cover the target through a better public entry point", strings.TrimSpace(task.Target), strings.TrimSpace(task.LineRange))
+		}
 	}
 	if reason := coverageTaskUnreachableReason(task, generated, result); reason != "" {
 		metadata["unreachable"] = true
@@ -140,6 +157,120 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 		metadata["no_runtime_reason"] = reason
 	}
 	return metadata
+}
+
+func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
+	if strings.ToLower(strings.TrimSpace(framework)) != "junit" || generated == nil || result == nil || result.Status != "pass" || task == nil {
+		return false, "", nil, nil, false
+	}
+	start, end, ok := coverageTaskLineRange(task.LineRange)
+	if !ok {
+		return false, "", nil, nil, false
+	}
+	report, reportPath, ok := javaCoverageReportForValidation(generated.TestFile, task.File)
+	if !ok {
+		return false, "", nil, nil, false
+	}
+	file := coverageTaskFindCoverageFile(report, task.File)
+	if file == nil {
+		return false, reportPath, nil, coverageTaskLineNumbers(start, end), true
+	}
+	coveredByLine := make(map[int]bool, len(file.Blocks))
+	for _, block := range file.Blocks {
+		for line := block.StartLine; line <= block.EndLine; line++ {
+			coveredByLine[line] = block.Covered
+		}
+	}
+	var hitLines []int
+	var missedLines []int
+	for line := start; line <= end; line++ {
+		if coveredByLine[line] {
+			hitLines = append(hitLines, line)
+		} else {
+			missedLines = append(missedLines, line)
+		}
+	}
+	return len(missedLines) == 0, reportPath, hitLines, missedLines, true
+}
+
+func javaCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {
+	root := ""
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		root = findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
+		break
+	}
+	if root == "" {
+		return nil, "", false
+	}
+	for _, reportPath := range []string{
+		filepath.Join(root, "target", "site", "jacoco", "jacoco.xml"),
+		filepath.Join(root, "build", "reports", "jacoco", "test", "jacocoTestReport.xml"),
+	} {
+		if !fileExists(reportPath) {
+			continue
+		}
+		report, err := coverage.ParseJaCoCoCoverage(reportPath)
+		if err != nil {
+			continue
+		}
+		return report, reportPath, true
+	}
+	return nil, "", false
+}
+
+func coverageTaskFindCoverageFile(report *types.CoverageReport, taskFile string) *types.CoverageFile {
+	if report == nil {
+		return nil
+	}
+	normalizedTaskFile := filepath.ToSlash(strings.TrimSpace(taskFile))
+	if idx := strings.LastIndex(normalizedTaskFile, "/src/main/java/"); idx >= 0 {
+		normalizedTaskFile = normalizedTaskFile[idx+len("/src/main/java/"):]
+	}
+	for i := range report.Files {
+		path := filepath.ToSlash(strings.TrimSpace(report.Files[i].Path))
+		if path == normalizedTaskFile || strings.HasSuffix(normalizedTaskFile, "/"+path) || strings.HasSuffix(path, "/"+normalizedTaskFile) {
+			return &report.Files[i]
+		}
+	}
+	return nil
+}
+
+func coverageTaskLineRange(raw string) (int, int, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.EqualFold(raw, "entire file") {
+		return 0, 0, false
+	}
+	parts := strings.SplitN(raw, "-", 2)
+	start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil || start <= 0 {
+		return 0, 0, false
+	}
+	end := start
+	if len(parts) == 2 {
+		parsedEnd, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+		if err != nil || parsedEnd <= 0 {
+			return 0, 0, false
+		}
+		end = parsedEnd
+	}
+	if end < start {
+		start, end = end, start
+	}
+	return start, end, true
+}
+
+func coverageTaskLineNumbers(start, end int) []int {
+	if start <= 0 || end < start {
+		return nil
+	}
+	lines := make([]int, 0, end-start+1)
+	for line := start; line <= end; line++ {
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 func coverageTaskUnreachableReason(task *types.CoverageTestTask, generated *types.GenerateTestsOutput, result *types.TestResult) string {
@@ -423,6 +554,7 @@ func validateCoverageTaskRun(ctx context.Context, input validateCoverageTaskInpu
 	if input.IncludeFixSuggestions != nil {
 		includeFixSuggestions = *input.IncludeFixSuggestions
 	}
+	collectCoverage := input.Coverage || strings.ToLower(strings.TrimSpace(framework)) == "junit"
 	if timeout := validateCoverageTaskTimeout(); timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -431,7 +563,7 @@ func validateCoverageTaskRun(ctx context.Context, input validateCoverageTaskInpu
 	result, _, err := HandleRunTests(ctx, nil, runTestsInput{
 		Path:                  generated.TestFile,
 		Framework:             framework,
-		Coverage:              input.Coverage,
+		Coverage:              collectCoverage,
 		IncludeFixSuggestions: includeFixSuggestions,
 		SourceCode:            input.FilePath,
 		TestCode:              generated.TestFile,

@@ -28,6 +28,8 @@
 
 表格补充：Apache Commons Codec 的 `language/` 非 bm 收口又验证了 `ColognePhonetic.java` top2，结果为 `passed=2/manual_review_internal=2`，目标集中在内部 `CologneInputBuffer.copyData` 状态路径；`Nysiis.java` 和 `RefinedSoundex.java` 当前过滤后无候选任务。
 
+补充：新增 Java/JUnit 目标行命中校验后，`validate_coverage_task` 会在 ready 前解析 JaCoCo XML 并确认 `coverage_task.line_range` 实际覆盖。本轮用 Commons Lang `Failable.tryWithResources 651-651` 真实复核，结果仍为 `passed/ready`，metadata 显示 `coverage_target_hit=true`、`coverage_hit_lines=[651]`。这意味着 Java ready 开始从“生成测试可运行”升级为“生成测试可运行且目标行被确认命中”。
+
 ## 已稳定的能力
 
 Go 链路已经能覆盖低依赖 utility、HTTP wrapper、JSON/file helper、panic/recover、JWT、泛型指针、nil receiver、Gin response、全局 logger 初始化、Unix socket 协议读取和多返回值 error branch。`validate_coverage_task` 也能把不可达分支、OS/runtime 错误分支、socket write / streaming I/O 时序分支和数据库分支从普通 ready 队列里分离。

@@ -137,6 +137,83 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestHandleValidateCoverageTaskMarksJavaReadyLineMiss(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>\n"), 0o644); err != nil {
+		t.Fatalf("write pom.xml: %v", err)
+	}
+	source := filepath.Join(dir, "src", "main", "java", "com", "example", "Calculator.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := `package com.example;
+
+public class Calculator {
+    public int add(int a, int b) {
+        if (a == 0) {
+            return b;
+        }
+        return a + b;
+    }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeMvnSuccessWithJaCoCo(t, `<report>
+  <package name="com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="4" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="0"/>
+</report>`)
+	task := types.CoverageTestTask{
+		ID:              "junit-line-miss",
+		Framework:       "junit",
+		File:            source,
+		Target:          "Calculator.add",
+		Kind:            "method",
+		LineRange:       "4-4",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		TestFile:        filepath.Join(dir, "src", "test", "java", "com", "example", "CalculatorTestLoopTest.java"),
+		TestName:        "shouldCoverCalculatorAddGap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "junit",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation output: %+v", out)
+	}
+	if out.RunResult == nil || out.RunResult.Status != "pass" {
+		t.Fatalf("expected passing test run with failed coverage validation, got %+v", out.RunResult)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	missed, ok := out.Metadata["coverage_missed_lines"].([]any)
+	if !ok || len(missed) != 1 || missed[0].(float64) != 4 {
+		t.Fatalf("unexpected missed lines metadata: %+v", out.Metadata["coverage_missed_lines"])
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksUnreachableSkippedTask(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/remote\n\ngo 1.23\n"), 0o644); err != nil {
@@ -864,6 +941,25 @@ func installFakeNpxFailure(t *testing.T, output string) {
 	path := filepath.Join(fakeBin, "npx")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakeMvnSuccessWithJaCoCo(t *testing.T, report string) {
+	t.Helper()
+	fakeBin := t.TempDir()
+	script := "#!/usr/bin/env sh\n" +
+		"mkdir -p target/site/jacoco\n" +
+		"cat > target/site/jacoco/jacoco.xml <<'JACOCO_XML'\n" + report + "\nJACOCO_XML\n" +
+		"cat <<'MAVEN_OUTPUT'\n" +
+		"[INFO] Results:\n" +
+		"[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0\n" +
+		"[INFO] BUILD SUCCESS\n" +
+		"MAVEN_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "mvn")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake mvn: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
