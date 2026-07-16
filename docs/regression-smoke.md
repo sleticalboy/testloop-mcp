@@ -19,7 +19,7 @@ scripts/validate-regression-smoke.sh
 | 语言 | 脚本 | 默认样本 | 期望结果 |
 | :--- | :--- | :--- | :--- |
 | Java | `scripts/validate-java-regression-samples.sh` | Commons Lang `junit-44/junit-50`，Commons Codec `junit-130`，Commons Lang `junit-52` | `ready`、`manual_review_unreachable`、`manual_review_internal` |
-| JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1` | `ready`、`manual_review_no_runtime` |
+| JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1`，仓库内 `testdata/js-internal` 的 `jest-internal-1` | `ready`、`manual_review_no_runtime`、`manual_review_internal` |
 | Python | `scripts/validate-py-regression-samples.sh` | Click `pytest-1/pytest-3` | `ready` |
 
 输出目录默认是：
@@ -40,6 +40,7 @@ scripts/validate-regression-smoke.sh
 | Java / Commons Codec | `/tmp/testloop-commons-codec` | `/tmp/testloop-commons-codec-taskids-junit130-results.jsonl` |
 | JS / ip2region | `/Users/binlee/code/open-source/ip2region/binding/javascript` | `/tmp/testloop-ip2region-js-jest-top2-current.jsonl` |
 | JS / no-runtime fixture | `./testdata/js-no-runtime` | 运行时临时生成到输出目录 |
+| JS / internal fixture | `./testdata/js-internal` | 运行时临时生成到输出目录 |
 | Python / Click | `/tmp/testloop-click-sample` | `/tmp/testloop-click-pytest-top5-regression.jsonl` |
 
 路径不一致时，用对应环境变量覆盖：
@@ -49,6 +50,7 @@ TESTLOOP_JAVA_REGRESSION_LANG_DIR=/path/to/commons-lang \
 TESTLOOP_JAVA_REGRESSION_CODEC_DIR=/path/to/commons-codec \
 TESTLOOP_JS_REGRESSION_IP2REGION_DIR=/path/to/ip2region/binding/javascript \
 TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR=/path/to/js-no-runtime-fixture \
+TESTLOOP_JS_REGRESSION_INTERNAL_DIR=/path/to/js-internal-fixture \
 TESTLOOP_PY_REGRESSION_CLICK_DIR=/path/to/click \
 scripts/validate-regression-smoke.sh
 ```
@@ -69,7 +71,7 @@ JS/ip2region 使用 Jest ESM，需要固定到单个生成测试文件，否则 
 TESTLOOP_JS_TEST_COMMAND="NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}"
 ```
 
-JS/no-runtime fixture 使用仓库内轻量 runner，只验证生成的手审 skip 能进入 `run_tests -> parse_results -> validate_coverage_task` 闭环，不依赖外部 Jest/Vitest 安装：
+JS/no-runtime 和 internal fixture 使用仓库内轻量 runner，只验证生成的手审 skip 能进入 `run_tests -> parse_results -> validate_coverage_task` 闭环，不依赖外部 Jest/Vitest 安装：
 
 ```bash
 node scripts/js-manual-review-runner.js {path}
@@ -83,8 +85,8 @@ TESTLOOP_PYTEST_COMMAND="uv run python -m pytest {verbose} {coverage} {path}"
 
 ## 当前边界
 
-- JS 默认 smoke 覆盖 `ready` 和 `manual_review_no_runtime`。仓库内 no-runtime fixture 不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件会被降级为可解析的手审任务。
+- JS 默认 smoke 覆盖 `ready`、`manual_review_no_runtime` 和 `manual_review_internal`。仓库内 no-runtime/internal fixture 不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件、未导出 ESM helper 会被降级为可解析的手审任务。
 - ip2region 扩大窗口会暴露 `repair_generated_test`，但这类普通失败不应进入默认 smoke。
 - 旧 ufo JSONL 包含 `manual_review_no_runtime`，但本机当前 ufo 目录只有发布产物，没有对应 `src/*.ts`，不适合作为固定样本。
-- Codex SDK TypeScript 的旧 JSONL 包含 `manual_review_internal`，但当前本地 workspace 的独立 `node_modules` 不包含 Jest，复用时会被 runner 依赖污染，不适合作为默认样本。
+- Codex SDK TypeScript 的旧 JSONL 包含更真实的 `manual_review_internal`，但当前本地 workspace 的独立 `node_modules` 不包含 Jest，复用时会被 runner 依赖污染，不适合作为默认样本。
 - GitHub Actions 偶尔会长时间停在 `queued`。这种状态表示 runner 尚未开始执行，不能等同于测试失败。

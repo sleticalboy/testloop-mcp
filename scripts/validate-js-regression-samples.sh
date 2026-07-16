@@ -26,6 +26,11 @@ top-N 覆盖率窗口。
                                     默认：testdata/js-no-runtime
   TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS
                                     默认：jest-no-runtime-1
+  TESTLOOP_JS_REGRESSION_INTERNAL_DIR
+                                    仓库内 TypeScript internal fixture 目录。
+                                    默认：testdata/js-internal
+  TESTLOOP_JS_REGRESSION_INTERNAL_IDS
+                                    默认：jest-internal-1
   TESTLOOP_JS_TEST_COMMAND
                                     默认：NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}
   TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS
@@ -54,6 +59,8 @@ ip2region_tasks="${TESTLOOP_JS_REGRESSION_IP2REGION_TASKS_FILE:-/tmp/testloop-ip
 ip2region_ready_ids="${TESTLOOP_JS_REGRESSION_IP2REGION_READY_IDS:-jest-1,jest-2}"
 no_runtime_dir="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR:-$repo_root/testdata/js-no-runtime}"
 no_runtime_ids="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS:-jest-no-runtime-1}"
+internal_dir="${TESTLOOP_JS_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/js-internal}"
+internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
 js_test_command="${TESTLOOP_JS_TEST_COMMAND:-}"
 if [[ -z "$js_test_command" ]]; then
   js_test_command="NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}"
@@ -171,5 +178,40 @@ with open(output, "w", encoding="utf-8") as handle:
     handle.write(json.dumps(task, ensure_ascii=False) + "\n")
 PY
 run_sample "fixture-no-runtime" "$no_runtime_dir" "$no_runtime_tasks" "$no_runtime_ids" "manual_review_no_runtime" "$manual_review_command"
+
+internal_tasks="$output_dir/internal-tasks.jsonl"
+require_path dir "$internal_dir"
+python3 - "$internal_dir" "$internal_tasks" <<'PY'
+import json
+import os
+import sys
+
+project_dir, output = sys.argv[1:]
+source = os.path.join(project_dir, "src", "helper.ts")
+task = {
+    "id": "jest-internal-1",
+    "framework": "jest",
+    "file": source,
+    "target": "hidden",
+    "kind": "function",
+    "line_range": "5-7",
+    "gap_type": "branch",
+    "missing_branches": ["未覆盖 if 分支: value === \"\""],
+    "suggested_inputs": ["直接调用 hidden(\"\") 会命中分支，但 hidden 没有从 ESM 模块导出"],
+    "goal": "确认未导出的 TypeScript helper 会被降级为 internal 手审任务",
+    "command": "node scripts/js-manual-review-runner.js tests/helper.test.ts",
+    "test_file": os.path.join(project_dir, "tests", "helper.test.ts"),
+    "test_name": "marks unexported helper as internal manual review",
+    "assertion_focus": [
+        "未导出的 ESM helper 不能从外部生成测试直接 named import，应通过公开入口、测试 seam 或手审覆盖"
+    ],
+    "priority": 88,
+    "priority_reason": "repository fixture for stable JS internal manual-review smoke",
+    "confidence": 0.9,
+}
+with open(output, "w", encoding="utf-8") as handle:
+    handle.write(json.dumps(task, ensure_ascii=False) + "\n")
+PY
+run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
 echo "js_regression_output_dir=$output_dir"
