@@ -1348,9 +1348,7 @@ func javaWriteCommonsCodecLanguageTaskAssertion(b *strings.Builder, m javaFuncIn
 		if !ok || start != 279 {
 			return false
 		}
-		b.WriteString(fmt.Sprintf("%s    String result = instance.metaphone(\"agned\");\n", indent))
-		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
-		b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    org.junit.jupiter.api.Assumptions.assumeTrue(false, \"manual_review_unreachable: Metaphone line 279 is mapped to the GNED side of an OR condition that is shadowed by the earlier GN match; review JaCoCo line mapping manually\");\n", indent))
 		return true
 	case m.ClassName == "Soundex" && m.Name == "getMaxLength":
 		b.WriteString(fmt.Sprintf("%s    int result = instance.getMaxLength();\n", indent))

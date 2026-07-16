@@ -11,7 +11,7 @@
 - Java coverage task 命中 private nested class/interface/enum 时会生成 `manual_review_internal` 手审 smoke，避免直接构造私有嵌套类型导致真实 Maven/JUnit 项目编译失败。
 - Java coverage task 命中确认不可达的公共路径时可生成 `manual_review_unreachable` 手审 smoke，`validate_coverage_task` 会识别该标记，避免把“测试通过但未命中目标缺口”的弱用例暴露为 ready。
 - Java/JUnit `validate_coverage_task` 会在运行生成测试时默认收集 JaCoCo 覆盖率，并校验 `coverage_task.line_range` 是否真正命中；测试通过但目标行仍未覆盖时会返回 `failed/needs_better_input`，metadata 中包含 `coverage_hit_lines` 和 `coverage_missed_lines`。
-- Java coverage task 补强 Commons Codec `Metaphone` / `Soundex` 公共 encoder 场景：`Metaphone.metaphone` silent `G` 分支使用 line-specific `agned` 输入，`Soundex.getMaxLength` / `setMaxLength` 断言真实默认值和状态变化。
+- Java coverage task 修正 Commons Codec `Metaphone.metaphone` 的弱 ready：目标 279 行被 JaCoCo 映射到被 `GN` 短路遮蔽的 `GNED` 侧，真实目标行命中校验后改为 `manual_review_unreachable`；`Soundex.getMaxLength` / `setMaxLength` 继续断言真实默认值和状态变化。
 - Java coverage task 命中裸类型变量数组或 varargs（例如 `T[]` / `T...`）时会生成 `manual_review_internal` 手审 smoke，避免输出不可编译的 `T[] result` 或重载歧义的 `addAll(null, null)`。
 - Java coverage task 补强 Apache Commons Lang `ClassUtils` 公共 helper 场景：`getShortClassName` 会用 JVM 数组编码输入覆盖对象数组和 primitive array 分支，`hierarchy` 会调用 `iterator.remove()` 覆盖 `UnsupportedOperationException` 路径，避免把未命中缺口的弱 ready 暴露给 Agent。
 - Java coverage task 补强 Apache Commons Lang `CharSequenceUtils.toCharArray` 的 `StringBuffer` 分支：按 `line_range` 使用 `new StringBuffer("test")` 并断言字符数组内容，避免用普通 `String` 输入生成通过但不命中目标行的弱 ready。

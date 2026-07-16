@@ -248,10 +248,10 @@ func TestGenerateJavaTestsForCoverageTaskHandlesCommonsCodecLanguagePublicEncode
 	if err != nil {
 		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
 	}
-	if !strings.Contains(code, "String result = instance.metaphone(\"agned\");") ||
-		!strings.Contains(code, "Assertions.assertFalse(result.isEmpty());") ||
+	if !strings.Contains(code, "manual_review_unreachable: Metaphone line 279") ||
+		strings.Contains(code, "instance.metaphone(\"agned\")") ||
 		strings.Contains(code, "instance.metaphone(\"test\")") {
-		t.Fatalf("Metaphone silent G task should use a line-specific GN input:\n%s", code)
+		t.Fatalf("Metaphone silent G task should be classified as unreachable after target-line validation:\n%s", code)
 	}
 
 	soundexSource := []byte(`public class Soundex {
