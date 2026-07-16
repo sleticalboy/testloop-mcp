@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,19 +35,28 @@ func TestValidateJavaCoverageTopTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve project dir: %v", err)
 	}
-	baselineRoot := filepath.Join(t.TempDir(), "baseline")
-	logJavaValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
-	if err := copyJavaProjectTree(projectDir, baselineRoot); err != nil {
-		t.Fatalf("copy baseline project: %v", err)
-	}
-	logJavaValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
-
-	report := parseJavaCoverageReportForProject(t, baselineRoot, baselineTimeout)
 	fileFilter := os.Getenv("TESTLOOP_VALIDATE_JAVA_FILE_FILTER")
 	taskIDFilter := os.Getenv("TESTLOOP_VALIDATE_JAVA_TASK_IDS")
-	tasks := filterJavaCoverageTasks(report.TestTasks, fileFilter, taskIDFilter)
+	tasksFile := os.Getenv("TESTLOOP_VALIDATE_JAVA_TASKS_FILE")
+	baselineRoot := projectDir
+	var tasks []types.CoverageTestTask
+	if strings.TrimSpace(tasksFile) != "" {
+		tasks = readJavaCoverageTasksJSONL(t, tasksFile)
+		logJavaValidationStage(t, "tasks.file.loaded path=%s count=%d", tasksFile, len(tasks))
+	} else {
+		baselineRoot = filepath.Join(t.TempDir(), "baseline")
+		logJavaValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
+		if err := copyJavaProjectTree(projectDir, baselineRoot); err != nil {
+			t.Fatalf("copy baseline project: %v", err)
+		}
+		logJavaValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
+
+		report := parseJavaCoverageReportForProject(t, baselineRoot, baselineTimeout)
+		tasks = report.TestTasks
+	}
+	tasks = filterJavaCoverageTasks(tasks, fileFilter, taskIDFilter)
 	if len(tasks) == 0 {
-		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q", fileFilter, taskIDFilter)
+		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q tasks_file=%q", fileFilter, taskIDFilter, tasksFile)
 	}
 	if taskIDFilter != "" && len(tasks) < limit {
 		limit = len(tasks)
@@ -297,6 +307,24 @@ func TestRewriteJavaValidationPathMapsJaCoCoPackagePathToNestedMavenModule(t *te
 	}
 }
 
+func TestRewriteJavaValidationPathMapsStaleAbsoluteJavaSourcePath(t *testing.T) {
+	taskRoot := filepath.Join(t.TempDir(), "task")
+	source := filepath.Join(taskRoot, "src", "main", "java", "org", "example", "Calculator.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	if err := os.WriteFile(source, []byte("class Calculator {}\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	stale := filepath.Join(t.TempDir(), "old", "src", "main", "java", "org", "example", "Calculator.java")
+
+	got := rewriteJavaValidationPath(filepath.Join(t.TempDir(), "baseline"), taskRoot, stale)
+
+	if got != source {
+		t.Fatalf("rewriteJavaValidationPath stale absolute = %q, want %q", got, source)
+	}
+}
+
 func TestRewriteJavaValidationTestFileForSourceKeepsNestedMavenModule(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "task")
 	source := filepath.Join(root, "client", "src", "main", "java", "org", "apache", "rocketmq", "client", "java", "route", "Endpoints.java")
@@ -346,6 +374,56 @@ func javaCoverageTaskIDSet(raw string) map[string]struct{} {
 	return ids
 }
 
+func readJavaCoverageTasksJSONL(t *testing.T, path string) []types.CoverageTestTask {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open Java coverage tasks JSONL %s: %v", path, err)
+	}
+	defer file.Close()
+
+	var tasks []types.CoverageTestTask
+	scanner := bufio.NewScanner(file)
+	for lineNo := 1; scanner.Scan(); lineNo++ {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		task, err := decodeJavaCoverageTaskJSONLine(line)
+		if err != nil {
+			t.Fatalf("decode Java coverage task %s:%d: %v", path, lineNo, err)
+		}
+		tasks = append(tasks, task)
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("scan Java coverage tasks JSONL %s: %v", path, err)
+	}
+	if len(tasks) == 0 {
+		t.Fatalf("Java coverage tasks JSONL %s did not contain any tasks", path)
+	}
+	return tasks
+}
+
+func decodeJavaCoverageTaskJSONLine(line string) (types.CoverageTestTask, error) {
+	var wrapped struct {
+		CoverageTask *types.CoverageTestTask `json:"coverage_task"`
+	}
+	if err := json.Unmarshal([]byte(line), &wrapped); err != nil {
+		return types.CoverageTestTask{}, err
+	}
+	if wrapped.CoverageTask != nil {
+		return *wrapped.CoverageTask, nil
+	}
+	var task types.CoverageTestTask
+	if err := json.Unmarshal([]byte(line), &task); err != nil {
+		return types.CoverageTestTask{}, err
+	}
+	if strings.TrimSpace(task.ID) == "" && strings.TrimSpace(task.Target) == "" {
+		return types.CoverageTestTask{}, fmt.Errorf("JSON line is neither a coverage task nor a validation output")
+	}
+	return task, nil
+}
+
 func TestFilterJavaCoverageTasksByFileAndTaskIDs(t *testing.T) {
 	tasks := []types.CoverageTestTask{
 		{ID: "junit-1", File: filepath.FromSlash("src/main/java/org/example/Foo.java")},
@@ -387,6 +465,24 @@ func TestJavaCoverageTaskIDSetIgnoresEmptyEntries(t *testing.T) {
 	}
 }
 
+func TestDecodeJavaCoverageTaskJSONLineSupportsTaskAndValidationOutput(t *testing.T) {
+	task, err := decodeJavaCoverageTaskJSONLine(`{"id":"junit-1","target":"Foo.bar"}`)
+	if err != nil {
+		t.Fatalf("decode task line: %v", err)
+	}
+	if task.ID != "junit-1" || task.Target != "Foo.bar" {
+		t.Fatalf("decoded task = %+v", task)
+	}
+
+	task, err = decodeJavaCoverageTaskJSONLine(`{"status":"passed","coverage_task":{"id":"junit-2","target":"Bar.baz"}}`)
+	if err != nil {
+		t.Fatalf("decode validation output line: %v", err)
+	}
+	if task.ID != "junit-2" || task.Target != "Bar.baz" {
+		t.Fatalf("decoded wrapped task = %+v", task)
+	}
+}
+
 func copyJavaProjectTree(src string, dst string) error {
 	return copyTreeSkipping(src, dst, map[string]bool{
 		".git":    true,
@@ -397,8 +493,23 @@ func copyJavaProjectTree(src string, dst string) error {
 }
 
 func rewriteJavaValidationPath(baselineRoot string, taskRoot string, value string) string {
-	rewritten := rewriteGoValidationPath(baselineRoot, taskRoot, value)
-	if rewritten == "" || fileExists(rewritten) || filepath.IsAbs(value) {
+	if value == "" {
+		return value
+	}
+	if filepath.IsAbs(value) {
+		if rel, err := filepath.Rel(baselineRoot, value); err == nil && !strings.HasPrefix(rel, "..") {
+			return filepath.Join(taskRoot, rel)
+		}
+		if rel, err := filepath.Rel(taskRoot, value); err == nil && !strings.HasPrefix(rel, "..") {
+			return value
+		}
+		if candidate := findJavaValidationPathBySourceSuffix(taskRoot, value); candidate != "" {
+			return candidate
+		}
+		return value
+	}
+	rewritten := filepath.Join(taskRoot, filepath.FromSlash(value))
+	if fileExists(rewritten) {
 		return rewritten
 	}
 	for _, root := range []string{filepath.Join("src", "main", "java"), filepath.Join("src", "test", "java")} {
@@ -411,6 +522,27 @@ func rewriteJavaValidationPath(baselineRoot string, taskRoot string, value strin
 		return candidate
 	}
 	return rewritten
+}
+
+func findJavaValidationPathBySourceSuffix(taskRoot string, value string) string {
+	slash := filepath.ToSlash(value)
+	for _, marker := range []string{"/src/main/java/", "/src/test/java/"} {
+		idx := strings.LastIndex(slash, marker)
+		if idx < 0 {
+			continue
+		}
+		rel := slash[idx+len(marker):]
+		for _, root := range []string{filepath.Join("src", "main", "java"), filepath.Join("src", "test", "java")} {
+			candidate := filepath.Join(taskRoot, root, filepath.FromSlash(rel))
+			if fileExists(candidate) {
+				return candidate
+			}
+		}
+		if candidate := findJavaValidationNestedPath(taskRoot, rel); candidate != "" {
+			return candidate
+		}
+	}
+	return ""
 }
 
 func findJavaValidationNestedPath(taskRoot string, value string) string {

@@ -487,6 +487,14 @@ TESTLOOP_VALIDATE_JAVA_TASK_IDS='junit-44,junit-130' \
 scripts/validate-java-coverage-top-tasks.sh /path/to/java/project
 ```
 
+如果已经有 `TESTLOOP_VALIDATE_JAVA_LIST_TASKS_ONLY=true` 导出的 task JSONL，或已有验证结果 JSONL，可以直接复用它跳过 baseline coverage：
+
+```bash
+TESTLOOP_VALIDATE_JAVA_TASKS_FILE=/tmp/testloop-java-tasks.jsonl \
+TESTLOOP_VALIDATE_JAVA_TASK_IDS='junit-44' \
+scripts/validate-java-coverage-top-tasks.sh /path/to/java/project /tmp/testloop-java-junit44.jsonl
+```
+
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
 ## Roadmap

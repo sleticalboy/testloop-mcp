@@ -28,6 +28,11 @@ Environment:
   TESTLOOP_VALIDATE_JAVA_TASK_IDS
                                     Optional comma-separated coverage task IDs to
                                     validate exactly, for example: junit-44,junit-130.
+  TESTLOOP_VALIDATE_JAVA_TASKS_FILE
+                                    Optional JSONL file containing coverage tasks or
+                                    validate_coverage_task outputs. When set, skips
+                                    baseline coverage generation and reads tasks from
+                                    this file.
   TESTLOOP_VALIDATE_JAVA_LIST_TASKS_ONLY
                                     If true, only writes selected coverage tasks to
                                     output-jsonl and skips per-task validation.
@@ -56,18 +61,40 @@ if [[ $# -lt 1 || $# -gt 3 ]]; then
 fi
 
 project_dir="$1"
+tasks_file="${TESTLOOP_VALIDATE_JAVA_TASKS_FILE:-}"
 output="${3:-${TESTLOOP_VALIDATE_JAVA_OUTPUT:-}}"
-if [[ $# -eq 2 && -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" && ! "$2" =~ ^[0-9]+$ ]]; then
-  limit="$(printf '%s' "$TESTLOOP_VALIDATE_JAVA_TASK_IDS" | tr ',' '\n' | awk 'NF {count++} END {print count+0}')"
+if [[ -n "$tasks_file" && ! -f "$tasks_file" ]]; then
+  echo "tasks file does not exist: $tasks_file" >&2
+  exit 1
+fi
+
+task_ids_count() {
+  printf '%s' "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" | tr ',' '\n' | awk 'NF {count++} END {print count+0}'
+}
+
+tasks_file_count() {
+  awk 'NF {count++} END {print count+0}' "$tasks_file"
+}
+
+inferred_limit() {
+  if [[ -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" ]]; then
+    task_ids_count
+  elif [[ -n "$tasks_file" ]]; then
+    tasks_file_count
+  else
+    printf '20\n'
+  fi
+}
+
+if [[ $# -eq 2 && ( -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" || -n "$tasks_file" ) && ! "$2" =~ ^[0-9]+$ ]]; then
+  limit="$(inferred_limit)"
   output="$2"
 elif [[ $# -ge 2 ]]; then
   limit="$2"
 elif [[ -n "${TESTLOOP_VALIDATE_JAVA_TASK_LIMIT:-}" ]]; then
   limit="$TESTLOOP_VALIDATE_JAVA_TASK_LIMIT"
-elif [[ -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" ]]; then
-  limit="$(printf '%s' "$TESTLOOP_VALIDATE_JAVA_TASK_IDS" | tr ',' '\n' | awk 'NF {count++} END {print count+0}')"
 else
-  limit="20"
+  limit="$(inferred_limit)"
 fi
 
 if [[ ! -d "$project_dir" ]]; then
