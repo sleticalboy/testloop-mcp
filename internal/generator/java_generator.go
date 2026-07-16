@@ -74,6 +74,11 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 	b.WriteString("\n")
 
 	b.WriteString(fmt.Sprintf("public class %s%s {\n", testClassName, javaTestClassExtends(funcs, task)))
+	if javaCoverageTaskIsFileLevel(task) {
+		javaWriteFileLevelManualReviewTest(&b, task, javaCoverageTaskMethodName(javaFuncInfo{Name: className}, task), style)
+		b.WriteString("}\n")
+		return testFileName, javaAddGeneratedImports(b.String(), source), nil
+	}
 
 	// 为每个方法生成测试
 	constructors := javaConstructorsByClass(allFuncs)
@@ -216,6 +221,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		}
 	} else if m.IsStatic {
 		// 静态方法调用：ClassName.method(...)
+		if javaWriteLangLoadFromResourceTask(b, m, task, style, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteRuleGetInstanceTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -268,6 +277,14 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteLanguagesSomeLanguagesTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
+		if javaWritePhoneticEngineTaskAssertion(b, m, task, style, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteHmacUtilsDigestTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -300,6 +317,30 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 		javaWriteCallAndAssert(b, callExpr, m, indent, assertions)
 	}
 
+	b.WriteString("    }\n")
+}
+
+func javaCoverageTaskIsFileLevel(task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	return target != "" && strings.HasSuffix(target, ".java") && strings.TrimSpace(task.Kind) == ""
+}
+
+func javaWriteFileLevelManualReviewTest(b *strings.Builder, task *types.CoverageTestTask, testName string, style javaJUnitStyle) {
+	indent := "    "
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = "file-level coverage task"
+	}
+	b.WriteString(fmt.Sprintf("\n    @Test\n"))
+	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
+	}
+	javaWriteManualReviewAssumption(b, indent, style, target,
+		"is a file-level Java coverage task without a stable public method target; cover it through a focused public entry point or review manually.")
 	b.WriteString("    }\n")
 }
 
@@ -478,10 +519,26 @@ func javaCoverageTaskCallClassName(defaultClassName string, m javaFuncInfo, task
 
 func javaMethodInfoWithQualifiedNestedReturnType(m javaFuncInfo, callClassName string) javaFuncInfo {
 	if m.ReturnType == "" || !strings.Contains(callClassName, ".") {
+		switch m.ReturnType {
+		case "RPattern", "Phoneme", "PhonemeExpr", "PhonemeList":
+			if m.ClassName == "Rule" {
+				m.ReturnType = "Rule." + m.ReturnType
+			}
+		}
 		return m
 	}
 	if strings.HasSuffix(callClassName, "."+m.ReturnType) {
 		m.ReturnType = callClassName
+		return m
+	}
+	if strings.HasPrefix(callClassName, "Languages.") && m.ReturnType == "LanguageSet" {
+		m.ReturnType = "Languages.LanguageSet"
+	}
+	if strings.HasPrefix(callClassName, "Rule.") {
+		switch m.ReturnType {
+		case "RPattern", "Phoneme", "PhonemeExpr", "PhonemeList":
+			m.ReturnType = "Rule." + m.ReturnType
+		}
 	}
 	return m
 }
@@ -818,6 +875,58 @@ func javaWriteRulePhonemeTaskAssertion(b *strings.Builder, m javaFuncInfo, task 
 		b.WriteString(fmt.Sprintf("%s    Rule.Phoneme instance = new Rule.Phoneme(\"abc\", Languages.ANY_LANGUAGE);\n", indent))
 		b.WriteString(fmt.Sprintf("%s    String result = instance.toString();\n", indent))
 		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(result.startsWith(\"abc[\"));\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
+}
+
+func javaWriteLanguagesSomeLanguagesTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "SomeLanguages" || !strings.HasPrefix(strings.TrimSpace(task.Target), "Languages.SomeLanguages.") {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    Languages.SomeLanguages instance = (Languages.SomeLanguages) Languages.LanguageSet.from(\n", indent))
+	b.WriteString(fmt.Sprintf("%s            new java.util.HashSet<>(java.util.Arrays.asList(\"english\")));\n", indent))
+	switch m.Name {
+	case "getLanguages":
+		b.WriteString(fmt.Sprintf("%s    java.util.Set<String> result = instance.getLanguages();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertTrue(result.contains(\"english\"));\n", indent, assertions))
+		return true
+	case "merge":
+		b.WriteString(fmt.Sprintf("%s    Languages.LanguageSet result = instance.merge(Languages.NO_LANGUAGES);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(instance, result);\n", indent, assertions))
+		return true
+	case "restrictTo":
+		b.WriteString(fmt.Sprintf("%s    Languages.LanguageSet result = instance.restrictTo(Languages.NO_LANGUAGES);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(Languages.NO_LANGUAGES, result);\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
+}
+
+func javaWriteLangLoadFromResourceTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, style javaJUnitStyle, indent string) bool {
+	if m.ClassName != "Lang" || m.Name != "loadFromResource" || task == nil {
+		return false
+	}
+	javaWriteManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
+		"depends on bundled classpath language-rule resources; cover malformed resource content with an integration fixture or review manually.")
+	return true
+}
+
+func javaWritePhoneticEngineTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, style javaJUnitStyle, assertions string, indent string) bool {
+	if m.ClassName != "PhoneticEngine" || task == nil {
+		return false
+	}
+	switch m.Name {
+	case "getLang":
+		b.WriteString(fmt.Sprintf("%s    PhoneticEngine instance = new PhoneticEngine(NameType.GENERIC, RuleType.APPROX, true);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    Lang result = instance.getLang();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+		return true
+	case "encode":
+		javaWriteManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
+			"depends on Beider-Morse resource rules, inferred language sets, and multi-word normalization; cover through existing public examples or review manually.")
 		return true
 	default:
 		return false

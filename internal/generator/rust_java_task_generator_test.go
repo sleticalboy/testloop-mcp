@@ -502,6 +502,7 @@ enum NameType {
 }
 
 enum RuleType {
+    APPROX,
     RULES
 }
 `)
@@ -551,6 +552,232 @@ enum RuleType {
 	}
 	if strings.Contains(code, "Rule.getInstance(null") {
 		t.Fatalf("Rule.getInstance should not use null enum inputs:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesLanguageBmValueObjects(t *testing.T) {
+	source := []byte(`import java.util.Collections;
+import java.util.Set;
+
+public class Languages {
+    public abstract static class LanguageSet {
+        public static LanguageSet from(Set<String> languages) {
+            return new SomeLanguages(languages);
+        }
+        public abstract LanguageSet merge(LanguageSet other);
+        public abstract LanguageSet restrictTo(LanguageSet other);
+    }
+
+    public static final LanguageSet NO_LANGUAGES = new LanguageSet() {
+        public LanguageSet merge(LanguageSet other) { return other; }
+        public LanguageSet restrictTo(LanguageSet other) { return this; }
+    };
+
+    public static final class SomeLanguages extends LanguageSet {
+        private final Set<String> languages;
+        private SomeLanguages(Set<String> languages) {
+            this.languages = Collections.unmodifiableSet(languages);
+        }
+        public Set<String> getLanguages() {
+            return languages;
+        }
+        public LanguageSet merge(LanguageSet other) {
+            if (other == NO_LANGUAGES) {
+                return this;
+            }
+            return other;
+        }
+        public LanguageSet restrictTo(LanguageSet other) {
+            if (other == NO_LANGUAGES) {
+                return other;
+            }
+            return this;
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Languages.java", &types.CoverageTestTask{
+		ID:              "junit-72",
+		Framework:       "junit",
+		Target:          "Languages.SomeLanguages.merge",
+		LineRange:       "24-24",
+		TestName:        "shouldCoverLanguagesSomeLanguagesMergeGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{24},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"Languages.SomeLanguages instance = (Languages.SomeLanguages) Languages.LanguageSet.from(",
+		"new java.util.HashSet<>(java.util.Arrays.asList(\"english\"))",
+		"Languages.LanguageSet result = instance.merge(Languages.NO_LANGUAGES);",
+		"Assertions.assertSame(instance, result);",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated SomeLanguages.merge test:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "new Languages.SomeLanguages()") || strings.Contains(code, "\n        LanguageSet result =") {
+		t.Fatalf("SomeLanguages task should not use inaccessible constructor or unqualified LanguageSet:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "Languages.java", &types.CoverageTestTask{
+		ID:              "junit-134",
+		Framework:       "junit",
+		Target:          "Languages.SomeLanguages.getLanguages",
+		LineRange:       "20-20",
+		TestName:        "shouldCoverLanguagesSomeLanguagesGetLanguagesGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{20},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "java.util.Set<String> result = instance.getLanguages();") ||
+		!strings.Contains(code, "Assertions.assertTrue(result.contains(\"english\"));") {
+		t.Fatalf("SomeLanguages.getLanguages should use real set state:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesLanguageBmManualReviewBoundaries(t *testing.T) {
+	source := []byte(`public class PhoneticEngine {
+    public PhoneticEngine(NameType nameType, RuleType ruleType, boolean concat) {
+    }
+    public String encode(String input, Languages.LanguageSet languageSet) {
+        return input;
+    }
+    public Lang getLang() {
+        return new Lang();
+    }
+}
+
+class Lang {
+    public static Lang loadFromResource(String languageRulesResourceName, Languages languages) {
+        return new Lang();
+    }
+}
+
+class Languages {
+    static abstract class LanguageSet {
+    }
+}
+
+enum NameType {
+    GENERIC
+}
+
+enum RuleType {
+    RULES
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "PhoneticEngine.java", &types.CoverageTestTask{
+		ID:              "junit-137",
+		Framework:       "junit",
+		Target:          "PhoneticEngine.encode",
+		LineRange:       "4-4",
+		TestName:        "shouldCoverPhoneticEngineEncodeGap",
+		AssertionFocus:  []string{"断言未覆盖语句执行后的可观察结果"},
+		UncoveredLines:  []int{4},
+		MissingBranches: []string{"未覆盖普通语句块"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_internal: ") ||
+		!strings.Contains(code, "PhoneticEngine.encode") ||
+		strings.Contains(code, "new PhoneticEngine(null") {
+		t.Fatalf("PhoneticEngine.encode should be marked for manual review instead of null construction:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "PhoneticEngine.java", &types.CoverageTestTask{
+		ID:              "junit-138",
+		Framework:       "junit",
+		Target:          "PhoneticEngine.getLang",
+		LineRange:       "7-7",
+		TestName:        "shouldCoverPhoneticEngineGetLangGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{7},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "new PhoneticEngine(NameType.GENERIC, RuleType.APPROX, true)") ||
+		!strings.Contains(code, "Lang result = instance.getLang();") {
+		t.Fatalf("PhoneticEngine.getLang should use valid enum constructor inputs:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "Lang.java", &types.CoverageTestTask{
+		ID:              "junit-26",
+		Framework:       "junit",
+		Target:          "Lang.loadFromResource",
+		LineRange:       "12-12",
+		TestName:        "shouldCoverLangLoadFromResourceGap",
+		AssertionFocus:  []string{"断言错误、异常或空值路径"},
+		UncoveredLines:  []int{12},
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_internal: ") ||
+		!strings.Contains(code, "bundled classpath language-rule resources") ||
+		strings.Contains(code, "Lang.loadFromResource(\"test\", null)") {
+		t.Fatalf("Lang.loadFromResource should be marked for resource manual review:\n%s", code)
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesRuleNestedReturnTypesAndFileLevel(t *testing.T) {
+	source := []byte(`public class Rule {
+    public interface RPattern {
+    }
+    public RPattern getLContext() {
+        return null;
+    }
+    public RPattern getRContext() {
+        return null;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Rule.java", &types.CoverageTestTask{
+		ID:              "junit-143",
+		Framework:       "junit",
+		Target:          "Rule.getLContext",
+		LineRange:       "3-3",
+		TestName:        "shouldCoverRuleGetLContextGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{3},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "Rule.RPattern result = instance.getLContext();") ||
+		strings.Contains(code, "\n        RPattern result") {
+		t.Fatalf("Rule.getLContext should qualify nested RPattern return type:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "Rule.java", &types.CoverageTestTask{
+		ID:             "junit-165",
+		Framework:      "junit",
+		Target:         "Rule.java",
+		LineRange:      "311-312",
+		TestName:       "shouldCoverRuleJavaGap",
+		UncoveredLines: []int{311, 312},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_internal: ") ||
+		!strings.Contains(code, "file-level Java coverage task") ||
+		strings.Contains(code, "new Phoneme(") {
+		t.Fatalf("file-level Java coverage task should be a manual-review smoke, not whole-file generation:\n%s", code)
 	}
 }
 
