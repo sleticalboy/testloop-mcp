@@ -508,6 +508,9 @@ func coverageTaskInternalSymbolReason(task *types.CoverageTestTask, generated *t
 	if framework == "junit" || strings.HasSuffix(strings.ToLower(task.File), ".java") {
 		return fmt.Sprintf("%s is private/internal Java code; cover it through a visible public or package entry point, add a test seam, or review manually", target)
 	}
+	if framework == "pytest" || strings.HasSuffix(strings.ToLower(task.File), ".py") {
+		return fmt.Sprintf("%s is private/internal Python code; cover it through a public method, add a test seam, or review manually", target)
+	}
 	return fmt.Sprintf("%s is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually", target)
 }
 

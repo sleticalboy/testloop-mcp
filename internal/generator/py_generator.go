@@ -708,6 +708,10 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 		if comment := coverageTaskComment(task); comment != "" {
 			sb.WriteString(fmt.Sprintf("        # coverage task: %s\n", comment))
 		}
+		if pyMethodRequiresInternalManualReview(cls, method) {
+			sb.WriteString(fmt.Sprintf("        __import__('pytest').skip(%q)\n\n", pyInternalManualReviewReason(cls, method)))
+			continue
+		}
 		if custom := genPytestClassMethodCustomCoverageTask(cls, method, task); custom != "" {
 			sb.WriteString(custom)
 			continue
@@ -762,6 +766,18 @@ func genPytestClassTestForCoverageTask(cls pyClassInfo, task *types.CoverageTest
 	}
 
 	return sb.String()
+}
+
+func pyMethodRequiresInternalManualReview(cls pyClassInfo, method pyFuncInfo) bool {
+	if cls.Name == "" {
+		return false
+	}
+	name := strings.TrimSpace(method.Name)
+	return strings.HasPrefix(name, "__") && !strings.HasSuffix(name, "__")
+}
+
+func pyInternalManualReviewReason(cls pyClassInfo, method pyFuncInfo) string {
+	return fmt.Sprintf("manual_review_internal: %s.%s is a Python name-mangled private method; cover it through a public method, add a test seam, or review manually", cls.Name, method.Name)
 }
 
 func genPytestFuncCustomCoverageTask(fn pyFuncInfo, task *types.CoverageTestTask) string {

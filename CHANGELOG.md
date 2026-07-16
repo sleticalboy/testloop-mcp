@@ -16,9 +16,10 @@
 - JS/TS 与 Python 真实项目验证脚本支持 `TESTLOOP_VALIDATE_JS_TASKS_FILE` / `TESTLOOP_VALIDATE_PY_TASKS_FILE` 和 `TESTLOOP_VALIDATE_JS_TASK_IDS` / `TESTLOOP_VALIDATE_PY_TASK_IDS`，可复用已有任务 JSONL 并跳过 baseline coverage。
 - Java/JUnit `run_tests` 当 path 指向 `src/test/**/*.java` 时会只运行该测试类，同时保留 JaCoCo report 生成，减少 `validate_coverage_task` 单任务回归的 Maven/JUnit 运行耗时和上游 skipped tests 干扰。
 - 新增 `scripts/validate-java-regression-samples.sh`，把 Java 真实 ready、历史假 ready 降级和内部手审三类样本固化为小型回归入口，并断言输出 JSONL 的 status/action/目标行命中元数据。
-- 新增 `scripts/validate-js-regression-samples.sh`、`scripts/validate-py-regression-samples.sh` 和 `scripts/validate-regression-smoke.sh`，把 ip2region Jest ready、仓库内 TypeScript no-runtime/internal fixture 与 Click pytest ready 样本纳入固定 smoke 矩阵，并串联 Java + JS + Python 小回归。
-- 新增 `docs/regression-smoke.md`，记录固定 smoke 的默认项目路径、JSONL 依赖、跳过开关、runner 约束和 JS no-runtime/internal 样本边界。
+- 新增 `scripts/validate-js-regression-samples.sh`、`scripts/validate-py-regression-samples.sh` 和 `scripts/validate-regression-smoke.sh`，把 ip2region Jest ready、仓库内 TypeScript no-runtime/internal fixture、Click pytest ready 与仓库内 Python internal fixture 纳入固定 smoke 矩阵，并串联 Java + JS + Python 小回归。
+- 新增 `docs/regression-smoke.md`，记录固定 smoke 的默认项目路径、JSONL 依赖、跳过开关、runner 约束以及 JS/Python fixture 样本边界。
 - 新增仓库内 `testdata/js-no-runtime`、`testdata/js-internal` fixture 与 `scripts/js-manual-review-runner.js`，让 JS regression smoke 可稳定覆盖 `manual_review_no_runtime` 和 `manual_review_internal`，不再依赖已漂移的外部 TS 项目样本。
+- 新增 Python name-mangled private method 生成规则、`testdata/py-internal` fixture 与 `scripts/py-manual-review-runner.py`，让 Python regression smoke 可稳定覆盖 `manual_review_internal`。
 - Java coverage task 修正 Commons Codec `Metaphone.metaphone` 的弱 ready：目标 279 行被 JaCoCo 映射到被 `GN` 短路遮蔽的 `GNED` 侧，真实目标行命中校验后改为 `manual_review_unreachable`；`Soundex.getMaxLength` / `setMaxLength` 继续断言真实默认值和状态变化。
 - Java coverage task 命中裸类型变量数组或 varargs（例如 `T[]` / `T...`）时会生成 `manual_review_internal` 手审 smoke，避免输出不可编译的 `T[] result` 或重载歧义的 `addAll(null, null)`。
 - Java coverage task 补强 Apache Commons Lang `ClassUtils` 公共 helper 场景：`getShortClassName` 会用 JVM 数组编码输入覆盖对象数组和 primitive array 分支，`hierarchy` 会调用 `iterator.remove()` 覆盖 `UnsupportedOperationException` 路径，避免把未命中缺口的弱 ready 暴露给 Agent。

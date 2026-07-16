@@ -2666,6 +2666,40 @@ func TestPytestClassCoverageTaskCoversStaticAsyncAndInstanceErrorBranches(t *tes
 	}
 }
 
+func TestPytestClassCoverageTaskMarksNameMangledPrivateMethodInternal(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:        "pytest-internal-1",
+		Framework: "pytest",
+		Target:    "PrivateService.__normalize",
+		GapType:   "branch",
+		LineRange: "5-7",
+		TestName:  "test_private_method_requires_internal_review",
+	}
+	cls := pyClassInfo{
+		Name: "PrivateService",
+		Methods: []pyFuncInfo{
+			{
+				Name:   "__normalize",
+				Params: []pyParamInfo{{Name: "value"}},
+				Analysis: pyFuncAnalysis{
+					HasReturn: true,
+					Returns:   []string{"\"empty\"", "value.strip().lower()"},
+				},
+			},
+		},
+	}
+
+	code := genPytestClassTestForCoverageTask(cls, &task)
+	assertPyGenerated(t, code, []string{
+		"def test_private_method_requires_internal_review(self):",
+		"manual_review_internal: PrivateService.__normalize is a Python name-mangled private method",
+		"__import__('pytest').skip(",
+	}, []string{
+		"instance = PrivateService()",
+		"instance.__normalize",
+	})
+}
+
 func TestPytestClassTestCoversAsyncStaticRaisesAndBoundaries(t *testing.T) {
 	cls := pyClassInfo{
 		Name: "Service",

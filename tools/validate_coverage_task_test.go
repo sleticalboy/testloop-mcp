@@ -852,6 +852,26 @@ func TestCoverageTaskInternalSymbolReasonUsesJavaWording(t *testing.T) {
 	}
 }
 
+func TestCoverageTaskInternalSymbolReasonUsesPythonWording(t *testing.T) {
+	reason := coverageTaskInternalSymbolReason(
+		&types.CoverageTestTask{
+			Framework: "pytest",
+			File:      "src/private_service.py",
+			Target:    "PrivateService.__normalize",
+		},
+		&types.GenerateTestsOutput{
+			Preview: "manual_review_internal: PrivateService.__normalize",
+			Context: &types.TestGenerationContext{Framework: "pytest"},
+		},
+		&types.TestResult{Status: "pass"},
+	)
+	if !strings.Contains(reason, "PrivateService.__normalize") ||
+		!strings.Contains(reason, "private/internal Python code") ||
+		strings.Contains(reason, "JavaScript module") {
+		t.Fatalf("unexpected Python internal reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksTypeOnlyTSFileAsNoRuntimeManualReview(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
