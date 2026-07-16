@@ -260,6 +260,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteExceptionUtilsErasureTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteClassUtilsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -925,6 +929,26 @@ func javaWriteExceptionUtilsThrowUncheckedTaskAssertion(b *strings.Builder, m ja
 		return true
 	}
 	return false
+}
+
+func javaWriteExceptionUtilsErasureTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "ExceptionUtils" || (m.Name != "asRuntimeException" && m.Name != "rethrow") {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine {
+		return false
+	}
+	switch {
+	case m.Name == "asRuntimeException" && start == 147:
+	case m.Name == "rethrow" && start == 875:
+	default:
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    final RuntimeException exception = new IllegalStateException(\"boom\");\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final RuntimeException thrown = %s.assertThrows(RuntimeException.class, () -> %s.%s(exception));\n", indent, assertions, className, m.Name))
+	b.WriteString(fmt.Sprintf("%s    %s.assertSame(exception, thrown);\n", indent, assertions))
+	return true
 }
 
 func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {

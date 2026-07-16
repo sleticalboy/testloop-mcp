@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1393,6 +1394,69 @@ func TestGenerateJavaTestsForCoverageTaskHandlesExceptionUtilsThrowUnchecked(t *
 				}
 			}
 			for _, forbidden := range tt.forbidden {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateJavaTestsForCoverageTaskHandlesExceptionUtilsErasureThrowers(t *testing.T) {
+	source := []byte(`public class ExceptionUtils {
+    public static <T extends RuntimeException> T asRuntimeException(final Throwable throwable) {
+        return ExceptionUtils.<T, RuntimeException>eraseType(throwable);
+    }
+
+    public static <T> T rethrow(final Throwable throwable) {
+        return ExceptionUtils.<T, RuntimeException>eraseType(throwable);
+    }
+}
+`)
+
+	tests := []struct {
+		name       string
+		target     string
+		lineRange  string
+		methodName string
+	}{
+		{
+			name:       "asRuntimeException throws original runtime exception",
+			target:     "ExceptionUtils.asRuntimeException",
+			lineRange:  "147-147",
+			methodName: "asRuntimeException",
+		},
+		{
+			name:       "rethrow throws original runtime exception",
+			target:     "ExceptionUtils.rethrow",
+			lineRange:  "875-875",
+			methodName: "rethrow",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "ExceptionUtils.java", &types.CoverageTestTask{
+				ID:             "junit-110",
+				Framework:      "junit",
+				Target:         tt.target,
+				LineRange:      tt.lineRange,
+				TestName:       "shouldCoverExceptionUtilsErasureGap",
+				AssertionFocus: []string{"断言错误、异常或空值路径"},
+			})
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range []string{
+				`final RuntimeException exception = new IllegalStateException("boom");`,
+				fmt.Sprintf(`Assertions.assertThrows(RuntimeException.class, () -> ExceptionUtils.%s(exception));`, tt.methodName),
+				`Assertions.assertSame(exception, thrown);`,
+			} {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range []string{`T result`, fmt.Sprintf(`ExceptionUtils.%s(null)`, tt.methodName), `Assertions.assertNotNull(result)`} {
 				if strings.Contains(code, forbidden) {
 					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
 				}
