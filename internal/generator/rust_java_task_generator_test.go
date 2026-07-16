@@ -158,6 +158,42 @@ public class Caverphone {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesPrivateNestedJavaClass(t *testing.T) {
+	source := []byte(`public class DaitchMokotoffSoundex {
+    private static final class Branch {
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof Branch)) {
+                return false;
+            }
+            return true;
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "DaitchMokotoffSoundex.java", &types.CoverageTestTask{
+		ID:              "junit-67",
+		Framework:       "junit",
+		Target:          "DaitchMokotoffSoundex.Branch.equals",
+		LineRange:       "7-7",
+		TestName:        "shouldCoverDaitchMokotoffSoundexBranchEqualsGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{7},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_internal: ") ||
+		!strings.Contains(code, "targets a private nested Java type") ||
+		strings.Contains(code, "new DaitchMokotoffSoundex.Branch()") {
+		t.Fatalf("private nested class task should be manual-review, not direct construction:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskUsesTaskTestFileClassName(t *testing.T) {
 	source := []byte(`public class Base64 {
     public byte[] encode(byte[] in) {

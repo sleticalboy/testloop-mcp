@@ -79,6 +79,11 @@ func generateJavaTests(source []byte, filePath string, task *types.CoverageTestT
 		b.WriteString("}\n")
 		return testFileName, javaAddGeneratedImports(b.String(), source), nil
 	}
+	if javaCoverageTaskTargetsPrivateNestedClass(source, task) {
+		javaWritePrivateNestedClassManualReviewTest(&b, task, javaCoverageTaskMethodName(javaFuncInfo{Name: className}, task), style)
+		b.WriteString("}\n")
+		return testFileName, javaAddGeneratedImports(b.String(), source), nil
+	}
 
 	// 为每个方法生成测试
 	constructors := javaConstructorsByClass(allFuncs)
@@ -345,6 +350,59 @@ func javaWriteFileLevelManualReviewTest(b *strings.Builder, task *types.Coverage
 	}
 	javaWriteManualReviewAssumption(b, indent, style, target,
 		"is a file-level Java coverage task without a stable public method target; cover it through a focused public entry point or review manually.")
+	b.WriteString("    }\n")
+}
+
+func javaCoverageTaskTargetsPrivateNestedClass(source []byte, task *types.CoverageTestTask) bool {
+	if task == nil {
+		return false
+	}
+	parts := strings.Split(strings.TrimSpace(task.Target), ".")
+	if len(parts) < 3 {
+		return false
+	}
+	text := string(source)
+	for _, part := range parts[1 : len(parts)-1] {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+		for _, keyword := range []string{"class", "interface", "enum"} {
+			pattern := "private "
+			idx := strings.Index(text, pattern)
+			for idx >= 0 {
+				rest := text[idx+len(pattern):]
+				declIdx := strings.Index(rest, keyword+" "+name)
+				if declIdx >= 0 {
+					prefix := rest[:declIdx]
+					if !strings.Contains(prefix, "{") && !strings.Contains(prefix, "}") && !strings.Contains(prefix, ";") {
+						return true
+					}
+				}
+				next := strings.Index(rest, pattern)
+				if next < 0 {
+					break
+				}
+				idx += len(pattern) + next
+			}
+		}
+	}
+	return false
+}
+
+func javaWritePrivateNestedClassManualReviewTest(b *strings.Builder, task *types.CoverageTestTask, testName string, style javaJUnitStyle) {
+	indent := "    "
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = "private nested Java coverage task"
+	}
+	b.WriteString(fmt.Sprintf("\n    @Test\n"))
+	b.WriteString(fmt.Sprintf("    public void %s() {\n", testName))
+	if comment := coverageTaskComment(task); comment != "" {
+		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
+	}
+	javaWriteManualReviewAssumption(b, indent, style, target,
+		"targets a private nested Java type; cover it through a public entry point or review manually.")
 	b.WriteString("    }\n")
 }
 
