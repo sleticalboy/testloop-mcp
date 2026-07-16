@@ -1056,6 +1056,39 @@ func TestGenerateJavaTestsForCoverageTaskCastsNullForOverloadedCollectionConstru
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskMarksGenericArrayVarargsManualReview(t *testing.T) {
+	source := []byte(`public class ArrayUtils {
+    public static <T> T[] addAll(final T[] array1, final T... array2) {
+        try {
+            return array1;
+        } catch (final ArrayStoreException ase) {
+            throw ase;
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "ArrayUtils.java", &types.CoverageTestTask{
+		ID:              "junit-74",
+		Framework:       "junit",
+		Target:          "ArrayUtils.addAll",
+		LineRange:       "5-5",
+		TestName:        "shouldCoverArrayUtilsAddAllGap",
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+		SuggestedInputs: []string{"设置 array1 覆盖未执行分支"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_internal: ") ||
+		!strings.Contains(code, "generic array or varargs type variables") {
+		t.Fatalf("generic array varargs task should be manual review:\n%s", code)
+	}
+	if strings.Contains(code, "T[] result") || strings.Contains(code, "addAll(null, null)") {
+		t.Fatalf("generic array varargs task should not emit unresolved T[] or ambiguous null call:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayNumberState(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray() {

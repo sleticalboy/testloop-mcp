@@ -201,6 +201,12 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 	if comment := coverageTaskComment(task); comment != "" {
 		b.WriteString(fmt.Sprintf("%s    // coverage task: %s\n", indent, truncateJavaComment(comment, 88)))
 	}
+	if task != nil && javaMethodUsesBareTypeVariableArray(m) {
+		javaWriteManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
+			"uses generic array or varargs type variables that cannot be instantiated safely by static generation; cover it through a typed public scenario or review manually.")
+		b.WriteString("    }\n")
+		return
+	}
 
 	// 构造调用参数
 	args := javaBuildArgsForCoverageTask(m.Params, task)
@@ -497,6 +503,37 @@ func javaManualReviewDetailSegments(detail string) []string {
 		return []string{" requires manual review."}
 	}
 	return segments
+}
+
+func javaMethodUsesBareTypeVariableArray(m javaFuncInfo) bool {
+	if javaTypeIsBareTypeVariableArray(m.ReturnType) {
+		return true
+	}
+	for _, p := range m.Params {
+		if javaTypeIsBareTypeVariableArray(p.Type) {
+			return true
+		}
+	}
+	return false
+}
+
+func javaTypeIsBareTypeVariableArray(typ string) bool {
+	typ = strings.TrimSpace(typ)
+	typ = strings.TrimPrefix(typ, "@SuppressWarnings(\"unchecked\") ")
+	typ = strings.TrimSpace(typ)
+	for strings.HasPrefix(typ, "final ") {
+		typ = strings.TrimSpace(strings.TrimPrefix(typ, "final "))
+	}
+	base := strings.TrimSuffix(strings.TrimSuffix(typ, "..."), "[]")
+	if base == typ {
+		return false
+	}
+	base = strings.TrimSpace(base)
+	if len(base) != 1 {
+		return false
+	}
+	r := rune(base[0])
+	return r >= 'A' && r <= 'Z'
 }
 
 func javaCoverageTaskMethodName(m javaFuncInfo, task *types.CoverageTestTask) string {
