@@ -16,6 +16,7 @@
 - Java coverage task 补强 Apache Commons Lang `CharSequenceUtils.toCharArray` 的 `StringBuffer` 分支：按 `line_range` 使用 `new StringBuffer("test")` 并断言字符数组内容，避免用普通 `String` 输入生成通过但不命中目标行的弱 ready。
 - Java coverage task 补强 Apache Commons Lang `StopWatch` 状态路径：`split(String)` 和 `getStopInstant` 的未启动状态会生成 `IllegalStateException` 断言，`getNanoTime` 的 switch default 防御分支会归为 `manual_review_unreachable`，避免普通调用失败或弱 ready。
 - Java coverage task 修正 public nested class 误判：`private enum SplitState` 这类前缀不再导致 `StopWatch.Split` 被归为私有嵌套类型，`StopWatch.Split.toString` 会生成真实构造和精确字符串断言。
+- Java coverage task 补强 Apache Commons Lang `ExceptionUtils.throwUnchecked`：按 `line_range` 生成 `RuntimeException`、`Error` 和 checked-return 断言，避免泛型返回类型 `T` 泄漏到测试代码导致 Maven/JUnit 编译失败。
 - Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil；变参函数的参数校验分支也会进入同一生成路径。
 - Go coverage task 分支匹配会优先使用 `line_range` 区分同一函数内重复的 `err != nil` 分支，并对 `net.Dial("unix", socketPath)` 连接失败分支生成缺失 socket 路径测试输入，避免把后续协议读写错误误判为连接失败。
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。

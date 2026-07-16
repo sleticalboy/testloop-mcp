@@ -1285,6 +1285,122 @@ func TestGenerateJavaTestsForCoverageTaskHandlesCharSequenceUtilsStringBuffer(t 
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesExceptionUtilsThrowUnchecked(t *testing.T) {
+	source := []byte(`public class ExceptionUtils {
+    public static <T> T throwUnchecked(final T throwable) {
+        if (throwable instanceof RuntimeException) {
+            throw (RuntimeException) throwable;
+        }
+        if (throwable instanceof Error) {
+            throw (Error) throwable;
+        }
+        return throwable;
+    }
+
+    public static <T extends Throwable> T throwUnchecked(final T throwable) {
+        if (isUnchecked(throwable)) {
+            throw asRuntimeException(throwable);
+        }
+        return throwable;
+    }
+}
+`)
+
+	tests := []struct {
+		name      string
+		lineRange string
+		want      []string
+		forbidden []string
+	}{
+		{
+			name:      "deprecated runtime branch",
+			lineRange: "1030-1030",
+			want: []string{
+				`final RuntimeException exception = new IllegalStateException("boom");`,
+				`Assertions.assertThrows(RuntimeException.class, () -> ExceptionUtils.throwUnchecked(exception));`,
+				`Assertions.assertSame(exception, thrown);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+		{
+			name:      "deprecated runtime throw",
+			lineRange: "1031-1031",
+			want: []string{
+				`final RuntimeException exception = new IllegalStateException("boom");`,
+				`Assertions.assertThrows(RuntimeException.class, () -> ExceptionUtils.throwUnchecked(exception));`,
+				`Assertions.assertSame(exception, thrown);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+		{
+			name:      "deprecated error branch",
+			lineRange: "1033-1033",
+			want: []string{
+				`final Error error = new AssertionError("boom");`,
+				`Assertions.assertThrows(Error.class, () -> ExceptionUtils.throwUnchecked(error));`,
+				`Assertions.assertSame(error, thrown);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+		{
+			name:      "deprecated error throw",
+			lineRange: "1034-1034",
+			want: []string{
+				`final Error error = new AssertionError("boom");`,
+				`Assertions.assertThrows(Error.class, () -> ExceptionUtils.throwUnchecked(error));`,
+				`Assertions.assertSame(error, thrown);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+		{
+			name:      "deprecated checked return",
+			lineRange: "1036-1036",
+			want: []string{
+				`final String result = ExceptionUtils.throwUnchecked("checked");`,
+				`Assertions.assertEquals("checked", result);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+		{
+			name:      "unchecked throwable branch",
+			lineRange: "1049-1049",
+			want: []string{
+				`final RuntimeException exception = new IllegalStateException("boom");`,
+				`Assertions.assertThrows(RuntimeException.class, () -> ExceptionUtils.throwUnchecked(exception));`,
+				`Assertions.assertSame(exception, thrown);`,
+			},
+			forbidden: []string{`T result`, `ExceptionUtils.throwUnchecked(null)`, `Assertions.assertNotNull(result)`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "ExceptionUtils.java", &types.CoverageTestTask{
+				ID:              "junit-48",
+				Framework:       "junit",
+				Target:          "ExceptionUtils.throwUnchecked",
+				LineRange:       tt.lineRange,
+				TestName:        "shouldCoverExceptionUtilsThrowUncheckedGap",
+				AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+				MissingBranches: []string{"未覆盖 if 分支: throwable instanceof RuntimeException"},
+			})
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range tt.forbidden {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesStopWatchStateBranches(t *testing.T) {
 	source := []byte(`public class StopWatch {
     public void split(final String label) {

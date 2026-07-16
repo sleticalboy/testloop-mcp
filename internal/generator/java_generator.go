@@ -256,6 +256,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteExceptionUtilsThrowUncheckedTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteClassUtilsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -894,6 +898,33 @@ func javaWriteStopWatchSplitTaskAssertion(b *strings.Builder, m javaFuncInfo, ta
 	}
 	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"Split [test, PT0S])\", instance.toString());\n", indent, assertions))
 	return true
+}
+
+func javaWriteExceptionUtilsThrowUncheckedTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "ExceptionUtils" || m.Name != "throwUnchecked" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine {
+		return false
+	}
+	switch start {
+	case 1030, 1031, 1049:
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException exception = new IllegalStateException(\"boom\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException thrown = %s.assertThrows(RuntimeException.class, () -> %s.throwUnchecked(exception));\n", indent, assertions, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(exception, thrown);\n", indent, assertions))
+		return true
+	case 1033, 1034:
+		b.WriteString(fmt.Sprintf("%s    final Error error = new AssertionError(\"boom\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final Error thrown = %s.assertThrows(Error.class, () -> %s.throwUnchecked(error));\n", indent, assertions, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(error, thrown);\n", indent, assertions))
+		return true
+	case 1036:
+		b.WriteString(fmt.Sprintf("%s    final String result = %s.throwUnchecked(\"checked\");\n", indent, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"checked\", result);\n", indent, assertions))
+		return true
+	}
+	return false
 }
 
 func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
