@@ -497,6 +497,14 @@ scripts/validate-java-coverage-top-tasks.sh /path/to/java/project /tmp/testloop-
 
 验证单个 Java coverage task 时，`run_tests` 会优先只运行生成的 `*TestLoopTest` 测试类，并继续生成 JaCoCo report，因此目标行命中校验仍然有效。
 
+如果要快速回归当前固定的 Java 质量样本，可以使用：
+
+```bash
+scripts/validate-java-regression-samples.sh
+```
+
+该脚本默认复用 `/tmp/testloop-commons-lang`、`/tmp/testloop-commons-codec` 以及已有 JSONL 任务文件，覆盖三类样本：真实 ready 且命中目标行、历史假 ready 降级为 `manual_review_unreachable`、内部路径 `manual_review_internal`。项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_JAVA_REGRESSION_*` 环境变量覆盖。
+
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
 ## Roadmap

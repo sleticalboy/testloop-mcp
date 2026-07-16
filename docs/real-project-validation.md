@@ -30,6 +30,8 @@
 
 补充：新增 Java/JUnit 目标行命中校验后，`validate_coverage_task` 会在 ready 前解析 JaCoCo XML 并确认 `coverage_task.line_range` 实际覆盖。本轮先用 Commons Lang `Failable.tryWithResources 651-651` 真实复核，结果仍为 `passed/ready`，metadata 显示 `coverage_target_hit=true`、`coverage_hit_lines=[651]`；随后回归历史弱 ready 的 `ClassUtils.java` top4，`getShortClassName 1111/1114` 与 `hierarchy 1222/1258` 全部保持 `passed/ready`，且 metadata 分别确认命中 `[1111]`、`[1114]`、`[1222]`、`[1258]`；`CharSequenceUtils.toCharArray 419-419` 也确认命中 `[419]`。Commons Codec `Metaphone.metaphone 279-279` 则被新校验推翻旧 ready：`agned` 可以覆盖行为分支，但 JaCoCo 279 行映射到被 `GN` 短路遮蔽的 `GNED` 侧，复跑收敛为 `passed/manual_review_unreachable`。这意味着 Java ready 开始从“生成测试可运行”升级为“生成测试可运行且目标行被确认命中”。
 
+固定回归入口：`scripts/validate-java-regression-samples.sh` 会复用已有 Java coverage task / validation JSONL，默认验证 Commons Lang `junit-44`、`junit-50` 两个真实 ready 命中样本，Commons Codec `junit-130` 历史假 ready 降级样本，以及 Commons Lang `junit-52` 内部手审样本。该脚本会断言 `status=passed`、期望 action 和 ready 样本的 `coverage_target_hit=true`，用于在完整 top-N 真实项目验证之外快速守住 Java 闭环质量。
+
 ## 已稳定的能力
 
 Go 链路已经能覆盖低依赖 utility、HTTP wrapper、JSON/file helper、panic/recover、JWT、泛型指针、nil receiver、Gin response、全局 logger 初始化、Unix socket 协议读取和多返回值 error branch。`validate_coverage_task` 也能把不可达分支、OS/runtime 错误分支、socket write / streaming I/O 时序分支和数据库分支从普通 ready 队列里分离。
