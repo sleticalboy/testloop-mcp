@@ -480,7 +480,7 @@ Java/Maven 或 Gradle 项目可使用：
 scripts/validate-java-coverage-top-tasks.sh /path/to/java/project 20 /tmp/testloop-java-top20.jsonl
 ```
 
-Java 脚本会读取 JaCoCo XML，默认检测 `target/site/jacoco/jacoco.xml` 或 `build/reports/jacoco/test/jacocoTestReport.xml`。常用变量包括 `TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND`、`TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE`、`TESTLOOP_VALIDATE_JAVA_FILE_FILTER`、`TESTLOOP_VALIDATE_JAVA_TASK_IDS`、`TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS`。如果只想回归特定任务，可以使用逗号分隔的 task id：
+Java 脚本会读取 JaCoCo XML，默认检测 `target/site/jacoco/jacoco.xml` 或 `build/reports/jacoco/test/jacocoTestReport.xml`。JS/Python/Java 脚本都支持 `TESTLOOP_VALIDATE_*_TASK_IDS` 按 task id 精确筛选，也支持 `TESTLOOP_VALIDATE_*_TASKS_FILE` 从已有 coverage task / validation JSONL 读取任务并跳过 baseline coverage。Java 常用变量包括 `TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND`、`TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE`、`TESTLOOP_VALIDATE_JAVA_FILE_FILTER`、`TESTLOOP_VALIDATE_JAVA_TASK_IDS`、`TESTLOOP_VALIDATE_JAVA_TASKS_FILE`、`TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS`。如果只想回归特定任务，可以使用逗号分隔的 task id：
 
 ```bash
 TESTLOOP_VALIDATE_JAVA_TASK_IDS='junit-44,junit-130' \
@@ -504,6 +504,14 @@ scripts/validate-java-regression-samples.sh
 ```
 
 该脚本默认复用 `/tmp/testloop-commons-lang`、`/tmp/testloop-commons-codec` 以及已有 JSONL 任务文件，覆盖三类样本：真实 ready 且命中目标行、历史假 ready 降级为 `manual_review_unreachable`、内部路径 `manual_review_internal`。项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_JAVA_REGRESSION_*` 环境变量覆盖。
+
+如果要运行当前维护的固定 smoke 矩阵，可以使用：
+
+```bash
+scripts/validate-regression-smoke.sh
+```
+
+当前默认矩阵覆盖 Java + Python：Java 使用上述三类样本，Python 使用 Click pytest ready 样本。JS 验证脚本已经支持 task JSONL 复用和 task id 筛选，但固定 JS 样本需要基于当前源码快照重新导出后再接入默认矩阵，避免旧临时 JSONL 指向已经变更的源码路径。
 
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 

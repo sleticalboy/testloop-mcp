@@ -33,19 +33,35 @@ func TestValidatePyCoverageTopTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve project dir: %v", err)
 	}
-	baselineRoot := filepath.Join(t.TempDir(), "baseline")
-	logPyValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
-	if err := copyPyProjectTree(projectDir, baselineRoot); err != nil {
-		t.Fatalf("copy baseline project: %v", err)
-	}
-	logPyValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
+	tasksFile := os.Getenv("TESTLOOP_VALIDATE_PY_TASKS_FILE")
+	taskIDFilter := os.Getenv("TESTLOOP_VALIDATE_PY_TASK_IDS")
+	baselineRoot := projectDir
+	var tasks []types.CoverageTestTask
+	if strings.TrimSpace(tasksFile) != "" {
+		tasks = readCoverageTasksJSONL(t, tasksFile)
+		logPyValidationStage(t, "tasks.file.loaded path=%s count=%d", tasksFile, len(tasks))
+	} else {
+		baselineRoot = filepath.Join(t.TempDir(), "baseline")
+		logPyValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
+		if err := copyPyProjectTree(projectDir, baselineRoot); err != nil {
+			t.Fatalf("copy baseline project: %v", err)
+		}
+		logPyValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
 
-	report := parsePyCoverageReportForProject(t, baselineRoot, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_PY_TEST_ARGS")), baselineTimeout)
-	tasks := filterPyCoverageTasks(report.TestTasks, os.Getenv("TESTLOOP_VALIDATE_PY_FILE_FILTER"))
+		report := parsePyCoverageReportForProject(t, baselineRoot, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_PY_TEST_ARGS")), baselineTimeout)
+		tasks = report.TestTasks
+	}
+	tasks = filterCoverageTasksByFileAndIDs(tasks, os.Getenv("TESTLOOP_VALIDATE_PY_FILE_FILTER"), taskIDFilter)
+	if len(tasks) == 0 {
+		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q tasks_file=%q", os.Getenv("TESTLOOP_VALIDATE_PY_FILE_FILTER"), taskIDFilter, tasksFile)
+	}
+	if taskIDFilter != "" && len(tasks) < limit {
+		limit = len(tasks)
+	}
 	if len(tasks) < limit {
 		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
-	logPyValidationStage(t, "tasks.selected count=%d limit=%d filter=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_PY_FILE_FILTER"))
+	logPyValidationStage(t, "tasks.selected count=%d limit=%d filter=%q task_ids=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_PY_FILE_FILTER"), taskIDFilter)
 
 	outFile, err := os.Create(outputPath)
 	if err != nil {
@@ -252,6 +268,12 @@ func rewritePyValidationPath(baselineRoot string, taskRoot string, value string)
 	if filepath.IsAbs(value) {
 		if rel, err := filepath.Rel(baselineRoot, value); err == nil && !strings.HasPrefix(rel, "..") {
 			return filepath.Join(taskRoot, rel)
+		}
+		if candidate := findValidationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/tests/", "/test/"}, []string{"src", "tests", "test"}); candidate != "" {
+			return candidate
+		}
+		if candidate := validationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/tests/", "/test/"}, []string{"src", "tests", "test"}); candidate != "" {
+			return candidate
 		}
 		return value
 	}

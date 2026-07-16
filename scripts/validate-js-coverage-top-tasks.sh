@@ -28,6 +28,12 @@ Environment:
                                       generated task validation. Use {path} for the generated
                                       test file, e.g. "npx egg-bin test --timeout 60000 {path}".
   TESTLOOP_VALIDATE_JS_FILE_FILTER  Optional substring filter for task source files
+  TESTLOOP_VALIDATE_JS_TASK_IDS     Optional comma-separated coverage task IDs to
+                                      validate exactly, for example: vitest-1,vitest-8.
+  TESTLOOP_VALIDATE_JS_TASKS_FILE   Optional JSONL file containing coverage tasks or
+                                      validate_coverage_task outputs. When set, skips
+                                      baseline coverage generation and reads tasks from
+                                      this file.
   TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS
                                       Optional timeout in seconds used as the default for
                                       baseline coverage and each task validation stage.
@@ -56,8 +62,41 @@ fi
 
 project_dir="$1"
 framework="${2:-${TESTLOOP_VALIDATE_JS_FRAMEWORK:-vitest}}"
-limit="${3:-${TESTLOOP_VALIDATE_JS_TASK_LIMIT:-20}}"
+tasks_file="${TESTLOOP_VALIDATE_JS_TASKS_FILE:-}"
 output="${4:-${TESTLOOP_VALIDATE_JS_OUTPUT:-}}"
+if [[ -n "$tasks_file" && ! -f "$tasks_file" ]]; then
+  echo "tasks file does not exist: $tasks_file" >&2
+  exit 1
+fi
+
+task_ids_count() {
+  printf '%s' "${TESTLOOP_VALIDATE_JS_TASK_IDS:-}" | tr ',' '\n' | awk 'NF {count++} END {print count+0}'
+}
+
+tasks_file_count() {
+  awk 'NF {count++} END {print count+0}' "$tasks_file"
+}
+
+inferred_limit() {
+  if [[ -n "${TESTLOOP_VALIDATE_JS_TASK_IDS:-}" ]]; then
+    task_ids_count
+  elif [[ -n "$tasks_file" ]]; then
+    tasks_file_count
+  else
+    printf '20\n'
+  fi
+}
+
+if [[ $# -eq 3 && ( -n "${TESTLOOP_VALIDATE_JS_TASK_IDS:-}" || -n "$tasks_file" ) && ! "$3" =~ ^[0-9]+$ ]]; then
+  limit="$(inferred_limit)"
+  output="$3"
+elif [[ $# -ge 3 ]]; then
+  limit="$3"
+elif [[ -n "${TESTLOOP_VALIDATE_JS_TASK_LIMIT:-}" ]]; then
+  limit="$TESTLOOP_VALIDATE_JS_TASK_LIMIT"
+else
+  limit="$(inferred_limit)"
+fi
 
 if [[ ! -d "$project_dir" ]]; then
   echo "project directory does not exist: $project_dir" >&2

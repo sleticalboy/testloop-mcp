@@ -42,24 +42,40 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve project dir: %v", err)
 	}
-	baselineRoot := filepath.Join(t.TempDir(), "baseline")
-	logJSValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
-	if err := copyJSProjectTree(projectDir, baselineRoot); err != nil {
-		t.Fatalf("copy baseline project: %v", err)
-	}
-	logJSValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
-	logJSValidationStage(t, "baseline.link.start extra=%q", os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS"))
-	if err := linkJSExtraResources(projectDir, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
-		t.Fatalf("link baseline extra resources: %v", err)
-	}
-	logJSValidationStage(t, "baseline.link.done")
+	tasksFile := os.Getenv("TESTLOOP_VALIDATE_JS_TASKS_FILE")
+	taskIDFilter := os.Getenv("TESTLOOP_VALIDATE_JS_TASK_IDS")
+	baselineRoot := projectDir
+	var tasks []types.CoverageTestTask
+	if strings.TrimSpace(tasksFile) != "" {
+		tasks = readCoverageTasksJSONL(t, tasksFile)
+		logJSValidationStage(t, "tasks.file.loaded path=%s count=%d", tasksFile, len(tasks))
+	} else {
+		baselineRoot = filepath.Join(t.TempDir(), "baseline")
+		logJSValidationStage(t, "baseline.copy.start project=%s dest=%s", projectDir, baselineRoot)
+		if err := copyJSProjectTree(projectDir, baselineRoot); err != nil {
+			t.Fatalf("copy baseline project: %v", err)
+		}
+		logJSValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
+		logJSValidationStage(t, "baseline.link.start extra=%q", os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS"))
+		if err := linkJSExtraResources(projectDir, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS")); err != nil {
+			t.Fatalf("link baseline extra resources: %v", err)
+		}
+		logJSValidationStage(t, "baseline.link.done")
 
-	report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")), baselineTimeout)
-	tasks := jsCoverageTasksForValidationFilter(report, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
+		report := parseJSCoverageReportForProject(t, baselineRoot, framework, strings.Fields(os.Getenv("TESTLOOP_VALIDATE_JS_TEST_ARGS")), baselineTimeout)
+		tasks = jsCoverageTasksForValidationFilter(report, baselineRoot, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
+	}
+	tasks = filterCoverageTasksByFileAndIDs(tasks, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"), taskIDFilter)
+	if len(tasks) == 0 {
+		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q tasks_file=%q", os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"), taskIDFilter, tasksFile)
+	}
+	if taskIDFilter != "" && len(tasks) < limit {
+		limit = len(tasks)
+	}
 	if len(tasks) < limit {
 		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
-	logJSValidationStage(t, "tasks.selected count=%d limit=%d filter=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"))
+	logJSValidationStage(t, "tasks.selected count=%d limit=%d filter=%q task_ids=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_JS_FILE_FILTER"), taskIDFilter)
 
 	outFile, err := os.Create(outputPath)
 	if err != nil {
@@ -474,6 +490,14 @@ func rewriteJSValidationPath(baselineRoot string, taskRoot string, value string)
 	for _, root := range roots {
 		if rel, err := filepath.Rel(root, cleanValue); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return filepath.Join(taskRoot, rel)
+		}
+	}
+	if filepath.IsAbs(value) {
+		if candidate := findValidationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/test/", "/tests/"}, []string{"src", "test", "tests"}); candidate != "" {
+			return candidate
+		}
+		if candidate := validationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/test/", "/tests/"}, []string{"src", "test", "tests"}); candidate != "" {
+			return candidate
 		}
 	}
 	return rewriteGoValidationPath(baselineRoot, taskRoot, value)
