@@ -297,6 +297,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
+		if javaWriteStringEncoderObjectEncodeTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -931,6 +935,28 @@ func javaWritePhoneticEngineTaskAssertion(b *strings.Builder, m javaFuncInfo, ta
 	default:
 		return false
 	}
+}
+
+func javaWriteStringEncoderObjectEncodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if task == nil || m.Name != "encode" || len(m.Params) != 1 || m.Params[0].Type != "Object" || !javaFuncThrows(m, "EncoderException") {
+		return false
+	}
+	if javaTaskMentions(task, "错误") || javaTaskMentions(task, "not of type") || javaTaskMentions(task, "!(obj instanceof String") {
+		b.WriteString(fmt.Sprintf("%s    %s.assertThrows(EncoderException.class, () -> instance.encode(new Object()));\n", indent, assertions))
+		return true
+	}
+	b.WriteString(fmt.Sprintf("%s    Object result = instance.encode(\"test\");\n", indent))
+	b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+	return true
+}
+
+func javaFuncThrows(m javaFuncInfo, exception string) bool {
+	for _, throws := range m.Throws {
+		if throws == exception || strings.HasSuffix(throws, "."+exception) {
+			return true
+		}
+	}
+	return false
 }
 
 func javaWriteXMLTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

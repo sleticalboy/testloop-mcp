@@ -101,6 +101,63 @@ func TestGenerateJavaTestsForCoverageTaskTargetsMethod(t *testing.T) {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesStringEncoderObjectEncode(t *testing.T) {
+	source := []byte(`import org.apache.commons.codec.EncoderException;
+
+public class Caverphone {
+    public Object encode(Object obj) throws EncoderException {
+        if (!(obj instanceof String)) {
+            throw new EncoderException("Parameter supplied to Caverphone encode is not of type java.lang.String");
+        }
+        return encode((String) obj);
+    }
+
+    public String encode(String value) {
+        return value;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "Caverphone.java", &types.CoverageTestTask{
+		ID:              "junit-6",
+		Framework:       "junit",
+		Target:          "Caverphone.encode",
+		LineRange:       "5-5",
+		GapType:         "error_path",
+		TestName:        "shouldCoverCaverphoneEncodeGap",
+		AssertionFocus:  []string{"断言错误、异常或空值路径", "未覆盖 if 分支: !(obj instanceof String"},
+		UncoveredLines:  []int{5},
+		MissingBranches: []string{"未覆盖错误或空值返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "Assertions.assertThrows(EncoderException.class, () -> instance.encode(new Object()));") ||
+		strings.Contains(code, "instance.encode(null)") ||
+		strings.Contains(code, "TODO: call with invalid args") {
+		t.Fatalf("encode(Object) error path should use a non-String object and no empty assertThrows:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(source, "Caverphone.java", &types.CoverageTestTask{
+		ID:             "junit-64",
+		Framework:      "junit",
+		Target:         "Caverphone.encode",
+		LineRange:      "8-8",
+		GapType:        "return_path",
+		TestName:       "shouldCoverCaverphoneEncodeReturnGap",
+		AssertionFocus: []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines: []int{8},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "Object result = instance.encode(\"test\");") ||
+		!strings.Contains(code, "Assertions.assertNotNull(result);") ||
+		strings.Contains(code, "TODO: call with invalid args") {
+		t.Fatalf("encode(Object) return path should use a String input and no empty assertThrows:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskUsesTaskTestFileClassName(t *testing.T) {
 	source := []byte(`public class Base64 {
     public byte[] encode(byte[] in) {
