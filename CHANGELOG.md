@@ -12,6 +12,7 @@
 - Java coverage task 命中确认不可达的公共路径时可生成 `manual_review_unreachable` 手审 smoke，`validate_coverage_task` 会识别该标记，避免把“测试通过但未命中目标缺口”的弱用例暴露为 ready。
 - Java coverage task 补强 Commons Codec `Metaphone` / `Soundex` 公共 encoder 场景：`Metaphone.metaphone` silent `G` 分支使用 line-specific `agned` 输入，`Soundex.getMaxLength` / `setMaxLength` 断言真实默认值和状态变化。
 - Java coverage task 命中裸类型变量数组或 varargs（例如 `T[]` / `T...`）时会生成 `manual_review_internal` 手审 smoke，避免输出不可编译的 `T[] result` 或重载歧义的 `addAll(null, null)`。
+- Java coverage task 补强 Apache Commons Lang `ClassUtils` 公共 helper 场景：`getShortClassName` 会用 JVM 数组编码输入覆盖对象数组和 primitive array 分支，`hierarchy` 会调用 `iterator.remove()` 覆盖 `UnsupportedOperationException` 路径，避免把未命中缺口的弱 ready 暴露给 Agent。
 - Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil；变参函数的参数校验分支也会进入同一生成路径。
 - Go coverage task 分支匹配会优先使用 `line_range` 区分同一函数内重复的 `err != nil` 分支，并对 `net.Dial("unix", socketPath)` 连接失败分支生成缺失 socket 路径测试输入，避免把后续协议读写错误误判为连接失败。
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。

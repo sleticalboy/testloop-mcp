@@ -1089,6 +1089,116 @@ func TestGenerateJavaTestsForCoverageTaskMarksGenericArrayVarargsManualReview(t 
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesClassUtilsBranches(t *testing.T) {
+	source := []byte(`public class ClassUtils {
+    public enum Interfaces {
+        INCLUDE,
+        EXCLUDE
+    }
+
+    public static String getShortClassName(String className) {
+        if (className.startsWith("[")) {
+            if (className.charAt(0) == 'L' && className.charAt(className.length() - 1) == ';') {
+                return "String[]";
+            }
+            if (className.equals("I")) {
+                return "int[]";
+            }
+        }
+        return className;
+    }
+
+    public static Iterable<Class<?>> hierarchy(final Class<?> type) {
+        return hierarchy(type, Interfaces.EXCLUDE);
+    }
+
+    public static Iterable<Class<?>> hierarchy(final Class<?> type, final Interfaces interfacesBehavior) {
+        return java.util.Collections.singletonList(type);
+    }
+}
+`)
+
+	tests := []struct {
+		name      string
+		task      types.CoverageTestTask
+		want      []string
+		forbidden []string
+	}{
+		{
+			name: "object array encoded name",
+			task: types.CoverageTestTask{
+				ID:              "junit-45",
+				Framework:       "junit",
+				Target:          "ClassUtils.getShortClassName",
+				LineRange:       "1111-1111",
+				TestName:        "shouldCoverClassUtilsGetShortClassNameGap",
+				MissingBranches: []string{"未覆盖 if 分支: className.charAt(0"},
+			},
+			want:      []string{`ClassUtils.getShortClassName("[Ljava.lang.String;")`, `Assertions.assertEquals("String[]", result);`},
+			forbidden: []string{`ClassUtils.getShortClassName("test")`},
+		},
+		{
+			name: "primitive array encoded name",
+			task: types.CoverageTestTask{
+				ID:              "junit-46",
+				Framework:       "junit",
+				Target:          "ClassUtils.getShortClassName",
+				LineRange:       "1114-1114",
+				TestName:        "shouldCoverClassUtilsGetShortClassNameGap",
+				MissingBranches: []string{"未覆盖 if 分支: REVERSE_ABBREVIATION_MAP.containsKey(className"},
+			},
+			want:      []string{`ClassUtils.getShortClassName("[I")`, `Assertions.assertEquals("int[]", result);`},
+			forbidden: []string{`ClassUtils.getShortClassName("test")`},
+		},
+		{
+			name: "hierarchy exclude remove",
+			task: types.CoverageTestTask{
+				ID:        "junit-77",
+				Framework: "junit",
+				Target:    "ClassUtils.hierarchy",
+				LineRange: "1222-1222",
+				TestName:  "shouldCoverClassUtilsHierarchyGap",
+			},
+			want:      []string{`ClassUtils.hierarchy(String.class).iterator()`, `Assertions.assertThrows(UnsupportedOperationException.class, iterator::remove);`},
+			forbidden: []string{`ClassUtils.hierarchy(null, null)`},
+		},
+		{
+			name: "hierarchy include remove",
+			task: types.CoverageTestTask{
+				ID:        "junit-78",
+				Framework: "junit",
+				Target:    "ClassUtils.hierarchy",
+				LineRange: "1258-1258",
+				TestName:  "shouldCoverClassUtilsHierarchyGap",
+			},
+			want:      []string{`ClassUtils.hierarchy(java.util.ArrayList.class, ClassUtils.Interfaces.INCLUDE).iterator()`, `Assertions.assertThrows(UnsupportedOperationException.class, iterator::remove);`},
+			forbidden: []string{`ClassUtils.hierarchy(null, null)`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "ClassUtils.java", &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range tt.forbidden {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+			if strings.Contains(code, "manual_review_internal:") {
+				t.Fatalf("ClassUtils public helper should generate ready test, got manual review:\n%s", code)
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayNumberState(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray() {

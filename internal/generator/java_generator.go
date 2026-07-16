@@ -256,6 +256,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteClassUtilsTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteXMLTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -767,6 +771,38 @@ func javaWriteJSONArrayTaskAssertion(b *strings.Builder, m javaFuncInfo, task *t
 func javaHasParamType(m javaFuncInfo, typ string) bool {
 	for _, param := range m.Params {
 		if param.Type == typ || strings.HasSuffix(param.Type, "."+typ) {
+			return true
+		}
+	}
+	return false
+}
+
+func javaWriteClassUtilsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "ClassUtils" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	switch m.Name {
+	case "getShortClassName":
+		switch {
+		case hasLine && start == 1111:
+			b.WriteString(fmt.Sprintf("%s    String result = ClassUtils.getShortClassName(\"[Ljava.lang.String;\");\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"String[]\", result);\n", indent, assertions))
+			return true
+		case hasLine && start == 1114:
+			b.WriteString(fmt.Sprintf("%s    String result = ClassUtils.getShortClassName(\"[I\");\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"int[]\", result);\n", indent, assertions))
+			return true
+		}
+	case "hierarchy":
+		switch {
+		case hasLine && start == 1222:
+			b.WriteString(fmt.Sprintf("%s    java.util.Iterator<Class<?>> iterator = ClassUtils.hierarchy(String.class).iterator();\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(UnsupportedOperationException.class, iterator::remove);\n", indent, assertions))
+			return true
+		case hasLine && start == 1258:
+			b.WriteString(fmt.Sprintf("%s    java.util.Iterator<Class<?>> iterator = ClassUtils.hierarchy(java.util.ArrayList.class, ClassUtils.Interfaces.INCLUDE).iterator();\n", indent))
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(UnsupportedOperationException.class, iterator::remove);\n", indent, assertions))
 			return true
 		}
 	}
