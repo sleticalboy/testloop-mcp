@@ -146,6 +146,13 @@ func coverageTaskUnreachableReason(task *types.CoverageTestTask, generated *type
 	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
 		return ""
 	}
+	if strings.Contains(generated.Preview, "manual_review_unreachable:") {
+		target := strings.TrimSpace(task.Target)
+		if target == "" {
+			target = "coverage task"
+		}
+		return fmt.Sprintf("%s appears unreachable through the generated public test path; review the coverage report or source branch manually", target)
+	}
 	if task.Target == "init" && strings.Contains(generated.Preview, `t.Skip("init functions cannot be called directly; review package initialization manually")`) {
 		return "Go init functions cannot be called directly from tests; review package initialization side effects manually"
 	}

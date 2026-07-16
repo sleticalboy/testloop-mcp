@@ -158,6 +158,62 @@ public class Caverphone {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskMarksMatchRatingEncodeLine145Unreachable(t *testing.T) {
+	source := []byte(`public class MatchRatingApproachEncoder {
+    public final String encode(String name) {
+        if (name == null || "".equalsIgnoreCase(name) || " ".equalsIgnoreCase(name) || name.length() == 1) {
+            return "";
+        }
+        name = cleanName(name);
+        if (" ".equals(name) || name.isEmpty()) {
+            return "";
+        }
+        name = removeVowels(name);
+        if (" ".equals(name) || name.isEmpty()) {
+            return "";
+        }
+        return name;
+    }
+
+    String cleanName(final String name) {
+        return name.toUpperCase();
+    }
+
+    String removeVowels(String name) {
+        final String firstLetter = name.substring(0, 1);
+        name = name.replace("A", "");
+        name = name.replace("E", "");
+        name = name.replace("I", "");
+        name = name.replace("O", "");
+        name = name.replace("U", "");
+        if ("AEIOU".contains(firstLetter)) {
+            return firstLetter + name;
+        }
+        return name;
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "MatchRatingApproachEncoder.java", &types.CoverageTestTask{
+		ID:             "junit-70",
+		Framework:      "junit",
+		Target:         "MatchRatingApproachEncoder.encode",
+		LineRange:      "145-145",
+		GapType:        "return_path",
+		TestName:       "shouldCoverMatchRatingApproachEncoderEncodeGap",
+		AssertionFocus: []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines: []int{145},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "manual_review_unreachable: ") ||
+		!strings.Contains(code, "line 145 is unreachable") ||
+		strings.Contains(code, "instance.encode(\"test\")") {
+		t.Fatalf("MatchRatingApproachEncoder line 145 should be unreachable manual-review, not weak ready:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesPrivateNestedJavaClass(t *testing.T) {
 	source := []byte(`public class DaitchMokotoffSoundex {
     private static final class Branch {

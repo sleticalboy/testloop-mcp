@@ -902,3 +902,23 @@ func TestHandleValidateCoverageTaskReportsGenerationError(t *testing.T) {
 		t.Fatalf("structured output = %#v, want generation_error validation output", structured)
 	}
 }
+
+func TestCoverageTaskUnreachableReasonRecognizesGeneratedMarker(t *testing.T) {
+	task := &types.CoverageTestTask{
+		Framework: "junit",
+		File:      "MatchRatingApproachEncoder.java",
+		Target:    "MatchRatingApproachEncoder.encode",
+	}
+	generated := &types.GenerateTestsOutput{
+		Preview: `org.junit.jupiter.api.Assumptions.assumeTrue(false, "manual_review_unreachable: MatchRatingApproachEncoder.encode");`,
+	}
+	result := &types.TestResult{
+		Status:  "pass",
+		Skipped: 1,
+	}
+
+	reason := coverageTaskUnreachableReason(task, generated, result)
+	if !strings.Contains(reason, "MatchRatingApproachEncoder.encode appears unreachable") {
+		t.Fatalf("unexpected unreachable reason: %q", reason)
+	}
+}

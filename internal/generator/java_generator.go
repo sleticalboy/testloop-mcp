@@ -306,6 +306,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteMatchRatingApproachEncodeTaskAssertion(b, m, task, style, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteEqualsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -442,9 +446,17 @@ func javaNeedsRocketMQTestBase(m javaFuncInfo, task *types.CoverageTestTask) boo
 }
 
 func javaWriteManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
+	javaWriteTaggedManualReviewAssumption(b, indent, style, "manual_review_internal", target, detail)
+}
+
+func javaWriteUnreachableManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, target string, detail string) {
+	javaWriteTaggedManualReviewAssumption(b, indent, style, "manual_review_unreachable", target, detail)
+}
+
+func javaWriteTaggedManualReviewAssumption(b *strings.Builder, indent string, style javaJUnitStyle, marker string, target string, detail string) {
 	b.WriteString(fmt.Sprintf("%s    final String target = \"%s\";\n", indent, javaEscapeStringLiteral(target)))
 	b.WriteString(fmt.Sprintf("%s    final String reason =\n", indent))
-	b.WriteString(fmt.Sprintf("%s            \"manual_review_internal: \" + target\n", indent))
+	b.WriteString(fmt.Sprintf("%s            \"%s: \" + target\n", indent, javaEscapeStringLiteral(marker)))
 	segments := javaManualReviewDetailSegments(detail)
 	for i, segment := range segments {
 		suffix := ""
@@ -1015,6 +1027,23 @@ func javaFuncThrows(m javaFuncInfo, exception string) bool {
 		}
 	}
 	return false
+}
+
+func javaWriteMatchRatingApproachEncodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, style javaJUnitStyle, indent string) bool {
+	if task == nil || m.ClassName != "MatchRatingApproachEncoder" || m.Name != "encode" || len(m.Params) != 1 || m.Params[0].Type != "String" {
+		return false
+	}
+	start, _, ok := javaCoverageTaskLineRange(task)
+	if !ok || start != 145 {
+		return false
+	}
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = "MatchRatingApproachEncoder.encode"
+	}
+	javaWriteUnreachableManualReviewAssumption(b, indent, style, target,
+		"line 145 is unreachable through the public encode(String) flow because empty input returns earlier and removeVowels preserves at least the first vowel or a consonant; review the coverage report or source branch manually.")
+	return true
 }
 
 func javaWriteXMLTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

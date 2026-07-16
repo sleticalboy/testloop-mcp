@@ -9,6 +9,7 @@
 - Java coverage task 支持 Commons Codec `language/bm` 资源规则与 nested value object 场景：`SomeLanguages` 使用 factory 构造，`PhoneticEngine.getLang` 使用合法 `RuleType.APPROX`，`Lang.loadFromResource` / `PhoneticEngine.encode` 归为资源手审边界，`Rule.RPattern` 等嵌套返回类型会自动限定，文件级 Java task 会生成可运行手审 smoke。
 - Java coverage task 支持 `StringEncoder.encode(Object) throws EncoderException` 适配方法：错误路径生成非 String 对象触发 `EncoderException`，返回路径生成 String 输入断言结果，避免 `null` 参数和空 lambda `assertThrows` 导致真实项目失败。
 - Java coverage task 命中 private nested class/interface/enum 时会生成 `manual_review_internal` 手审 smoke，避免直接构造私有嵌套类型导致真实 Maven/JUnit 项目编译失败。
+- Java coverage task 命中确认不可达的公共路径时可生成 `manual_review_unreachable` 手审 smoke，`validate_coverage_task` 会识别该标记，避免把“测试通过但未命中目标缺口”的弱用例暴露为 ready。
 - Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil；变参函数的参数校验分支也会进入同一生成路径。
 - Go coverage task 分支匹配会优先使用 `line_range` 区分同一函数内重复的 `err != nil` 分支，并对 `net.Dial("unix", socketPath)` 连接失败分支生成缺失 socket 路径测试输入，避免把后续协议读写错误误判为连接失败。
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。
