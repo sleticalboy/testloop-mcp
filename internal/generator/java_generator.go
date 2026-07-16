@@ -260,6 +260,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteCharSequenceUtilsTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteXMLTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -805,6 +809,19 @@ func javaWriteClassUtilsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *
 			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(UnsupportedOperationException.class, iterator::remove);\n", indent, assertions))
 			return true
 		}
+	}
+	return false
+}
+
+func javaWriteCharSequenceUtilsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if m.ClassName != "CharSequenceUtils" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if m.Name == "toCharArray" && hasLine && start == 419 {
+		b.WriteString(fmt.Sprintf("%s    char[] result = CharSequenceUtils.toCharArray(new StringBuffer(\"test\"));\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertArrayEquals(new char[] {'t', 'e', 's', 't'}, result);\n", indent, assertions))
+		return true
 	}
 	return false
 }

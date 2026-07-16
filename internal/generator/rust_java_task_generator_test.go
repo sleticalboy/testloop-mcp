@@ -1199,6 +1199,47 @@ func TestGenerateJavaTestsForCoverageTaskHandlesClassUtilsBranches(t *testing.T)
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesCharSequenceUtilsStringBuffer(t *testing.T) {
+	source := []byte(`public class CharSequenceUtils {
+    public static char[] toCharArray(final CharSequence source) {
+        if (source instanceof String) {
+            return ((String) source).toCharArray();
+        }
+        if (source instanceof StringBuffer) {
+            return source.toString().toCharArray();
+        }
+        return new char[0];
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "CharSequenceUtils.java", &types.CoverageTestTask{
+		ID:              "junit-44",
+		Framework:       "junit",
+		Target:          "CharSequenceUtils.toCharArray",
+		LineRange:       "419-419",
+		TestName:        "shouldCoverCharSequenceUtilsToCharArrayGap",
+		MissingBranches: []string{"未覆盖 if 分支: source instanceof StringBuffer"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		`CharSequenceUtils.toCharArray(new StringBuffer("test"))`,
+		`Assertions.assertArrayEquals(new char[] {'t', 'e', 's', 't'}, result);`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, `CharSequenceUtils.toCharArray("test")`) {
+		t.Fatalf("CharSequenceUtils.toCharArray StringBuffer task should not use String input:\n%s", code)
+	}
+	if strings.Contains(code, "manual_review_internal:") {
+		t.Fatalf("CharSequenceUtils.toCharArray StringBuffer task should generate ready test:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayNumberState(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray() {
