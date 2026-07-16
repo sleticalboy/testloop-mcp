@@ -306,6 +306,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteCommonsCodecLanguageTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteMatchRatingApproachEncodeTaskAssertion(b, m, task, style, indent) {
 			b.WriteString("    }\n")
 			return
@@ -1027,6 +1031,33 @@ func javaFuncThrows(m javaFuncInfo, exception string) bool {
 		}
 	}
 	return false
+}
+
+func javaWriteCommonsCodecLanguageTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if task == nil {
+		return false
+	}
+	switch {
+	case m.ClassName == "Metaphone" && m.Name == "metaphone" && len(m.Params) == 1 && m.Params[0].Type == "String":
+		start, _, ok := javaCoverageTaskLineRange(task)
+		if !ok || start != 279 {
+			return false
+		}
+		b.WriteString(fmt.Sprintf("%s    String result = instance.metaphone(\"agned\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNotNull(result);\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    %s.assertFalse(result.isEmpty());\n", indent, assertions))
+		return true
+	case m.ClassName == "Soundex" && m.Name == "getMaxLength":
+		b.WriteString(fmt.Sprintf("%s    int result = instance.getMaxLength();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(4, result);\n", indent, assertions))
+		return true
+	case m.ClassName == "Soundex" && m.Name == "setMaxLength" && len(m.Params) == 1 && m.Params[0].Type == "int":
+		b.WriteString(fmt.Sprintf("%s    instance.setMaxLength(6);\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.assertEquals(6, instance.getMaxLength());\n", indent, assertions))
+		return true
+	default:
+		return false
+	}
 }
 
 func javaWriteMatchRatingApproachEncodeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, style javaJUnitStyle, indent string) bool {

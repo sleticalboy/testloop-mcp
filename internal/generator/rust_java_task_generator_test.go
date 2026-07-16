@@ -214,6 +214,96 @@ func TestGenerateJavaTestsForCoverageTaskMarksMatchRatingEncodeLine145Unreachabl
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesCommonsCodecLanguagePublicEncoders(t *testing.T) {
+	metaphoneSource := []byte(`public class Metaphone {
+    public String metaphone(String txt) {
+        String local = txt.toUpperCase();
+        for (int n = 0; n < local.length(); n++) {
+            switch (local.charAt(n)) {
+                case 'G':
+                    if (n > 0 && local.startsWith("GN", n)) {
+                        break;
+                    }
+                    return "K";
+                default:
+                    break;
+            }
+        }
+        return "A";
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(metaphoneSource, "Metaphone.java", &types.CoverageTestTask{
+		ID:             "junit-130",
+		Framework:      "junit",
+		Target:         "Metaphone.metaphone",
+		LineRange:      "279-279",
+		GapType:        "statement",
+		TestName:       "shouldCoverMetaphoneMetaphoneGap",
+		AssertionFocus: []string{"断言未覆盖语句执行后的可观察结果"},
+		UncoveredLines: []int{279},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "String result = instance.metaphone(\"agned\");") ||
+		!strings.Contains(code, "Assertions.assertFalse(result.isEmpty());") ||
+		strings.Contains(code, "instance.metaphone(\"test\")") {
+		t.Fatalf("Metaphone silent G task should use a line-specific GN input:\n%s", code)
+	}
+
+	soundexSource := []byte(`public class Soundex {
+    private int maxLength = 4;
+
+    public int getMaxLength() {
+        return this.maxLength;
+    }
+
+    public void setMaxLength(final int maxLength) {
+        this.maxLength = maxLength;
+    }
+}
+`)
+
+	_, code, err = GenerateJavaTestsForCoverageTask(soundexSource, "Soundex.java", &types.CoverageTestTask{
+		ID:             "junit-131",
+		Framework:      "junit",
+		Target:         "Soundex.getMaxLength",
+		LineRange:      "4-4",
+		GapType:        "return_path",
+		TestName:       "shouldCoverSoundexGetMaxLengthGap",
+		AssertionFocus: []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines: []int{4},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "int result = instance.getMaxLength();") ||
+		!strings.Contains(code, "Assertions.assertEquals(4, result);") ||
+		strings.Contains(code, "Assertions.assertEquals(0, result);") {
+		t.Fatalf("Soundex getMaxLength should assert the default codec length:\n%s", code)
+	}
+
+	_, code, err = GenerateJavaTestsForCoverageTask(soundexSource, "Soundex.java", &types.CoverageTestTask{
+		ID:             "junit-132",
+		Framework:      "junit",
+		Target:         "Soundex.setMaxLength",
+		LineRange:      "8-9",
+		GapType:        "statement",
+		TestName:       "shouldCoverSoundexSetMaxLengthGap",
+		AssertionFocus: []string{"断言未覆盖语句执行后的可观察结果"},
+		UncoveredLines: []int{8, 9},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	if !strings.Contains(code, "instance.setMaxLength(6);") ||
+		!strings.Contains(code, "Assertions.assertEquals(6, instance.getMaxLength());") {
+		t.Fatalf("Soundex setMaxLength should assert the visible state change:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesPrivateNestedJavaClass(t *testing.T) {
 	source := []byte(`public class DaitchMokotoffSoundex {
     private static final class Branch {
