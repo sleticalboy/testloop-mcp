@@ -340,6 +340,51 @@ func TestGenerateJavaTestsForCoverageTaskHandlesPrivateNestedJavaClass(t *testin
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesPublicNestedJavaClassWithPrivateMembers(t *testing.T) {
+	source := []byte(`public class StopWatch {
+    private int runningState;
+    private enum SplitState {
+        SPLIT, UNSPLIT
+    }
+
+    public static final class Split {
+        public Split(String label, java.time.Duration duration) {
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Split [%s, %s])", "test", java.time.Duration.ZERO);
+        }
+    }
+}
+`)
+
+	_, code, err := GenerateJavaTestsForCoverageTask(source, "StopWatch.java", &types.CoverageTestTask{
+		ID:              "junit-190",
+		Framework:       "junit",
+		Target:          "StopWatch.Split.toString",
+		LineRange:       "118-118",
+		TestName:        "shouldCoverStopWatchSplitToStringGap",
+		AssertionFocus:  []string{"断言未覆盖返回路径的具体结果"},
+		UncoveredLines:  []int{118},
+		MissingBranches: []string{"未覆盖返回路径"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"StopWatch.Split instance = new StopWatch.Split(\"test\", java.time.Duration.ZERO);",
+		"Assertions.assertEquals(\"Split [test, PT0S])\", instance.toString());",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+	if strings.Contains(code, "manual_review_internal:") || strings.Contains(code, "new StopWatch.Split()") {
+		t.Fatalf("public nested class task should generate a real assertion:\n%s", code)
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskUsesTaskTestFileClassName(t *testing.T) {
 	source := []byte(`public class Base64 {
     public byte[] encode(byte[] in) {

@@ -320,6 +320,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteStopWatchSplitTaskAssertion(b, m, task, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteStringEncoderObjectEncodeTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -393,24 +397,45 @@ func javaCoverageTaskTargetsPrivateNestedClass(source []byte, task *types.Covera
 		if name == "" {
 			continue
 		}
-		for _, keyword := range []string{"class", "interface", "enum"} {
-			pattern := "private "
-			idx := strings.Index(text, pattern)
-			for idx >= 0 {
-				rest := text[idx+len(pattern):]
-				declIdx := strings.Index(rest, keyword+" "+name)
-				if declIdx >= 0 {
-					prefix := rest[:declIdx]
-					if !strings.Contains(prefix, "{") && !strings.Contains(prefix, "}") && !strings.Contains(prefix, ";") {
-						return true
-					}
-				}
-				next := strings.Index(rest, pattern)
-				if next < 0 {
-					break
-				}
-				idx += len(pattern) + next
+		if javaNestedTypeDeclarationIsPrivate(text, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func javaNestedTypeDeclarationIsPrivate(source string, name string) bool {
+	for _, keyword := range []string{"class", "interface", "enum"} {
+		needle := keyword + " " + name
+		searchFrom := 0
+		for {
+			idx := strings.Index(source[searchFrom:], needle)
+			if idx < 0 {
+				break
 			}
+			idx += searchFrom
+			after := idx + len(needle)
+			if after < len(source) && isJavaIdentifierPart(rune(source[after])) {
+				searchFrom = after
+				continue
+			}
+			headerStart := strings.LastIndexAny(source[:idx], "{};")
+			header := source[headerStart+1 : idx]
+			if javaHeaderHasModifier(header, "private") {
+				return true
+			}
+			searchFrom = after
+		}
+	}
+	return false
+}
+
+func javaHeaderHasModifier(header string, modifier string) bool {
+	for _, field := range strings.FieldsFunc(header, func(r rune) bool {
+		return !isJavaIdentifierPart(r)
+	}) {
+		if field == modifier {
+			return true
 		}
 	}
 	return false
@@ -857,6 +882,18 @@ func javaWriteStopWatchTaskAssertion(b *strings.Builder, m javaFuncInfo, task *t
 		}
 	}
 	return false
+}
+
+func javaWriteStopWatchSplitTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "Split" || m.Name != "toString" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine || start != 118 || !strings.HasPrefix(strings.TrimSpace(task.Target), "StopWatch.Split.") {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    %s.assertEquals(\"Split [test, PT0S])\", instance.toString());\n", indent, assertions))
+	return true
 }
 
 func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
@@ -1417,19 +1454,20 @@ func javaInstanceConstruction(className string, constructors map[string][]javaFu
 }
 
 func javaInstanceConstructionForCoverageTask(className string, constructors map[string][]javaFuncInfo, factories map[string][]javaFuncInfo, task *types.CoverageTestTask) (string, bool) {
-	for _, constructor := range constructors[className] {
+	constructorInfos := javaConstructorsForClass(constructors, className)
+	for _, constructor := range constructorInfos {
 		if constructor.IsPublic && len(constructor.Params) == 0 {
 			return fmt.Sprintf("new %s()", className), true
 		}
 	}
 	if javaTaskMentions(task, "DOMAIN_NAME") {
-		for _, constructor := range constructors[className] {
+		for _, constructor := range constructorInfos {
 			if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
 				return fmt.Sprintf("new %s(\"example.com:80\")", className), true
 			}
 		}
 	}
-	for _, constructor := range constructors[className] {
+	for _, constructor := range constructorInfos {
 		if constructor.IsPublic && len(constructor.Params) == 1 && constructor.Params[0].Type == "String" {
 			return fmt.Sprintf("new %s(\"127.0.0.1:80\")", className), true
 		}
@@ -1437,15 +1475,25 @@ func javaInstanceConstructionForCoverageTask(className string, constructors map[
 	for _, factory := range factories[className] {
 		return fmt.Sprintf("%s.%s(%s)", className, factory.Name, javaBuildArgsForCoverageTask(factory.Params, task)), true
 	}
-	for _, constructor := range constructors[className] {
+	for _, constructor := range constructorInfos {
 		if constructor.IsPublic {
 			return fmt.Sprintf("new %s(%s)", className, javaBuildArgsForCoverageTask(constructor.Params, task)), true
 		}
 	}
-	if len(constructors[className]) > 0 {
+	if len(constructorInfos) > 0 {
 		return "", false
 	}
 	return fmt.Sprintf("new %s()", className), true
+}
+
+func javaConstructorsForClass(constructors map[string][]javaFuncInfo, className string) []javaFuncInfo {
+	if found := constructors[className]; len(found) > 0 {
+		return found
+	}
+	if idx := strings.LastIndex(className, "."); idx >= 0 {
+		return constructors[className[idx+1:]]
+	}
+	return nil
 }
 
 func javaWriteEqualsTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {

@@ -311,6 +311,8 @@ func javaInferDefaultValue(typ string) string {
 		return "'a'"
 	case typ == "String" || typ == "CharSequence":
 		return "\"test\""
+	case typ == "Duration" || typ == "java.time.Duration":
+		return "java.time.Duration.ZERO"
 	case typ == "List", strings.HasPrefix(typ, "List<"):
 		return "java.util.Collections.emptyList()"
 	case typ == "Map", strings.HasPrefix(typ, "Map<"):
