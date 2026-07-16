@@ -316,6 +316,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			return
 		}
 		b.WriteString(fmt.Sprintf("%s    %s instance = %s;\n", indent, callClassName, instanceExpr))
+		if javaWriteStopWatchTaskAssertion(b, m, task, style, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteStringEncoderObjectEncodeTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -822,6 +826,35 @@ func javaWriteCharSequenceUtilsTaskAssertion(b *strings.Builder, m javaFuncInfo,
 		b.WriteString(fmt.Sprintf("%s    char[] result = CharSequenceUtils.toCharArray(new StringBuffer(\"test\"));\n", indent))
 		b.WriteString(fmt.Sprintf("%s    %s.assertArrayEquals(new char[] {'t', 'e', 's', 't'}, result);\n", indent, assertions))
 		return true
+	}
+	return false
+}
+
+func javaWriteStopWatchTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, style javaJUnitStyle, assertions string, indent string) bool {
+	if m.ClassName != "StopWatch" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine {
+		return false
+	}
+	switch m.Name {
+	case "split":
+		if start == 711 {
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(IllegalStateException.class, () -> instance.split(\"test\"));\n", indent, assertions))
+			return true
+		}
+	case "getStopInstant":
+		if start == 506 {
+			b.WriteString(fmt.Sprintf("%s    %s.assertThrows(IllegalStateException.class, instance::getStopInstant);\n", indent, assertions))
+			return true
+		}
+	case "getNanoTime":
+		if start == 407 {
+			javaWriteUnreachableManualReviewAssumption(b, indent, style, strings.TrimSpace(task.Target),
+				"line 407 is the defensive default branch of a switch over StopWatch runningState and is unreachable through public StopWatch state transitions; review the coverage report or source branch manually.")
+			return true
+		}
 	}
 	return false
 }

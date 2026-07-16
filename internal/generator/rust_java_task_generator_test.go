@@ -1240,6 +1240,89 @@ func TestGenerateJavaTestsForCoverageTaskHandlesCharSequenceUtilsStringBuffer(t 
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesStopWatchStateBranches(t *testing.T) {
+	source := []byte(`public class StopWatch {
+    public void split(final String label) {
+        throw new IllegalStateException("Stopwatch is not running.");
+    }
+
+    public long getNanoTime() {
+        return 0;
+    }
+
+    public java.time.Instant getStopInstant() {
+        throw new IllegalStateException("Stopwatch has not been started");
+    }
+}
+`)
+
+	tests := []struct {
+		name      string
+		task      types.CoverageTestTask
+		want      []string
+		forbidden []string
+	}{
+		{
+			name: "split requires running watch",
+			task: types.CoverageTestTask{
+				ID:        "junit-14",
+				Framework: "junit",
+				Target:    "StopWatch.split",
+				LineRange: "711-711",
+				GapType:   "error_path",
+				TestName:  "shouldCoverStopWatchSplitGap",
+			},
+			want:      []string{`Assertions.assertThrows(IllegalStateException.class, () -> instance.split("test"));`},
+			forbidden: []string{"\n        instance.split(\"test\");"},
+		},
+		{
+			name: "get nano time defensive default is unreachable",
+			task: types.CoverageTestTask{
+				ID:        "junit-35",
+				Framework: "junit",
+				Target:    "StopWatch.getNanoTime",
+				LineRange: "407-407",
+				GapType:   "error_path",
+				TestName:  "shouldCoverStopWatchGetNanoTimeGap",
+			},
+			want:      []string{`manual_review_unreachable: `, `final String target = "StopWatch.getNanoTime";`, `line 407 is the defensive default branch`},
+			forbidden: []string{`long result = instance.getNanoTime();`, `Assertions.assertEquals(0, result);`},
+		},
+		{
+			name: "get stop instant requires started watch",
+			task: types.CoverageTestTask{
+				ID:        "junit-36",
+				Framework: "junit",
+				Target:    "StopWatch.getStopInstant",
+				LineRange: "506-506",
+				GapType:   "error_path",
+				TestName:  "shouldCoverStopWatchGetStopInstantGap",
+			},
+			want:      []string{`Assertions.assertThrows(IllegalStateException.class, instance::getStopInstant);`},
+			forbidden: []string{`Instant result = instance.getStopInstant();`, `Assertions.assertNotNull(result);`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "StopWatch.java", &tt.task)
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range tt.forbidden {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskBuildsJSONArrayNumberState(t *testing.T) {
 	source := []byte(`public class JSONArray {
     public JSONArray() {
