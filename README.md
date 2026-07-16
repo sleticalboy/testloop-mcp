@@ -495,6 +495,8 @@ TESTLOOP_VALIDATE_JAVA_TASK_IDS='junit-44' \
 scripts/validate-java-coverage-top-tasks.sh /path/to/java/project /tmp/testloop-java-junit44.jsonl
 ```
 
+验证单个 Java coverage task 时，`run_tests` 会优先只运行生成的 `*TestLoopTest` 测试类，并继续生成 JaCoCo report，因此目标行命中校验仍然有效。
+
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
 ## Roadmap

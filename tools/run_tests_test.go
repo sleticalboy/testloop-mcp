@@ -71,6 +71,10 @@ func TestJavaTestCommandFindsDeepNonexistentMavenTestPath(t *testing.T) {
 	if cmd.Dir != moduleRoot {
 		t.Fatalf("dir = %s, want %s", cmd.Dir, moduleRoot)
 	}
+	want := []string{"mvn", "-Dtest=EndpointsTest", "test"}
+	if !equalStrings(cmd.Args, want) {
+		t.Fatalf("args = %v, want %v", cmd.Args, want)
+	}
 }
 
 func TestJavaTestCommandRunsMavenModuleFromAggregator(t *testing.T) {
@@ -89,7 +93,7 @@ func TestJavaTestCommandRunsMavenModuleFromAggregator(t *testing.T) {
 
 	cmd := javaTestCommand(context.Background(), testFile, false)
 
-	want := []string{"mvn", "-pl", "client", "-am", "-DfailIfNoTests=false", "test"}
+	want := []string{"mvn", "-pl", "client", "-am", "-DfailIfNoTests=false", "-Dtest=EndpointsTest", "test"}
 	if !equalStrings(cmd.Args, want) {
 		t.Fatalf("args = %v, want %v", cmd.Args, want)
 	}
@@ -119,7 +123,7 @@ func TestJavaTestCommandPrefersGradleWrapper(t *testing.T) {
 	}
 
 	cmd := javaTestCommand(context.Background(), testFile, true)
-	want := []string{"./gradlew", "test", "jacocoTestReport"}
+	want := []string{"./gradlew", "test", "--tests", "CalculatorTest", "jacocoTestReport"}
 	if !equalStrings(cmd.Args, want) {
 		t.Fatalf("args = %v, want %v", cmd.Args, want)
 	}
@@ -562,17 +566,40 @@ func TestHandleRunTestsMochaRepairTaskGolden(t *testing.T) {
 }
 
 func TestCoverageArgs(t *testing.T) {
-	if got := javaMavenArgs(false); !equalStrings(got, []string{"test"}) {
+	if got := javaMavenArgs(false, ""); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("maven no coverage args = %v", got)
 	}
-	if got := javaMavenArgs(true); !equalStrings(got, []string{"test", "jacoco:report"}) {
+	if got := javaMavenArgs(true, ""); !equalStrings(got, []string{"test", "jacoco:report"}) {
 		t.Fatalf("maven coverage args = %v", got)
 	}
-	if got := javaGradleArgs(false); !equalStrings(got, []string{"test"}) {
+	if got := javaMavenArgs(true, "CalculatorTest"); !equalStrings(got, []string{"-Dtest=CalculatorTest", "test", "jacoco:report"}) {
+		t.Fatalf("maven coverage filtered args = %v", got)
+	}
+	if got := javaGradleArgs(false, ""); !equalStrings(got, []string{"test"}) {
 		t.Fatalf("gradle no coverage args = %v", got)
 	}
-	if got := javaGradleArgs(true); !equalStrings(got, []string{"test", "jacocoTestReport"}) {
+	if got := javaGradleArgs(true, ""); !equalStrings(got, []string{"test", "jacocoTestReport"}) {
 		t.Fatalf("gradle coverage args = %v", got)
+	}
+	if got := javaGradleArgs(true, "CalculatorTest"); !equalStrings(got, []string{"test", "--tests", "CalculatorTest", "jacocoTestReport"}) {
+		t.Fatalf("gradle coverage filtered args = %v", got)
+	}
+}
+
+func TestJavaTestClassFilterOnlyUsesTestJavaFiles(t *testing.T) {
+	tests := []struct {
+		path string
+		want string
+	}{
+		{path: filepath.Join("src", "test", "java", "org", "example", "CalculatorTest.java"), want: "CalculatorTest"},
+		{path: filepath.Join("src", "main", "java", "org", "example", "Calculator.java"), want: ""},
+		{path: filepath.Join("src", "test", "resources", "data.txt"), want: ""},
+		{path: "src/test/java/org/example", want: ""},
+	}
+	for _, tt := range tests {
+		if got := javaTestClassFilter(tt.path); got != tt.want {
+			t.Fatalf("javaTestClassFilter(%q) = %q, want %q", tt.path, got, tt.want)
+		}
 	}
 }
 

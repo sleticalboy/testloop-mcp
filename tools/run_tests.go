@@ -462,8 +462,9 @@ func getProjectRoot(path string) string {
 
 func javaTestCommand(ctx context.Context, path string, withCoverage bool) *exec.Cmd {
 	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
+	testClass := javaTestClassFilter(path)
 	if fileExists(filepath.Join(root, "pom.xml")) {
-		commandRoot, args := javaMavenCommandRootAndArgs(root, withCoverage)
+		commandRoot, args := javaMavenCommandRootAndArgs(root, withCoverage, testClass)
 		if fileExists(filepath.Join(commandRoot, "mvnw")) {
 			cmd := exec.CommandContext(ctx, "./mvnw", args...)
 			cmd.Dir = commandRoot
@@ -474,19 +475,19 @@ func javaTestCommand(ctx context.Context, path string, withCoverage bool) *exec.
 		return cmd
 	}
 	if fileExists(filepath.Join(root, "gradlew")) {
-		args := javaGradleArgs(withCoverage)
+		args := javaGradleArgs(withCoverage, testClass)
 		cmd := exec.CommandContext(ctx, "./gradlew", args...)
 		cmd.Dir = root
 		return cmd
 	}
-	args := javaGradleArgs(withCoverage)
+	args := javaGradleArgs(withCoverage, testClass)
 	cmd := exec.CommandContext(ctx, "gradle", args...)
 	cmd.Dir = root
 	return cmd
 }
 
-func javaMavenCommandRootAndArgs(moduleRoot string, withCoverage bool) (string, []string) {
-	args := javaMavenArgs(withCoverage)
+func javaMavenCommandRootAndArgs(moduleRoot string, withCoverage bool, testClass string) (string, []string) {
+	args := javaMavenArgs(withCoverage, testClass)
 	if aggregator := findMavenAggregatorRoot(moduleRoot); aggregator != "" && aggregator != moduleRoot {
 		rel, err := filepath.Rel(aggregator, moduleRoot)
 		if err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
@@ -524,18 +525,37 @@ func mavenPomDeclaresModule(pom string, modulePath string) bool {
 		strings.Contains(pom, "<module>./"+normalized+"</module>")
 }
 
-func javaMavenArgs(withCoverage bool) []string {
-	if withCoverage {
-		return []string{"test", "jacoco:report"}
+func javaMavenArgs(withCoverage bool, testClass string) []string {
+	args := []string{}
+	if strings.TrimSpace(testClass) != "" {
+		args = append(args, "-Dtest="+strings.TrimSpace(testClass))
 	}
-	return []string{"test"}
+	if withCoverage {
+		return append(args, "test", "jacoco:report")
+	}
+	return append(args, "test")
 }
 
-func javaGradleArgs(withCoverage bool) []string {
-	if withCoverage {
-		return []string{"test", "jacocoTestReport"}
+func javaGradleArgs(withCoverage bool, testClass string) []string {
+	args := []string{"test"}
+	if strings.TrimSpace(testClass) != "" {
+		args = append(args, "--tests", strings.TrimSpace(testClass))
 	}
-	return []string{"test"}
+	if withCoverage {
+		return append(args, "jacocoTestReport")
+	}
+	return args
+}
+
+func javaTestClassFilter(path string) string {
+	if strings.TrimSpace(path) == "" || strings.ToLower(filepath.Ext(path)) != ".java" {
+		return ""
+	}
+	slash := filepath.ToSlash(path)
+	if !strings.Contains(slash, "/src/test/") && !strings.HasPrefix(slash, "src/test/") {
+		return ""
+	}
+	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 }
 
 func fileExists(path string) bool {

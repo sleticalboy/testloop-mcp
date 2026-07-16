@@ -384,6 +384,7 @@ func readJavaCoverageTasksJSONL(t *testing.T, path string) []types.CoverageTestT
 
 	var tasks []types.CoverageTestTask
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 64*1024*1024)
 	for lineNo := 1; scanner.Scan(); lineNo++ {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
