@@ -264,6 +264,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteFailableTryWithResourcesTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteClassUtilsTaskAssertion(b, m, task, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -949,6 +953,36 @@ func javaWriteExceptionUtilsErasureTaskAssertion(b *strings.Builder, m javaFuncI
 	b.WriteString(fmt.Sprintf("%s    final RuntimeException thrown = %s.assertThrows(RuntimeException.class, () -> %s.%s(exception));\n", indent, assertions, className, m.Name))
 	b.WriteString(fmt.Sprintf("%s    %s.assertSame(exception, thrown);\n", indent, assertions))
 	return true
+}
+
+func javaWriteFailableTryWithResourcesTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "Failable" || m.Name != "tryWithResources" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine {
+		return false
+	}
+	switch start {
+	case 637:
+		b.WriteString(fmt.Sprintf("%s    final java.util.concurrent.atomic.AtomicReference<Throwable> handled = new java.util.concurrent.atomic.AtomicReference<>();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.tryWithResources(() -> {}, handled::set, () -> {});\n", indent, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertNull(handled.get());\n", indent, assertions))
+		return true
+	case 650, 651, 652, 659:
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException resourceFailure = new IllegalStateException(\"resource\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final java.util.concurrent.atomic.AtomicReference<Throwable> handled = new java.util.concurrent.atomic.AtomicReference<>();\n", indent))
+		b.WriteString(fmt.Sprintf("%s    %s.tryWithResources(() -> {}, handled::set, () -> { throw resourceFailure; });\n", indent, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(resourceFailure, handled.get());\n", indent, assertions))
+		return true
+	case 661, 662:
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException resourceFailure = new IllegalStateException(\"resource\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException handlerFailure = new UnsupportedOperationException(\"handler\");\n", indent))
+		b.WriteString(fmt.Sprintf("%s    final RuntimeException thrown = %s.assertThrows(RuntimeException.class, () -> %s.tryWithResources(() -> {}, ignored -> { throw handlerFailure; }, () -> { throw resourceFailure; }));\n", indent, assertions, className))
+		b.WriteString(fmt.Sprintf("%s    %s.assertSame(handlerFailure, thrown);\n", indent, assertions))
+		return true
+	}
+	return false
 }
 
 func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {

@@ -1465,6 +1465,152 @@ func TestGenerateJavaTestsForCoverageTaskHandlesExceptionUtilsErasureThrowers(t 
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesFailableTryWithResources(t *testing.T) {
+	source := []byte(`public class Failable {
+    public static void tryWithResources(final FailableRunnable<? extends Throwable> action,
+        final FailableConsumer<Throwable, ? extends Throwable> errorHandler,
+        final FailableRunnable<? extends Throwable>... resources) {
+        final FailableConsumer<Throwable, ? extends Throwable> actualErrorHandler;
+        if (errorHandler == null) {
+            actualErrorHandler = Failable::rethrow;
+        } else {
+            actualErrorHandler = errorHandler;
+        }
+        Throwable th = null;
+        try {
+            action.run();
+        } catch (final Throwable t) {
+            th = t;
+        }
+        if (resources != null) {
+            for (final FailableRunnable<?> runnable : resources) {
+                try {
+                    runnable.run();
+                } catch (final Throwable t) {
+                    if (th == null) {
+                        th = t;
+                    }
+                }
+            }
+        }
+        if (th != null) {
+            try {
+                actualErrorHandler.accept(th);
+            } catch (final Throwable t) {
+                throw rethrow(t);
+            }
+        }
+    }
+
+    public static <T> T rethrow(final Throwable throwable) {
+        throw new RuntimeException(throwable);
+    }
+}
+interface FailableRunnable<E extends Throwable> {
+    void run() throws E;
+}
+interface FailableConsumer<T, E extends Throwable> {
+    void accept(T value) throws E;
+}
+`)
+
+	tests := []struct {
+		name      string
+		lineRange string
+		want      []string
+	}{
+		{
+			name:      "custom handler branch",
+			lineRange: "637-637",
+			want: []string{
+				`final java.util.concurrent.atomic.AtomicReference<Throwable> handled = new java.util.concurrent.atomic.AtomicReference<>();`,
+				`Failable.tryWithResources(() -> {}, handled::set, () -> {});`,
+				`Assertions.assertNull(handled.get());`,
+			},
+		},
+		{
+			name:      "resource failure catch",
+			lineRange: "650-650",
+			want: []string{
+				`final RuntimeException resourceFailure = new IllegalStateException("resource");`,
+				`Failable.tryWithResources(() -> {}, handled::set, () -> { throw resourceFailure; });`,
+				`Assertions.assertSame(resourceFailure, handled.get());`,
+			},
+		},
+		{
+			name:      "first resource failure records throwable",
+			lineRange: "651-651",
+			want: []string{
+				`final RuntimeException resourceFailure = new IllegalStateException("resource");`,
+				`Failable.tryWithResources(() -> {}, handled::set, () -> { throw resourceFailure; });`,
+				`Assertions.assertSame(resourceFailure, handled.get());`,
+			},
+		},
+		{
+			name:      "first resource failure assigns throwable",
+			lineRange: "652-652",
+			want: []string{
+				`final RuntimeException resourceFailure = new IllegalStateException("resource");`,
+				`Failable.tryWithResources(() -> {}, handled::set, () -> { throw resourceFailure; });`,
+				`Assertions.assertSame(resourceFailure, handled.get());`,
+			},
+		},
+		{
+			name:      "custom handler receives throwable",
+			lineRange: "659-659",
+			want: []string{
+				`final RuntimeException resourceFailure = new IllegalStateException("resource");`,
+				`Failable.tryWithResources(() -> {}, handled::set, () -> { throw resourceFailure; });`,
+				`Assertions.assertSame(resourceFailure, handled.get());`,
+			},
+		},
+		{
+			name:      "handler failure rethrows",
+			lineRange: "661-661",
+			want: []string{
+				`final RuntimeException handlerFailure = new UnsupportedOperationException("handler");`,
+				`Assertions.assertThrows(RuntimeException.class, () -> Failable.tryWithResources(() -> {}, ignored -> { throw handlerFailure; }, () -> { throw resourceFailure; }));`,
+				`Assertions.assertSame(handlerFailure, thrown);`,
+			},
+		},
+		{
+			name:      "handler failure throw statement",
+			lineRange: "662-662",
+			want: []string{
+				`final RuntimeException handlerFailure = new UnsupportedOperationException("handler");`,
+				`Assertions.assertThrows(RuntimeException.class, () -> Failable.tryWithResources(() -> {}, ignored -> { throw handlerFailure; }, () -> { throw resourceFailure; }));`,
+				`Assertions.assertSame(handlerFailure, thrown);`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "Failable.java", &types.CoverageTestTask{
+				ID:             "junit-50",
+				Framework:      "junit",
+				Target:         "Failable.tryWithResources",
+				LineRange:      tt.lineRange,
+				TestName:       "shouldCoverFailableTryWithResourcesGap",
+				AssertionFocus: []string{"断言未覆盖分支的返回值或副作用"},
+			})
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range []string{`Failable.tryWithResources(null, null, null)`, `manual_review_internal:`} {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesStopWatchStateBranches(t *testing.T) {
 	source := []byte(`public class StopWatch {
     public void split(final String label) {
