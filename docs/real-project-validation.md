@@ -28,7 +28,7 @@
 
 表格补充：Apache Commons Codec 的 `language/` 非 bm 收口又验证了 `ColognePhonetic.java` top2，结果为 `passed=2/manual_review_internal=2`，目标集中在内部 `CologneInputBuffer.copyData` 状态路径；`Nysiis.java` 和 `RefinedSoundex.java` 当前过滤后无候选任务。
 
-补充：新增 Java/JUnit 目标行命中校验后，`validate_coverage_task` 会在 ready 前解析 JaCoCo XML 并确认 `coverage_task.line_range` 实际覆盖。本轮用 Commons Lang `Failable.tryWithResources 651-651` 真实复核，结果仍为 `passed/ready`，metadata 显示 `coverage_target_hit=true`、`coverage_hit_lines=[651]`。这意味着 Java ready 开始从“生成测试可运行”升级为“生成测试可运行且目标行被确认命中”。
+补充：新增 Java/JUnit 目标行命中校验后，`validate_coverage_task` 会在 ready 前解析 JaCoCo XML 并确认 `coverage_task.line_range` 实际覆盖。本轮先用 Commons Lang `Failable.tryWithResources 651-651` 真实复核，结果仍为 `passed/ready`，metadata 显示 `coverage_target_hit=true`、`coverage_hit_lines=[651]`；随后回归历史弱 ready 的 `ClassUtils.java` top4，`getShortClassName 1111/1114` 与 `hierarchy 1222/1258` 全部保持 `passed/ready`，且 metadata 分别确认命中 `[1111]`、`[1114]`、`[1222]`、`[1258]`。这意味着 Java ready 开始从“生成测试可运行”升级为“生成测试可运行且目标行被确认命中”。
 
 ## 已稳定的能力
 
