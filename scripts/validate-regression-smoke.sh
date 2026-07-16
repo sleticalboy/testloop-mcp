@@ -14,9 +14,11 @@ usage() {
                                     默认：/tmp/testloop-regression-smoke-<timestamp>
   TESTLOOP_REGRESSION_SKIP_JAVA
                                     true 时跳过 Java 样本。
+  TESTLOOP_REGRESSION_SKIP_JS
+                                    true 时跳过 JS 样本。
   TESTLOOP_REGRESSION_SKIP_PY
                                     true 时跳过 Python 样本。
-  TESTLOOP_VALIDATE_* / TESTLOOP_JAVA_REGRESSION_* / TESTLOOP_PY_REGRESSION_*
+  TESTLOOP_VALIDATE_* / TESTLOOP_JAVA_REGRESSION_* / TESTLOOP_JS_REGRESSION_* / TESTLOOP_PY_REGRESSION_*
                                     透传给各语言样本脚本。
 USAGE
 }
@@ -47,6 +49,12 @@ if ! env_bool "${TESTLOOP_REGRESSION_SKIP_JAVA:-}"; then
   echo "==> java regression samples"
   TESTLOOP_JAVA_REGRESSION_OUTPUT_DIR="$output_dir/java" \
     "$script_dir/validate-java-regression-samples.sh"
+fi
+
+if ! env_bool "${TESTLOOP_REGRESSION_SKIP_JS:-}"; then
+  echo "==> js regression samples"
+  TESTLOOP_JS_REGRESSION_OUTPUT_DIR="$output_dir/js" \
+    "$script_dir/validate-js-regression-samples.sh"
 fi
 
 if ! env_bool "${TESTLOOP_REGRESSION_SKIP_PY:-}"; then

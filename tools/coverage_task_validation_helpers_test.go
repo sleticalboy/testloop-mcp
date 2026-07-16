@@ -144,6 +144,47 @@ func validationPathCandidatesBySourceSuffix(taskRoot string, value string, marke
 	return nil
 }
 
+func findValidationPathByTail(taskRoot string, value string, maxSegments int) string {
+	for _, candidate := range validationTailPathCandidates(taskRoot, value, maxSegments) {
+		if fileExists(candidate) {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func validationPathByTail(taskRoot string, value string, maxSegments int) string {
+	candidates := validationTailPathCandidates(taskRoot, value, maxSegments)
+	if len(candidates) == 0 {
+		return ""
+	}
+	return candidates[0]
+}
+
+func validationTailPathCandidates(taskRoot string, value string, maxSegments int) []string {
+	slash := filepath.ToSlash(value)
+	parts := strings.Split(slash, "/")
+	cleaned := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part == "" || part == "." || part == ".." {
+			continue
+		}
+		cleaned = append(cleaned, part)
+	}
+	if len(cleaned) == 0 {
+		return nil
+	}
+	if maxSegments <= 0 || maxSegments > len(cleaned) {
+		maxSegments = len(cleaned)
+	}
+	candidates := make([]string, 0, maxSegments)
+	for n := 1; n <= maxSegments; n++ {
+		tail := cleaned[len(cleaned)-n:]
+		candidates = append(candidates, filepath.Join(append([]string{taskRoot}, tail...)...))
+	}
+	return candidates
+}
+
 func findValidationNestedPath(taskRoot string, value string, roots []string) string {
 	slash := filepath.ToSlash(value)
 	for _, root := range roots {
@@ -195,5 +236,21 @@ func TestFilterCoverageTasksByFileAndIDsKeepsCoverageOrder(t *testing.T) {
 
 	if len(filtered) != 2 || filtered[0].ID != "task-1" || filtered[1].ID != "task-3" {
 		t.Fatalf("filterCoverageTasksByFileAndIDs() = %+v, want task-1 then task-3", filtered)
+	}
+}
+
+func TestValidationPathByTailHandlesRootLevelFiles(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "util.js")
+	if err := os.WriteFile(source, []byte("export const value = 1;\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	stale := filepath.Join(t.TempDir(), "old", "task-01", "util.js")
+
+	if got := findValidationPathByTail(root, stale, 4); got != source {
+		t.Fatalf("findValidationPathByTail = %q, want %q", got, source)
+	}
+	if got := validationPathByTail(root, filepath.Join(t.TempDir(), "old", "task-01", "util.test.js"), 1); got != filepath.Join(root, "util.test.js") {
+		t.Fatalf("validationPathByTail = %q, want root-level test file", got)
 	}
 }

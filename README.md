@@ -511,7 +511,7 @@ scripts/validate-java-regression-samples.sh
 scripts/validate-regression-smoke.sh
 ```
 
-当前默认矩阵覆盖 Java + Python：Java 使用上述三类样本，Python 使用 Click pytest ready 样本。JS 验证脚本已经支持 task JSONL 复用和 task id 筛选，但固定 JS 样本需要基于当前源码快照重新导出后再接入默认矩阵，避免旧临时 JSONL 指向已经变更的源码路径。
+当前默认矩阵覆盖 Java + JS + Python：Java 使用上述三类样本，JS 使用 ip2region JavaScript binding 的 Jest ready 样本，Python 使用 Click pytest ready 样本。各语言项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_*_REGRESSION_*` 环境变量覆盖。
 
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 

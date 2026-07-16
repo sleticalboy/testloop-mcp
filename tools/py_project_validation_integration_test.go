@@ -275,6 +275,12 @@ func rewritePyValidationPath(baselineRoot string, taskRoot string, value string)
 		if candidate := validationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/tests/", "/test/"}, []string{"src", "tests", "test"}); candidate != "" {
 			return candidate
 		}
+		if candidate := findValidationPathByTail(taskRoot, value, 4); candidate != "" {
+			return candidate
+		}
+		if candidate := validationPathByTail(taskRoot, value, 1); candidate != "" {
+			return candidate
+		}
 		return value
 	}
 	return filepath.Join(taskRoot, filepath.FromSlash(value))

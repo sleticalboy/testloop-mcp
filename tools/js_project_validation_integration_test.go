@@ -499,6 +499,12 @@ func rewriteJSValidationPath(baselineRoot string, taskRoot string, value string)
 		if candidate := validationPathBySourceSuffix(taskRoot, value, []string{"/src/", "/test/", "/tests/"}, []string{"src", "test", "tests"}); candidate != "" {
 			return candidate
 		}
+		if candidate := findValidationPathByTail(taskRoot, value, 4); candidate != "" {
+			return candidate
+		}
+		if candidate := validationPathByTail(taskRoot, value, 1); candidate != "" {
+			return candidate
+		}
 	}
 	return rewriteGoValidationPath(baselineRoot, taskRoot, value)
 }
