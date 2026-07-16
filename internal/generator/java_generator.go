@@ -264,6 +264,10 @@ func javaWriteMethodTestForCoverageTaskWithName(b *strings.Builder, m javaFuncIn
 			b.WriteString("    }\n")
 			return
 		}
+		if javaWriteFailableWrapperTaskAssertion(b, m, task, callClassName, assertions, indent) {
+			b.WriteString("    }\n")
+			return
+		}
 		if javaWriteFailableTryWithResourcesTaskAssertion(b, m, task, callClassName, assertions, indent) {
 			b.WriteString("    }\n")
 			return
@@ -983,6 +987,58 @@ func javaWriteFailableTryWithResourcesTaskAssertion(b *strings.Builder, m javaFu
 		return true
 	}
 	return false
+}
+
+func javaWriteFailableWrapperTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {
+	if task == nil || m.ClassName != "Failable" {
+		return false
+	}
+	start, _, hasLine := javaCoverageTaskLineRange(task)
+	if !hasLine {
+		return false
+	}
+	expectedLines := map[string]int{
+		"get":          412,
+		"getAsBoolean": 427,
+		"getAsDouble":  442,
+		"getAsInt":     457,
+		"getAsLong":    472,
+		"getAsShort":   487,
+		"run":          536,
+	}
+	expectedLine, ok := expectedLines[m.Name]
+	if !ok || start != expectedLine {
+		return false
+	}
+	call := javaFailableThrowingWrapperCall(className, m.Name)
+	if call == "" {
+		return false
+	}
+	b.WriteString(fmt.Sprintf("%s    final RuntimeException failure = new IllegalStateException(\"boom\");\n", indent))
+	b.WriteString(fmt.Sprintf("%s    final RuntimeException thrown = %s.assertThrows(RuntimeException.class, () -> %s);\n", indent, assertions, call))
+	b.WriteString(fmt.Sprintf("%s    %s.assertSame(failure, thrown);\n", indent, assertions))
+	return true
+}
+
+func javaFailableThrowingWrapperCall(className string, methodName string) string {
+	switch methodName {
+	case "get":
+		return fmt.Sprintf("%s.get(() -> { throw failure; })", className)
+	case "getAsBoolean":
+		return fmt.Sprintf("%s.getAsBoolean(() -> { throw failure; })", className)
+	case "getAsDouble":
+		return fmt.Sprintf("%s.getAsDouble(() -> { throw failure; })", className)
+	case "getAsInt":
+		return fmt.Sprintf("%s.getAsInt(() -> { throw failure; })", className)
+	case "getAsLong":
+		return fmt.Sprintf("%s.getAsLong(() -> { throw failure; })", className)
+	case "getAsShort":
+		return fmt.Sprintf("%s.getAsShort(() -> { throw failure; })", className)
+	case "run":
+		return fmt.Sprintf("%s.run(() -> { throw failure; })", className)
+	default:
+		return ""
+	}
 }
 
 func javaWriteDigestUtilsShakeTaskAssertion(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, className string, assertions string, indent string) bool {

@@ -18,7 +18,7 @@
 - Java coverage task 修正 public nested class 误判：`private enum SplitState` 这类前缀不再导致 `StopWatch.Split` 被归为私有嵌套类型，`StopWatch.Split.toString` 会生成真实构造和精确字符串断言。
 - Java coverage task 补强 Apache Commons Lang `ExceptionUtils.throwUnchecked`：按 `line_range` 生成 `RuntimeException`、`Error` 和 checked-return 断言，避免泛型返回类型 `T` 泄漏到测试代码导致 Maven/JUnit 编译失败。
 - Java coverage task 补强 Apache Commons Lang `ExceptionUtils.asRuntimeException` / `rethrow`：type-erasure 异常传播路径会断言原始 `RuntimeException` 被抛出，不再把泛型返回类型 `T` 当作测试局部变量类型。
-- Java coverage task 补强 Apache Commons Lang `Failable.tryWithResources`：按 `line_range` 生成 functional interface 输入、资源关闭异常和 errorHandler 断言，避免退化成 `tryWithResources(null, null, null)` 导致空指针或弱 ready。
+- Java coverage task 补强 Apache Commons Lang `Failable` wrapper：`tryWithResources` 会按 `line_range` 生成 functional interface 输入、资源关闭异常和 errorHandler 断言；`get*` / `run` wrapper 会用 throwing lambda 断言原始 `RuntimeException` 被 rethrow，避免退化成 `tryWithResources(null, null, null)`、`T result` 或 `get*(null)`。
 - Go static generator 支持普通参数校验触发的多返回值 error 分支，例如 `if socketPath == "" { return Status{}, fmt.Errorf(...) }` 会生成非 skipped 测试，断言非 error 返回为零值、error 返回非 nil；变参函数的参数校验分支也会进入同一生成路径。
 - Go coverage task 分支匹配会优先使用 `line_range` 区分同一函数内重复的 `err != nil` 分支，并对 `net.Dial("unix", socketPath)` 连接失败分支生成缺失 socket 路径测试输入，避免把后续协议读写错误误判为连接失败。
 - Go static generator 支持 Unix socket 协议错误路径输入合成，可用本地 `net.Listen("unix", ...)` 稳定触发 `ReadBytes` EOF 和 `json.Unmarshal` 非法 JSON 分支。

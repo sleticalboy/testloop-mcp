@@ -1611,6 +1611,144 @@ interface FailableConsumer<T, E extends Throwable> {
 	}
 }
 
+func TestGenerateJavaTestsForCoverageTaskHandlesFailableWrappers(t *testing.T) {
+	source := []byte(`public class Failable {
+    public static <T, E extends Throwable> T get(final FailableSupplier<T, E> supplier) {
+        try {
+            return supplier.get();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> boolean getAsBoolean(final FailableBooleanSupplier<E> supplier) {
+        try {
+            return supplier.getAsBoolean();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> double getAsDouble(final FailableDoubleSupplier<E> supplier) {
+        try {
+            return supplier.getAsDouble();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> int getAsInt(final FailableIntSupplier<E> supplier) {
+        try {
+            return supplier.getAsInt();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> long getAsLong(final FailableLongSupplier<E> supplier) {
+        try {
+            return supplier.getAsLong();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> short getAsShort(final FailableShortSupplier<E> supplier) {
+        try {
+            return supplier.getAsShort();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <E extends Throwable> void run(final FailableRunnable<E> runnable) {
+        try {
+            runnable.run();
+        } catch (final Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static <T> T rethrow(final Throwable throwable) {
+        throw new RuntimeException(throwable);
+    }
+}
+interface FailableSupplier<T, E extends Throwable> {
+    T get() throws E;
+}
+interface FailableBooleanSupplier<E extends Throwable> {
+    boolean getAsBoolean() throws E;
+}
+interface FailableDoubleSupplier<E extends Throwable> {
+    double getAsDouble() throws E;
+}
+interface FailableIntSupplier<E extends Throwable> {
+    int getAsInt() throws E;
+}
+interface FailableLongSupplier<E extends Throwable> {
+    long getAsLong() throws E;
+}
+interface FailableShortSupplier<E extends Throwable> {
+    short getAsShort() throws E;
+}
+interface FailableRunnable<E extends Throwable> {
+    void run() throws E;
+}
+`)
+
+	tests := []struct {
+		name       string
+		target     string
+		lineRange  string
+		methodName string
+	}{
+		{name: "get", target: "Failable.get", lineRange: "412-412", methodName: "get"},
+		{name: "getAsBoolean", target: "Failable.getAsBoolean", lineRange: "427-427", methodName: "getAsBoolean"},
+		{name: "getAsDouble", target: "Failable.getAsDouble", lineRange: "442-442", methodName: "getAsDouble"},
+		{name: "getAsInt", target: "Failable.getAsInt", lineRange: "457-457", methodName: "getAsInt"},
+		{name: "getAsLong", target: "Failable.getAsLong", lineRange: "472-472", methodName: "getAsLong"},
+		{name: "getAsShort", target: "Failable.getAsShort", lineRange: "487-487", methodName: "getAsShort"},
+		{name: "run", target: "Failable.run", lineRange: "536-536", methodName: "run"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, code, err := GenerateJavaTestsForCoverageTask(source, "Failable.java", &types.CoverageTestTask{
+				ID:             "junit-113",
+				Framework:      "junit",
+				Target:         tt.target,
+				LineRange:      tt.lineRange,
+				TestName:       "shouldCoverFailableWrapperGap",
+				AssertionFocus: []string{"断言错误、异常或空值路径"},
+			})
+			if err != nil {
+				t.Fatalf("GenerateJavaTestsForCoverageTask() error = %v", err)
+			}
+			for _, want := range []string{
+				`final RuntimeException failure = new IllegalStateException("boom");`,
+				fmt.Sprintf(`Assertions.assertThrows(RuntimeException.class, () -> Failable.%s(() -> { throw failure; }));`, tt.methodName),
+				`Assertions.assertSame(failure, thrown);`,
+			} {
+				if !strings.Contains(code, want) {
+					t.Fatalf("expected %q in generated code:\n%s", want, code)
+				}
+			}
+			for _, forbidden := range []string{
+				`T result`,
+				fmt.Sprintf(`Failable.%s(null)`, tt.methodName),
+				`Assertions.assertNotNull(result)`,
+				`Assertions.assertTrue(result)`,
+				`Assertions.assertEquals(0.0, result, 0.001)`,
+				`manual_review_internal:`,
+			} {
+				if strings.Contains(code, forbidden) {
+					t.Fatalf("did not expect %q in generated code:\n%s", forbidden, code)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateJavaTestsForCoverageTaskHandlesStopWatchStateBranches(t *testing.T) {
 	source := []byte(`public class StopWatch {
     public void split(final String label) {
