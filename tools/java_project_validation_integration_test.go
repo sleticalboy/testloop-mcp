@@ -42,11 +42,19 @@ func TestValidateJavaCoverageTopTasks(t *testing.T) {
 	logJavaValidationStage(t, "baseline.copy.done dest=%s", baselineRoot)
 
 	report := parseJavaCoverageReportForProject(t, baselineRoot, baselineTimeout)
-	tasks := filterJavaCoverageTasks(report.TestTasks, os.Getenv("TESTLOOP_VALIDATE_JAVA_FILE_FILTER"))
+	fileFilter := os.Getenv("TESTLOOP_VALIDATE_JAVA_FILE_FILTER")
+	taskIDFilter := os.Getenv("TESTLOOP_VALIDATE_JAVA_TASK_IDS")
+	tasks := filterJavaCoverageTasks(report.TestTasks, fileFilter, taskIDFilter)
+	if len(tasks) == 0 {
+		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q", fileFilter, taskIDFilter)
+	}
+	if taskIDFilter != "" && len(tasks) < limit {
+		limit = len(tasks)
+	}
 	if len(tasks) < limit {
 		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
-	logJavaValidationStage(t, "tasks.selected count=%d limit=%d filter=%q", len(tasks), limit, os.Getenv("TESTLOOP_VALIDATE_JAVA_FILE_FILTER"))
+	logJavaValidationStage(t, "tasks.selected count=%d limit=%d filter=%q task_ids=%q", len(tasks), limit, fileFilter, taskIDFilter)
 
 	outFile, err := os.Create(outputPath)
 	if err != nil {
@@ -302,18 +310,81 @@ func TestRewriteJavaValidationTestFileForSourceKeepsNestedMavenModule(t *testing
 	}
 }
 
-func filterJavaCoverageTasks(tasks []types.CoverageTestTask, filter string) []types.CoverageTestTask {
+func filterJavaCoverageTasks(tasks []types.CoverageTestTask, filter string, taskIDs string) []types.CoverageTestTask {
 	filter = strings.TrimSpace(filter)
-	if filter == "" {
+	ids := javaCoverageTaskIDSet(taskIDs)
+	if filter == "" && len(ids) == 0 {
 		return tasks
 	}
 	filtered := make([]types.CoverageTestTask, 0, len(tasks))
 	for _, task := range tasks {
-		if strings.Contains(filepath.ToSlash(task.File), filter) {
-			filtered = append(filtered, task)
+		if filter != "" && !strings.Contains(filepath.ToSlash(task.File), filter) {
+			continue
 		}
+		if len(ids) > 0 {
+			if _, ok := ids[strings.TrimSpace(task.ID)]; !ok {
+				continue
+			}
+		}
+		filtered = append(filtered, task)
 	}
 	return filtered
+}
+
+func javaCoverageTaskIDSet(raw string) map[string]struct{} {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	ids := map[string]struct{}{}
+	for _, part := range strings.Split(raw, ",") {
+		id := strings.TrimSpace(part)
+		if id != "" {
+			ids[id] = struct{}{}
+		}
+	}
+	return ids
+}
+
+func TestFilterJavaCoverageTasksByFileAndTaskIDs(t *testing.T) {
+	tasks := []types.CoverageTestTask{
+		{ID: "junit-1", File: filepath.FromSlash("src/main/java/org/example/Foo.java")},
+		{ID: "junit-2", File: filepath.FromSlash("src/main/java/org/example/Bar.java")},
+		{ID: "junit-3", File: filepath.FromSlash("src/main/java/org/example/Foo.java")},
+	}
+
+	filtered := filterJavaCoverageTasks(tasks, "Foo.java", "junit-3, junit-missing")
+
+	if len(filtered) != 1 || filtered[0].ID != "junit-3" {
+		t.Fatalf("filterJavaCoverageTasks() = %+v, want only junit-3", filtered)
+	}
+}
+
+func TestFilterJavaCoverageTasksByTaskIDsKeepsCoverageOrder(t *testing.T) {
+	tasks := []types.CoverageTestTask{
+		{ID: "junit-1", File: "A.java"},
+		{ID: "junit-2", File: "B.java"},
+		{ID: "junit-3", File: "C.java"},
+	}
+
+	filtered := filterJavaCoverageTasks(tasks, "", "junit-3,junit-1")
+
+	if len(filtered) != 2 || filtered[0].ID != "junit-1" || filtered[1].ID != "junit-3" {
+		t.Fatalf("filterJavaCoverageTasks() = %+v, want junit-1 then junit-3", filtered)
+	}
+}
+
+func TestJavaCoverageTaskIDSetIgnoresEmptyEntries(t *testing.T) {
+	ids := javaCoverageTaskIDSet(" junit-1, ,junit-2 ")
+
+	if len(ids) != 2 {
+		t.Fatalf("javaCoverageTaskIDSet length = %d, want 2", len(ids))
+	}
+	for _, id := range []string{"junit-1", "junit-2"} {
+		if _, ok := ids[id]; !ok {
+			t.Fatalf("javaCoverageTaskIDSet missing %s: %+v", id, ids)
+		}
+	}
 }
 
 func copyJavaProjectTree(src string, dst string) error {

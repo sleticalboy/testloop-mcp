@@ -25,6 +25,9 @@ Environment:
                                     build/reports/jacoco/test/jacocoTestReport.xml.
   TESTLOOP_VALIDATE_JAVA_FILE_FILTER
                                     Optional substring filter for task source files.
+  TESTLOOP_VALIDATE_JAVA_TASK_IDS
+                                    Optional comma-separated coverage task IDs to
+                                    validate exactly, for example: junit-44,junit-130.
   TESTLOOP_VALIDATE_JAVA_LIST_TASKS_ONLY
                                     If true, only writes selected coverage tasks to
                                     output-jsonl and skips per-task validation.
@@ -53,8 +56,19 @@ if [[ $# -lt 1 || $# -gt 3 ]]; then
 fi
 
 project_dir="$1"
-limit="${2:-${TESTLOOP_VALIDATE_JAVA_TASK_LIMIT:-20}}"
 output="${3:-${TESTLOOP_VALIDATE_JAVA_OUTPUT:-}}"
+if [[ $# -eq 2 && -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" && ! "$2" =~ ^[0-9]+$ ]]; then
+  limit="$(printf '%s' "$TESTLOOP_VALIDATE_JAVA_TASK_IDS" | tr ',' '\n' | awk 'NF {count++} END {print count+0}')"
+  output="$2"
+elif [[ $# -ge 2 ]]; then
+  limit="$2"
+elif [[ -n "${TESTLOOP_VALIDATE_JAVA_TASK_LIMIT:-}" ]]; then
+  limit="$TESTLOOP_VALIDATE_JAVA_TASK_LIMIT"
+elif [[ -n "${TESTLOOP_VALIDATE_JAVA_TASK_IDS:-}" ]]; then
+  limit="$(printf '%s' "$TESTLOOP_VALIDATE_JAVA_TASK_IDS" | tr ',' '\n' | awk 'NF {count++} END {print count+0}')"
+else
+  limit="20"
+fi
 
 if [[ ! -d "$project_dir" ]]; then
   echo "project directory does not exist: $project_dir" >&2

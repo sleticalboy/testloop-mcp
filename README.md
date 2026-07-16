@@ -480,7 +480,12 @@ Java/Maven 或 Gradle 项目可使用：
 scripts/validate-java-coverage-top-tasks.sh /path/to/java/project 20 /tmp/testloop-java-top20.jsonl
 ```
 
-Java 脚本会读取 JaCoCo XML，默认检测 `target/site/jacoco/jacoco.xml` 或 `build/reports/jacoco/test/jacocoTestReport.xml`。常用变量包括 `TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND`、`TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE`、`TESTLOOP_VALIDATE_JAVA_FILE_FILTER`、`TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS`。
+Java 脚本会读取 JaCoCo XML，默认检测 `target/site/jacoco/jacoco.xml` 或 `build/reports/jacoco/test/jacocoTestReport.xml`。常用变量包括 `TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND`、`TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE`、`TESTLOOP_VALIDATE_JAVA_FILE_FILTER`、`TESTLOOP_VALIDATE_JAVA_TASK_IDS`、`TESTLOOP_VALIDATE_JAVA_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_JAVA_TASK_TIMEOUT_SECONDS`。如果只想回归特定任务，可以使用逗号分隔的 task id：
+
+```bash
+TESTLOOP_VALIDATE_JAVA_TASK_IDS='junit-44,junit-130' \
+scripts/validate-java-coverage-top-tasks.sh /path/to/java/project
+```
 
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
