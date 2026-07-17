@@ -43,6 +43,7 @@ jobs:
           sh test/showcase_scripts_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
+          sh test/fixtures_index_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .

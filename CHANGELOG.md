@@ -26,6 +26,7 @@
 - 新增 `docs/fixtures/validate-coverage-task-manual-review-internal.json` 和 handler 级 fixture 测试，固定 `passed/manual_review_internal` 的真实结构化样例投影。
 - 新增 `docs/fixtures/validate-coverage-task-apply-fix-suggestions.json` 和 handler 级 fixture 测试，固定 `failed/apply_fix_suggestions` 的真实修复闭环样例投影。
 - 新增 `docs/fixtures.md`，集中说明真实结构化 fixture 的来源、Agent 分流、稳定字段和过滤规则。
+- 新增 `test/fixtures_index_test.sh` 并纳入 CI，校验 `docs/fixtures/*.json` 的 `status/action` 覆盖清单已登记到 fixture 索引。
 
 ## v0.5.0 - 2026-07-17
 
