@@ -515,7 +515,15 @@ scripts/validate-regression-smoke.sh
 
 ### 面向 Agent 的快速演示路径
 
-演示 testloop-mcp 时，优先展示一条小而完整的反馈闭环，而不是只展示单次生成测试：
+演示 testloop-mcp 时，优先展示一条小而完整的反馈闭环，而不是只展示单次生成测试。最小 MCP 客户端 demo 会启动 in-memory MCP server，创建一个临时 Go 项目，先触发失败断言并读取 `structuredContent` 里的 `repair_task`，再模拟修复、复跑测试并解析覆盖率：
+
+```bash
+go run ./examples/mcp-client-demo
+```
+
+预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
+
+更完整的跨语言质量回归可以运行：
 
 ```bash
 go test ./...

@@ -2,6 +2,14 @@
 
 这个示例展示 AI Agent 或编辑器集成如何把 `run_tests`、`parse_results`、`parse_coverage` 和 `generate_tests` 串成一个可执行闭环。示例使用仓库内 Go demo，其他语言只需要替换测试命令和覆盖率格式。
 
+如果要先验证客户端消费方式，可以直接运行最小 MCP 客户端 demo：
+
+```bash
+go run ./examples/mcp-client-demo
+```
+
+这个 demo 会启动 in-memory MCP server，创建临时 Go 项目，调用真实 `run_tests`，优先读取 `structuredContent`，校验它与 text JSON 一致，然后按 `fix_suggestions[].repair_task` 模拟一次测试修复，最后复跑并调用 `parse_coverage`。它不是新的生成器能力，而是给 Codex、Claude Code、Cursor 或其他 MCP 客户端提供一条可复制的集成验收路径。
+
 ## 1. 运行测试
 
 先让 Agent 调用 MCP 工具：

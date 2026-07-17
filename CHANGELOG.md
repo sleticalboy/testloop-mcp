@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `examples/mcp-client-demo` 最小 MCP 客户端端到端 demo，演示客户端优先消费 `structuredContent`，串联 `run_tests -> repair_task -> rerun -> parse_coverage`。
+
 ## v0.5.0 - 2026-07-17
 
 ### Added
