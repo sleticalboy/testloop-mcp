@@ -3,6 +3,8 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,15 +52,7 @@ func startServer(t *testing.T) *mcp.ClientSession {
 
 func startStdioCommandServer(t *testing.T) *mcp.ClientSession {
 	t.Helper()
-	binary := filepath.Join(t.TempDir(), "testloop-mcp")
-	if runtime.GOOS == "windows" {
-		binary += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", binary, projectRoot())
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build testloop-mcp binary: %v\n%s", err, output)
-	}
-
+	binary := buildTestloopBinary(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	t.Cleanup(cancel)
 	cmd := exec.CommandContext(ctx, binary, "--transport=stdio")
@@ -78,6 +72,96 @@ func startStdioCommandServer(t *testing.T) *mcp.ClientSession {
 		_ = session.Close()
 	})
 	return session
+}
+
+func startStreamableHTTPCommandServer(t *testing.T) *mcp.ClientSession {
+	t.Helper()
+	binary := buildTestloopBinary(t)
+	addr := freeTCPAddr(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	t.Cleanup(cancel)
+
+	cmd := exec.CommandContext(ctx, binary, "--transport=http", "--addr="+addr)
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start http testloop-mcp: %v", err)
+	}
+	t.Cleanup(func() {
+		cancel()
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+		}
+		_ = cmd.Wait()
+	})
+
+	baseURL := "http://" + addr
+	waitForHealthz(t, ctx, baseURL+"/healthz")
+
+	client := mcp.NewClient(
+		&mcp.Implementation{Name: "test-http-client", Version: "1.0.0"},
+		nil,
+	)
+	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
+		Endpoint:             baseURL + "/mcp",
+		DisableStandaloneSSE: true,
+	}, nil)
+	if err != nil {
+		t.Fatalf("streamable http client connect failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+	return session
+}
+
+func buildTestloopBinary(t *testing.T) string {
+	t.Helper()
+	binary := filepath.Join(t.TempDir(), "testloop-mcp")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", binary, projectRoot())
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build testloop-mcp binary: %v\n%s", err, output)
+	}
+	return binary
+}
+
+func freeTCPAddr(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen free tcp addr: %v", err)
+	}
+	defer listener.Close()
+	return listener.Addr().String()
+}
+
+func waitForHealthz(t *testing.T, ctx context.Context, url string) {
+	t.Helper()
+	client := http.Client{Timeout: 250 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatalf("new healthz request: %v", err)
+		}
+		resp, err := client.Do(req)
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return
+			}
+			lastErr = nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if lastErr != nil {
+		t.Fatalf("healthz did not become ready: %v", lastErr)
+	}
+	t.Fatalf("healthz did not return 200 before timeout")
 }
 
 // callTool 调用工具并返回解析后的 JSON payload
@@ -252,6 +336,37 @@ func TestE2E_StdioCommandTransportListsAndCallsTool(t *testing.T) {
 	})
 	if payload["status"] != "pass" || payload["framework"] != "go-test" {
 		t.Fatalf("unexpected stdio parse_results payload: %+v", payload)
+	}
+}
+
+func TestE2E_StreamableHTTPTransportListsAndCallsTool(t *testing.T) {
+	session := startStreamableHTTPCommandServer(t)
+
+	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("streamable http ListTools error: %v", err)
+	}
+	foundParseResults := false
+	for _, tool := range result.Tools {
+		if tool.Name == "parse_results" {
+			foundParseResults = true
+			break
+		}
+	}
+	if !foundParseResults {
+		t.Fatalf("streamable http ListTools missing parse_results: %+v", result.Tools)
+	}
+
+	payload := callTool(t, session, "parse_results", map[string]any{
+		"framework": "go-test",
+		"output": strings.Join([]string{
+			`{"Action":"run","Package":"example.com/calc","Test":"TestHTTP"}`,
+			`{"Action":"pass","Package":"example.com/calc","Test":"TestHTTP","Elapsed":0}`,
+			`{"Action":"pass","Package":"example.com/calc","Elapsed":0}`,
+		}, "\n"),
+	})
+	if payload["status"] != "pass" || payload["framework"] != "go-test" {
+		t.Fatalf("unexpected streamable http parse_results payload: %+v", payload)
 	}
 }
 
