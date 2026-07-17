@@ -1428,6 +1428,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSSSEManagerAddConnectionCloseTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "SSEManager" && method.Name == "addConnection" && jsCoverageTaskTargetsSSEAddConnectionSendFailure(task) {
+			sb.WriteString(genJSSSEManagerAddConnectionSendFailureTest(method, task, testName))
+			continue
+		}
 		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
@@ -2164,7 +2168,8 @@ func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
 		jsCoverageTaskNeedsOAuthProviderMocks(task) ||
 		jsCoverageTaskNeedsWorkspaceCacheSpies(task) ||
 		(task != nil && task.Target == "SSEManager.setupAutoShutdown") ||
-		jsCoverageTaskTargetsSSEAddConnectionClose(task)
+		jsCoverageTaskTargetsSSEAddConnectionClose(task) ||
+		jsCoverageTaskTargetsSSEAddConnectionSendFailure(task)
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
@@ -2195,6 +2200,17 @@ func jsCoverageTaskTargetsSSEAddConnectionClose(task *types.CoverageTestTask) bo
 		jsCoverageTaskMentions(task, "client disconnect") ||
 		jsCoverageTaskMentions(task, "close") ||
 		jsCoverageTaskMentions(task, "disconnect")
+}
+
+func jsCoverageTaskTargetsSSEAddConnectionSendFailure(task *types.CoverageTestTask) bool {
+	if task == nil || task.Target != "SSEManager.addConnection" {
+		return false
+	}
+	return jsCoverageTaskMentions(task, "SSE_SEND_ERROR") ||
+		jsCoverageTaskMentions(task, "res.write") ||
+		jsCoverageTaskMentions(task, "send failure") ||
+		jsCoverageTaskMentions(task, "write failed") ||
+		jsCoverageTaskMentions(task, "ConnectionState.ERROR")
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
@@ -2636,6 +2652,41 @@ func genJSSSEManagerAddConnectionCloseTest(method jsFuncInfo, task *types.Covera
 	sb.WriteString("      } finally {\n")
 	sb.WriteString("        await instance.shutdown();\n")
 	sb.WriteString("        vi.useRealTimers();\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSSEManagerAddConnectionSendFailureTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const { EventEmitter } = await import('node:events');\n")
+	sb.WriteString("      const req = new EventEmitter();\n")
+	sb.WriteString("      const writeError = new Error('write failed');\n")
+	sb.WriteString("      const res = {\n")
+	sb.WriteString("        writableEnded: false,\n")
+	sb.WriteString("        setHeader: vi.fn(),\n")
+	sb.WriteString("        write: vi.fn(() => { throw writeError; }),\n")
+	sb.WriteString("        end: vi.fn(),\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new SSEManager({ autoShutdown: false, heartbeatInterval: 1000 });\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        const connection = await instance.addConnection(req, res);\n")
+	sb.WriteString("        expect(instance.connections.has(connection.id)).toBe(true);\n")
+	sb.WriteString("        const sent = connection.send('log', { message: 'hello' });\n")
+	sb.WriteString("        expect(sent).toBe(false);\n")
+	sb.WriteString("        expect(res.write).toHaveBeenCalledWith('event: log\\n');\n")
+	sb.WriteString("        expect(connection.state).toBe('error');\n")
+	sb.WriteString("        const sentCount = instance.broadcast('heartbeat', {});\n")
+	sb.WriteString("        expect(sentCount).toBe(0);\n")
+	sb.WriteString("        expect(instance.connections.has(connection.id)).toBe(false);\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        await instance.shutdown();\n")
 	sb.WriteString("      }\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")

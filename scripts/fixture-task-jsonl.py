@@ -318,6 +318,29 @@ def js_mcp_hub_sse(project_dir: str) -> dict:
             "priority": 130,
             "priority_reason": "real mcp-hub SSE connection close sample requiring EventEmitter request lifecycle",
         },
+        {
+            **common,
+            "id": "vitest-mcp-hub-sse-3",
+            "target": "SSEManager.addConnection",
+            "line_range": "150-160",
+            "gap_type": "error_path",
+            "missing_branches": [
+                "未覆盖 connection.send 中 res.write 抛错后的 SSE_SEND_ERROR 分支"
+            ],
+            "uncovered_lines": [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160],
+            "suggested_inputs": [
+                "构造 res.write 抛错",
+                "调用 connection.send",
+                "调用 broadcast 清理 error connection",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 SSEManager.addConnection send failure 可通过 throwing res.write 进入 ready，并清理 dead connection",
+            "test_name": "covers SSEManager send failure marks connection error",
+            "assertion_focus": [
+                "应断言 send 返回 false、connection.state 为 error，并通过 broadcast 清理 dead connection"
+            ],
+            "priority": 131,
+            "priority_reason": "real mcp-hub SSE send failure sample requiring response write error isolation",
+        },
     ]
 
 

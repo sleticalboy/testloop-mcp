@@ -2702,6 +2702,99 @@ export class SSEManager extends EventEmitter {
 			forbidden: []string{"{ on: () => {} }", "ConnectionState.DISCONNECTED", "vi.spyOn(process, 'emit')"},
 		},
 		{
+			name:     "vitest sse add connection send failure marks error and cleans dead connection",
+			fileName: "sse-manager.js",
+			source: `import EventEmitter from 'events';
+
+export class SSEManager extends EventEmitter {
+  constructor(options = {}) {
+    super()
+    this.connections = new Map()
+    this.heartbeatInterval = options.heartbeatInterval || 10000
+    this.heartbeatTimer = null
+    this.setupHeartbeat()
+  }
+
+  setupHeartbeat() {
+    this.heartbeatTimer = setInterval(() => {}, this.heartbeatInterval)
+    this.heartbeatTimer.unref()
+  }
+
+  async addConnection(req, res) {
+    const id = 'client-1'
+    const connection = {
+      id,
+      res,
+      state: 'connected',
+      send: (event, data) => {
+        if (res.writableEnded) return false
+        try {
+          res.write('event: ' + event + '\n')
+          res.write('data: ' + JSON.stringify(data) + '\n\n')
+          return true
+        } catch (error) {
+          connection.state = 'error'
+          return false
+        }
+      },
+    }
+    res.setHeader('Content-Type', 'text/event-stream')
+    req.on('close', () => {})
+    this.connections.set(id, connection)
+    return connection
+  }
+
+  broadcast(event, data) {
+    let sentCount = 0
+    for (const [id, connection] of this.connections) {
+      if (connection.state === 'connected') {
+        if (connection.send(event, data)) {
+          sentCount++
+        }
+      } else {
+        this.connections.delete(id)
+      }
+    }
+    return sentCount
+  }
+
+  async shutdown() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+    this.connections.clear()
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-sse-3",
+				Framework:       "vitest",
+				Target:          "SSEManager.addConnection",
+				LineRange:       "150-160",
+				GapType:         "error_path",
+				TestName:        "covers SSEManager send failure marks connection error",
+				MissingBranches: []string{"未覆盖 connection.send 中 res.write 抛错后的 SSE_SEND_ERROR 分支"},
+				SuggestedInputs: []string{"构造 res.write 抛错", "调用 connection.send", "调用 broadcast 清理 error connection"},
+				AssertionFocus:  []string{"应断言 send 返回 false、connection.state 为 error，并通过 broadcast 清理 dead connection"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"const { EventEmitter } = await import('node:events');",
+				"const writeError = new Error('write failed');",
+				"write: vi.fn(() => { throw writeError; }),",
+				"const connection = await instance.addConnection(req, res);",
+				"const sent = connection.send('log', { message: 'hello' });",
+				"expect(sent).toBe(false);",
+				"expect(res.write).toHaveBeenCalledWith('event: log\\n');",
+				"expect(connection.state).toBe('error');",
+				"const sentCount = instance.broadcast('heartbeat', {});",
+				"expect(sentCount).toBe(0);",
+				"expect(instance.connections.has(connection.id)).toBe(false);",
+			},
+			forbidden: []string{"await expect(instance.addConnection", "ConnectionState.ERROR", "res.write: () => {}"},
+		},
+		{
 			name:     "vitest sse auto shutdown uses fake timers and sigterm listener",
 			fileName: "sse-manager.js",
 			source: `import EventEmitter from 'events';
