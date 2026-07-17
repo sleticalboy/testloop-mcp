@@ -71,6 +71,8 @@ Agent 决策应以 `status/action` 为准：
 - `run_error`：先修测试命令、依赖或项目环境。
 - `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计。
 
+更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)。
+
 ## 回归保护
 
 `types/agent_contract_test.go` 固定了上述关键 JSON 字段名。新增字段可以直接追加；如果确实需要改名或改变语义，应先新增兼容字段、更新文档和客户端迁移说明，再在后续主版本中移除旧字段。

@@ -172,6 +172,8 @@ go test ./demo -coverprofile=/tmp/testloop-demo-coverage.out
 - `generation_error`：测试未生成，读取 `provider_error.action` 或 `error`，必要时降级 `provider: "static"`。
 - `run_error`：测试执行入口异常，先修命令、框架或项目环境。
 
+更完整的 `action -> 客户端下一步` 对照见 [Agent Action 决策表](./agent-action-guide.md)。
+
 `validate_coverage_task` 默认在测试失败时开启 `include_fix_suggestions`。如果 Agent 需要调试 provider 输出、分步审查生成内容，仍可使用下面的手动路径。
 
 ## 5. 手动按覆盖率任务生成增量测试

@@ -18,6 +18,7 @@
 - 新增 `docs/showcase.md`，统一说明默认 CI、公开 opt-in showcase 和真实项目 regression smoke 的边界。
 - 新增 `test/showcase_scripts_test.sh` 并纳入 CI，固定公开 showcase 脚本的帮助输出、参数错误和缺少 `pnpm` 的提示。
 - 新增 `validate_coverage_task` 结构化返回一致性测试，固定 `structuredContent` 与文本 JSON 中的 `status/action/coverage_task/generated/run_result/metadata` 不漂移。
+- 新增 `docs/agent-action-guide.md`，整理 `validate_coverage_task.status/action` 到客户端下一步动作的决策表。
 
 ## v0.5.0 - 2026-07-17
 
