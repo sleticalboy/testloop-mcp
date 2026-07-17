@@ -71,15 +71,15 @@ def js_mcp_hub_repair(project_dir: str) -> dict:
         "suggested_inputs": [
             "构造没有 configPaths 或 configPaths 为空数组的 ConfigManager 实例"
         ],
-        "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的错误路径会进入 repair_generated_test，而不是被当成 ready",
+        "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的错误路径会生成 async reject 断言并进入 ready",
         "command": "npx vitest run tests/utils/config.test.js",
         "test_file": os.path.join(project_dir, "tests", "utils", "config.test.js"),
         "test_name": "covers ConfigManager.loadConfig empty config paths branch",
         "assertion_focus": [
-            "当前静态生成器会直接 await loadConfig()，但该分支应断言 ConfigError，因此 run_tests 应返回失败并提示修生成测试"
+            "该分支应断言 ConfigError，生成测试需要使用 await expect(instance.loadConfig()).rejects.toThrow()"
         ],
         "priority": 121,
-        "priority_reason": "real mcp-hub regression sample for failed/repair_generated_test coverage task",
+        "priority_reason": "real mcp-hub regression sample for an async throwing branch that used to be repair_generated_test",
         "confidence": 0.9,
     }
 

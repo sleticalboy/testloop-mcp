@@ -173,6 +173,6 @@ run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" 
 mcp_hub_repair_tasks="$output_dir/mcp-hub-repair-tasks.jsonl"
 require_path dir "$mcp_hub_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-repair "$mcp_hub_dir" "$mcp_hub_repair_tasks"
-run_sample "mcp-hub-repair" "$mcp_hub_dir" "$mcp_hub_repair_tasks" "$mcp_hub_repair_ids" "repair_generated_test" "$vitest_test_command" "vitest" "failed"
+run_sample "mcp-hub-repair" "$mcp_hub_dir" "$mcp_hub_repair_tasks" "$mcp_hub_repair_ids" "ready" "$vitest_test_command" "vitest"
 
 echo "js_regression_output_dir=$output_dir"

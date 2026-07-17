@@ -1649,6 +1649,46 @@ module.exports = { Widget };
 			forbidden: []string{"describe('save'", "to.equal(", "require('chai')", "caughtError"},
 		},
 		{
+			name:     "vitest class async throwing branch",
+			fileName: "config.js",
+			source: `export class ConfigManager {
+  constructor(configPathOrObject) {
+    this.configPaths = null
+    if (typeof configPathOrObject === 'string') {
+      this.configPaths = [configPathOrObject]
+    }
+  }
+
+  async loadConfig() {
+    if (!this.configPaths || this.configPaths.length === 0) {
+      throw new Error('No config paths specified')
+    }
+    return { mcpServers: {} }
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-repair-1",
+				Framework:       "vitest",
+				Target:          "ConfigManager.loadConfig",
+				LineRange:       "10-10",
+				GapType:         "branch",
+				TestName:        "covers ConfigManager.loadConfig empty config paths branch",
+				MissingBranches: []string{"未覆盖 if 分支: !this.configPaths || this.configPaths.length === 0"},
+				SuggestedInputs: []string{"构造没有 configPaths 或 configPaths 为空数组的 ConfigManager 实例"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { ConfigManager } from './config';",
+				"describe('ConfigManager'",
+				"describe('loadConfig'",
+				"it('covers ConfigManager.loadConfig empty config paths branch', async () => {",
+				"const instance = new ConfigManager({});",
+				"await expect(instance.loadConfig()).rejects.toThrow();",
+			},
+			forbidden: []string{"const result = await instance.loadConfig();", "expect(result).toBeDefined();"},
+		},
+		{
 			name:     "vitest class strict fallback error path",
 			fileName: "env-resolver.js",
 			source: `export class EnvResolver {

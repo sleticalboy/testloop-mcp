@@ -403,6 +403,7 @@ var (
 	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*([^)]+?)\s*\)`)
 	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*(null|undefined)\s*\)`)
 	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(?:===?|==)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
+	jsIfThrowRe  = regexp.MustCompile(`(?s)if\s*\((.*?)\)\s*\{?\s*throw\b`)
 )
 
 // analyzeJSBody 分析 JS 函数体，推断返回类型、检测 throw 和边界条件
@@ -759,7 +760,7 @@ func jsFunctionCoverageTaskWantsErrorAssertion(fn jsFuncInfo, task *types.Covera
 	if task == nil {
 		return fn.Analysis.Throws
 	}
-	return task.GapType == "error_path"
+	return task.GapType == "error_path" || jsCoverageTaskTargetsThrowingBranch(fn.Body, task)
 }
 
 func jsCoverageTaskArgOverrides(fn jsFuncInfo, task *types.CoverageTestTask) map[string]string {
@@ -3003,9 +3004,87 @@ func jsPrivateEntryCandidatesForMethod(cls jsClassInfo, privateName string) []st
 
 func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTestTask) bool {
 	if task != nil && taskTargetMatches(task.Target, method.ClassName, method.Name) {
-		return task.GapType == "error_path" || jsCoverageTaskMentions(task, "if 分支: e") || jsCoverageTaskMentions(task, "if (e)")
+		return task.GapType == "error_path" || jsCoverageTaskMentions(task, "if 分支: e") || jsCoverageTaskMentions(task, "if (e)") || jsCoverageTaskTargetsThrowingBranch(method.Body, task)
 	}
 	return method.Analysis.Throws
+}
+
+func jsCoverageTaskTargetsThrowingBranch(body string, task *types.CoverageTestTask) bool {
+	if task == nil || strings.TrimSpace(task.GapType) != "branch" || strings.TrimSpace(body) == "" {
+		return false
+	}
+	conditions := jsCoverageTaskBranchConditions(task)
+	if len(conditions) == 0 {
+		return false
+	}
+	throwingConditions := jsThrowingBranchConditions(body)
+	for _, condition := range conditions {
+		if _, ok := throwingConditions[normalizeJSCondition(condition)]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func jsCoverageTaskBranchConditions(task *types.CoverageTestTask) []string {
+	if task == nil {
+		return nil
+	}
+	var conditions []string
+	for _, text := range append(append([]string{}, task.MissingBranches...), task.AssertionFocus...) {
+		if condition := jsCoverageTaskBranchCondition(text); condition != "" {
+			conditions = append(conditions, condition)
+		}
+	}
+	for _, text := range task.SuggestedInputs {
+		if condition := jsBacktickExpression(text); condition != "" {
+			conditions = append(conditions, condition)
+		}
+	}
+	return conditions
+}
+
+func jsCoverageTaskBranchCondition(text string) string {
+	for _, marker := range []string{"if 分支:", "if branch:"} {
+		idx := strings.Index(text, marker)
+		if idx >= 0 {
+			return strings.TrimSpace(text[idx+len(marker):])
+		}
+	}
+	return ""
+}
+
+func jsBacktickExpression(text string) string {
+	start := strings.Index(text, "`")
+	if start < 0 {
+		return ""
+	}
+	end := strings.Index(text[start+1:], "`")
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(text[start+1 : start+1+end])
+}
+
+func jsThrowingBranchConditions(body string) map[string]struct{} {
+	conditions := map[string]struct{}{}
+	for _, match := range jsIfThrowRe.FindAllStringSubmatch(body, -1) {
+		if len(match) != 2 {
+			continue
+		}
+		condition := normalizeJSCondition(match[1])
+		if condition != "" {
+			conditions[condition] = struct{}{}
+		}
+	}
+	return conditions
+}
+
+func normalizeJSCondition(condition string) string {
+	condition = strings.TrimSpace(condition)
+	condition = strings.TrimPrefix(condition, "(")
+	condition = strings.TrimSuffix(condition, ")")
+	return strings.Join(strings.Fields(condition), " ")
 }
 
 func jsClassInstanceForCoverageTask(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask) string {
