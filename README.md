@@ -198,7 +198,7 @@ command = "/absolute/path/to/testloop-mcp"
 
 LLM provider 示例见 [docs/llm-provider.md](./docs/llm-provider.md) 和 [examples/llm-provider.sh](./examples/llm-provider.sh)。示例脚本会根据 `payload_notes` 读取 imported type 的候选文件，并使用 [examples/llm-provider-prompt.md](./examples/llm-provider-prompt.md) 组装 prompt；默认模板包含严格输出契约，要求模型只返回一个可直接写盘的完整测试文件，无法安全增强时回退静态草稿。可通过 `TESTLOOP_LLM_PROVIDER_PROMPT_FILE` 调试 prompt，通过 `TESTLOOP_LLM_PROVIDER_PROMPT_TEMPLATE` 替换模板，或通过 `TESTLOOP_LLM_PROVIDER_MODEL_CMD` 接入真实模型命令。仓库提供了 Ollama 和 OpenAI CLI 的模型命令包装示例。
 
-Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md)。无论使用 `static` 还是 `llm` provider，生成测试后都应继续调用 `run_tests`；失败时建议开启 `include_fix_suggestions=true`，让生成结果直接进入结构化修复闭环。
+Agent 端到端闭环示例见 [docs/agent-workflow.md](./docs/agent-workflow.md)，稳定字段契约见 [Agent 结构化契约](./docs/agent-contract.md)。无论使用 `static` 还是 `llm` provider，生成测试后都应继续调用 `run_tests`；失败时建议开启 `include_fix_suggestions=true`，让生成结果直接进入结构化修复闭环。
 
 **Go 生成器：** 优先调用本机 `gotests -all` 生成 Go 社区标准测试骨架；如果未安装 `gotests`、命令失败或输出为空，则回退到内置 `go/ast` 生成器。内置回退支持泛型类型参数实例化（`T → int`）、指针/值接收者方法、变参 `...T` → 切片、通道参数 nil-check + `t.Skip` 防阻塞、接口参数自动 mock、slice/map/struct 自动使用 `reflect.DeepEqual`。
 
