@@ -178,7 +178,7 @@ func Add(a, b int) int {
 	}
 }
 
-type validateCoverageTaskReadyFixture struct {
+type validateCoverageTaskFixture struct {
 	Status       string                               `json:"status"`
 	Action       string                               `json:"action"`
 	CoverageTask types.CoverageTestTask               `json:"coverage_task"`
@@ -258,7 +258,7 @@ func Add(a, b int) int {
 		t.Fatalf("unmarshal validation output: %v", err)
 	}
 
-	gotBytes, err := json.MarshalIndent(validateCoverageTaskReadyFixtureFromOutput(t, dir, out), "", "  ")
+	gotBytes, err := json.MarshalIndent(validateCoverageTaskFixtureFromOutput(t, dir, out), "", "  ")
 	if err != nil {
 		t.Fatalf("marshal ready fixture: %v", err)
 	}
@@ -273,7 +273,7 @@ func Add(a, b int) int {
 	}
 }
 
-func validateCoverageTaskReadyFixtureFromOutput(t *testing.T, root string, out types.CoverageTaskValidationOutput) validateCoverageTaskReadyFixture {
+func validateCoverageTaskFixtureFromOutput(t *testing.T, root string, out types.CoverageTaskValidationOutput) validateCoverageTaskFixture {
 	t.Helper()
 	if out.CoverageTask == nil {
 		t.Fatalf("coverage_task missing in output: %+v", out)
@@ -299,7 +299,32 @@ func validateCoverageTaskReadyFixtureFromOutput(t *testing.T, root string, out t
 	if testFile, ok := out.Metadata["test_file"].(string); ok {
 		metadata["test_file"] = normalizeFixturePath(root, testFile)
 	}
-	return validateCoverageTaskReadyFixture{
+	for _, key := range []string{
+		"unreachable",
+		"unreachable_reason",
+		"environment_dependent",
+		"environment_reason",
+		"protocol_dependent",
+		"protocol_reason",
+		"database_dependent",
+		"database_reason",
+		"external_service_dependent",
+		"external_service_reason",
+		"private_method",
+		"private_reason",
+		"public_entry_candidates",
+		"internal_symbol",
+		"internal_reason",
+		"no_runtime",
+		"no_runtime_reason",
+		"coverage_target_hit",
+		"coverage_miss_reason",
+	} {
+		if value, ok := out.Metadata[key]; ok {
+			metadata[key] = value
+		}
+	}
+	return validateCoverageTaskFixture{
 		Status:       out.Status,
 		Action:       out.Action,
 		CoverageTask: coverageTask,
@@ -1110,6 +1135,83 @@ export default class CacheFacade {
 	if out.Generated == nil || !strings.Contains(out.Generated.Preview, "manual_review_internal: LocalCache") ||
 		strings.Contains(out.Generated.Preview, "new LocalCache()") {
 		t.Fatalf("expected generated internal review skip, got %+v", out.Generated)
+	}
+}
+
+func TestHandleValidateCoverageTaskManualReviewInternalFixture(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "cache.js")
+	src := `class LocalCache {
+  get(key) {
+    if (!this.values[key]) {
+      this.values[key] = null
+    }
+    return this.values[key]
+  }
+}
+
+export default class CacheFacade {
+  constructor() {
+    this.cache = new LocalCache()
+  }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeNpxSuccess(t, strings.Join([]string{
+		" RUN  v3.2.4 " + dir,
+		"",
+		" ↓ cache.test.js (1 test | 1 skipped)",
+		"",
+		" Test Files  1 skipped (1)",
+		"      Tests  1 skipped (1)",
+	}, "\n"))
+	task := types.CoverageTestTask{
+		ID:              "vitest-internal-1",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "LocalCache.get",
+		Kind:            "method",
+		LineRange:       "3-3",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: !this.values[key]"},
+		SuggestedInputs: []string{"构造满足条件 `!this.values[key]` 的输入"},
+		TestFile:        filepath.Join(dir, "cache.test.js"),
+		TestName:        "covers LocalCache internal get",
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+
+	gotBytes, err := json.MarshalIndent(validateCoverageTaskFixtureFromOutput(t, dir, out), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal manual-review fixture: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("..", "docs", "fixtures", "validate-coverage-task-manual-review-internal.json"))
+	if err != nil {
+		t.Fatalf("read manual-review fixture: %v\n--- got ---\n%s", err, got)
+	}
+	want := string(wantBytes)
+	if got != want {
+		t.Fatalf("manual-review fixture mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }
 

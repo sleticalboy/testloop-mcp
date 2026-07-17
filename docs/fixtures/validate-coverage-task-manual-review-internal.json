@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "action": "manual_review_internal",
+  "coverage_task": {
+    "id": "vitest-internal-1",
+    "framework": "vitest",
+    "file": "cache.js",
+    "target": "LocalCache.get",
+    "kind": "method",
+    "line_range": "3-3",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: !this.values[key]"
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `!this.values[key]` 的输入"
+    ],
+    "goal": "",
+    "test_file": "cache.test.js",
+    "test_name": "covers LocalCache internal get",
+    "confidence": 0
+  },
+  "generated": {
+    "status": "ok",
+    "test_file": "cache.test.js",
+    "generated_cases": 0,
+    "provider": "static",
+    "coverage_task": {
+      "id": "vitest-internal-1",
+      "framework": "vitest",
+      "file": "cache.js",
+      "target": "LocalCache.get",
+      "kind": "method",
+      "line_range": "3-3",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: !this.values[key]"
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `!this.values[key]` 的输入"
+      ],
+      "goal": "",
+      "test_file": "cache.test.js",
+      "test_name": "covers LocalCache internal get",
+      "confidence": 0
+    }
+  },
+  "run_result": {
+    "status": "pass",
+    "framework": "vitest",
+    "total": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 1,
+    "coverage_percent": 0,
+    "failures": null
+  },
+  "metadata": {
+    "framework": "vitest",
+    "internal_reason": "LocalCache.get is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually",
+    "internal_symbol": true,
+    "test_file": "cache.test.js"
+  }
+}
