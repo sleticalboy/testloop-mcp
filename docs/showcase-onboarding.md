@@ -1,0 +1,31 @@
+# 安装到 Agent 闭环展示路径
+
+这条路径用于公开演示 testloop-mcp 的首次接入体验：先确认安装产物和客户端配置没问题，再确认真实 MCP 进程传输可用，最后跑一条最小 Agent 测试反馈闭环。
+
+## 一键演示
+
+在源码 checkout 根目录执行：
+
+```bash
+scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+```
+
+如果要确认安装的是指定版本：
+
+```bash
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+```
+
+## 这条路径验证什么
+
+脚本会依次执行三步：
+
+1. `scripts/verify-client-setup.sh`：基础安装验收，确认二进制可执行、版本可读、客户端配置片段可 roundtrip 校验，并检查 HTTP `/healthz`。
+2. `scripts/verify-mcp-process-smoke.sh`：深度协议验收，使用真实 MCP SDK 客户端通过 stdio 和 Streamable HTTP 启动二进制，调用 `tools/list` 和轻量 `parse_results`，并校验 `structuredContent` 与文本 JSON fallback 一致。
+3. `go run ./examples/mcp-client-demo`：最小 Agent 闭环，演示 `run_tests -> repair_task -> rerun -> parse_coverage`。
+
+## 适用边界
+
+这条路径适合 README、录屏和首次接入验收。它不依赖外部项目，也不会修改当前仓库业务文件。
+
+如果只是想确认安装和配置，运行 `scripts/verify-client-setup.sh` 即可。如果要证明真实 MCP 协议链路可用，再运行 `scripts/verify-mcp-process-smoke.sh` 或本脚本。

@@ -39,8 +39,20 @@ run_expect_code() {
 }
 
 test_showcase_scripts_are_valid_bash() {
+  bash -n "${repo_root}/scripts/showcase-onboarding.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
+}
+
+test_onboarding_showcase_help_and_args() {
+  out="${tmp_dir}/onboarding-help.out"
+  run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-onboarding.sh" --help
+  assert_contains "$out" "Usage: scripts/showcase-onboarding.sh [testloop-mcp-binary]"
+  assert_contains "$out" "TESTLOOP_MCP_VERIFY_EXPECT_VERSION"
+
+  out="${tmp_dir}/onboarding-args.out"
+  run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-onboarding.sh" one two
+  assert_contains "$out" "Usage: scripts/showcase-onboarding.sh [testloop-mcp-binary]"
 }
 
 test_go_showcase_help_and_args() {
@@ -71,6 +83,7 @@ test_js_showcase_help_args_and_missing_pnpm() {
 }
 
 test_showcase_scripts_are_valid_bash
+test_onboarding_showcase_help_and_args
 test_go_showcase_help_and_args
 test_js_showcase_help_args_and_missing_pnpm
 

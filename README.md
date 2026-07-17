@@ -544,7 +544,13 @@ go run ./examples/mcp-client-demo
 
 预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
-更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含最小 Agent demo、公开 Go showcase、公开 JS/TS showcase，以及维护者使用的真实项目 regression smoke。
+如果要演示完整首次接入路径，可以运行：
+
+```bash
+scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+```
+
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 

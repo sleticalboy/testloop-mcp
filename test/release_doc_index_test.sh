@@ -25,6 +25,7 @@ required_entries = {
 required_commands = [
     "go run ./examples/agent-decision-demo",
     "go run ./examples/mcp-client-demo",
+    "scripts/showcase-onboarding.sh",
     "scripts/verify-client-setup.sh",
     "scripts/verify-mcp-process-smoke.sh",
 ]
