@@ -513,6 +513,19 @@ scripts/validate-regression-smoke.sh
 
 当前默认矩阵覆盖 Java + JS + Python：Java 使用上述三类样本，JS 使用 ip2region JavaScript binding 的 Jest ready、仓库内 TypeScript no-runtime/internal 手审样本、mcp-hub Vitest async throwing branch 样本、mcp-hub `DevWatcher` 文件监听生命周期样本、mcp-hub `WorkspaceCacheManager` 缓存文件锁/进程探测样本，以及 mcp-hub `SSEManager` 自动关闭、连接断开、发送失败和定向发送样本，Python 使用 Click pytest ready、仓库内 name-mangled private method 手审样本、haoy-apk-station FastAPI 动态前端入口 `manual_review_environment` 样本、下载代理对象存储 endpoint timeout 的 `manual_review_external_service` 样本，以及删除应用 SQLAlchemy 事务失败的 `manual_review_database` 样本。各语言项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_*_REGRESSION_*` 环境变量覆盖。详细运行说明见 [固定 smoke 回归说明](./docs/regression-smoke.md)。
 
+### 面向 Agent 的快速演示路径
+
+演示 testloop-mcp 时，优先展示一条小而完整的反馈闭环，而不是只展示单次生成测试：
+
+```bash
+go test ./...
+TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS=180 \
+TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS=180 \
+scripts/validate-regression-smoke.sh
+```
+
+重点查看 smoke 输出里的 `status_counts` 和 `action_counts`：真实 ready 样本应保持 `passed/ready`；内部实现、环境依赖、外部服务和数据库事务样本应保持对应 `manual_review_*` 分类。对 AI Agent 来说，这条路径展示的是“覆盖率任务 -> 生成测试 -> 运行测试 -> 结构化反馈 -> 下一步动作分类”，而不是把项目包装成普通测试生成器。
+
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
 ## Roadmap

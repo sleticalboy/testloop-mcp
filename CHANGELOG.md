@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `docs/plan-release-notes-v0.5.0.md`，把当前固定 smoke 矩阵、Agent 闭环定位、真实项目验证证据和 v0.5.0 发布前门禁整理成中文发布草案。
+- README 新增“面向 Agent 的快速演示路径”，推荐用 `go test ./...` + 固定 smoke 展示 `generate_tests -> run_tests -> parse/fix/coverage feedback` 闭环。
+
 ### Changed
 
 - Go coverage task 写入测试文件前会扫描同包所有 `*_test.go`，当任务推荐的 `test_name` 已在其它测试文件中存在时，也会自动追加稳定后缀，避免生成后 `go test` 因包级 `Test*` 重名构建失败。
