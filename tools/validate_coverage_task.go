@@ -364,6 +364,13 @@ func coverageTaskDatabaseReason(task *types.CoverageTestTask, generated *types.G
 	if task == nil || generated == nil || result == nil || result.Status != "pass" || result.Skipped == 0 {
 		return ""
 	}
+	if strings.Contains(generated.Preview, "manual_review_database:") {
+		target := strings.TrimSpace(task.Target)
+		if target == "" {
+			target = "coverage task"
+		}
+		return fmt.Sprintf("%s depends on database transaction/session behavior; use a deterministic test database, injected repository/session, or integration fixture instead of treating the generated skip as directly ready", target)
+	}
 	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
 		return ""
 	}

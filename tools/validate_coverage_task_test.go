@@ -668,6 +668,28 @@ func TestHandleValidateCoverageTaskMarksExternalServiceTimeoutAsManualReview(t *
 	}
 }
 
+func TestCoverageTaskDatabaseReasonRecognizesManualReviewMarker(t *testing.T) {
+	task := &types.CoverageTestTask{
+		ID:        "pytest-db-1",
+		Framework: "pytest",
+		Target:    "delete_app",
+		GapType:   "error_path",
+		LineRange: "670-672",
+	}
+	generated := &types.GenerateTestsOutput{
+		Preview: "def test_delete_app_database_commit_failure_requires_review():\n    __import__('pytest').skip('manual_review_database: delete_app depends on SQLAlchemy database transaction/session behavior')\n",
+	}
+	result := &types.TestResult{
+		Status:  "pass",
+		Skipped: 1,
+	}
+
+	reason := coverageTaskDatabaseReason(task, generated, result)
+	if !strings.Contains(reason, "delete_app") || !strings.Contains(reason, "database transaction/session behavior") {
+		t.Fatalf("unexpected database reason: %q", reason)
+	}
+}
+
 func TestHandleValidateCoverageTaskMarksJSPrivateMethodAsManualReview(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^3.0.0"}}`+"\n"), 0o644); err != nil {

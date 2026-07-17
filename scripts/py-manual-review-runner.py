@@ -9,6 +9,7 @@ MANUAL_REVIEW_MARKERS = (
     "manual_review_internal:",
     "manual_review_unreachable:",
     "manual_review_environment:",
+    "manual_review_database:",
     "manual_review_external_service:",
 )
 

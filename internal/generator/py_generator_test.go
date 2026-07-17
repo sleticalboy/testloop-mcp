@@ -2700,6 +2700,44 @@ func TestPytestClassCoverageTaskMarksNameMangledPrivateMethodInternal(t *testing
 	})
 }
 
+func TestPytestFunctionCoverageTaskMarksSQLAlchemyDatabaseErrorManualReview(t *testing.T) {
+	task := types.CoverageTestTask{
+		ID:        "pytest-apk-delete-db-1",
+		Framework: "pytest",
+		Target:    "delete_app",
+		GapType:   "error_path",
+		LineRange: "670-672",
+		TestName:  "test_delete_app_database_commit_failure_requires_review",
+		MissingBranches: []string{
+			"未覆盖 db.commit 抛出 SQLAlchemyError 后的数据库事务失败路径",
+		},
+		SuggestedInputs: []string{
+			"构造 db.commit 抛出 SQLAlchemyError 的 Session",
+		},
+		AssertionFocus: []string{
+			"数据库事务失败应通过测试数据库或注入 session 验证",
+		},
+	}
+	fn := pyFuncInfo{
+		Name:   "delete_app",
+		Params: []pyParamInfo{{Name: "app_id"}, {Name: "current_user"}, {Name: "db"}},
+		Body: `app = db.query(App).filter(App.id == app_id).first()
+db.query(AppVersion).filter(AppVersion.app_id == app_id).delete()
+db.delete(app)
+db.commit()`,
+	}
+
+	code := genPytestFuncTestForCoverageTask(fn, &task)
+	assertPyGenerated(t, code, []string{
+		"def test_delete_app_database_commit_failure_requires_review():",
+		"manual_review_database: delete_app depends on SQLAlchemy database transaction/session behavior",
+		"__import__('pytest').skip(",
+	}, []string{
+		"delete_app(",
+		"with pytest.raises",
+	})
+}
+
 func TestPytestClassTestCoversAsyncStaticRaisesAndBoundaries(t *testing.T) {
 	cls := pyClassInfo{
 		Name: "Service",

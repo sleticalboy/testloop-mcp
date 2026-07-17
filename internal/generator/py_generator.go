@@ -546,6 +546,10 @@ func genPytestFuncTestForCoverageTask(fn pyFuncInfo, task *types.CoverageTestTas
 		sb.WriteString(fmt.Sprintf("    pytest.skip(%q)\n\n", review))
 		return sb.String()
 	}
+	if review := pyFuncDatabaseReview(fn, task); review != "" {
+		sb.WriteString(fmt.Sprintf("    __import__('pytest').skip(%q)\n\n", review))
+		return sb.String()
+	}
 	if fn.Name == "safecall" && task != nil && task.GapType == "error_path" {
 		sb.WriteString("    def boom():\n")
 		sb.WriteString("        raise RuntimeError('boom')\n")
@@ -2517,8 +2521,7 @@ func pyCoverageTaskMentions(task *types.CoverageTestTask, needle string) bool {
 	if task == nil || needle == "" {
 		return false
 	}
-	haystack := strings.Join(append(append([]string{}, task.MissingBranches...), task.SuggestedInputs...), "\n")
-	return strings.Contains(haystack, needle)
+	return strings.Contains(pyCoverageTaskText(task), needle)
 }
 
 func pyFuncEnvironmentReview(fn pyFuncInfo, task *types.CoverageTestTask) string {
@@ -2530,6 +2533,53 @@ func pyFuncEnvironmentReview(fn pyFuncInfo, task *types.CoverageTestTask) string
 		return fmt.Sprintf("manual_review_environment: %s depends on process std stream binary-wrapper state; cover with injected stream helpers or an integration environment", fn.Name)
 	}
 	return ""
+}
+
+func pyFuncDatabaseReview(fn pyFuncInfo, task *types.CoverageTestTask) string {
+	if task == nil || !pyCoverageTaskLooksDatabaseDependent(fn, task) {
+		return ""
+	}
+	target := strings.TrimSpace(task.Target)
+	if target == "" {
+		target = fn.Name
+	}
+	return fmt.Sprintf("manual_review_database: %s depends on SQLAlchemy database transaction/session behavior; cover it with a deterministic test database, injected repository/session, or integration fixture instead of treating the generated unit test as directly ready", target)
+}
+
+func pyCoverageTaskLooksDatabaseDependent(fn pyFuncInfo, task *types.CoverageTestTask) bool {
+	text := strings.ToLower(pyCoverageTaskText(task) + "\n" + task.Target + "\n" + task.File + "\n" + fn.Body)
+	hasDatabaseHint := strings.Contains(text, "sqlalchemy") ||
+		strings.Contains(text, "db.commit") ||
+		strings.Contains(text, "db.rollback") ||
+		strings.Contains(text, "db.query") ||
+		strings.Contains(text, "sessionlocal") ||
+		strings.Contains(text, "database") ||
+		strings.Contains(text, "数据库") ||
+		strings.Contains(text, "事务")
+	if !hasDatabaseHint {
+		return false
+	}
+	hasErrorHint := strings.TrimSpace(task.GapType) == "error_path" ||
+		strings.Contains(text, "error") ||
+		strings.Contains(text, "exception") ||
+		strings.Contains(text, "err != nil") ||
+		strings.Contains(text, "失败") ||
+		strings.Contains(text, "抛出") ||
+		strings.Contains(text, "rollback") ||
+		strings.Contains(text, "回滚")
+	return hasErrorHint
+}
+
+func pyCoverageTaskText(task *types.CoverageTestTask) string {
+	if task == nil {
+		return ""
+	}
+	parts := make([]string, 0, len(task.MissingBranches)+len(task.SuggestedInputs)+len(task.AssertionFocus)+2)
+	parts = append(parts, task.MissingBranches...)
+	parts = append(parts, task.SuggestedInputs...)
+	parts = append(parts, task.AssertionFocus...)
+	parts = append(parts, task.Goal, task.PriorityReason)
+	return strings.Join(parts, "\n")
 }
 
 func genPyResultAssertionWithArgs(a pyFuncAnalysis, params []pyParamInfo, boundary *pyBoundary, indent string) string {

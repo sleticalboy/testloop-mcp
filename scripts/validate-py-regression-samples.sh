@@ -33,6 +33,8 @@ top-N 覆盖率窗口。
                                     默认：pytest-apk-frontend-env-1
   TESTLOOP_PY_REGRESSION_APK_STATION_EXTERNAL_IDS
                                     默认：pytest-apk-download-external-1
+  TESTLOOP_PY_REGRESSION_APK_STATION_DATABASE_IDS
+                                    默认：pytest-apk-delete-db-1
   TESTLOOP_PYTEST_COMMAND
                                     默认：uv run python -m pytest {verbose} {coverage} {path}
   TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS
@@ -64,6 +66,7 @@ internal_ids="${TESTLOOP_PY_REGRESSION_INTERNAL_IDS:-pytest-internal-1}"
 apk_station_dir="${TESTLOOP_PY_REGRESSION_APK_STATION_DIR:-/Users/binlee/code/free-works/haoy-apk-station/backend}"
 apk_station_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_IDS:-pytest-apk-frontend-env-1}"
 apk_station_external_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_EXTERNAL_IDS:-pytest-apk-download-external-1}"
+apk_station_database_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_DATABASE_IDS:-pytest-apk-delete-db-1}"
 pytest_command="${TESTLOOP_PYTEST_COMMAND:-}"
 if [[ -z "$pytest_command" ]]; then
   pytest_command='uv run python -m pytest {verbose} {coverage} {path}'
@@ -166,5 +169,10 @@ apk_station_external_tasks="$output_dir/apk-station-external-service-tasks.jsonl
 require_path dir "$apk_station_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" py-apk-station-external-service "$apk_station_dir" "$apk_station_external_tasks"
 run_sample "apk-station-external-service" "$apk_station_dir" "$apk_station_external_tasks" "$apk_station_external_ids" "manual_review_external_service" "$external_service_command" "failed"
+
+apk_station_database_tasks="$output_dir/apk-station-database-tasks.jsonl"
+require_path dir "$apk_station_dir"
+"$repo_root/scripts/fixture-task-jsonl.py" py-apk-station-database "$apk_station_dir" "$apk_station_database_tasks"
+run_sample "apk-station-database" "$apk_station_dir" "$apk_station_database_tasks" "$apk_station_database_ids" "manual_review_database" "$manual_review_command"
 
 echo "py_regression_output_dir=$output_dir"
