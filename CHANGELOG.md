@@ -9,6 +9,8 @@
 - 新增真实 stdio 进程级 e2e smoke，通过 MCP SDK `CommandTransport` 构建并启动当前 `testloop-mcp` 二进制，验证 `tools/list` 和 `parse_results` 的结构化返回一致性。
 - 新增真实 Streamable HTTP 进程级 e2e smoke，验证 `/healthz`、`StreamableClientTransport`、`tools/list` 和 `parse_results` 的结构化返回一致性。
 - 新增真实二进制级客户端配置 smoke，验证 `--print-config=all` 生成的 Codex / Codex HTTP / Claude / Cursor 配置可被同一二进制 `--check-config -` 校验通过。
+- 新增 `scripts/verify-client-setup.sh`，把二进制可执行性、`--doctor-config`、配置 roundtrip 和 HTTP `/healthz` 收敛为安装后自检入口。
+- 新增 `test/verify_client_setup_test.sh` 并纳入 CI，固定安装后自检脚本的 skip HTTP 路径和缺失二进制错误提示。
 
 ## v0.5.0 - 2026-07-17
 

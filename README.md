@@ -136,6 +136,14 @@ testloop-mcp --doctor-config
 
 诊断会区分“配置文件存在但缺少 `testloop` server”和“已有其他 MCP server 配置正常”，并给出可复制的 `--print-config` 修复建议。
 
+源码 checkout 中还提供安装后自检脚本：
+
+```bash
+scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+```
+
+该脚本会执行 `--doctor-config`、`--print-config=all | --check-config -`，并启动一次 HTTP 模式检查 `/healthz`。
+
 ### Codex
 
 `~/.codex/config.toml`:

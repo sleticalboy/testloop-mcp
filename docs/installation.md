@@ -226,6 +226,14 @@ testloop-mcp --print-config=codex | testloop-mcp --check-config -
 
 源码仓库的测试会构建当前 `testloop-mcp` 二进制，并验证 `--print-config=all --config-command=<built-binary>` 生成的 Codex、Codex HTTP、Claude 和 Cursor 片段可以被同一个二进制 `--check-config -` 校验通过。这个 smoke 用来防止配置生成、配置解析和安装接入文档之间发生漂移。
 
+源码 checkout 中也提供用户侧安装后自检脚本：
+
+```bash
+scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+```
+
+脚本会依次验证二进制可执行、`--doctor-config` 可运行、`--print-config=all` 与 `--check-config -` 可以闭环，并启动一次 HTTP 模式检查 `/healthz`。如果当前机器的 `127.0.0.1:18080` 已被占用，可以通过 `TESTLOOP_MCP_VERIFY_HTTP_ADDR=127.0.0.1:18081` 指定其他端口；只想验证 stdio 配置时可以设置 `TESTLOOP_MCP_VERIFY_SKIP_HTTP=true`。
+
 如果不确定应该写入哪个配置文件，先运行本机诊断：
 
 ```bash
