@@ -149,6 +149,12 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
+如果还要验证真实 MCP 客户端能通过 stdio 和 Streamable HTTP 启动该二进制并调用轻量工具：
+
+```bash
+scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp
+```
+
 ### Codex
 
 `~/.codex/config.toml`:

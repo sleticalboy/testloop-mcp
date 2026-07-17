@@ -38,6 +38,12 @@ scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
 ```
 
+如果要进一步确认真实 MCP 客户端可以通过 stdio 和 HTTP 启动该二进制并调用工具：
+
+```bash
+scripts/verify-mcp-process-smoke.sh "$(command -v testloop-mcp)"
+```
+
 如果当前机器 `127.0.0.1:18080` 已被占用：
 
 ```bash

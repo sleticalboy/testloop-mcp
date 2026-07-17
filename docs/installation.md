@@ -242,6 +242,14 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
+如果需要验证真实 MCP 客户端进程接入，而不仅是配置 roundtrip 和 HTTP 探活，可以运行：
+
+```bash
+scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp
+```
+
+该脚本会使用 MCP SDK 客户端通过 stdio 和 Streamable HTTP 启动指定二进制，调用 `tools/list` 和轻量 `parse_results`，并校验 `structuredContent` 与文本 JSON fallback 一致。只想验证单一路径时可以设置 `TESTLOOP_MCP_CLIENT_SMOKE_TRANSPORT=stdio` 或 `http`。
+
 如果不确定应该写入哪个配置文件，先运行本机诊断：
 
 ```bash

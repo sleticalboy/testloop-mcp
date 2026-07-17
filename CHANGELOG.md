@@ -5,6 +5,7 @@
 ### Added
 
 - 主二进制新增 `--version`，安装后自检脚本可通过 `TESTLOOP_MCP_VERIFY_EXPECT_VERSION` 校验当前 PATH 或指定二进制是否为预期版本。
+- 新增 `scripts/verify-mcp-process-smoke.sh` 和 `examples/mcp-process-smoke`，用真实 MCP SDK 客户端通过 stdio / Streamable HTTP 启动安装后的二进制并调用轻量工具。
 
 ## v0.5.1 - 2026-07-17
 
