@@ -74,3 +74,5 @@ Agent 决策应以 `status/action` 为准：
 ## 回归保护
 
 `types/agent_contract_test.go` 固定了上述关键 JSON 字段名。新增字段可以直接追加；如果确实需要改名或改变语义，应先新增兼容字段、更新文档和客户端迁移说明，再在后续主版本中移除旧字段。
+
+`test/e2e` 还包含真实 stdio 进程级 smoke：测试会先构建当前 `testloop-mcp` 二进制，再通过 MCP SDK `CommandTransport` 启动 `--transport=stdio` 进程，执行 `tools/list` 和一次 `parse_results` 调用，并复用 e2e helper 校验 `structuredContent` 与 text JSON 语义一致。这个测试覆盖的是客户端实际接入路径，不只是 in-memory server。

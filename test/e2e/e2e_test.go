@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -43,6 +45,38 @@ func startServer(t *testing.T) *mcp.ClientSession {
 	if err != nil {
 		t.Fatalf("client connect failed: %v", err)
 	}
+	return session
+}
+
+func startStdioCommandServer(t *testing.T) *mcp.ClientSession {
+	t.Helper()
+	binary := filepath.Join(t.TempDir(), "testloop-mcp")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", binary, projectRoot())
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build testloop-mcp binary: %v\n%s", err, output)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	t.Cleanup(cancel)
+	cmd := exec.CommandContext(ctx, binary, "--transport=stdio")
+	transport := &mcp.CommandTransport{
+		Command:           cmd,
+		TerminateDuration: 2 * time.Second,
+	}
+	client := mcp.NewClient(
+		&mcp.Implementation{Name: "test-stdio-client", Version: "1.0.0"},
+		nil,
+	)
+	session, err := client.Connect(ctx, transport, nil)
+	if err != nil {
+		t.Fatalf("stdio client connect failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
 	return session
 }
 
@@ -188,6 +222,37 @@ func TestE2E_ListTools(t *testing.T) {
 	}
 
 	t.Logf("ListTools: %d tools registered", len(result.Tools))
+}
+
+func TestE2E_StdioCommandTransportListsAndCallsTool(t *testing.T) {
+	session := startStdioCommandServer(t)
+
+	result, err := session.ListTools(context.Background(), &mcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("stdio ListTools error: %v", err)
+	}
+	foundParseResults := false
+	for _, tool := range result.Tools {
+		if tool.Name == "parse_results" {
+			foundParseResults = true
+			break
+		}
+	}
+	if !foundParseResults {
+		t.Fatalf("stdio ListTools missing parse_results: %+v", result.Tools)
+	}
+
+	payload := callTool(t, session, "parse_results", map[string]any{
+		"framework": "go-test",
+		"output": strings.Join([]string{
+			`{"Action":"run","Package":"example.com/calc","Test":"TestAdd"}`,
+			`{"Action":"pass","Package":"example.com/calc","Test":"TestAdd","Elapsed":0}`,
+			`{"Action":"pass","Package":"example.com/calc","Elapsed":0}`,
+		}, "\n"),
+	})
+	if payload["status"] != "pass" || payload["framework"] != "go-test" {
+		t.Fatalf("unexpected stdio parse_results payload: %+v", payload)
+	}
 }
 
 // TestE2E_GenerateTests 验证 generate_tests 端到端
