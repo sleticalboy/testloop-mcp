@@ -541,6 +541,14 @@ scripts/showcase-go-public-project.sh
 
 该脚本默认克隆 `google/uuid` 的固定 commit，并验证 `go-test-1` 任务。详细说明见 [公开 Go 项目覆盖率闭环案例](./docs/showcase-public-go.md)。
 
+如果要展示 JS/TS 项目的 ready 与 manual-review 决策分流，可以运行：
+
+```bash
+scripts/showcase-js-public-project.sh
+```
+
+该脚本默认克隆 `unjs/ufo` 的固定 commit，并验证 `vitest-1,vitest-2`。详细说明见 [公开 JS/TS 项目覆盖率闭环案例](./docs/showcase-public-js.md)。
+
 更完整的跨语言质量回归可以运行：
 
 ```bash
