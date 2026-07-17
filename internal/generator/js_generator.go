@@ -1424,6 +1424,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSSSEManagerSetupAutoShutdownTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "SSEManager" && method.Name == "addConnection" && jsCoverageTaskTargetsSSEAddConnectionClose(task) {
+			sb.WriteString(genJSSSEManagerAddConnectionCloseTest(method, task, testName))
+			continue
+		}
 		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
@@ -2159,7 +2163,8 @@ func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
 	return jsCoverageTaskNeedsChokidarMock(task) ||
 		jsCoverageTaskNeedsOAuthProviderMocks(task) ||
 		jsCoverageTaskNeedsWorkspaceCacheSpies(task) ||
-		(task != nil && task.Target == "SSEManager.setupAutoShutdown")
+		(task != nil && task.Target == "SSEManager.setupAutoShutdown") ||
+		jsCoverageTaskTargetsSSEAddConnectionClose(task)
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
@@ -2180,6 +2185,16 @@ func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
 	default:
 		return false
 	}
+}
+
+func jsCoverageTaskTargetsSSEAddConnectionClose(task *types.CoverageTestTask) bool {
+	if task == nil || task.Target != "SSEManager.addConnection" {
+		return false
+	}
+	return jsCoverageTaskMentions(task, "connectionClosed") ||
+		jsCoverageTaskMentions(task, "client disconnect") ||
+		jsCoverageTaskMentions(task, "close") ||
+		jsCoverageTaskMentions(task, "disconnect")
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
@@ -2574,6 +2589,52 @@ func genJSSSEManagerSetupAutoShutdownTest(method jsFuncInfo, task *types.Coverag
 	sb.WriteString("      } finally {\n")
 	sb.WriteString("        await instance.shutdown();\n")
 	sb.WriteString("        process.removeListener('SIGTERM', sigtermHandler);\n")
+	sb.WriteString("        vi.useRealTimers();\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSSEManagerAddConnectionCloseTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const { EventEmitter } = await import('node:events');\n")
+	sb.WriteString("      const workspaceCache = {\n")
+	sb.WriteString("        updateActiveConnections: vi.fn().mockResolvedValue(undefined),\n")
+	sb.WriteString("        cancelShutdownTimer: vi.fn().mockResolvedValue(undefined),\n")
+	sb.WriteString("        setShutdownTimer: vi.fn().mockResolvedValue(undefined),\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const req = new EventEmitter();\n")
+	sb.WriteString("      const headers = new Map();\n")
+	sb.WriteString("      const res = {\n")
+	sb.WriteString("        writableEnded: false,\n")
+	sb.WriteString("        setHeader: vi.fn((name, value) => headers.set(name, value)),\n")
+	sb.WriteString("        write: vi.fn(),\n")
+	sb.WriteString("        end: vi.fn(),\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new SSEManager({ autoShutdown: true, shutdownDelay: 50, heartbeatInterval: 1000, workspaceCache, port: 3000 });\n")
+	sb.WriteString("      vi.useFakeTimers();\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        const connection = await instance.addConnection(req, res);\n")
+	sb.WriteString("        expect(headers.get('Content-Type')).toBe('text/event-stream');\n")
+	sb.WriteString("        expect(instance.connections.has(connection.id)).toBe(true);\n")
+	sb.WriteString("        expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 1);\n")
+	sb.WriteString("        req.emit('close');\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        expect(connection.state).toBe('disconnected');\n")
+	sb.WriteString("        expect(instance.connections.has(connection.id)).toBe(false);\n")
+	sb.WriteString("        expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 0);\n")
+	sb.WriteString("        expect(workspaceCache.setShutdownTimer).toHaveBeenCalledWith(3000, 50);\n")
+	sb.WriteString("        expect(instance.shutdownTimer).not.toBeNull();\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        await instance.shutdown();\n")
 	sb.WriteString("        vi.useRealTimers();\n")
 	sb.WriteString("      }\n")
 	sb.WriteString("    });\n\n")

@@ -2595,6 +2595,113 @@ export default class CacheFacade {
 			forbidden: []string{"undefined, { json", "res.setHeader is not a function"},
 		},
 		{
+			name:     "vitest sse add connection close lifecycle uses event emitter",
+			fileName: "sse-manager.js",
+			source: `import EventEmitter from 'events';
+
+export class SSEManager extends EventEmitter {
+  constructor(options = {}) {
+    super()
+    this.connections = new Map()
+    this.heartbeatInterval = options.heartbeatInterval || 10000
+    this.autoShutdown = options.autoShutdown || false
+    this.shutdownDelay = options.shutdownDelay || 0
+    this.shutdownTimer = null
+    this.heartbeatTimer = null
+    this.workspaceCache = options.workspaceCache || null
+    this.port = options.port || null
+    this.setupHeartbeat()
+    this.setupAutoShutdown()
+  }
+
+  setupHeartbeat() {
+    this.heartbeatTimer = setInterval(() => {}, this.heartbeatInterval)
+    this.heartbeatTimer.unref()
+  }
+
+  setupAutoShutdown() {
+    if (!this.autoShutdown) return
+    this.on('connectionClosed', async () => {
+      if (this.workspaceCache && this.port) {
+        await this.workspaceCache.updateActiveConnections(this.port, this.connections.size)
+      }
+      if (this.connections.size === 0) {
+        if (this.workspaceCache && this.port) {
+          await this.workspaceCache.setShutdownTimer(this.port, this.shutdownDelay)
+        }
+        this.shutdownTimer = setTimeout(() => process.emit('SIGTERM'), this.shutdownDelay)
+      }
+    })
+  }
+
+  async addConnection(req, res) {
+    const id = 'client-1'
+    const connection = {
+      id,
+      res,
+      state: 'connected',
+      send: () => true,
+    }
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    req.on('close', () => {
+      connection.state = 'disconnected'
+      this.connections.delete(id)
+      this.emit('connectionClosed', { id, remaining: this.connections.size })
+    })
+    this.connections.set(id, connection)
+    if (this.workspaceCache && this.port) {
+      await this.workspaceCache.updateActiveConnections(this.port, this.connections.size)
+    }
+    return connection
+  }
+
+  async shutdown() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+    if (this.shutdownTimer) {
+      clearTimeout(this.shutdownTimer)
+      this.shutdownTimer = null
+    }
+    this.connections.clear()
+    this.removeAllListeners()
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-sse-2",
+				Framework:       "vitest",
+				Target:          "SSEManager.addConnection",
+				LineRange:       "170-185",
+				GapType:         "branch",
+				TestName:        "covers SSEManager addConnection close lifecycle",
+				MissingBranches: []string{"未覆盖 req close 后连接清理和 connectionClosed 分支"},
+				SuggestedInputs: []string{"构造 EventEmitter req", "触发 req.emit('close')", "mock workspaceCache"},
+				AssertionFocus:  []string{"应触发 close 事件并断言 connections 删除、状态变更和 workspace cache 更新，不应只注册空 on 回调"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"const { EventEmitter } = await import('node:events');",
+				"cancelShutdownTimer: vi.fn().mockResolvedValue(undefined),",
+				"setHeader: vi.fn((name, value) => headers.set(name, value)),",
+				"const instance = new SSEManager({ autoShutdown: true, shutdownDelay: 50, heartbeatInterval: 1000, workspaceCache, port: 3000 });",
+				"vi.useFakeTimers();",
+				"const connection = await instance.addConnection(req, res);",
+				"expect(headers.get('Content-Type')).toBe('text/event-stream');",
+				"expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 1);",
+				"req.emit('close');",
+				"expect(connection.state).toBe('disconnected');",
+				"expect(instance.connections.has(connection.id)).toBe(false);",
+				"expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 0);",
+				"expect(workspaceCache.setShutdownTimer).toHaveBeenCalledWith(3000, 50);",
+				"await instance.shutdown();",
+				"vi.useRealTimers();",
+			},
+			forbidden: []string{"{ on: () => {} }", "ConnectionState.DISCONNECTED", "vi.spyOn(process, 'emit')"},
+		},
+		{
 			name:     "vitest sse auto shutdown uses fake timers and sigterm listener",
 			fileName: "sse-manager.js",
 			source: `import EventEmitter from 'events';

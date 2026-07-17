@@ -295,6 +295,29 @@ def js_mcp_hub_sse(project_dir: str) -> dict:
             "priority": 129,
             "priority_reason": "real mcp-hub SSE lifecycle sample requiring timer and process signal isolation",
         },
+        {
+            **common,
+            "id": "vitest-mcp-hub-sse-2",
+            "target": "SSEManager.addConnection",
+            "line_range": "170-185",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 req close 后连接清理和 connectionClosed 分支"
+            ],
+            "uncovered_lines": [170, 171, 172, 173, 174, 182, 183, 184, 185],
+            "suggested_inputs": [
+                "构造 EventEmitter req",
+                "触发 req.emit('close')",
+                "mock workspaceCache",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 SSEManager.addConnection close 生命周期可通过 EventEmitter req 和 fake workspace cache 进入 ready",
+            "test_name": "covers SSEManager addConnection close lifecycle",
+            "assertion_focus": [
+                "应触发 close 事件并断言 connections 删除、状态变更和 workspace cache 更新，不应只注册空 on 回调"
+            ],
+            "priority": 130,
+            "priority_reason": "real mcp-hub SSE connection close sample requiring EventEmitter request lifecycle",
+        },
     ]
 
 

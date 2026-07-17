@@ -511,7 +511,7 @@ scripts/validate-java-regression-samples.sh
 scripts/validate-regression-smoke.sh
 ```
 
-当前默认矩阵覆盖 Java + JS + Python：Java 使用上述三类样本，JS 使用 ip2region JavaScript binding 的 Jest ready、仓库内 TypeScript no-runtime/internal 手审样本、mcp-hub Vitest async throwing branch 样本、mcp-hub `WorkspaceCacheManager` 缓存文件锁/进程探测样本，以及 mcp-hub `SSEManager` 自动关闭计时器样本，Python 使用 Click pytest ready、仓库内 name-mangled private method 手审样本、haoy-apk-station FastAPI 动态前端入口 `manual_review_environment` 样本、下载代理对象存储 endpoint timeout 的 `manual_review_external_service` 样本，以及删除应用 SQLAlchemy 事务失败的 `manual_review_database` 样本。各语言项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_*_REGRESSION_*` 环境变量覆盖。详细运行说明见 [固定 smoke 回归说明](./docs/regression-smoke.md)。
+当前默认矩阵覆盖 Java + JS + Python：Java 使用上述三类样本，JS 使用 ip2region JavaScript binding 的 Jest ready、仓库内 TypeScript no-runtime/internal 手审样本、mcp-hub Vitest async throwing branch 样本、mcp-hub `WorkspaceCacheManager` 缓存文件锁/进程探测样本，以及 mcp-hub `SSEManager` 自动关闭和连接断开生命周期样本，Python 使用 Click pytest ready、仓库内 name-mangled private method 手审样本、haoy-apk-station FastAPI 动态前端入口 `manual_review_environment` 样本、下载代理对象存储 endpoint timeout 的 `manual_review_external_service` 样本，以及删除应用 SQLAlchemy 事务失败的 `manual_review_database` 样本。各语言项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_*_REGRESSION_*` 环境变量覆盖。详细运行说明见 [固定 smoke 回归说明](./docs/regression-smoke.md)。
 
 真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
 
