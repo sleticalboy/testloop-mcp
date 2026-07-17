@@ -77,3 +77,4 @@ switch payload.status + "/" + payload.action:
 - [Agent Action 决策表](./agent-action-guide.md)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
 - [真实结构化 fixture](./fixtures.md)
+- [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)
