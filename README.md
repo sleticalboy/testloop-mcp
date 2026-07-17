@@ -531,6 +531,8 @@ go run ./examples/mcp-client-demo
 
 预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
+展示案例的完整预期输出、验收边界和 CI 回归入口见 [Agent 闭环展示案例](./docs/showcase-agent-loop.md)。
+
 更完整的跨语言质量回归可以运行：
 
 ```bash

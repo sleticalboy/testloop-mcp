@@ -105,3 +105,5 @@ go run ./examples/mcp-client-demo
 ```
 
 这个 demo 会展示 `run_tests -> repair_task -> rerun -> parse_coverage` 的最小 Agent 消费路径。
+
+预期输出和可重复验收方式见 [Agent 闭环展示案例](./showcase-agent-loop.md)。

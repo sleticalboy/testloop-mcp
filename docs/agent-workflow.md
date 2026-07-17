@@ -10,6 +10,8 @@ go run ./examples/mcp-client-demo
 
 这个 demo 会启动 in-memory MCP server，创建临时 Go 项目，调用真实 `run_tests`，优先读取 `structuredContent`，校验它与 text JSON 一致，然后按 `fix_suggestions[].repair_task` 模拟一次测试修复，最后复跑并调用 `parse_coverage`。它不是新的生成器能力，而是给 Codex、Claude Code、Cursor 或其他 MCP 客户端提供一条可复制的集成验收路径。
 
+如果需要面向演示或接入验收的固定预期输出，见 [Agent 闭环展示案例](./showcase-agent-loop.md)。
+
 ## 1. 运行测试
 
 先让 Agent 调用 MCP 工具：

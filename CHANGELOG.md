@@ -12,6 +12,7 @@
 - 新增 `scripts/verify-client-setup.sh`，把二进制可执行性、`--doctor-config`、配置 roundtrip 和 HTTP `/healthz` 收敛为安装后自检入口。
 - 新增 `test/verify_client_setup_test.sh` 并纳入 CI，固定安装后自检脚本的 skip HTTP 路径和缺失二进制错误提示。
 - 新增 `docs/quickstart.md`，把安装、自检、Codex/Claude/Cursor 配置和最小 Agent 闭环收敛成 5 分钟接入路径。
+- 新增 `docs/showcase-agent-loop.md` 和 `test/mcp_client_demo_test.sh`，固定最小 MCP 客户端闭环 demo 的预期输出，并纳入 CI 回归。
 
 ## v0.5.0 - 2026-07-17
 
