@@ -26,6 +26,11 @@ top-N 覆盖率窗口。
                                     默认：testdata/py-internal
   TESTLOOP_PY_REGRESSION_INTERNAL_IDS
                                     默认：pytest-internal-1
+  TESTLOOP_PY_REGRESSION_APK_STATION_DIR
+                                    haoy-apk-station backend 真实 FastAPI 项目目录。
+                                    默认：/Users/binlee/code/free-works/haoy-apk-station/backend
+  TESTLOOP_PY_REGRESSION_APK_STATION_IDS
+                                    默认：pytest-apk-frontend-env-1
   TESTLOOP_PYTEST_COMMAND
                                     默认：uv run python -m pytest {verbose} {coverage} {path}
   TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS
@@ -54,6 +59,8 @@ click_tasks="${TESTLOOP_PY_REGRESSION_CLICK_TASKS_FILE:-/tmp/testloop-click-pyte
 click_ready_ids="${TESTLOOP_PY_REGRESSION_CLICK_READY_IDS:-pytest-1,pytest-3}"
 internal_dir="${TESTLOOP_PY_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/py-internal}"
 internal_ids="${TESTLOOP_PY_REGRESSION_INTERNAL_IDS:-pytest-internal-1}"
+apk_station_dir="${TESTLOOP_PY_REGRESSION_APK_STATION_DIR:-/Users/binlee/code/free-works/haoy-apk-station/backend}"
+apk_station_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_IDS:-pytest-apk-frontend-env-1}"
 pytest_command="${TESTLOOP_PYTEST_COMMAND:-}"
 if [[ -z "$pytest_command" ]]; then
   pytest_command='uv run python -m pytest {verbose} {coverage} {path}'
@@ -143,5 +150,10 @@ internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" py-internal "$internal_dir" "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
+
+apk_station_tasks="$output_dir/apk-station-environment-tasks.jsonl"
+require_path dir "$apk_station_dir"
+"$repo_root/scripts/fixture-task-jsonl.py" py-apk-station-environment "$apk_station_dir" "$apk_station_tasks"
+run_sample "apk-station-environment" "$apk_station_dir" "$apk_station_tasks" "$apk_station_ids" "manual_review_environment" "$manual_review_command"
 
 echo "py_regression_output_dir=$output_dir"
