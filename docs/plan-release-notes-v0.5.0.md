@@ -9,9 +9,9 @@ testloop-mcp v0.5.0
 - [x] 创建 v0.5.0 发布说明草案。
 - [x] 梳理当前固定 smoke 矩阵和真实项目验证证据。
 - [x] 在 README 补充面向 AI Agent 的快速演示路径。
-- [ ] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.0`。
-- [ ] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.0 - YYYY-MM-DD`。
-- [ ] 正式版本准备时更新 README、安装文档和必要的版本引用。
+- [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.0`。
+- [x] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.0 - 2026-07-17`。
+- [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
 - [ ] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和 Homebrew 安装链路验证。
 
 ## 摘要
@@ -103,6 +103,8 @@ v0.5.0 候选仍保持以下边界：
 - [x] `go build -o /tmp/testloop-testgen-v0.5.0-prep ./cmd/testgen`
 - [x] `/tmp/testloop-mcp-v0.5.0-prep --help` 输出 usage；Go `flag` 包对 help 返回 exit code 2。
 - [x] `/tmp/testloop-testgen-v0.5.0-prep --help` 输出 usage；Go `flag` 包对 help 返回 exit code 2。
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.0-prep scripts/package-release-asset.sh v0.5.0 darwin_arm64 darwin arm64`
+- [x] 校验 `/tmp/testloop-v0.5.0-prep/testloop-mcp_v0.5.0_darwin_arm64.tar.gz.sha256`
 - [ ] 推送后等待远端 CI 通过。
 - [ ] 正式发布时验证 Release Artifacts 和 Homebrew 安装链路。
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.0 - 2026-07-17
+
 ### Added
 
 - 新增 `docs/plan-release-notes-v0.5.0.md`，把当前固定 smoke 矩阵、Agent 闭环定位、真实项目验证证据和 v0.5.0 发布前门禁整理成中文发布草案。
@@ -9,6 +11,7 @@
 
 ### Changed
 
+- MCP server implementation version 更新为 `0.5.0`。
 - Go coverage task 写入测试文件前会扫描同包所有 `*_test.go`，当任务推荐的 `test_name` 已在其它测试文件中存在时，也会自动追加稳定后缀，避免生成后 `go test` 因包级 `Test*` 重名构建失败。
 - Java coverage task 支持 Commons Codec `DigestUtils.sha` 重载和 `getShake*Digest` 运行时兼容路径：生成 typed `byte[]` / `InputStream` / `String` 输入，避免裸 `null` 重载歧义；SHAKE MessageDigest 不可用时断言 `IllegalArgumentException` 信息而不是误报生成失败。
 - Java coverage task 支持 Commons Codec `language/bm` 资源规则与 nested value object 场景：`SomeLanguages` 使用 factory 构造，`PhoneticEngine.getLang` 使用合法 `RuleType.APPROX`，`Lang.loadFromResource` / `PhoneticEngine.encode` 归为资源手审边界，`Rule.RPattern` 等嵌套返回类型会自动限定，文件级 Java task 会生成可运行手审 smoke。
