@@ -99,6 +99,17 @@ func coverageTaskIDSet(raw string) map[string]struct{} {
 	return ids
 }
 
+func envCSVSet(name string) map[string]struct{} {
+	values := map[string]struct{}{}
+	for _, part := range strings.Split(os.Getenv(name), ",") {
+		value := strings.TrimSpace(part)
+		if value != "" {
+			values[value] = struct{}{}
+		}
+	}
+	return values
+}
+
 func findValidationPathBySourceSuffix(taskRoot string, value string, markers []string, roots []string) string {
 	for _, candidate := range validationPathCandidatesBySourceSuffix(taskRoot, value, markers, roots) {
 		if fileExists(candidate) {

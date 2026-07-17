@@ -89,6 +89,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		StatusCounts: map[string]int{},
 		ActionCounts: map[string]int{},
 	}
+	allowedFailureActions := envCSVSet("TESTLOOP_VALIDATE_JS_ALLOWED_FAILURE_ACTIONS")
 	var failures []string
 	for i := 0; i < limit; i++ {
 		task := tasks[i]
@@ -132,6 +133,9 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 		}
 		summary.record(i+1, task, out)
 		if out.Status != "passed" && !strings.HasPrefix(out.Action, "manual_review_") {
+			if _, ok := allowedFailureActions[out.Action]; ok {
+				continue
+			}
 			failures = append(failures, fmt.Sprintf("task %d %s %s status=%s action=%s error=%s", i+1, task.ID, task.Target, out.Status, out.Action, out.Error))
 		}
 	}

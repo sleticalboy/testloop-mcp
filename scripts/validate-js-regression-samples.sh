@@ -31,6 +31,11 @@ top-N 覆盖率窗口。
                                     默认：testdata/js-internal
   TESTLOOP_JS_REGRESSION_INTERNAL_IDS
                                     默认：jest-internal-1
+  TESTLOOP_JS_REGRESSION_MCP_HUB_DIR
+                                    mcp-hub 真实项目目录。
+                                    默认：/Users/binlee/code/open-source/mcp-hub
+  TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS
+                                    默认：vitest-mcp-hub-repair-1
   TESTLOOP_JS_TEST_COMMAND
                                     默认：NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}
   TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS
@@ -61,10 +66,13 @@ no_runtime_dir="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR:-$repo_root/testdata/js-
 no_runtime_ids="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS:-jest-no-runtime-1}"
 internal_dir="${TESTLOOP_JS_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/js-internal}"
 internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
+mcp_hub_dir="${TESTLOOP_JS_REGRESSION_MCP_HUB_DIR:-/Users/binlee/code/open-source/mcp-hub}"
+mcp_hub_repair_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS:-vitest-mcp-hub-repair-1}"
 js_test_command="${TESTLOOP_JS_TEST_COMMAND:-}"
 if [[ -z "$js_test_command" ]]; then
   js_test_command="NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}"
 fi
+vitest_test_command="npx vitest run {path}"
 manual_review_command="node $repo_root/scripts/js-manual-review-runner.js {path}"
 
 require_path() {
@@ -88,12 +96,13 @@ assert_sample_output() {
   local output="$1"
   local expected_ids="$2"
   local expected_action="$3"
+  local expected_status="${4:-passed}"
 
-  python3 - "$output" "$expected_ids" "$expected_action" <<'PY'
+  python3 - "$output" "$expected_ids" "$expected_action" "$expected_status" <<'PY'
 import json
 import sys
 
-path, raw_ids, expected_action = sys.argv[1:]
+path, raw_ids, expected_action, expected_status = sys.argv[1:]
 expected_ids = [item.strip() for item in raw_ids.split(",") if item.strip()]
 
 rows = []
@@ -111,8 +120,8 @@ for row in rows:
     task_id = row.get("coverage_task", {}).get("id", "")
     status = row.get("status")
     action = row.get("action")
-    if status != "passed":
-        raise SystemExit(f"{path}: {task_id} status={status}, want=passed")
+    if status != expected_status:
+        raise SystemExit(f"{path}: {task_id} status={status}, want={expected_status}")
     if action != expected_action:
         raise SystemExit(f"{path}: {task_id} action={action}, want={expected_action}")
 PY
@@ -125,20 +134,25 @@ run_sample() {
   local ids="$4"
   local expected_action="$5"
   local test_command="${6:-$js_test_command}"
+  local framework="${7:-jest}"
+  local expected_status="${8:-passed}"
   local output="$output_dir/$name.jsonl"
 
   require_path dir "$project_dir"
   require_path file "$tasks_file"
 
-  echo "==> $name ids=$ids expected_action=$expected_action"
+  echo "==> $name ids=$ids expected_status=$expected_status expected_action=$expected_action"
   (
     cd "$repo_root"
-    TESTLOOP_VALIDATE_JS_TASKS_FILE="$tasks_file" \
-    TESTLOOP_VALIDATE_JS_TASK_IDS="$ids" \
-    TESTLOOP_JS_TEST_COMMAND="$test_command" \
-    "$validator" "$project_dir" jest "$(task_count "$ids")" "$output"
+    export TESTLOOP_VALIDATE_JS_TASKS_FILE="$tasks_file"
+    export TESTLOOP_VALIDATE_JS_TASK_IDS="$ids"
+    export TESTLOOP_JS_TEST_COMMAND="$test_command"
+    if [[ "$expected_status" != "passed" ]]; then
+      export TESTLOOP_VALIDATE_JS_ALLOWED_FAILURE_ACTIONS="$expected_action"
+    fi
+    "$validator" "$project_dir" "$framework" "$(task_count "$ids")" "$output"
   )
-  assert_sample_output "$output" "$ids" "$expected_action"
+  assert_sample_output "$output" "$ids" "$expected_action" "$expected_status"
   echo "ok  $name output=$output"
 }
 
@@ -155,5 +169,10 @@ internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" js-internal "$internal_dir" "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
+
+mcp_hub_repair_tasks="$output_dir/mcp-hub-repair-tasks.jsonl"
+require_path dir "$mcp_hub_dir"
+"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-repair "$mcp_hub_dir" "$mcp_hub_repair_tasks"
+run_sample "mcp-hub-repair" "$mcp_hub_dir" "$mcp_hub_repair_tasks" "$mcp_hub_repair_ids" "repair_generated_test" "$vitest_test_command" "vitest" "failed"
 
 echo "js_regression_output_dir=$output_dir"

@@ -42,6 +42,10 @@ Environment:
   TESTLOOP_VALIDATE_JS_TASK_TIMEOUT_SECONDS
                                       Optional timeout in seconds for each generated task
                                       validation only.
+  TESTLOOP_VALIDATE_JS_ALLOWED_FAILURE_ACTIONS
+                                      Optional comma-separated validation actions that may
+                                      fail without failing this helper, e.g.
+                                      repair_generated_test for explicit regression samples.
   TESTLOOP_VALIDATE_JS_EXTRA_SYMLINKS
                                       Optional comma-separated src:dst mappings.
                                       src is relative to <js-project-dir> unless absolute;
