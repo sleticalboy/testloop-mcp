@@ -12,7 +12,7 @@ testloop-mcp v0.5.0
 - [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.0`。
 - [x] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.0 - 2026-07-17`。
 - [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
-- [ ] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和 Homebrew 安装链路验证。
+- [x] 正式发布前重新跑完整本地验证、远端 CI、Release Artifacts、资产校验和 Homebrew 安装链路验证。
 
 ## 摘要
 
@@ -106,7 +106,7 @@ v0.5.0 候选仍保持以下边界：
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.0-prep scripts/package-release-asset.sh v0.5.0 darwin_arm64 darwin arm64`
 - [x] 校验 `/tmp/testloop-v0.5.0-prep/testloop-mcp_v0.5.0_darwin_arm64.tar.gz.sha256`
 - [x] 推送后等待远端 CI 通过：run `29557865650` passed。
-- [ ] 正式发布时验证 Release Artifacts 和 Homebrew 安装链路。
+- [x] 正式发布时验证 Release Artifacts 和 Homebrew 安装链路：Release Artifacts run `29558114233` passed，Post-Release Verify run `29559912737` passed，Homebrew tap commit `e201f8f` 已验证。
 
 ## 发布备注
 
