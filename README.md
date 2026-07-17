@@ -533,6 +533,14 @@ go run ./examples/mcp-client-demo
 
 展示案例的完整预期输出、验收边界和 CI 回归入口见 [Agent 闭环展示案例](./docs/showcase-agent-loop.md)。
 
+如果要在外部公开 Go 项目上展示 coverage task 闭环，可以运行：
+
+```bash
+scripts/showcase-go-public-project.sh
+```
+
+该脚本默认克隆 `google/uuid` 的固定 commit，并验证 `go-test-1` 任务。详细说明见 [公开 Go 项目覆盖率闭环案例](./docs/showcase-public-go.md)。
+
 更完整的跨语言质量回归可以运行：
 
 ```bash

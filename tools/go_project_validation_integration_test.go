@@ -31,14 +31,29 @@ func TestValidateGoCoverageTopTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve project dir: %v", err)
 	}
-	baselineRoot := filepath.Join(t.TempDir(), "baseline")
-	if err := copyTree(projectDir, baselineRoot); err != nil {
-		t.Fatalf("copy baseline project: %v", err)
+	tasksFile := os.Getenv("TESTLOOP_VALIDATE_GO_TASKS_FILE")
+	taskIDFilter := os.Getenv("TESTLOOP_VALIDATE_GO_TASK_IDS")
+	baselineRoot := projectDir
+	var tasks []types.CoverageTestTask
+	if strings.TrimSpace(tasksFile) != "" {
+		tasks = readCoverageTasksJSONL(t, tasksFile)
+	} else {
+		baselineRoot = filepath.Join(t.TempDir(), "baseline")
+		if err := copyTree(projectDir, baselineRoot); err != nil {
+			t.Fatalf("copy baseline project: %v", err)
+		}
+		report := parseGoCoverageReportForProject(t, baselineRoot)
+		tasks = report.TestTasks
 	}
-
-	report := parseGoCoverageReportForProject(t, baselineRoot)
-	if len(report.TestTasks) < limit {
-		t.Fatalf("coverage tasks = %d, want at least %d", len(report.TestTasks), limit)
+	tasks = filterCoverageTasksByFileAndIDs(tasks, os.Getenv("TESTLOOP_VALIDATE_GO_FILE_FILTER"), taskIDFilter)
+	if len(tasks) == 0 {
+		t.Fatalf("coverage tasks after filter = 0, file_filter=%q task_ids=%q tasks_file=%q", os.Getenv("TESTLOOP_VALIDATE_GO_FILE_FILTER"), taskIDFilter, tasksFile)
+	}
+	if taskIDFilter != "" && len(tasks) < limit {
+		limit = len(tasks)
+	}
+	if len(tasks) < limit {
+		t.Fatalf("coverage tasks after filter = %d, want at least %d", len(tasks), limit)
 	}
 
 	outFile, err := os.Create(outputPath)
@@ -53,7 +68,7 @@ func TestValidateGoCoverageTopTasks(t *testing.T) {
 		ActionCounts: map[string]int{},
 	}
 	for i := 0; i < limit; i++ {
-		task := report.TestTasks[i]
+		task := tasks[i]
 		taskRoot := filepath.Join(t.TempDir(), fmt.Sprintf("task-%02d", i+1))
 		if err := copyTree(projectDir, taskRoot); err != nil {
 			t.Fatalf("copy task worktree for %s: %v", task.ID, err)
