@@ -21,6 +21,7 @@
 - 新增 `docs/agent-action-guide.md`，整理 `validate_coverage_task.status/action` 到客户端下一步动作的决策表。
 - 新增 `test/docs_links_test.sh` 并纳入 CI，检查 README 与 docs 下 Markdown 相对链接的文件目标是否存在。
 - 新增 `docs/validate-coverage-task-samples.md` 和 `test/docs_json_examples_test.sh`，固定 `validate_coverage_task` 典型结构化返回样例的 JSON 合法性。
+- 新增 `examples/agent-decision-demo` 和 `test/agent_decision_demo_test.sh`，演示客户端如何把 `validate_coverage_task.status/action` 映射成下一步动作。
 
 ## v0.5.0 - 2026-07-17
 

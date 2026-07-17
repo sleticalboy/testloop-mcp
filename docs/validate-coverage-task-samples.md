@@ -8,6 +8,8 @@
 - [Agent 结构化契约](./agent-contract.md)
 - [Agent 工作流](./agent-workflow.md)
 
+仓库里的 `go run ./examples/agent-decision-demo` 会读取本文档中的 JSON 样例，并演示一个最小客户端如何把 `status/action` 映射成 `accept`、`manual-review`、`apply-repair` 和 `needs-better-input`。
+
 ## passed / ready
 
 含义：生成测试已经通过，且没有被标记为人工复核或弱覆盖。Agent 可以接受生成测试，进入下一个 coverage task，或重新统计覆盖率确认收益。
