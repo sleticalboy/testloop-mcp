@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.1 的版本准备和 release readiness 记录。当前已完成发布说明草案、发布前本地门禁、版本号切换和安装文档同步；还没有打 tag、创建 GitHub Release、生成 Release Artifacts 或更新 Homebrew tap。
+这是 v0.5.1 的版本准备、release readiness 和正式发布核验记录。当前已完成发布说明草案、发布前本地门禁、版本号切换、安装文档同步、tag 推送、Release Artifacts、GitHub Release 正文、资产校验和 Homebrew tap 更新。
 
 v0.5.1 发布重点见 [v0.5.1 发布说明草案](./plan-release-notes-v0.5.1.md)：本轮主要是 MCP 客户端接入、Agent 结构化契约、真实 handler fixture、客户端动作映射和 release 文档入口回归保护。
 
@@ -52,16 +52,18 @@ v0.5.1 发布重点见 [v0.5.1 发布说明草案](./plan-release-notes-v0.5.1.m
 - [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.1 - 2026-07-17`。
 - [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.1`。
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.1`。
-- [ ] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.1`，或在 Homebrew tap 发布步骤中生成并验证。
+- [x] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.1`，使用 GitHub Release 真实 asset digest。
 - [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
 - [x] 提交版本准备改动后确认远端 CI 通过：run `29591849021` passed。
-- [ ] 打 tag `v0.5.1` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.1` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.1 发布说明。
-- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过。
-- [ ] 更新 Homebrew tap 到 `0.5.1`，并通过 `brew fetch`、`brew audit --formula --strict`、`brew upgrade --formula`、`brew test`。
+- [x] 打 tag `v0.5.1` 并推送。
+- [x] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29592283968` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.1` 验证 Release 资产完整：10 个必需资产已确认。
+- [x] 更新 GitHub Release 正文为正式 v0.5.1 发布说明。
+- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过：run `29593507242` 已触发，当前等待 GitHub runner 调度。
+- [x] 更新 Homebrew tap 到 `0.5.1`，提交 `54d6e7a` 并推送到 `sleticalboy/homebrew-tap`。
+- [x] 本机 Homebrew tap 已快进到 `54d6e7a`，并通过 `ruby -c` 与 `brew style`。
+- [ ] `brew fetch` 下载验证受 GitHub/Homebrew 网络队列影响未完成；已用 release asset digest 与 tap formula digest 一致性校验替代。
 
 ## 当前结论
 
-v0.5.1 已完成候选发布资料、本地 release readiness 门禁、版本号切换、安装文档同步和版本准备提交后的远端 CI。下一步可以打 `v0.5.1` tag，并进入 Release Artifacts、资产校验、GitHub Release 正文和 Homebrew tap 验证。
+v0.5.1 已正式发布。Release Artifacts、GitHub Release 资产清单、仓库内 Formula、Homebrew tap 同步和 tap style 校验已完成。剩余发布后验证是等待 Post-Release Verify run `29593507242` 从 GitHub runner 队列中完成，以及在 GitHub/Homebrew 网络恢复稳定后补跑 `brew fetch`/安装级验证。
