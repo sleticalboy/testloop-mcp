@@ -1,0 +1,78 @@
+{
+  "status": "failed",
+  "action": "needs_better_input",
+  "coverage_task": {
+    "id": "junit-needs-better-input-1",
+    "framework": "junit",
+    "file": "src/main/java/com/example/Calculator.java",
+    "target": "Calculator.add",
+    "kind": "method",
+    "line_range": "4-4",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: a == 0"
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `a == 0` 的输入"
+    ],
+    "goal": "",
+    "test_file": "src/test/java/com/example/CalculatorTestLoopTest.java",
+    "test_name": "shouldCoverCalculatorAddGap",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用"
+    ],
+    "confidence": 0
+  },
+  "generated": {
+    "status": "ok",
+    "test_file": "src/test/java/com/example/CalculatorTestLoopTest.java",
+    "generated_cases": 1,
+    "provider": "static",
+    "coverage_task": {
+      "id": "junit-needs-better-input-1",
+      "framework": "junit",
+      "file": "src/main/java/com/example/Calculator.java",
+      "target": "Calculator.add",
+      "kind": "method",
+      "line_range": "4-4",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: a == 0"
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `a == 0` 的输入"
+      ],
+      "goal": "",
+      "test_file": "src/test/java/com/example/CalculatorTestLoopTest.java",
+      "test_name": "shouldCoverCalculatorAddGap",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用"
+      ],
+      "confidence": 0
+    }
+  },
+  "run_result": {
+    "status": "pass",
+    "framework": "junit",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "coverage_percent": 0,
+    "failures": null
+  },
+  "metadata": {
+    "coverage_hit_lines": null,
+    "coverage_miss_reason": "Calculator.add did not cover target line range 4-4; generate stronger inputs or cover the target through a better public entry point",
+    "coverage_missed_lines": [
+      4
+    ],
+    "coverage_report": "target/site/jacoco/jacoco.xml",
+    "coverage_target_hit": false,
+    "coverage_target_lines": [
+      4
+    ],
+    "framework": "junit",
+    "test_file": "src/test/java/com/example/CalculatorTestLoopTest.java"
+  }
+}

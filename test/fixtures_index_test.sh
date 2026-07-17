@@ -16,6 +16,7 @@ expected_actions = {
     "passed/ready",
     "passed/manual_review_internal",
     "failed/apply_fix_suggestions",
+    "failed/needs_better_input",
 }
 
 text = index.read_text(encoding="utf-8")

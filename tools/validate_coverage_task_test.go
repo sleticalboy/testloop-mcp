@@ -300,6 +300,9 @@ func validateCoverageTaskFixtureFromOutput(t *testing.T, root string, out types.
 	if testFile, ok := out.Metadata["test_file"].(string); ok {
 		metadata["test_file"] = normalizeFixturePath(root, testFile)
 	}
+	if reportPath, ok := out.Metadata["coverage_report"].(string); ok {
+		metadata["coverage_report"] = normalizeFixturePath(root, reportPath)
+	}
 	for _, key := range []string{
 		"unreachable",
 		"unreachable_reason",
@@ -318,6 +321,9 @@ func validateCoverageTaskFixtureFromOutput(t *testing.T, root string, out types.
 		"internal_reason",
 		"no_runtime",
 		"no_runtime_reason",
+		"coverage_target_lines",
+		"coverage_hit_lines",
+		"coverage_missed_lines",
 		"coverage_target_hit",
 		"coverage_miss_reason",
 	} {
@@ -529,6 +535,84 @@ public class Calculator {
 	missed, ok := out.Metadata["coverage_missed_lines"].([]any)
 	if !ok || len(missed) != 1 || missed[0].(float64) != 4 {
 		t.Fatalf("unexpected missed lines metadata: %+v", out.Metadata["coverage_missed_lines"])
+	}
+}
+
+func TestHandleValidateCoverageTaskNeedsBetterInputFixture(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>\n"), 0o644); err != nil {
+		t.Fatalf("write pom.xml: %v", err)
+	}
+	source := filepath.Join(dir, "src", "main", "java", "com", "example", "Calculator.java")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := `package com.example;
+
+public class Calculator {
+    public int add(int a, int b) {
+        if (a == 0) {
+            return b;
+        }
+        return a + b;
+    }
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	installFakeMvnSuccessWithJaCoCo(t, `<report>
+  <package name="com/example">
+    <sourcefile name="Calculator.java">
+      <line nr="4" mi="1" ci="0"/>
+      <counter type="LINE" missed="1" covered="0"/>
+    </sourcefile>
+  </package>
+  <counter type="LINE" missed="1" covered="0"/>
+</report>`)
+	task := types.CoverageTestTask{
+		ID:              "junit-needs-better-input-1",
+		Framework:       "junit",
+		File:            source,
+		Target:          "Calculator.add",
+		Kind:            "method",
+		LineRange:       "4-4",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		TestFile:        filepath.Join(dir, "src", "test", "java", "com", "example", "CalculatorTestLoopTest.java"),
+		TestName:        "shouldCoverCalculatorAddGap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "junit",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+
+	gotBytes, err := json.MarshalIndent(validateCoverageTaskFixtureFromOutput(t, dir, out), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal needs-better-input fixture: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("..", "docs", "fixtures", "validate-coverage-task-needs-better-input.json"))
+	if err != nil {
+		t.Fatalf("read needs-better-input fixture: %v\n--- got ---\n%s", err, got)
+	}
+	want := string(wantBytes)
+	if got != want {
+		t.Fatalf("needs-better-input fixture mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }
 

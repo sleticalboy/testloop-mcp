@@ -36,6 +36,7 @@ go run ./examples/agent-decision-demo
 | [validate-coverage-task-ready.json](./fixtures/validate-coverage-task-ready.json) | 接受生成测试，进入下一个 coverage task。 |
 | [validate-coverage-task-manual-review-internal.json](./fixtures/validate-coverage-task-manual-review-internal.json) | 记录手审原因，不继续自动修同一个生成测试。 |
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | 读取 `repair_task`，按限定文件和命令执行修复闭环。 |
+| [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | 读取覆盖率未命中原因，重新选择输入或公共入口。 |
 
 建议客户端测试至少断言：
 
@@ -43,6 +44,7 @@ go run ./examples/agent-decision-demo
 - `passed/ready` 不读取 `run_result.fix_suggestions`。
 - `manual_review_*` 不触发自动修复循环。
 - `failed/apply_fix_suggestions` 能定位 `run_result.fix_suggestions[0].repair_task.target_file`、`editable_files` 和 `suggested_commands`。
+- `failed/needs_better_input` 能定位 `metadata.coverage_miss_reason` 和 `metadata.coverage_missed_lines`。
 - 遇到未知字段不会报错。
 
 ## 推荐客户端伪代码

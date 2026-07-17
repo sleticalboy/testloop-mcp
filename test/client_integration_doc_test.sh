@@ -18,6 +18,7 @@ required_snippets = [
     "./fixtures/validate-coverage-task-ready.json",
     "./fixtures/validate-coverage-task-manual-review-internal.json",
     "./fixtures/validate-coverage-task-apply-fix-suggestions.json",
+    "./fixtures/validate-coverage-task-needs-better-input.json",
     "structuredContent",
     "content[0].text",
 ]
