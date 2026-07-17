@@ -30,6 +30,7 @@
 - 新增 `docs/client-integration.md`，说明客户端消费 `structuredContent`、复用真实 fixture 和回归 `status/action` 分流的推荐流程。
 - 新增 `test/client_integration_doc_test.sh` 并纳入 CI，校验客户端集成说明引用的 fixture 文件和 `agent-decision-demo` 入口持续存在。
 - 新增 `docs/fixtures/validate-coverage-task-needs-better-input.json` 和 handler 级 fixture 测试，固定 `failed/needs_better_input` 的真实 JaCoCo 目标行未命中样例投影。
+- `examples/agent-decision-demo` 改为直接读取 `docs/fixtures/*.json`，让最小客户端决策 demo 与真实 handler fixture 保持一致。
 
 ## v0.5.0 - 2026-07-17
 

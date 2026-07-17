@@ -18,7 +18,7 @@
 go run ./examples/agent-decision-demo
 ```
 
-该示例读取 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md) 中的 JSON，演示如何把：
+该示例读取 [真实结构化 fixture](./fixtures.md) 中的 JSON，演示如何把：
 
 - `passed/ready` 映射为 `accept`
 - `passed/manual_review_internal` 映射为 `manual-review`

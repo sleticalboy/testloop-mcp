@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
+	"path/filepath"
+	"sort"
 	"strings"
 )
 
 type validationSample struct {
+	Name      string          `json:"-"`
 	Status    string          `json:"status"`
 	Action    string          `json:"action"`
 	RunResult json.RawMessage `json:"run_result,omitempty"`
@@ -23,39 +25,62 @@ func main() {
 }
 
 func run() error {
-	data, err := os.ReadFile("docs/validate-coverage-task-samples.md")
+	samples, err := loadFixtureSamples("docs/fixtures")
 	if err != nil {
 		return err
 	}
-	blocks := jsonCodeBlocks(string(data))
-	if len(blocks) == 0 {
-		return fmt.Errorf("no json samples found")
+	if len(samples) == 0 {
+		return fmt.Errorf("no fixture samples found")
 	}
 
-	decisions := make([]string, 0, len(blocks))
-	for i, block := range blocks {
-		var sample validationSample
-		if err := json.Unmarshal([]byte(block), &sample); err != nil {
-			return fmt.Errorf("sample %d invalid JSON: %w", i+1, err)
-		}
+	decisions := make([]string, 0, len(samples))
+	for i, sample := range samples {
 		decision := agentDecision(sample)
 		decisions = append(decisions, decision)
-		fmt.Printf("%d. status=%s action=%s decision=%s\n", i+1, sample.Status, sample.Action, decision)
+		fmt.Printf("%d. fixture=%s status=%s action=%s decision=%s\n", i+1, sample.Name, sample.Status, sample.Action, decision)
 	}
 	fmt.Printf("agent_decisions=%s\n", strings.Join(decisions, ","))
 	return nil
 }
 
-func jsonCodeBlocks(text string) []string {
-	re := regexp.MustCompile("(?s)```json\\n(.*?)\\n```")
-	matches := re.FindAllStringSubmatch(text, -1)
-	blocks := make([]string, 0, len(matches))
-	for _, match := range matches {
-		if len(match) == 2 {
-			blocks = append(blocks, match[1])
-		}
+func loadFixtureSamples(dir string) ([]validationSample, error) {
+	paths, err := filepath.Glob(filepath.Join(dir, "validate-coverage-task-*.json"))
+	if err != nil {
+		return nil, err
 	}
-	return blocks
+	sort.Strings(paths)
+	samples := make([]validationSample, 0, len(paths))
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		var sample validationSample
+		if err := json.Unmarshal(data, &sample); err != nil {
+			return nil, fmt.Errorf("%s invalid JSON: %w", path, err)
+		}
+		sample.Name = filepath.Base(path)
+		samples = append(samples, sample)
+	}
+	sort.SliceStable(samples, func(i, j int) bool {
+		return sampleOrder(samples[i]) < sampleOrder(samples[j])
+	})
+	return samples, nil
+}
+
+func sampleOrder(sample validationSample) int {
+	switch {
+	case sample.Status == "passed" && sample.Action == "ready":
+		return 10
+	case strings.HasPrefix(sample.Action, "manual_review_"):
+		return 20
+	case sample.Action == "apply_fix_suggestions":
+		return 30
+	case sample.Action == "needs_better_input":
+		return 40
+	default:
+		return 100
+	}
 }
 
 func agentDecision(sample validationSample) string {

@@ -9,7 +9,7 @@
 - [Agent 工作流](./agent-workflow.md)
 - [真实结构化 fixture](./fixtures.md)
 
-仓库里的 `go run ./examples/agent-decision-demo` 会读取本文档中的 JSON 样例，并演示一个最小客户端如何把 `status/action` 映射成 `accept`、`manual-review`、`apply-repair` 和 `needs-better-input`。
+仓库里的 `go run ./examples/agent-decision-demo` 会读取 [真实结构化 fixture](./fixtures.md)，并演示一个最小客户端如何把 `status/action` 映射成 `accept`、`manual-review`、`apply-repair` 和 `needs-better-input`。
 
 如果需要更贴近真实 handler 的可复用样例，可以查看 [真实结构化 fixture](./fixtures.md)。这些 JSON 由 `tools` 层测试通过临时项目真实调用 `HandleValidateCoverageTask` 后生成稳定投影，并在 CI 中比对。
 
