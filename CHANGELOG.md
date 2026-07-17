@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+暂无。
+
+## v0.5.1 - 2026-07-17
+
 ### Added
 
 - 新增 `examples/mcp-client-demo` 最小 MCP 客户端端到端 demo，演示客户端优先消费 `structuredContent`，串联 `run_tests -> repair_task -> rerun -> parse_coverage`。
@@ -35,6 +39,10 @@
 - 新增 `docs/mcp-client-contract-tests.md`，说明接入方如何复制真实 fixture、demo 和契约校验到自己的客户端 CI。
 - 新增 `test/release_doc_index_test.sh` 并纳入 CI，固定 README 中 Agent/客户端关键文档入口和 demo 命令。
 - 新增 `docs/plan-release-notes-v0.5.1.md` 和 `docs/plan-release-v0.5.1.md`，整理 v0.5.1 候选发布说明、发布前门禁和正式发布待办。
+
+### Changed
+
+- MCP server implementation version 更新为 `0.5.1`。
 
 ## v0.5.0 - 2026-07-17
 
