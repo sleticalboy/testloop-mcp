@@ -40,6 +40,7 @@ jobs:
           sh test/verify_client_setup_test.sh
           sh test/mcp_client_demo_test.sh
           sh test/showcase_scripts_test.sh
+          sh test/docs_links_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .
