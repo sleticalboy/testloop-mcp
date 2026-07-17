@@ -138,10 +138,40 @@ def py_apk_station_environment(project_dir: str) -> dict:
     }
 
 
+def py_apk_station_external_service(project_dir: str) -> dict:
+    source = os.path.join(project_dir, "app", "api", "apps.py")
+    return {
+        "id": "pytest-apk-download-external-1",
+        "framework": "pytest",
+        "file": source,
+        "target": "download_apk",
+        "kind": "function",
+        "line_range": "550-570",
+        "gap_type": "error_path",
+        "missing_branches": [
+            "未覆盖 urllib.request.urlopen(download_url, timeout=60) 外部下载 endpoint timeout 后回退重定向的路径"
+        ],
+        "suggested_inputs": [
+            "构造 AppVersion 指向外部对象存储 endpoint，代理下载 timeout 后应回退 RedirectResponse"
+        ],
+        "goal": "确认真实 haoy-apk-station FastAPI 下载代理依赖外部对象存储 endpoint 的失败会进入 manual_review_external_service",
+        "command": "python3 -m pytest {path}",
+        "test_file": os.path.join(project_dir, "tests", "test_apps_download_external_testloop.py"),
+        "test_name": "test_download_apk_external_endpoint_timeout_requires_integration_review",
+        "assertion_focus": [
+            "download_apk 代理下载依赖对象存储 endpoint 和 urllib timeout，应该通过 fake storage client 或集成环境验证，而不是把真实 timeout 当普通生成测试修复"
+        ],
+        "priority": 126,
+        "priority_reason": "real haoy-apk-station FastAPI download proxy external storage endpoint sample",
+        "confidence": 0.9,
+    }
+
+
 PRESETS = {
     "js-mcp-hub-repair": js_mcp_hub_repair,
     "js-no-runtime": js_no_runtime,
     "js-internal": js_internal,
+    "py-apk-station-external-service": py_apk_station_external_service,
     "py-apk-station-environment": py_apk_station_environment,
     "py-internal": py_internal,
 }

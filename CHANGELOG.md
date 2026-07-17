@@ -20,6 +20,7 @@
 - JS coverage task 对 `branch` 任务会识别命中的 `if (...) { throw ... }` 分支，并为 async 方法生成 `await expect(...).rejects.toThrow()`；mcp-hub `ConfigManager.loadConfig` 历史 `repair_generated_test` smoke 已收敛为真实 `ready`。
 - JS validation helper 支持 `TESTLOOP_VALIDATE_JS_ALLOWED_FAILURE_ACTIONS`，只在脚本显式声明期望失败 action 时放行，默认 top-N 验证仍保持严格失败。
 - Python regression smoke 新增 haoy-apk-station backend 真实 FastAPI `manual_review_environment` 样本，固定 `app.main` 动态前端入口依赖 `frontend/dist` 导入时环境的降级行为。
+- Python regression smoke 新增 haoy-apk-station backend 真实 FastAPI `manual_review_external_service` 样本，固定 `download_apk` 对象存储 endpoint timeout 会输出 `failed/manual_review_external_service`，不进入普通 repair。
 - 新增 `docs/regression-smoke.md`，记录固定 smoke 的默认项目路径、JSONL 依赖、跳过开关、runner 约束以及 JS/Python fixture 样本边界。
 - 新增仓库内 `testdata/js-no-runtime`、`testdata/js-internal` fixture 与 `scripts/js-manual-review-runner.js`，让 JS regression smoke 可稳定覆盖 `manual_review_no_runtime` 和 `manual_review_internal`，不再依赖已漂移的外部 TS 项目样本。
 - 新增 Python name-mangled private method 生成规则、`testdata/py-internal` fixture 与 `scripts/py-manual-review-runner.py`，让 Python regression smoke 可稳定覆盖 `manual_review_internal`。

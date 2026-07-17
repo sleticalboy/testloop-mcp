@@ -31,6 +31,8 @@ top-N 覆盖率窗口。
                                     默认：/Users/binlee/code/free-works/haoy-apk-station/backend
   TESTLOOP_PY_REGRESSION_APK_STATION_IDS
                                     默认：pytest-apk-frontend-env-1
+  TESTLOOP_PY_REGRESSION_APK_STATION_EXTERNAL_IDS
+                                    默认：pytest-apk-download-external-1
   TESTLOOP_PYTEST_COMMAND
                                     默认：uv run python -m pytest {verbose} {coverage} {path}
   TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS
@@ -61,11 +63,13 @@ internal_dir="${TESTLOOP_PY_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/py-inte
 internal_ids="${TESTLOOP_PY_REGRESSION_INTERNAL_IDS:-pytest-internal-1}"
 apk_station_dir="${TESTLOOP_PY_REGRESSION_APK_STATION_DIR:-/Users/binlee/code/free-works/haoy-apk-station/backend}"
 apk_station_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_IDS:-pytest-apk-frontend-env-1}"
+apk_station_external_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_EXTERNAL_IDS:-pytest-apk-download-external-1}"
 pytest_command="${TESTLOOP_PYTEST_COMMAND:-}"
 if [[ -z "$pytest_command" ]]; then
   pytest_command='uv run python -m pytest {verbose} {coverage} {path}'
 fi
 manual_review_command="python3 $repo_root/scripts/py-manual-review-runner.py {path}"
+external_service_command="python3 $repo_root/scripts/py-external-service-runner.py {path}"
 
 require_path() {
   local kind="$1"
@@ -88,12 +92,13 @@ assert_sample_output() {
   local output="$1"
   local expected_ids="$2"
   local expected_action="$3"
+  local expected_status="${4:-passed}"
 
-  python3 - "$output" "$expected_ids" "$expected_action" <<'PY'
+  python3 - "$output" "$expected_ids" "$expected_action" "$expected_status" <<'PY'
 import json
 import sys
 
-path, raw_ids, expected_action = sys.argv[1:]
+path, raw_ids, expected_action, expected_status = sys.argv[1:]
 expected_ids = [item.strip() for item in raw_ids.split(",") if item.strip()]
 
 rows = []
@@ -111,8 +116,8 @@ for row in rows:
     task_id = row.get("coverage_task", {}).get("id", "")
     status = row.get("status")
     action = row.get("action")
-    if status != "passed":
-        raise SystemExit(f"{path}: {task_id} status={status}, want=passed")
+    if status != expected_status:
+        raise SystemExit(f"{path}: {task_id} status={status}, want={expected_status}")
     if action != expected_action:
         raise SystemExit(f"{path}: {task_id} action={action}, want={expected_action}")
 PY
@@ -125,12 +130,13 @@ run_sample() {
   local ids="$4"
   local expected_action="$5"
   local test_command="${6:-$pytest_command}"
+  local expected_status="${7:-passed}"
   local output="$output_dir/$name.jsonl"
 
   require_path dir "$project_dir"
   require_path file "$tasks_file"
 
-  echo "==> $name ids=$ids expected_action=$expected_action"
+  echo "==> $name ids=$ids expected_status=$expected_status expected_action=$expected_action"
   (
     cd "$repo_root"
     TESTLOOP_VALIDATE_PY_TASKS_FILE="$tasks_file" \
@@ -138,7 +144,7 @@ run_sample() {
     TESTLOOP_PYTEST_COMMAND="$test_command" \
     "$validator" "$project_dir" "$(task_count "$ids")" "$output"
   )
-  assert_sample_output "$output" "$ids" "$expected_action"
+  assert_sample_output "$output" "$ids" "$expected_action" "$expected_status"
   echo "ok  $name output=$output"
 }
 
@@ -155,5 +161,10 @@ apk_station_tasks="$output_dir/apk-station-environment-tasks.jsonl"
 require_path dir "$apk_station_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" py-apk-station-environment "$apk_station_dir" "$apk_station_tasks"
 run_sample "apk-station-environment" "$apk_station_dir" "$apk_station_tasks" "$apk_station_ids" "manual_review_environment" "$manual_review_command"
+
+apk_station_external_tasks="$output_dir/apk-station-external-service-tasks.jsonl"
+require_path dir "$apk_station_dir"
+"$repo_root/scripts/fixture-task-jsonl.py" py-apk-station-external-service "$apk_station_dir" "$apk_station_external_tasks"
+run_sample "apk-station-external-service" "$apk_station_dir" "$apk_station_external_tasks" "$apk_station_external_ids" "manual_review_external_service" "$external_service_command" "failed"
 
 echo "py_regression_output_dir=$output_dir"

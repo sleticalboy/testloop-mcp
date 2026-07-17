@@ -20,7 +20,7 @@ scripts/validate-regression-smoke.sh
 | :--- | :--- | :--- | :--- |
 | Java | `scripts/validate-java-regression-samples.sh` | Commons Lang `junit-44/junit-50`，Commons Codec `junit-130`，Commons Lang `junit-52` | `ready`、`manual_review_unreachable`、`manual_review_internal` |
 | JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1`，仓库内 `testdata/js-internal` 的 `jest-internal-1`，mcp-hub `vitest-mcp-hub-repair-1` | `ready`、`manual_review_no_runtime`、`manual_review_internal` |
-| Python | `scripts/validate-py-regression-samples.sh` | Click `pytest-1/pytest-3`，仓库内 `testdata/py-internal` 的 `pytest-internal-1`，haoy-apk-station backend 的 `pytest-apk-frontend-env-1` | `ready`、`manual_review_internal`、`manual_review_environment` |
+| Python | `scripts/validate-py-regression-samples.sh` | Click `pytest-1/pytest-3`，仓库内 `testdata/py-internal` 的 `pytest-internal-1`，haoy-apk-station backend 的 `pytest-apk-frontend-env-1/pytest-apk-download-external-1` | `ready`、`manual_review_internal`、`manual_review_environment`、`manual_review_external_service` |
 
 输出目录默认是：
 
@@ -79,6 +79,7 @@ scripts/fixture-task-jsonl.py js-internal ./testdata/js-internal /tmp/js-interna
 scripts/fixture-task-jsonl.py js-mcp-hub-repair /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-repair.jsonl
 scripts/fixture-task-jsonl.py py-internal ./testdata/py-internal /tmp/py-internal.jsonl
 scripts/fixture-task-jsonl.py py-apk-station-environment /Users/binlee/code/free-works/haoy-apk-station/backend /tmp/py-apk-station-environment.jsonl
+scripts/fixture-task-jsonl.py py-apk-station-external-service /Users/binlee/code/free-works/haoy-apk-station/backend /tmp/py-apk-station-external-service.jsonl
 ```
 
 JS/ip2region 使用 Jest ESM，需要固定到单个生成测试文件，否则 `jest util.test.js` 会误匹配项目已有 `tests/util.test.js`：
@@ -113,10 +114,12 @@ python3 scripts/py-manual-review-runner.py {path}
 
 Python/haoy-apk-station 使用真实 FastAPI 项目验证 environment 手审路径。`app.main` 中的 `serve_frontend` 只会在 `frontend/dist` 存在时于模块导入阶段动态定义，固定样本预期生成 `manual_review_environment` skip，并提示通过导入前创建 `frontend/dist/index.html` 的集成 fixture 覆盖，而不是直接调用 `lifespan` 或导入不存在的动态函数。
 
+Python/haoy-apk-station 还使用真实 FastAPI 下载代理验证 external-service 路径。`app.api.apps.download_apk` 的代理下载分支依赖外部对象存储 endpoint 和 `urllib.request.urlopen(..., timeout=60)`；固定 runner 会输出 pytest 风格 timeout 失败，预期 `validate_coverage_task` 返回 `failed/manual_review_external_service`，表示应通过 fake storage client、route data 或集成环境验证，而不是继续普通修生成测试。
+
 ## 当前边界
 
 - JS 默认 smoke 覆盖 `ready`、`manual_review_no_runtime` 和 `manual_review_internal`。仓库内 no-runtime/internal fixture 不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件、未导出 ESM helper 会被降级为可解析的手审任务；mcp-hub 样本用于防止真实 Vitest 项目里的 async throwing branch 从 `ready` 回退成 `repair_generated_test`。
-- Python 默认 smoke 覆盖 `ready`、`manual_review_internal` 和真实项目 `manual_review_environment`。仓库内 Python internal fixture 用于稳定验证 name-mangled private method 会被降级为可解析的手审任务；haoy-apk-station 样本用于验证 FastAPI 动态前端入口这类导入时环境依赖不会被误当成普通 ready。
+- Python 默认 smoke 覆盖 `ready`、`manual_review_internal`、真实项目 `manual_review_environment` 和真实项目 `manual_review_external_service`。仓库内 Python internal fixture 用于稳定验证 name-mangled private method 会被降级为可解析的手审任务；haoy-apk-station 样本用于验证 FastAPI 动态前端入口这类导入时环境依赖不会被误当成普通 ready，也用于验证对象存储 endpoint timeout 会被归类为外部服务手审而不是普通 repair。
 - ip2region 扩大窗口也会暴露 `repair_generated_test`，但那类普通失败没有固定为默认样本；当前默认 mcp-hub 样本固定的是历史 repair 已收敛的 `ConfigManager.loadConfig` 稳定错误路径。
 - 旧 ufo JSONL 包含 `manual_review_no_runtime`，但本机当前 ufo 目录只有发布产物，没有对应 `src/*.ts`，不适合作为固定样本。
 - Codex SDK TypeScript 的旧 JSONL 包含更真实的 `manual_review_internal`，但当前本地 workspace 的独立 `node_modules` 不包含 Jest，复用时会被 runner 依赖污染，不适合作为默认样本。
