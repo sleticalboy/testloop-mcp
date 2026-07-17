@@ -29,10 +29,37 @@ test_verify_client_setup_passes_with_skip_http() {
     bash "${repo_root}/scripts/verify-client-setup.sh" "$binary" > "$out"
 
   assert_contains "$out" "==> binary: $binary"
+  assert_contains "$out" "==> version"
   assert_contains "$out" "==> doctor-config"
   assert_contains "$out" "==> print-config/check-config roundtrip"
   assert_contains "$out" "==> HTTP health check skipped"
   assert_contains "$out" "==> client setup verification passed"
+}
+
+test_verify_client_setup_checks_expected_version() {
+  out="${tmp_dir}/verify-version.out"
+  TESTLOOP_MCP_VERIFY_SKIP_HTTP=true \
+    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 \
+    bash "${repo_root}/scripts/verify-client-setup.sh" "$binary" > "$out"
+
+  assert_contains "$out" "==> version"
+  assert_contains "$out" "==> client setup verification passed"
+}
+
+test_verify_client_setup_rejects_version_mismatch() {
+  out="${tmp_dir}/version-mismatch.out"
+  set +e
+  TESTLOOP_MCP_VERIFY_SKIP_HTTP=true \
+    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=9.9.9 \
+    bash "${repo_root}/scripts/verify-client-setup.sh" "$binary" > "$out" 2>&1
+  code=$?
+  set -e
+
+  if [ "$code" -eq 0 ]; then
+    echo "expected version mismatch verification to fail" >&2
+    exit 1
+  fi
+  assert_contains "$out" "error: version mismatch: expected 9.9.9, got 0.5.1"
 }
 
 test_verify_client_setup_rejects_missing_binary() {
@@ -50,6 +77,8 @@ test_verify_client_setup_rejects_missing_binary() {
 }
 
 test_verify_client_setup_passes_with_skip_http
+test_verify_client_setup_checks_expected_version
+test_verify_client_setup_rejects_version_mismatch
 test_verify_client_setup_rejects_missing_binary
 
 echo "client setup verification tests passed"

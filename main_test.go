@@ -73,13 +73,29 @@ func TestParseServerConfigRejectsUnsupportedTransport(t *testing.T) {
 func TestParseServerConfigRejectsMultipleConfigActions(t *testing.T) {
 	var stderr bytes.Buffer
 
-	_, code := parseServerConfig([]string{"--print-config=codex", "--check-config=-"}, &stderr)
+	_, code := parseServerConfig([]string{"--print-config=codex", "--version"}, &stderr)
 
 	if code != 1 {
 		t.Fatalf("code = %d, want 1", code)
 	}
 	if !strings.Contains(stderr.String(), "不能同时使用") {
 		t.Fatalf("stderr missing mutual exclusion error: %q", stderr.String())
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	var stderr bytes.Buffer
+
+	cfg, code := parseServerConfig([]string{"--version"}, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !cfg.version {
+		t.Fatalf("version = false, want true")
+	}
+	if appVersion != "0.5.1" {
+		t.Fatalf("appVersion = %q, want 0.5.1", appVersion)
 	}
 }
 

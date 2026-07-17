@@ -22,6 +22,8 @@ import (
 	"github.com/sleticalboy/testloop-mcp/tools"
 )
 
+const appVersion = "0.5.1"
+
 type serverConfig struct {
 	transport     string
 	addr          string
@@ -29,6 +31,7 @@ type serverConfig struct {
 	printConfig   string
 	checkConfig   string
 	doctorConfig  bool
+	version       bool
 	configCommand string
 	configHTTPURL string
 }
@@ -42,6 +45,7 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 	printConfig := flags.String("print-config", "", "打印 MCP 客户端配置片段: all、codex、codex-http、claude 或 cursor")
 	checkConfig := flags.String("check-config", "", "检查 MCP 客户端配置文件路径；使用 - 从 stdin 读取")
 	doctorConfig := flags.Bool("doctor-config", false, "诊断本机 MCP 客户端配置路径和 testloop-mcp 可执行文件")
+	version := flags.Bool("version", false, "打印 testloop-mcp 版本并退出")
 	configCommand := flags.String("config-command", "", "配置片段中的 testloop-mcp 二进制路径，默认使用当前可执行文件路径")
 	configHTTPURL := flags.String("config-http-url", "http://localhost:8080/mcp", "Codex HTTP 配置片段中的 MCP endpoint")
 	if err := flags.Parse(args); err != nil {
@@ -55,11 +59,12 @@ func parseServerConfig(args []string, stderr io.Writer) (serverConfig, int) {
 		printConfig:   *printConfig,
 		checkConfig:   *checkConfig,
 		doctorConfig:  *doctorConfig,
+		version:       *version,
 		configCommand: *configCommand,
 		configHTTPURL: *configHTTPURL,
 	}
 	if countConfigActions(cfg) > 1 {
-		fmt.Fprintln(stderr, "--print-config、--check-config 和 --doctor-config 不能同时使用")
+		fmt.Fprintln(stderr, "--print-config、--check-config、--doctor-config 和 --version 不能同时使用")
 		return cfg, 1
 	}
 	switch cfg.transport {
@@ -80,6 +85,9 @@ func countConfigActions(cfg serverConfig) int {
 		count++
 	}
 	if cfg.doctorConfig {
+		count++
+	}
+	if cfg.version {
 		count++
 	}
 	return count
@@ -481,7 +489,7 @@ func validateConfigURL(rawURL string) error {
 
 func newTestloopServer() *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "testloop-mcp", Version: "0.5.1"},
+		&mcp.Implementation{Name: "testloop-mcp", Version: appVersion},
 		nil,
 	)
 	tools.Register(server)
@@ -515,6 +523,10 @@ func main() {
 	}
 	if cfg.doctorConfig {
 		os.Exit(doctorClientConfig(os.Stdout, os.Stderr))
+	}
+	if cfg.version {
+		fmt.Fprintf(os.Stdout, "testloop-mcp %s\n", appVersion)
+		os.Exit(0)
 	}
 
 	server := newTestloopServer()

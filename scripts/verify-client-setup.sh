@@ -9,9 +9,10 @@ Verify that a local testloop-mcp binary is ready for MCP client setup.
 
 Checks:
   1. The binary exists and can print a client config snippet.
-  2. --doctor-config can inspect local client config paths.
-  3. --print-config=all output can be validated by --check-config -.
-  4. HTTP mode can start and /healthz returns ok.
+  2. --version works, and can optionally match an expected version.
+  3. --doctor-config can inspect local client config paths.
+  4. --print-config=all output can be validated by --check-config -.
+  5. HTTP mode can start and /healthz returns ok.
 
 Arguments:
   testloop-mcp-binary  Optional binary path. Defaults to TESTLOOP_MCP_COMMAND,
@@ -19,6 +20,9 @@ Arguments:
 
 Environment:
   TESTLOOP_MCP_COMMAND             Binary path to verify.
+  TESTLOOP_MCP_VERIFY_EXPECT_VERSION
+                                   Optional version to require, for example 0.5.1
+                                   or v0.5.1.
   TESTLOOP_MCP_VERIFY_HTTP_ADDR    HTTP listen address for the health check.
                                    Default: 127.0.0.1:18080
   TESTLOOP_MCP_VERIFY_SKIP_HTTP    Set to true to skip the HTTP health check.
@@ -45,6 +49,7 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
 fi
 
 command_path="${1:-${TESTLOOP_MCP_COMMAND:-}}"
+expected_version="${TESTLOOP_MCP_VERIFY_EXPECT_VERSION:-}"
 http_addr="${TESTLOOP_MCP_VERIFY_HTTP_ADDR:-127.0.0.1:18080}"
 skip_http="${TESTLOOP_MCP_VERIFY_SKIP_HTTP:-false}"
 
@@ -106,6 +111,16 @@ http_url="http://${http_addr}/mcp"
 
 log "binary: $binary"
 "$binary" --print-config=codex --config-command="$binary" >/dev/null
+
+log "version"
+version_output="$("$binary" --version)"
+printf '%s\n' "$version_output" | grep -E '^testloop-mcp v?[0-9]+\.[0-9]+\.[0-9]+' >/dev/null 2>&1 || fail "--version returned unexpected output: $version_output"
+if [ -n "$expected_version" ]; then
+  expected_version="${expected_version#v}"
+  actual_version="$(printf '%s\n' "$version_output" | awk '{print $2}')"
+  actual_version="${actual_version#v}"
+  [ "$actual_version" = "$expected_version" ] || fail "version mismatch: expected $expected_version, got $actual_version"
+fi
 
 log "doctor-config"
 "$binary" --doctor-config >/dev/null

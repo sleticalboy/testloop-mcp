@@ -143,6 +143,11 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
 该脚本会执行 `--doctor-config`、`--print-config=all | --check-config -`，并启动一次 HTTP 模式检查 `/healthz`。
+如果要确认 PATH 没有指到旧版本，可以加版本门禁：
+
+```bash
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+```
 
 ### Codex
 

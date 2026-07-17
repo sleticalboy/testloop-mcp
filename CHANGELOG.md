@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-暂无。
+### Added
+
+- 主二进制新增 `--version`，安装后自检脚本可通过 `TESTLOOP_MCP_VERIFY_EXPECT_VERSION` 校验当前 PATH 或指定二进制是否为预期版本。
 
 ## v0.5.1 - 2026-07-17
 

@@ -234,7 +234,13 @@ testloop-mcp --print-config=codex | testloop-mcp --check-config -
 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
-脚本会依次验证二进制可执行、`--doctor-config` 可运行、`--print-config=all` 与 `--check-config -` 可以闭环，并启动一次 HTTP 模式检查 `/healthz`。如果当前机器的 `127.0.0.1:18080` 已被占用，可以通过 `TESTLOOP_MCP_VERIFY_HTTP_ADDR=127.0.0.1:18081` 指定其他端口；只想验证 stdio 配置时可以设置 `TESTLOOP_MCP_VERIFY_SKIP_HTTP=true`。
+脚本会依次验证二进制可执行、`--version` 可运行、`--doctor-config` 可运行、`--print-config=all` 与 `--check-config -` 可以闭环，并启动一次 HTTP 模式检查 `/healthz`。如果当前机器的 `127.0.0.1:18080` 已被占用，可以通过 `TESTLOOP_MCP_VERIFY_HTTP_ADDR=127.0.0.1:18081` 指定其他端口；只想验证 stdio 配置时可以设置 `TESTLOOP_MCP_VERIFY_SKIP_HTTP=true`。
+
+如果需要确认安装产物没有指向旧版本，可以加版本门禁：
+
+```bash
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+```
 
 如果不确定应该写入哪个配置文件，先运行本机诊断：
 
