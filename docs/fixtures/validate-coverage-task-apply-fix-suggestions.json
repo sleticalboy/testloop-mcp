@@ -1,0 +1,119 @@
+{
+  "status": "failed",
+  "action": "apply_fix_suggestions",
+  "coverage_task": {
+    "id": "go-test-apply-fix-1",
+    "framework": "go-test",
+    "file": "calc.go",
+    "target": "Add",
+    "kind": "function",
+    "line_range": "4-6",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: a == 0"
+    ],
+    "uncovered_lines": [
+      4,
+      5,
+      6
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `a == 0` 的输入"
+    ],
+    "goal": "为 Add 补充测试，覆盖未执行行段 4-6",
+    "command": "go test ./...",
+    "test_file": "calc_test.go",
+    "test_name": "TestAdd",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用"
+    ],
+    "confidence": 0.95
+  },
+  "generated": {
+    "status": "ok",
+    "test_file": "calc_test.go",
+    "generated_cases": 1,
+    "provider": "static",
+    "coverage_task": {
+      "id": "go-test-apply-fix-1",
+      "framework": "go-test",
+      "file": "calc.go",
+      "target": "Add",
+      "kind": "function",
+      "line_range": "4-6",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: a == 0"
+      ],
+      "uncovered_lines": [
+        4,
+        5,
+        6
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `a == 0` 的输入"
+      ],
+      "goal": "为 Add 补充测试，覆盖未执行行段 4-6",
+      "command": "go test ./...",
+      "test_file": "calc_test.go",
+      "test_name": "TestAdd",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用"
+      ],
+      "confidence": 0.95
+    }
+  },
+  "run_result": {
+    "status": "fail",
+    "framework": "go-test",
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "coverage_percent": 0,
+    "failures": [
+      {
+        "test_name": "TestLegacyAddExpectation",
+        "file": "legacy_test.go",
+        "line": 7,
+        "error": "got 3, want 4"
+      }
+    ],
+    "fix_suggestions": [
+      {
+        "file": "legacy_test.go",
+        "line": 7,
+        "issue": "got 3, want 4",
+        "category": "expectation_mismatch",
+        "context_file": "calc_test.go",
+        "context_line": 7,
+        "suggested_fix": "期望值不匹配\n  实际值: 3\n  期望值: 4\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\n// TestAdd 测试 Add\n",
+        "confidence": 0.8,
+        "repair_task": {
+          "id": "repair-expectation_mismatch-testlegacyaddexpectation",
+          "test_name": "TestLegacyAddExpectation",
+          "category": "expectation_mismatch",
+          "issue": "got 3, want 4",
+          "target_file": "calc_test.go",
+          "target_line": 7,
+          "context_file": "calc_test.go",
+          "context_line": 7,
+          "context_snippet": "// TestAdd 测试 Add",
+          "editable_files": [
+            "calc.go",
+            "calc_test.go",
+            "legacy_test.go"
+          ],
+          "suggested_commands": [
+            "go test ./..."
+          ],
+          "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "framework": "go-test",
+    "test_file": "calc_test.go"
+  }
+}

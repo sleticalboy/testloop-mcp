@@ -71,7 +71,7 @@
     "failed": 0,
     "skipped": 0,
     "coverage_percent": 0,
-    "failures": []
+    "failures": null
   },
   "metadata": {
     "framework": "go-test",

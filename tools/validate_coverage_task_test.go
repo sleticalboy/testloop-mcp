@@ -196,14 +196,15 @@ type validateCoverageTaskGeneratedFixture struct {
 }
 
 type validateCoverageTaskRunResultFixture struct {
-	Status          string              `json:"status"`
-	Framework       string              `json:"framework"`
-	Total           int                 `json:"total"`
-	Passed          int                 `json:"passed"`
-	Failed          int                 `json:"failed"`
-	Skipped         int                 `json:"skipped"`
-	CoveragePercent float64             `json:"coverage_percent"`
-	Failures        []types.TestFailure `json:"failures"`
+	Status          string                `json:"status"`
+	Framework       string                `json:"framework"`
+	Total           int                   `json:"total"`
+	Passed          int                   `json:"passed"`
+	Failed          int                   `json:"failed"`
+	Skipped         int                   `json:"skipped"`
+	CoveragePercent float64               `json:"coverage_percent"`
+	Failures        []types.TestFailure   `json:"failures"`
+	FixSuggestions  []types.FixSuggestion `json:"fix_suggestions,omitempty"`
 }
 
 func TestHandleValidateCoverageTaskReadyFixture(t *testing.T) {
@@ -343,7 +344,8 @@ func validateCoverageTaskFixtureFromOutput(t *testing.T, root string, out types.
 			Failed:          out.RunResult.Failed,
 			Skipped:         out.RunResult.Skipped,
 			CoveragePercent: out.RunResult.CoveragePercent,
-			Failures:        out.RunResult.Failures,
+			Failures:        normalizeFixtureFailures(root, out.RunResult.Failures),
+			FixSuggestions:  normalizeFixtureFixSuggestions(root, out.RunResult.FixSuggestions),
 		},
 		Metadata: metadata,
 	}
@@ -362,6 +364,38 @@ func normalizeFixturePath(root string, path string) string {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(path)
+}
+
+func normalizeFixtureFailures(root string, failures []types.TestFailure) []types.TestFailure {
+	if failures == nil {
+		return nil
+	}
+	normalized := append([]types.TestFailure(nil), failures...)
+	for i := range normalized {
+		normalized[i].File = normalizeFixturePath(root, normalized[i].File)
+	}
+	return normalized
+}
+
+func normalizeFixtureFixSuggestions(root string, suggestions []types.FixSuggestion) []types.FixSuggestion {
+	if suggestions == nil {
+		return nil
+	}
+	normalized := append([]types.FixSuggestion(nil), suggestions...)
+	for i := range normalized {
+		normalized[i].File = normalizeFixturePath(root, normalized[i].File)
+		normalized[i].ContextFile = normalizeFixturePath(root, normalized[i].ContextFile)
+		if normalized[i].RepairTask != nil {
+			repair := *normalized[i].RepairTask
+			repair.TargetFile = normalizeFixturePath(root, repair.TargetFile)
+			repair.ContextFile = normalizeFixturePath(root, repair.ContextFile)
+			for j := range repair.EditableFiles {
+				repair.EditableFiles[j] = normalizeFixturePath(root, repair.EditableFiles[j])
+			}
+			normalized[i].RepairTask = &repair
+		}
+	}
+	return normalized
 }
 
 func TestHandleValidateCoverageTaskReturnsAdjustedCoverageTaskName(t *testing.T) {
@@ -1212,6 +1246,86 @@ export default class CacheFacade {
 	want := string(wantBytes)
 	if got != want {
 		t.Fatalf("manual-review fixture mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+func TestHandleValidateCoverageTaskApplyFixSuggestionsFixture(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	src := `package calc
+
+func Add(a, b int) int {
+	if a == 0 {
+		return b
+	}
+	return a + b
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	legacyTest := `package calc
+
+import "testing"
+
+func TestLegacyAddExpectation(t *testing.T) {
+	if got := Add(1, 2); got != 4 {
+		t.Fatalf("got %d, want 4", got)
+	}
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "legacy_test.go"), []byte(legacyTest), 0o644); err != nil {
+		t.Fatalf("write legacy test: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-apply-fix-1",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "Add",
+		Kind:            "function",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{4, 5, 6},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 Add 补充测试，覆盖未执行行段 4-6",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "calc_test.go"),
+		TestName:        "TestAdd",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+
+	gotBytes, err := json.MarshalIndent(validateCoverageTaskFixtureFromOutput(t, dir, out), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal apply-fix fixture: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("..", "docs", "fixtures", "validate-coverage-task-apply-fix-suggestions.json"))
+	if err != nil {
+		t.Fatalf("read apply-fix fixture: %v\n--- got ---\n%s", err, got)
+	}
+	want := string(wantBytes)
+	if got != want {
+		t.Fatalf("apply-fix fixture mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }
 
