@@ -5,11 +5,30 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/sleticalboy/testloop-mcp/types"
 )
+
+func normalizedJSONValue(t *testing.T, data []byte) any {
+	t.Helper()
+	var value any
+	if err := json.Unmarshal(data, &value); err != nil {
+		t.Fatalf("unmarshal JSON value: %v\n%s", err, data)
+	}
+	return value
+}
+
+func normalizedStructuredJSONValue(t *testing.T, value any) any {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal structured value %T: %v", value, err)
+	}
+	return normalizedJSONValue(t, data)
+}
 
 func TestHandleValidateCoverageTaskGeneratesAndRunsGoTask(t *testing.T) {
 	dir := t.TempDir()
@@ -77,6 +96,85 @@ func Add(a, b int) int {
 	structuredOutput, ok := structured.(types.CoverageTaskValidationOutput)
 	if !ok || structuredOutput.Status != "passed" {
 		t.Fatalf("structured output = %#v, want passed validation output", structured)
+	}
+}
+
+func TestHandleValidateCoverageTaskStructuredContentMatchesTextJSON(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	src := `package calc
+
+func Add(a, b int) int {
+	if a == 0 {
+		return b
+	}
+	return a + b
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-1",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "Add",
+		Kind:            "function",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{4, 5, 6},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 Add 补充测试，覆盖未执行行段 4-6",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "calc_test.go"),
+		TestName:        "TestAdd",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, structured, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+
+	textPayload := normalizedJSONValue(t, []byte(resultText(t, result)))
+	structuredPayload := normalizedStructuredJSONValue(t, result.StructuredContent)
+	if !reflect.DeepEqual(structuredPayload, textPayload) {
+		t.Fatalf("StructuredContent mismatch\nstructured: %#v\ntext: %#v", structuredPayload, textPayload)
+	}
+	returnedPayload := normalizedStructuredJSONValue(t, structured)
+	if !reflect.DeepEqual(returnedPayload, textPayload) {
+		t.Fatalf("handler structured return mismatch\nstructured: %#v\ntext: %#v", returnedPayload, textPayload)
+	}
+
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected status/action: %+v", out)
+	}
+	if out.CoverageTask == nil || out.CoverageTask.ID != task.ID || out.CoverageTask.Target != task.Target {
+		t.Fatalf("coverage_task missing or changed: %+v", out.CoverageTask)
+	}
+	if out.Generated == nil || out.Generated.Status != "ok" || out.Generated.TestFile != task.TestFile {
+		t.Fatalf("generated missing or changed: %+v", out.Generated)
+	}
+	if out.RunResult == nil || out.RunResult.Status != "pass" || out.RunResult.Failed != 0 {
+		t.Fatalf("run_result missing or changed: %+v", out.RunResult)
+	}
+	if out.Metadata == nil || out.Metadata["framework"] != "go-test" || out.Metadata["test_file"] != task.TestFile {
+		t.Fatalf("metadata missing or changed: %+v", out.Metadata)
 	}
 }
 
