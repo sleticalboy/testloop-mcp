@@ -39,7 +39,7 @@ top-N 覆盖率窗口。
   TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS
                                     默认：vitest-mcp-hub-env-1,vitest-mcp-hub-env-2
   TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_IDS
-                                    默认：vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3
+                                    默认：vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3,vitest-mcp-hub-sse-4
   TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_READY_IDS
                                     默认：vitest-mcp-hub-workspace-1,vitest-mcp-hub-workspace-2
   TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_MANUAL_IDS
@@ -77,7 +77,7 @@ internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
 mcp_hub_dir="${TESTLOOP_JS_REGRESSION_MCP_HUB_DIR:-/Users/binlee/code/open-source/mcp-hub}"
 mcp_hub_repair_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS:-vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3}"
 mcp_hub_env_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS:-vitest-mcp-hub-env-1,vitest-mcp-hub-env-2}"
-mcp_hub_sse_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_IDS:-vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3}"
+mcp_hub_sse_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_IDS:-vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3,vitest-mcp-hub-sse-4}"
 mcp_hub_workspace_ready_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_READY_IDS:-vitest-mcp-hub-workspace-1,vitest-mcp-hub-workspace-2}"
 mcp_hub_workspace_manual_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_MANUAL_IDS:-vitest-mcp-hub-workspace-3}"
 js_test_command="${TESTLOOP_JS_TEST_COMMAND:-}"

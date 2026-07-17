@@ -1432,6 +1432,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSSSEManagerAddConnectionSendFailureTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "SSEManager" && method.Name == "sendToClient" {
+			sb.WriteString(genJSSSEManagerSendToClientTest(method, task, testName))
+			continue
+		}
 		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
@@ -2168,6 +2172,7 @@ func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
 		jsCoverageTaskNeedsOAuthProviderMocks(task) ||
 		jsCoverageTaskNeedsWorkspaceCacheSpies(task) ||
 		(task != nil && task.Target == "SSEManager.setupAutoShutdown") ||
+		(task != nil && task.Target == "SSEManager.sendToClient") ||
 		jsCoverageTaskTargetsSSEAddConnectionClose(task) ||
 		jsCoverageTaskTargetsSSEAddConnectionSendFailure(task)
 }
@@ -2685,6 +2690,35 @@ func genJSSSEManagerAddConnectionSendFailureTest(method jsFuncInfo, task *types.
 	sb.WriteString("        const sentCount = instance.broadcast('heartbeat', {});\n")
 	sb.WriteString("        expect(sentCount).toBe(0);\n")
 	sb.WriteString("        expect(instance.connections.has(connection.id)).toBe(false);\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        await instance.shutdown();\n")
+	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSSEManagerSendToClientTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const instance = new SSEManager({ autoShutdown: false, heartbeatInterval: 1000 });\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        const missingSent = instance.sendToClient('missing-client', 'log', { message: 'hello' });\n")
+	sb.WriteString("        expect(missingSent).toBe(false);\n")
+	sb.WriteString("        const disconnected = { id: 'client-disconnected', res: { writableEnded: false, end: vi.fn() }, state: 'disconnected', send: vi.fn() };\n")
+	sb.WriteString("        instance.connections.set(disconnected.id, disconnected);\n")
+	sb.WriteString("        const disconnectedSent = instance.sendToClient(disconnected.id, 'log', { message: 'hello' });\n")
+	sb.WriteString("        expect(disconnectedSent).toBe(false);\n")
+	sb.WriteString("        expect(disconnected.send).not.toHaveBeenCalled();\n")
+	sb.WriteString("        const connected = { id: 'client-connected', res: { writableEnded: false, end: vi.fn() }, state: 'connected', send: vi.fn().mockReturnValue(true) };\n")
+	sb.WriteString("        instance.connections.set(connected.id, connected);\n")
+	sb.WriteString("        const sent = instance.sendToClient(connected.id, 'log', { message: 'hello' });\n")
+	sb.WriteString("        expect(sent).toBe(true);\n")
+	sb.WriteString("        expect(connected.send).toHaveBeenCalledWith('log', { message: 'hello' });\n")
 	sb.WriteString("      } finally {\n")
 	sb.WriteString("        await instance.shutdown();\n")
 	sb.WriteString("      }\n")

@@ -2795,6 +2795,69 @@ export class SSEManager extends EventEmitter {
 			forbidden: []string{"await expect(instance.addConnection", "ConnectionState.ERROR", "res.write: () => {}"},
 		},
 		{
+			name:     "vitest sse send to client covers missing disconnected and connected paths",
+			fileName: "sse-manager.js",
+			source: `import EventEmitter from 'events';
+
+export class SSEManager extends EventEmitter {
+  constructor(options = {}) {
+    super()
+    this.connections = new Map()
+    this.heartbeatInterval = options.heartbeatInterval || 10000
+    this.heartbeatTimer = null
+    this.setupHeartbeat()
+  }
+
+  setupHeartbeat() {
+    this.heartbeatTimer = setInterval(() => {}, this.heartbeatInterval)
+    this.heartbeatTimer.unref()
+  }
+
+  sendToClient(clientId, event, data) {
+    const connection = this.connections.get(clientId)
+    if (!connection || connection.state !== 'connected') {
+      return false
+    }
+    return connection.send(event, data)
+  }
+
+  async shutdown() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+    this.connections.clear()
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-sse-4",
+				Framework:       "vitest",
+				Target:          "SSEManager.sendToClient",
+				LineRange:       "215-220",
+				GapType:         "branch",
+				TestName:        "covers SSEManager sendToClient client state branches",
+				MissingBranches: []string{"未覆盖 sendToClient 缺失 client、非 connected client 和 connected send 委托路径"},
+				SuggestedInputs: []string{"调用不存在 clientId", "放入 disconnected connection", "放入 connected connection 并 mock send"},
+				AssertionFocus:  []string{"应断言缺失和 disconnected 返回 false 且不调用 send，connected 时委托 connection.send"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"const instance = new SSEManager({ autoShutdown: false, heartbeatInterval: 1000 });",
+				"const missingSent = instance.sendToClient('missing-client', 'log', { message: 'hello' });",
+				"expect(missingSent).toBe(false);",
+				"const disconnected = { id: 'client-disconnected', res: { writableEnded: false, end: vi.fn() }, state: 'disconnected', send: vi.fn() };",
+				"const disconnectedSent = instance.sendToClient(disconnected.id, 'log', { message: 'hello' });",
+				"expect(disconnectedSent).toBe(false);",
+				"expect(disconnected.send).not.toHaveBeenCalled();",
+				"const connected = { id: 'client-connected', res: { writableEnded: false, end: vi.fn() }, state: 'connected', send: vi.fn().mockReturnValue(true) };",
+				"const sent = instance.sendToClient(connected.id, 'log', { message: 'hello' });",
+				"expect(sent).toBe(true);",
+				"expect(connected.send).toHaveBeenCalledWith('log', { message: 'hello' });",
+			},
+			forbidden: []string{"ConnectionState.CONNECTED", "sendToClient(undefined", "expect(result).toBeDefined();"},
+		},
+		{
 			name:     "vitest sse auto shutdown uses fake timers and sigterm listener",
 			fileName: "sse-manager.js",
 			source: `import EventEmitter from 'events';

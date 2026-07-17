@@ -341,6 +341,29 @@ def js_mcp_hub_sse(project_dir: str) -> dict:
             "priority": 131,
             "priority_reason": "real mcp-hub SSE send failure sample requiring response write error isolation",
         },
+        {
+            **common,
+            "id": "vitest-mcp-hub-sse-4",
+            "target": "SSEManager.sendToClient",
+            "line_range": "215-220",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 sendToClient 缺失 client、非 connected client 和 connected send 委托路径"
+            ],
+            "uncovered_lines": [215, 216, 217, 218, 220],
+            "suggested_inputs": [
+                "调用不存在 clientId",
+                "放入 disconnected connection",
+                "放入 connected connection 并 mock send",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 SSEManager.sendToClient 可覆盖 missing/disconnected false 和 connected send delegation",
+            "test_name": "covers SSEManager sendToClient client state branches",
+            "assertion_focus": [
+                "应断言缺失和 disconnected 返回 false 且不调用 send，connected 时委托 connection.send"
+            ],
+            "priority": 132,
+            "priority_reason": "real mcp-hub SSE directed send sample covering missing and disconnected client branches",
+        },
     ]
 
 
