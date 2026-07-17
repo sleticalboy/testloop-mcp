@@ -7,10 +7,11 @@
 - [Agent Action 决策表](./agent-action-guide.md)
 - [Agent 结构化契约](./agent-contract.md)
 - [Agent 工作流](./agent-workflow.md)
+- [真实结构化 fixture](./fixtures.md)
 
 仓库里的 `go run ./examples/agent-decision-demo` 会读取本文档中的 JSON 样例，并演示一个最小客户端如何把 `status/action` 映射成 `accept`、`manual-review`、`apply-repair` 和 `needs-better-input`。
 
-如果需要更贴近真实 handler 的可复用样例，可以查看 [真实 validate_coverage_task ready fixture](./fixtures/validate-coverage-task-ready.json)、[真实 manual_review_internal fixture](./fixtures/validate-coverage-task-manual-review-internal.json) 和 [真实 apply_fix_suggestions fixture](./fixtures/validate-coverage-task-apply-fix-suggestions.json)。这些 JSON 由 `tools` 层测试通过临时项目真实调用 `HandleValidateCoverageTask` 后生成稳定投影，并在 CI 中比对。
+如果需要更贴近真实 handler 的可复用样例，可以查看 [真实结构化 fixture](./fixtures.md)。这些 JSON 由 `tools` 层测试通过临时项目真实调用 `HandleValidateCoverageTask` 后生成稳定投影，并在 CI 中比对。
 
 ## passed / ready
 
