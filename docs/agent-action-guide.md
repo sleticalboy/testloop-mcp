@@ -50,4 +50,4 @@
 - `provider_error`
 - `metadata`
 
-这些字段已由 Agent 结构化契约和 handler 级一致性测试保护。客户端应优先读取 `structuredContent`，旧客户端可以 fallback 到 `content[0].text` JSON。
+这些字段已由 Agent 结构化契约和 handler 级一致性测试保护。客户端应优先读取 `structuredContent`，旧客户端可以 fallback 到 `content[0].text` JSON。典型返回可对照 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)。

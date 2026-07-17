@@ -20,6 +20,7 @@
 - 新增 `validate_coverage_task` 结构化返回一致性测试，固定 `structuredContent` 与文本 JSON 中的 `status/action/coverage_task/generated/run_result/metadata` 不漂移。
 - 新增 `docs/agent-action-guide.md`，整理 `validate_coverage_task.status/action` 到客户端下一步动作的决策表。
 - 新增 `test/docs_links_test.sh` 并纳入 CI，检查 README 与 docs 下 Markdown 相对链接的文件目标是否存在。
+- 新增 `docs/validate-coverage-task-samples.md` 和 `test/docs_json_examples_test.sh`，固定 `validate_coverage_task` 典型结构化返回样例的 JSON 合法性。
 
 ## v0.5.0 - 2026-07-17
 

@@ -71,7 +71,7 @@ Agent 决策应以 `status/action` 为准：
 - `run_error`：先修测试命令、依赖或项目环境。
 - `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计。
 
-更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)。
+更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)，典型返回可对照 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)。
 
 ## 回归保护
 
