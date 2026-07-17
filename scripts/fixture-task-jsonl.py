@@ -178,6 +178,88 @@ def js_mcp_hub_env(project_dir: str) -> dict:
     ]
 
 
+def js_mcp_hub_workspace(project_dir: str) -> dict:
+    source = os.path.join(project_dir, "src", "utils", "workspace-cache.js")
+    test_file = os.path.join(project_dir, "tests", "utils", "workspace-cache.test.js")
+    common = {
+        "framework": "vitest",
+        "file": source,
+        "kind": "method",
+        "command": "npx vitest run tests/utils/workspace-cache.test.js",
+        "test_file": test_file,
+        "confidence": 0.9,
+    }
+    return [
+        {
+            **common,
+            "id": "vitest-mcp-hub-workspace-1",
+            "target": "WorkspaceCacheManager.updateWorkspaceState",
+            "line_range": "255-260",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 if 分支: cache[workspaceKey]"
+            ],
+            "uncovered_lines": [255, 256, 257, 258, 259, 260],
+            "suggested_inputs": [
+                "构造满足条件 `cache[workspaceKey]` 的输入",
+                "设置 port 覆盖未执行分支",
+                "设置 updates 覆盖未执行分支",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 WorkspaceCacheManager.updateWorkspaceState 通过 mocked cache/lock 进入 ready",
+            "test_name": "covers WorkspaceCacheManager update existing workspace",
+            "assertion_focus": [
+                "应 mock _withLock/_readCache/_writeCache，避免触碰真实 XDG state 文件"
+            ],
+            "priority": 126,
+            "priority_reason": "real mcp-hub workspace cache update sample requiring filesystem side-effect isolation",
+        },
+        {
+            **common,
+            "id": "vitest-mcp-hub-workspace-2",
+            "target": "WorkspaceCacheManager.cleanupStaleEntries",
+            "line_range": "226-233",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 else 分支: process no longer running"
+            ],
+            "uncovered_lines": [226, 227, 228, 229, 230, 231, 232, 233],
+            "suggested_inputs": [
+                "构造 cache 包含 pid 不存在的 workspace entry",
+                "mock _isProcessRunning 返回 false",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 WorkspaceCacheManager.cleanupStaleEntries stale pid 分支不会调用真实 process.kill，并进入 ready",
+            "test_name": "covers WorkspaceCacheManager cleanup stale entries branch",
+            "assertion_focus": [
+                "应 mock _withLock/_readCache/_writeCache/_isProcessRunning，避免真实文件锁和真实进程探测"
+            ],
+            "priority": 127,
+            "priority_reason": "real mcp-hub workspace cache stale-process sample requiring process/filesystem side-effect isolation",
+        },
+        {
+            **common,
+            "id": "vitest-mcp-hub-workspace-3",
+            "target": "WorkspaceCacheManager._withLock",
+            "line_range": "399-421",
+            "gap_type": "error_path",
+            "missing_branches": [
+                "未覆盖 stale lock cleanup retry failure path"
+            ],
+            "uncovered_lines": [399, 400, 401, 407, 413, 416, 421],
+            "suggested_inputs": [
+                "构造 lockFilePath 指向不可写或持续 EEXIST 的 lock 文件",
+                "mock fs.writeFile/unlink",
+            ],
+            "goal": "确认 _withLock 文件锁重试依赖真实计时和文件系统，应进入环境手审而不是直接写真实 lock 文件",
+            "test_name": "marks WorkspaceCacheManager lock retry path as environment manual review",
+            "assertion_focus": [
+                "文件锁重试路径依赖真实计时、lock 文件和 fs exclusive write，应使用集成 fixture 或手审"
+            ],
+            "priority": 128,
+            "priority_reason": "real mcp-hub workspace cache lock retry path should avoid unsafe generated filesystem mutation",
+        },
+    ]
+
+
 def py_internal(project_dir: str) -> dict:
     source = os.path.join(project_dir, "src", "private_service.py")
     return {
@@ -293,6 +375,7 @@ def py_apk_station_database(project_dir: str) -> dict:
 PRESETS = {
     "js-mcp-hub-env": js_mcp_hub_env,
     "js-mcp-hub-repair": js_mcp_hub_repair,
+    "js-mcp-hub-workspace": js_mcp_hub_workspace,
     "js-no-runtime": js_no_runtime,
     "js-internal": js_internal,
     "py-apk-station-database": py_apk_station_database,

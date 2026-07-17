@@ -2454,6 +2454,103 @@ export default class CacheFacade {
 			forbidden: []string{"updateWorkspaceState(undefined", "const result = await instance.updateWorkspaceState"},
 		},
 		{
+			name:     "vitest workspace cache cleanup stale entries isolates process and fs",
+			fileName: "workspace-cache.js",
+			source: `export class WorkspaceCacheManager {
+  constructor(options = {}) {
+    this.port = options.port || null
+  }
+
+  async cleanupStaleEntries() {
+    await this._withLock(async () => {
+      const cache = await this._readCache()
+      const cleanedCache = {}
+      let removedCount = 0
+      for (const [workspaceKey, entry] of Object.entries(cache)) {
+        if (await this._isProcessRunning(entry.pid)) {
+          cleanedCache[workspaceKey] = entry
+        } else {
+          removedCount++
+        }
+      }
+      if (removedCount > 0) {
+        await this._writeCache(cleanedCache)
+      }
+    })
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-workspace-2",
+				Framework:       "vitest",
+				Target:          "WorkspaceCacheManager.cleanupStaleEntries",
+				LineRange:       "226-233",
+				GapType:         "branch",
+				TestName:        "covers WorkspaceCacheManager cleanup stale entries branch",
+				MissingBranches: []string{"未覆盖 else 分支: process no longer running"},
+				SuggestedInputs: []string{"构造 cache 包含 pid 不存在的 workspace entry", "mock _isProcessRunning 返回 false"},
+				AssertionFocus:  []string{"应 mock _withLock/_readCache/_writeCache/_isProcessRunning，避免真实文件锁和真实进程探测"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"const instance = new WorkspaceCacheManager({ port: 3000 });",
+				"instance._withLock = async (fn) => fn();",
+				"instance._readCache = vi.fn().mockResolvedValue(cache);",
+				"instance._writeCache = vi.fn().mockResolvedValue(undefined);",
+				"instance._isProcessRunning = vi.fn().mockImplementation(async (pid) => pid === process.pid);",
+				"await instance.cleanupStaleEntries();",
+				"expect(instance._isProcessRunning).toHaveBeenCalledWith(-1);",
+				"expect(instance._writeCache.mock.calls[0][0]).not.toHaveProperty('4000');",
+			},
+			forbidden: []string{"await instance.cleanupStaleEntries();\n    });", "new WorkspaceCacheManager({});"},
+		},
+		{
+			name:     "vitest workspace cache with lock requires environment review",
+			fileName: "workspace-cache.js",
+			source: `export class WorkspaceCacheManager {
+  constructor(options = {}) {
+    this.lockFilePath = '/tmp/workspaces.json.lock'
+  }
+
+  async _withLock(fn, _isRetryAfterCleanup = false) {
+    const maxRetries = 10
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await fs.writeFile(this.lockFilePath, process.pid.toString(), { flag: 'wx' })
+        await fn()
+        return
+      } catch (error) {
+        if (error.code === 'EEXIST') {
+          continue
+        }
+        throw error
+      }
+    }
+    if (_isRetryAfterCleanup) {
+      throw new Error('Failed to acquire lock after cleanup attempt.')
+    }
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-workspace-3",
+				Framework:       "vitest",
+				Target:          "WorkspaceCacheManager._withLock",
+				LineRange:       "399-421",
+				GapType:         "error_path",
+				TestName:        "marks WorkspaceCacheManager lock retry path as environment manual review",
+				MissingBranches: []string{"未覆盖 stale lock cleanup retry failure path"},
+				SuggestedInputs: []string{"构造 lockFilePath 指向不可写或持续 EEXIST 的 lock 文件", "mock fs.writeFile/unlink"},
+				AssertionFocus:  []string{"文件锁重试路径依赖真实计时、lock 文件和 fs exclusive write，应使用集成 fixture 或手审"},
+			},
+			wants: []string{
+				"it.skip('marks WorkspaceCacheManager lock retry path as environment manual review'",
+				"manual_review_environment: WorkspaceCacheManager._withLock depends on real fs exclusive lock semantics",
+				"public_entry_candidates: register, deregister, cleanupStaleEntries, updateWorkspaceState",
+			},
+			forbidden: []string{"instance._withLock(undefined, true)", "await expect(instance._withLock"},
+		},
+		{
 			name:     "vitest sse add connection mocks express req res",
 			fileName: "sse-manager.js",
 			source: `export class SSEManager {

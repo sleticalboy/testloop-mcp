@@ -1412,6 +1412,14 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSWorkspaceCacheUpdateStateTest(method, task, testName))
 			continue
 		}
+		if cls.Name == "WorkspaceCacheManager" && method.Name == "cleanupStaleEntries" {
+			sb.WriteString(genJSWorkspaceCacheCleanupStaleEntriesTest(method, task, testName))
+			continue
+		}
+		if cls.Name == "WorkspaceCacheManager" && method.Name == "_withLock" {
+			sb.WriteString(genJSWorkspaceCacheWithLockManualReviewTest(method, task, testName, assertions))
+			continue
+		}
 		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
@@ -2156,7 +2164,15 @@ func jsCoverageTaskNeedsOAuthProviderMocks(task *types.CoverageTestTask) bool {
 }
 
 func jsCoverageTaskNeedsWorkspaceCacheSpies(task *types.CoverageTestTask) bool {
-	return task != nil && task.Target == "WorkspaceCacheManager.updateWorkspaceState"
+	if task == nil {
+		return false
+	}
+	switch task.Target {
+	case "WorkspaceCacheManager.updateWorkspaceState", "WorkspaceCacheManager.cleanupStaleEntries":
+		return true
+	default:
+		return false
+	}
 }
 
 func jsCoverageTaskNeedsDynamicImportOnly(task *types.CoverageTestTask) bool {
@@ -2469,6 +2485,48 @@ func genJSWorkspaceCacheUpdateStateTest(method jsFuncInfo, task *types.CoverageT
 	sb.WriteString("      expect(instance._writeCache).toHaveBeenCalledWith(expect.objectContaining({\n")
 	sb.WriteString("        '3000': expect.objectContaining({ state: 'shutting_down', activeConnections: 0, port: 3000 }),\n")
 	sb.WriteString("      }));\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSWorkspaceCacheCleanupStaleEntriesTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const instance = new WorkspaceCacheManager({ port: 3000 });\n")
+	sb.WriteString("      const cache = {\n")
+	sb.WriteString("        '3000': { state: 'active', pid: process.pid, port: 3000 },\n")
+	sb.WriteString("        '4000': { state: 'active', pid: -1, port: 4000 },\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      instance._withLock = async (fn) => fn();\n")
+	sb.WriteString("      instance._readCache = vi.fn().mockResolvedValue(cache);\n")
+	sb.WriteString("      instance._writeCache = vi.fn().mockResolvedValue(undefined);\n")
+	sb.WriteString("      instance._isProcessRunning = vi.fn().mockImplementation(async (pid) => pid === process.pid);\n")
+	sb.WriteString("      await instance.cleanupStaleEntries();\n")
+	sb.WriteString("      expect(instance._isProcessRunning).toHaveBeenCalledWith(-1);\n")
+	sb.WriteString("      expect(instance._writeCache).toHaveBeenCalledWith(expect.objectContaining({\n")
+	sb.WriteString("        '3000': expect.objectContaining({ pid: process.pid, port: 3000 }),\n")
+	sb.WriteString("      }));\n")
+	sb.WriteString("      expect(instance._writeCache.mock.calls[0][0]).not.toHaveProperty('4000');\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSWorkspaceCacheWithLockManualReviewTest(method jsFuncInfo, task *types.CoverageTestTask, testName string, assertions jsAssertionStyle) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
+	sb.WriteString(jsManualReviewSymbolReferences("WorkspaceCacheManager", assertions, "      "))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      // manual_review_environment: WorkspaceCacheManager._withLock depends on real fs exclusive lock semantics, retry timing, and stale lock cleanup; cover it with an integration fixture that redirects cacheFilePath and lockFilePath to a temporary directory.\n")
+	sb.WriteString("      // public_entry_candidates: register, deregister, cleanupStaleEntries, updateWorkspaceState\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()
