@@ -2,6 +2,8 @@
 
 这个目录给 Agent 客户端、编辑器插件和 MCP 集成测试复用。`docs/fixtures/*.json` 不是手写示意样例，而是 `tools` 层测试通过临时项目真实调用 `HandleValidateCoverageTask` 后生成的稳定投影。
 
+接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
+
 ## fixture 列表
 
 | 文件 | status/action | 来源 | Agent 下一步 |
