@@ -108,7 +108,7 @@ go install github.com/sleticalboy/testloop-mcp/cmd/testgen@latest
 
 **前置要求：** Go 1.25+；源码构建需要 CGO 可用的 C 编译工具链。
 
-更完整的下载、校验、Docker 和客户端接入说明见 [安装与接入](./docs/installation.md)。
+想快速接入 Codex、Claude 或 Cursor，先看 [5 分钟接入向导](./docs/quickstart.md)。更完整的下载、校验、Docker 和客户端接入说明见 [安装与接入](./docs/installation.md)。
 
 ## 配置接入
 

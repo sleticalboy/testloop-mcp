@@ -2,6 +2,8 @@
 
 本文面向想直接使用 testloop-mcp 的用户，覆盖 Homebrew、二进制下载、校验、本地构建、Docker 运行和常见 MCP 客户端接入方式。
 
+如果只想尽快接入 Codex、Claude 或 Cursor，先看 [5 分钟接入向导](./quickstart.md)。
+
 ## 推荐方式：Homebrew
 
 macOS / Linux 可以通过 `sleticalboy/tap` 安装：
