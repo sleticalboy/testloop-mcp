@@ -1420,6 +1420,10 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSWorkspaceCacheWithLockManualReviewTest(method, task, testName, assertions))
 			continue
 		}
+		if cls.Name == "SSEManager" && method.Name == "setupAutoShutdown" {
+			sb.WriteString(genJSSSEManagerSetupAutoShutdownTest(method, task, testName))
+			continue
+		}
 		if cls.Name == "CodexExec" && method.Name == "run" && jsCoverageTaskNeedsCodexExecMock(task) {
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
@@ -2152,7 +2156,10 @@ vi.mock('%s', () => ({
 }
 
 func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
-	return jsCoverageTaskNeedsChokidarMock(task) || jsCoverageTaskNeedsOAuthProviderMocks(task) || jsCoverageTaskNeedsWorkspaceCacheSpies(task)
+	return jsCoverageTaskNeedsChokidarMock(task) ||
+		jsCoverageTaskNeedsOAuthProviderMocks(task) ||
+		jsCoverageTaskNeedsWorkspaceCacheSpies(task) ||
+		(task != nil && task.Target == "SSEManager.setupAutoShutdown")
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
@@ -2527,6 +2534,48 @@ func genJSWorkspaceCacheWithLockManualReviewTest(method jsFuncInfo, task *types.
 	}
 	sb.WriteString("      // manual_review_environment: WorkspaceCacheManager._withLock depends on real fs exclusive lock semantics, retry timing, and stale lock cleanup; cover it with an integration fixture that redirects cacheFilePath and lockFilePath to a temporary directory.\n")
 	sb.WriteString("      // public_entry_candidates: register, deregister, cleanupStaleEntries, updateWorkspaceState\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSSSEManagerSetupAutoShutdownTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const workspaceCache = {\n")
+	sb.WriteString("        updateActiveConnections: vi.fn().mockResolvedValue(undefined),\n")
+	sb.WriteString("        setShutdownTimer: vi.fn().mockResolvedValue(undefined),\n")
+	sb.WriteString("      };\n")
+	sb.WriteString("      const instance = new SSEManager({ autoShutdown: false, heartbeatInterval: 1000 });\n")
+	sb.WriteString("      await instance.shutdown();\n")
+	sb.WriteString("      instance.connections = new Map();\n")
+	sb.WriteString("      instance.autoShutdown = true;\n")
+	sb.WriteString("      instance.shutdownDelay = 25;\n")
+	sb.WriteString("      instance.shutdownTimer = null;\n")
+	sb.WriteString("      instance.workspaceCache = workspaceCache;\n")
+	sb.WriteString("      instance.port = 3000;\n")
+	sb.WriteString("      vi.useFakeTimers();\n")
+	sb.WriteString("      const sigtermHandler = vi.fn();\n")
+	sb.WriteString("      try {\n")
+	sb.WriteString("        process.once('SIGTERM', sigtermHandler);\n")
+	sb.WriteString("        instance.setupAutoShutdown();\n")
+	sb.WriteString("        instance.emit('connectionClosed', { id: 'client-1', remaining: 0 });\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        await Promise.resolve();\n")
+	sb.WriteString("        expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 0);\n")
+	sb.WriteString("        expect(workspaceCache.setShutdownTimer).toHaveBeenCalledWith(3000, 25);\n")
+	sb.WriteString("        await vi.advanceTimersByTimeAsync(25);\n")
+	sb.WriteString("        expect(sigtermHandler).toHaveBeenCalledTimes(1);\n")
+	sb.WriteString("      } finally {\n")
+	sb.WriteString("        await instance.shutdown();\n")
+	sb.WriteString("        process.removeListener('SIGTERM', sigtermHandler);\n")
+	sb.WriteString("        vi.useRealTimers();\n")
+	sb.WriteString("      }\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()

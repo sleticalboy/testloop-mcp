@@ -2594,6 +2594,96 @@ export default class CacheFacade {
 			},
 			forbidden: []string{"undefined, { json", "res.setHeader is not a function"},
 		},
+		{
+			name:     "vitest sse auto shutdown uses fake timers and sigterm listener",
+			fileName: "sse-manager.js",
+			source: `import EventEmitter from 'events';
+
+export class SSEManager extends EventEmitter {
+  constructor(options = {}) {
+    super()
+    this.connections = new Map()
+    this.heartbeatInterval = options.heartbeatInterval || 10000
+    this.autoShutdown = options.autoShutdown || false
+    this.shutdownDelay = options.shutdownDelay || 0
+    this.shutdownTimer = null
+    this.heartbeatTimer = null
+    this.workspaceCache = options.workspaceCache || null
+    this.port = options.port || null
+    this.setupHeartbeat()
+    this.setupAutoShutdown()
+  }
+
+  setupHeartbeat() {
+    this.heartbeatTimer = setInterval(() => {}, this.heartbeatInterval)
+    this.heartbeatTimer.unref()
+  }
+
+  setupAutoShutdown() {
+    if (!this.autoShutdown) return
+    this.on('connectionClosed', async () => {
+      if (this.workspaceCache && this.port) {
+        await this.workspaceCache.updateActiveConnections(this.port, this.connections.size)
+      }
+      if (this.connections.size === 0) {
+        if (this.shutdownTimer) {
+          clearTimeout(this.shutdownTimer)
+        }
+        if (this.workspaceCache && this.port) {
+          await this.workspaceCache.setShutdownTimer(this.port, this.shutdownDelay)
+        }
+        this.shutdownTimer = setTimeout(() => {
+          process.emit('SIGTERM')
+        }, this.shutdownDelay)
+      }
+    })
+  }
+
+  async shutdown() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+    if (this.shutdownTimer) {
+      clearTimeout(this.shutdownTimer)
+      this.shutdownTimer = null
+    }
+    this.connections.clear()
+    this.removeAllListeners()
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-sse-1",
+				Framework:       "vitest",
+				Target:          "SSEManager.setupAutoShutdown",
+				LineRange:       "80-103",
+				GapType:         "branch",
+				TestName:        "covers SSEManager auto shutdown timer without mocked process emit",
+				MissingBranches: []string{"未覆盖 connectionClosed 后 connections.size === 0 的自动关闭路径"},
+				SuggestedInputs: []string{"启用 autoShutdown", "mock workspaceCache", "使用 fake timers 推进 shutdownDelay"},
+				AssertionFocus:  []string{"必须监听 SIGTERM 并使用 fake timers，避免 mock process.emit 干扰 Vitest worker"},
+			},
+			wants: []string{
+				"import { describe, it, expect, vi } from 'vitest';",
+				"const workspaceCache = {",
+				"updateActiveConnections: vi.fn().mockResolvedValue(undefined),",
+				"setShutdownTimer: vi.fn().mockResolvedValue(undefined),",
+				"await instance.shutdown();",
+				"vi.useFakeTimers();",
+				"const sigtermHandler = vi.fn();",
+				"process.once('SIGTERM', sigtermHandler);",
+				"instance.setupAutoShutdown();",
+				"instance.emit('connectionClosed', { id: 'client-1', remaining: 0 });",
+				"expect(workspaceCache.updateActiveConnections).toHaveBeenCalledWith(3000, 0);",
+				"expect(workspaceCache.setShutdownTimer).toHaveBeenCalledWith(3000, 25);",
+				"await vi.advanceTimersByTimeAsync(25);",
+				"expect(sigtermHandler).toHaveBeenCalledTimes(1);",
+				"process.removeListener('SIGTERM', sigtermHandler);",
+				"vi.useRealTimers();",
+			},
+			forbidden: []string{"vi.spyOn(process, 'emit')", "setTimeout(() => {}, 1000)", "const result = instance.setupAutoShutdown();"},
+		},
 	}
 
 	for _, tt := range tests {

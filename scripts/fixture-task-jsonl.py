@@ -260,6 +260,44 @@ def js_mcp_hub_workspace(project_dir: str) -> dict:
     ]
 
 
+def js_mcp_hub_sse(project_dir: str) -> dict:
+    source = os.path.join(project_dir, "src", "utils", "sse-manager.js")
+    test_file = os.path.join(project_dir, "tests", "utils", "sse-manager.test.js")
+    common = {
+        "framework": "vitest",
+        "file": source,
+        "kind": "method",
+        "command": "npx vitest run tests/utils/sse-manager.test.js",
+        "test_file": test_file,
+        "confidence": 0.9,
+    }
+    return [
+        {
+            **common,
+            "id": "vitest-mcp-hub-sse-1",
+            "target": "SSEManager.setupAutoShutdown",
+            "line_range": "80-103",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 connectionClosed 后 connections.size === 0 的自动关闭路径"
+            ],
+            "uncovered_lines": [80, 81, 82, 85, 88, 89, 93, 97, 99, 103],
+            "suggested_inputs": [
+                "启用 autoShutdown",
+                "mock workspaceCache",
+                "使用 fake timers 推进 shutdownDelay",
+            ],
+            "goal": "确认真实 mcp-hub 项目中 SSEManager auto shutdown 使用 fake timers 和 SIGTERM listener 进入 ready，不 mock process.emit",
+            "test_name": "covers SSEManager auto shutdown timer without mocked process emit",
+            "assertion_focus": [
+                "必须监听 SIGTERM 并使用 fake timers，避免 mock process.emit 干扰 Vitest worker"
+            ],
+            "priority": 129,
+            "priority_reason": "real mcp-hub SSE lifecycle sample requiring timer and process signal isolation",
+        },
+    ]
+
+
 def py_internal(project_dir: str) -> dict:
     source = os.path.join(project_dir, "src", "private_service.py")
     return {
@@ -375,6 +413,7 @@ def py_apk_station_database(project_dir: str) -> dict:
 PRESETS = {
     "js-mcp-hub-env": js_mcp_hub_env,
     "js-mcp-hub-repair": js_mcp_hub_repair,
+    "js-mcp-hub-sse": js_mcp_hub_sse,
     "js-mcp-hub-workspace": js_mcp_hub_workspace,
     "js-no-runtime": js_no_runtime,
     "js-internal": js_internal,
