@@ -34,7 +34,7 @@ v0.5.0 发布重点见 [v0.5.0 发布说明草案](./plan-release-notes-v0.5.0.m
 - [x] `/tmp/testloop-v0.5.0-prep/testloop-mcp_v0.5.0_darwin_arm64.tar.gz.sha256` 校验通过。
 - [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
 - [x] `git diff --check`
-- [ ] 提交版本准备改动后确认远端 CI 通过。
+- [x] 提交版本准备改动后确认远端 CI 通过：run `29557865650` passed。
 
 ## 正式发布前待办
 
@@ -43,7 +43,7 @@ v0.5.0 发布重点见 [v0.5.0 发布说明草案](./plan-release-notes-v0.5.0.m
 - [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.0`。
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.0`。
 - [x] 重新运行完整验证：`go test ./...`、固定 smoke、脚本语法检查、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
+- [x] 提交版本准备改动后确认远端 CI 通过：run `29557865650` passed。
 - [ ] 打 tag `v0.5.0` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.0` 验证 Release 资产，确认 10 个必需资产完整。

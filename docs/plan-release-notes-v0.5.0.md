@@ -105,7 +105,7 @@ v0.5.0 候选仍保持以下边界：
 - [x] `/tmp/testloop-testgen-v0.5.0-prep --help` 输出 usage；Go `flag` 包对 help 返回 exit code 2。
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.0-prep scripts/package-release-asset.sh v0.5.0 darwin_arm64 darwin arm64`
 - [x] 校验 `/tmp/testloop-v0.5.0-prep/testloop-mcp_v0.5.0_darwin_arm64.tar.gz.sha256`
-- [ ] 推送后等待远端 CI 通过。
+- [x] 推送后等待远端 CI 通过：run `29557865650` passed。
 - [ ] 正式发布时验证 Release Artifacts 和 Homebrew 安装链路。
 
 ## 发布备注
