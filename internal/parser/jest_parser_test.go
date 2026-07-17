@@ -83,6 +83,27 @@ func TestParseJestTestCountsSkippedResultLinesWithoutSummary(t *testing.T) {
 	}
 }
 
+func TestParseJestManualReviewRunnerOutput(t *testing.T) {
+	output := `PASS tests/helper.test.ts (0.003 s)
+  hidden
+    ○ skipped marks unexported helper as internal manual review
+
+Test Suites: 1 passed, 1 total
+Tests:       1 skipped, 1 total
+Snapshots:   0 total
+Time:        0.003 s
+Ran all test suites matching tests/helper.test.ts.`
+
+	result := ParseJestTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 1 || result.Skipped != 1 || result.Passed != 0 || result.Failed != 0 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
 func TestParseJestTestSummarySkipsMalformedParts(t *testing.T) {
 	output := `PASS  ./sum.test.js
   ✓ adds 1 + 2 to equal 3

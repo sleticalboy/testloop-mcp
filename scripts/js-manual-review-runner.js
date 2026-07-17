@@ -31,11 +31,37 @@ if (!source.includes('it.skip(') || !hasManualReviewMarker) {
 }
 
 const displayPath = path.relative(process.cwd(), path.resolve(testPath)) || testPath;
-console.log(`PASS ${displayPath}`);
-console.log('  fixture manual review');
-console.log('    ○ skipped generated manual-review task');
+const suiteName = extractStringCallArg(source, 'describe') || 'fixture manual review';
+const testName = extractSkippedTestName(source) || 'generated manual-review task';
+
+console.log(`PASS ${displayPath} (0.003 s)`);
+console.log(`  ${suiteName}`);
+console.log(`    ○ skipped ${testName}`);
 console.log('');
 console.log('Test Suites: 1 passed, 1 total');
 console.log('Tests:       1 skipped, 1 total');
 console.log('Snapshots:   0 total');
-console.log('Time:        0.001 s');
+console.log('Time:        0.003 s');
+console.log(`Ran all test suites matching ${displayPath}.`);
+
+function extractSkippedTestName(text) {
+  return extractStringCallArg(text, 'it.skip') || extractStringCallArg(text, 'test.skip');
+}
+
+function extractStringCallArg(text, callee) {
+  const escapedCallee = callee.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`${escapedCallee}\\s*\\(\\s*(['"\`])((?:\\\\.|(?!\\1)[\\s\\S])*)\\1`);
+  const match = text.match(pattern);
+  if (!match) {
+    return '';
+  }
+  return unescapeJSString(match[2]);
+}
+
+function unescapeJSString(value) {
+  return value
+    .replace(/\\'/g, "'")
+    .replace(/\\"/g, '"')
+    .replace(/\\`/g, '`')
+    .replace(/\\\\/g, '\\');
+}

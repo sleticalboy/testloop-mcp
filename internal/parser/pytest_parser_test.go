@@ -55,6 +55,25 @@ test_calc.py::test_setup ERROR                                           [100%]
 	}
 }
 
+func TestParsePytestManualReviewRunnerOutput(t *testing.T) {
+	output := `============================= test session starts ==============================
+platform darwin -- Python 3.x, pytest-8.x, pluggy-1.x
+rootdir: /tmp/project
+collected 1 item
+
+tests/test_private_service.py::TestPrivateService::test_private_method_requires_internal_review SKIPPED                                             [100%]
+============================== 1 skipped in 0.01s ==============================`
+
+	result := ParsePytestTest(output)
+
+	if result.Status != "pass" {
+		t.Fatalf("Expected pass status, got %s", result.Status)
+	}
+	if result.Total != 1 || result.Skipped != 1 || result.Passed != 0 || result.Failed != 0 {
+		t.Fatalf("Unexpected counts: total=%d passed=%d skipped=%d failed=%d", result.Total, result.Passed, result.Skipped, result.Failed)
+	}
+}
+
 func TestParsePytestTestFailure(t *testing.T) {
 	output := `test_calc.py::test_add FAILED                                            [ 33%]
 test_calc.py::test_add_negative PASSED                                   [ 66%]
