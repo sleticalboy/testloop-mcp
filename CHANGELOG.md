@@ -28,6 +28,7 @@
 - 新增 `docs/fixtures.md`，集中说明真实结构化 fixture 的来源、Agent 分流、稳定字段和过滤规则。
 - 新增 `test/fixtures_index_test.sh` 并纳入 CI，校验 `docs/fixtures/*.json` 的 `status/action` 覆盖清单已登记到 fixture 索引。
 - 新增 `docs/client-integration.md`，说明客户端消费 `structuredContent`、复用真实 fixture 和回归 `status/action` 分流的推荐流程。
+- 新增 `test/client_integration_doc_test.sh` 并纳入 CI，校验客户端集成说明引用的 fixture 文件和 `agent-decision-demo` 入口持续存在。
 
 ## v0.5.0 - 2026-07-17
 
