@@ -1,0 +1,80 @@
+{
+  "status": "passed",
+  "action": "ready",
+  "coverage_task": {
+    "id": "go-test-1",
+    "framework": "go-test",
+    "file": "calc.go",
+    "target": "Add",
+    "kind": "function",
+    "line_range": "4-6",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: a == 0"
+    ],
+    "uncovered_lines": [
+      4,
+      5,
+      6
+    ],
+    "suggested_inputs": [
+      "构造满足条件 `a == 0` 的输入"
+    ],
+    "goal": "为 Add 补充测试，覆盖未执行行段 4-6",
+    "command": "go test ./...",
+    "test_file": "calc_test.go",
+    "test_name": "TestAdd",
+    "assertion_focus": [
+      "断言未覆盖分支的返回值或副作用"
+    ],
+    "confidence": 0.95
+  },
+  "generated": {
+    "status": "ok",
+    "test_file": "calc_test.go",
+    "generated_cases": 1,
+    "provider": "static",
+    "coverage_task": {
+      "id": "go-test-1",
+      "framework": "go-test",
+      "file": "calc.go",
+      "target": "Add",
+      "kind": "function",
+      "line_range": "4-6",
+      "gap_type": "branch",
+      "missing_branches": [
+        "未覆盖 if 分支: a == 0"
+      ],
+      "uncovered_lines": [
+        4,
+        5,
+        6
+      ],
+      "suggested_inputs": [
+        "构造满足条件 `a == 0` 的输入"
+      ],
+      "goal": "为 Add 补充测试，覆盖未执行行段 4-6",
+      "command": "go test ./...",
+      "test_file": "calc_test.go",
+      "test_name": "TestAdd",
+      "assertion_focus": [
+        "断言未覆盖分支的返回值或副作用"
+      ],
+      "confidence": 0.95
+    }
+  },
+  "run_result": {
+    "status": "pass",
+    "framework": "go-test",
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "coverage_percent": 0,
+    "failures": []
+  },
+  "metadata": {
+    "framework": "go-test",
+    "test_file": "calc_test.go"
+  }
+}

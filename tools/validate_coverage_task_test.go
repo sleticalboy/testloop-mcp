@@ -178,6 +178,167 @@ func Add(a, b int) int {
 	}
 }
 
+type validateCoverageTaskReadyFixture struct {
+	Status       string                               `json:"status"`
+	Action       string                               `json:"action"`
+	CoverageTask types.CoverageTestTask               `json:"coverage_task"`
+	Generated    validateCoverageTaskGeneratedFixture `json:"generated"`
+	RunResult    validateCoverageTaskRunResultFixture `json:"run_result"`
+	Metadata     map[string]any                       `json:"metadata"`
+}
+
+type validateCoverageTaskGeneratedFixture struct {
+	Status         string                  `json:"status"`
+	TestFile       string                  `json:"test_file"`
+	GeneratedCases int                     `json:"generated_cases"`
+	Provider       string                  `json:"provider"`
+	CoverageTask   *types.CoverageTestTask `json:"coverage_task,omitempty"`
+}
+
+type validateCoverageTaskRunResultFixture struct {
+	Status          string              `json:"status"`
+	Framework       string              `json:"framework"`
+	Total           int                 `json:"total"`
+	Passed          int                 `json:"passed"`
+	Failed          int                 `json:"failed"`
+	Skipped         int                 `json:"skipped"`
+	CoveragePercent float64             `json:"coverage_percent"`
+	Failures        []types.TestFailure `json:"failures"`
+}
+
+func TestHandleValidateCoverageTaskReadyFixture(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	src := `package calc
+
+func Add(a, b int) int {
+	if a == 0 {
+		return b
+	}
+	return a + b
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "go-test-1",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "Add",
+		Kind:            "function",
+		LineRange:       "4-6",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{4, 5, 6},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 Add 补充测试，覆盖未执行行段 4-6",
+		Command:         "go test ./...",
+		TestFile:        filepath.Join(dir, "calc_test.go"),
+		TestName:        "TestAdd",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+
+	gotBytes, err := json.MarshalIndent(validateCoverageTaskReadyFixtureFromOutput(t, dir, out), "", "  ")
+	if err != nil {
+		t.Fatalf("marshal ready fixture: %v", err)
+	}
+	got := string(gotBytes) + "\n"
+	wantBytes, err := os.ReadFile(filepath.Join("..", "docs", "fixtures", "validate-coverage-task-ready.json"))
+	if err != nil {
+		t.Fatalf("read ready fixture: %v\n--- got ---\n%s", err, got)
+	}
+	want := string(wantBytes)
+	if got != want {
+		t.Fatalf("ready fixture mismatch\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+func validateCoverageTaskReadyFixtureFromOutput(t *testing.T, root string, out types.CoverageTaskValidationOutput) validateCoverageTaskReadyFixture {
+	t.Helper()
+	if out.CoverageTask == nil {
+		t.Fatalf("coverage_task missing in output: %+v", out)
+	}
+	if out.Generated == nil {
+		t.Fatalf("generated missing in output: %+v", out)
+	}
+	if out.RunResult == nil {
+		t.Fatalf("run_result missing in output: %+v", out)
+	}
+	coverageTask := *out.CoverageTask
+	normalizeCoverageTaskFixturePaths(root, &coverageTask)
+	var generatedCoverageTask *types.CoverageTestTask
+	if out.Generated.CoverageTask != nil {
+		generated := *out.Generated.CoverageTask
+		normalizeCoverageTaskFixturePaths(root, &generated)
+		generatedCoverageTask = &generated
+	}
+	metadata := map[string]any{}
+	if framework, ok := out.Metadata["framework"]; ok {
+		metadata["framework"] = framework
+	}
+	if testFile, ok := out.Metadata["test_file"].(string); ok {
+		metadata["test_file"] = normalizeFixturePath(root, testFile)
+	}
+	return validateCoverageTaskReadyFixture{
+		Status:       out.Status,
+		Action:       out.Action,
+		CoverageTask: coverageTask,
+		Generated: validateCoverageTaskGeneratedFixture{
+			Status:         out.Generated.Status,
+			TestFile:       normalizeFixturePath(root, out.Generated.TestFile),
+			GeneratedCases: out.Generated.GeneratedCases,
+			Provider:       out.Generated.Provider,
+			CoverageTask:   generatedCoverageTask,
+		},
+		RunResult: validateCoverageTaskRunResultFixture{
+			Status:          out.RunResult.Status,
+			Framework:       out.RunResult.Framework,
+			Total:           out.RunResult.Total,
+			Passed:          out.RunResult.Passed,
+			Failed:          out.RunResult.Failed,
+			Skipped:         out.RunResult.Skipped,
+			CoveragePercent: out.RunResult.CoveragePercent,
+			Failures:        out.RunResult.Failures,
+		},
+		Metadata: metadata,
+	}
+}
+
+func normalizeCoverageTaskFixturePaths(root string, task *types.CoverageTestTask) {
+	task.File = normalizeFixturePath(root, task.File)
+	task.TestFile = normalizeFixturePath(root, task.TestFile)
+}
+
+func normalizeFixturePath(root string, path string) string {
+	if strings.TrimSpace(path) == "" {
+		return path
+	}
+	if rel, err := filepath.Rel(root, path); err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
+		return filepath.ToSlash(rel)
+	}
+	return filepath.ToSlash(path)
+}
+
 func TestHandleValidateCoverageTaskReturnsAdjustedCoverageTaskName(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
