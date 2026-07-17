@@ -59,11 +59,11 @@ v0.5.1 发布重点见 [v0.5.1 发布说明草案](./plan-release-notes-v0.5.1.m
 - [x] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29592283968` passed。
 - [x] 使用 `scripts/verify-release-assets.sh v0.5.1` 验证 Release 资产完整：10 个必需资产已确认。
 - [x] 更新 GitHub Release 正文为正式 v0.5.1 发布说明。
-- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过：run `29593507242` 已触发，当前等待 GitHub runner 调度。
+- [x] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过：run `29593507242` passed。
 - [x] 更新 Homebrew tap 到 `0.5.1`，提交 `54d6e7a` 并推送到 `sleticalboy/homebrew-tap`。
 - [x] 本机 Homebrew tap 已快进到 `54d6e7a`，并通过 `ruby -c` 与 `brew style`。
 - [ ] `brew fetch` 下载验证受 GitHub/Homebrew 网络队列影响未完成；已用 release asset digest 与 tap formula digest 一致性校验替代。
 
 ## 当前结论
 
-v0.5.1 已正式发布。Release Artifacts、GitHub Release 资产清单、仓库内 Formula、Homebrew tap 同步和 tap style 校验已完成。剩余发布后验证是等待 Post-Release Verify run `29593507242` 从 GitHub runner 队列中完成，以及在 GitHub/Homebrew 网络恢复稳定后补跑 `brew fetch`/安装级验证。
+v0.5.1 已正式发布。Release Artifacts、GitHub Release 资产清单、仓库内 Formula、Homebrew tap 同步、tap style 校验和 Post-Release Verify 五平台安装 dry run 已完成。剩余发布后验证是在 GitHub/Homebrew 网络恢复稳定后补跑本机 `brew fetch` 下载验证。

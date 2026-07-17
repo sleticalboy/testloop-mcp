@@ -71,6 +71,8 @@
 | `v0.4.12` | JS/TS 同文件简单泛型 DTO 展开，payload 回退原因贯通到工具输出和 LLM provider 输入 | Release run `29022581976`；Post-Release Verify run `29025114403`；Homebrew tap 升级到 `0.4.12` 并通过 `brew test` |
 | `v0.4.13` | LLM provider 接入质量增强，补齐默认 prompt、输出清洗、结构化 `provider_error` 和 Agent static fallback 闭环 | Release run `29089692602`；Post-Release Verify run `29090486292`；Homebrew tap 升级到 `0.4.13` 并通过 `brew test` |
 | `v0.4.14` | Go coverage task 闭环质量增强，补齐 `validate_coverage_task`、skipped task 分类和 laoxia top50 隔离验证 | Release run `29157722825`；Post-Release Verify run `29157901152`；Homebrew tap 升级到 `0.4.14` 并通过 `brew test` |
+| `v0.5.0` | Agent 测试反馈闭环定位收敛，固定真实项目 smoke 和结构化契约方向 | Release run `29558114233`；Post-Release Verify run `29559912737`；Homebrew tap 升级到 `0.5.0` 并通过 tap 验证 |
+| `v0.5.1` | MCP 客户端接入契约、真实 fixture、结构化分流和 release 文档入口回归保护 | Release run `29592283968`；Post-Release Verify run `29593507242`；Homebrew tap 升级到 `0.5.1`，本机 `brew fetch` 下载验证受网络影响待补 |
 
 ## 发布维护流程
 

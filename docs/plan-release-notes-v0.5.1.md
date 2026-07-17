@@ -13,7 +13,8 @@ testloop-mcp v0.5.1
 - [x] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.1 - 2026-07-17`。
 - [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
 - [x] 正式发布前重新跑远端 CI、Release Artifacts、资产校验和 Homebrew tap 更新。
-- [ ] GitHub/Homebrew 网络恢复稳定后补跑安装级 `brew fetch`，并等待 Post-Release Verify run `29593507242` 完成。
+- [x] Post-Release Verify run `29593507242` 已完成，资产清单和五平台安装脚本 dry run 全部通过。
+- [ ] GitHub/Homebrew 网络恢复稳定后补跑本机安装级 `brew fetch`。
 
 ## 摘要
 
@@ -116,7 +117,8 @@ v0.5.1 保持以下边界：
 - [x] `ruby -c Formula/testloop-mcp.rb`
 - [x] `TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.5.1 /Users/binlee/code/open-source/homebrew-tap`
 - [x] Homebrew tap 提交 `54d6e7a testloop-mcp 0.5.1` 已推送。
-- [ ] Post-Release Verify run `29593507242` 已触发；当前等待 GitHub runner 调度。
+- [x] Post-Release Verify run `29593507242` passed，资产清单和五平台安装脚本 dry run 全部通过。
+- [ ] 本机 `HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp` 仍卡在下载阶段，已中止等待后续网络恢复。
 
 ## 发布备注
 
