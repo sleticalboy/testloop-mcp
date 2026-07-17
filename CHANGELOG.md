@@ -34,6 +34,7 @@
 - 新增 `test/fixture_decision_mapping_test.sh` 并纳入 CI，直接校验每个真实 fixture 的 `status/action` 到客户端动作映射。
 - 新增 `docs/mcp-client-contract-tests.md`，说明接入方如何复制真实 fixture、demo 和契约校验到自己的客户端 CI。
 - 新增 `test/release_doc_index_test.sh` 并纳入 CI，固定 README 中 Agent/客户端关键文档入口和 demo 命令。
+- 新增 `docs/plan-release-notes-v0.5.1.md` 和 `docs/plan-release-v0.5.1.md`，整理 v0.5.1 候选发布说明、发布前门禁和正式发布待办。
 
 ## v0.5.0 - 2026-07-17
 
