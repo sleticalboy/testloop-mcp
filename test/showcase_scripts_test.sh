@@ -60,6 +60,7 @@ test_go_showcase_help_and_args() {
   run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-go-public-project.sh" --help
   assert_contains "$out" "Usage: scripts/showcase-go-public-project.sh [output-jsonl]"
   assert_contains "$out" "TESTLOOP_SHOWCASE_GO_REF"
+  assert_contains "$out" "TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS"
 
   out="${tmp_dir}/go-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-go-public-project.sh" one two
@@ -71,6 +72,7 @@ test_js_showcase_help_args_and_missing_pnpm() {
   run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-js-public-project.sh" --help
   assert_contains "$out" "Usage: scripts/showcase-js-public-project.sh [output-jsonl]"
   assert_contains "$out" "TESTLOOP_SHOWCASE_JS_REF"
+  assert_contains "$out" "TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS"
 
   out="${tmp_dir}/js-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-js-public-project.sh" one two

@@ -14,6 +14,7 @@ scripts/showcase-js-public-project.sh
 2. 使用 `pnpm install --frozen-lockfile` 安装依赖。
 3. 调用 `scripts/validate-js-coverage-top-tasks.sh`，用 `TESTLOOP_VALIDATE_JS_TASK_IDS=vitest-1,vitest-2` 精确筛选目标任务。
 4. 输出 JSONL 结果，并打印 `showcase_summary=...` 摘要。
+5. 校验默认期望 `vitest-1=manual_review_internal,vitest-2=ready`，如果公开案例的决策信号漂移会直接失败。
 
 默认输出文件：
 
@@ -48,7 +49,8 @@ top5 结果：
   "tasks": [
     {"id": "vitest-1", "target": "s", "status": "passed", "action": "manual_review_internal"},
     {"id": "vitest-2", "target": "resolveURL", "status": "passed", "action": "ready"}
-  ]
+  ],
+  "showcase_expectations": "pass"
 }
 ```
 
@@ -60,10 +62,13 @@ top5 结果：
 TESTLOOP_SHOWCASE_JS_REPO=https://github.com/unjs/ufo.git \
 TESTLOOP_SHOWCASE_JS_REF=f06c800d0c59f2a4a1b9ba65eb6cb61a84419be6 \
 TESTLOOP_SHOWCASE_JS_TASK_IDS=vitest-1,vitest-2 \
+TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS=vitest-1=manual_review_internal,vitest-2=ready \
 TESTLOOP_SHOWCASE_JS_OUTPUT=/tmp/testloop-ufo-showcase.jsonl \
 TESTLOOP_SHOWCASE_JS_TIMEOUT=180 \
 scripts/showcase-js-public-project.sh
 ```
+
+如果只想打印摘要、不做期望断言，可以把 `TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS` 设为空字符串。
 
 如果已经有本地 checkout 和依赖，也可以直接运行底层验证脚本：
 

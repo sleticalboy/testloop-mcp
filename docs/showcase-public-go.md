@@ -13,6 +13,7 @@ scripts/showcase-go-public-project.sh
 1. 克隆公开 Go 项目到临时目录，并 checkout 固定 commit。
 2. 调用 `scripts/validate-go-coverage-top-tasks.sh`，用 `TESTLOOP_VALIDATE_GO_TASK_IDS=go-test-1` 精确筛选目标任务。
 3. 输出 JSONL 结果，并打印 `showcase_summary=...` 摘要。
+4. 校验默认期望 `go-test-1=ready`，如果公开案例的决策信号漂移会直接失败。
 
 默认输出文件：
 
@@ -36,7 +37,8 @@ TESTLOOP_VALIDATE_GO_TASK_IDS=go-test-1 \
   "status_counts": {"passed": 1},
   "action_counts": {"ready": 1},
   "task": "go-test-1 clockSequence 87-90",
-  "run_result.skipped": 1
+  "run_result.skipped": 1,
+  "showcase_expectations": "pass"
 }
 ```
 
@@ -48,9 +50,12 @@ TESTLOOP_VALIDATE_GO_TASK_IDS=go-test-1 \
 TESTLOOP_SHOWCASE_GO_REPO=https://github.com/google/uuid.git \
 TESTLOOP_SHOWCASE_GO_REF=2d3c2a9cc518326daf99a383f07c4d3c44317e4d \
 TESTLOOP_SHOWCASE_GO_TASK_IDS=go-test-1 \
+TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS=go-test-1=ready \
 TESTLOOP_SHOWCASE_GO_OUTPUT=/tmp/testloop-google-uuid-showcase.jsonl \
 scripts/showcase-go-public-project.sh
 ```
+
+如果只想打印摘要、不做期望断言，可以把 `TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS` 设为空字符串。
 
 `scripts/validate-go-coverage-top-tasks.sh` 也支持直接复用已有任务文件：
 
