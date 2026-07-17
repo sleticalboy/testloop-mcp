@@ -8,6 +8,7 @@
 - 新增 `docs/agent-contract.md` 和 `types` 层 Agent JSON contract 测试，固定 `repair_task`、`provider_error`、`validate_coverage_task` 等关键结构化字段名。
 - 新增真实 stdio 进程级 e2e smoke，通过 MCP SDK `CommandTransport` 构建并启动当前 `testloop-mcp` 二进制，验证 `tools/list` 和 `parse_results` 的结构化返回一致性。
 - 新增真实 Streamable HTTP 进程级 e2e smoke，验证 `/healthz`、`StreamableClientTransport`、`tools/list` 和 `parse_results` 的结构化返回一致性。
+- 新增真实二进制级客户端配置 smoke，验证 `--print-config=all` 生成的 Codex / Codex HTTP / Claude / Cursor 配置可被同一二进制 `--check-config -` 校验通过。
 
 ## v0.5.0 - 2026-07-17
 

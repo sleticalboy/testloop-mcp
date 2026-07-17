@@ -224,6 +224,8 @@ testloop-mcp --check-config .cursor/mcp.json
 testloop-mcp --print-config=codex | testloop-mcp --check-config -
 ```
 
+源码仓库的测试会构建当前 `testloop-mcp` 二进制，并验证 `--print-config=all --config-command=<built-binary>` 生成的 Codex、Codex HTTP、Claude 和 Cursor 片段可以被同一个二进制 `--check-config -` 校验通过。这个 smoke 用来防止配置生成、配置解析和安装接入文档之间发生漂移。
+
 如果不确定应该写入哪个配置文件，先运行本机诊断：
 
 ```bash

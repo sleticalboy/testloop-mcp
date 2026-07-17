@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -276,6 +278,61 @@ command = "` + binary + `"
 	if strings.Count(got, "ok: testloop") != 3 {
 		t.Fatalf("expected three validated entries, got:\n%s", got)
 	}
+}
+
+func TestCLIPrintConfigOutputCanBeCheckedByBuiltBinary(t *testing.T) {
+	binary := buildMainBinary(t)
+	httpURL := "http://127.0.0.1:18080/mcp"
+
+	printCmd := exec.Command(binary, "--print-config=all", "--config-command="+binary, "--config-http-url="+httpURL)
+	configOutput, err := printCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("print config failed: %v\n%s", err, configOutput)
+	}
+	config := string(configOutput)
+	for _, want := range []string{
+		"# ~/.codex/config.toml",
+		`command = "` + binary + `"`,
+		`url = "` + httpURL + `"`,
+		"# ~/.claude/claude_desktop_config.json",
+		"# .cursor/mcp.json",
+	} {
+		if !strings.Contains(config, want) {
+			t.Fatalf("generated config missing %q:\n%s", want, config)
+		}
+	}
+
+	checkCmd := exec.Command(binary, "--check-config", "-")
+	checkCmd.Stdin = strings.NewReader(config)
+	checkOutput, err := checkCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("check generated config failed: %v\n%s", err, checkOutput)
+	}
+	got := string(checkOutput)
+	for _, want := range []string{
+		"ok: testloop command " + binary,
+		"ok: testloop url " + httpURL,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("check output missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Count(got, "ok: testloop") != 4 {
+		t.Fatalf("expected four validated testloop entries, got:\n%s", got)
+	}
+}
+
+func buildMainBinary(t *testing.T) string {
+	t.Helper()
+	binary := filepath.Join(t.TempDir(), "testloop-mcp")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	cmd := exec.Command("go", "build", "-o", binary, ".")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("build binary: %v\n%s", err, output)
+	}
+	return binary
 }
 
 func TestDoctorClientConfigReportsRecommendedPaths(t *testing.T) {
