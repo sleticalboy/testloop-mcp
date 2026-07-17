@@ -15,6 +15,7 @@
 - 新增 `docs/showcase-agent-loop.md` 和 `test/mcp_client_demo_test.sh`，固定最小 MCP 客户端闭环 demo 的预期输出，并纳入 CI 回归。
 - 新增 `scripts/showcase-go-public-project.sh` 和 `docs/showcase-public-go.md`，用固定 commit 的 `google/uuid` 展示公开 Go 项目的 `validate_coverage_task` 闭环。
 - 新增 `scripts/showcase-js-public-project.sh` 和 `docs/showcase-public-js.md`，用固定 commit 的 `unjs/ufo` 展示 JS/TS 项目的 `ready` 与 `manual_review_internal` 决策分流。
+- 新增 `docs/showcase.md`，统一说明默认 CI、公开 opt-in showcase 和真实项目 regression smoke 的边界。
 
 ## v0.5.0 - 2026-07-17
 

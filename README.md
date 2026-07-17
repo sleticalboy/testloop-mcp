@@ -531,36 +531,7 @@ go run ./examples/mcp-client-demo
 
 预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
-展示案例的完整预期输出、验收边界和 CI 回归入口见 [Agent 闭环展示案例](./docs/showcase-agent-loop.md)。
-
-如果要在外部公开 Go 项目上展示 coverage task 闭环，可以运行：
-
-```bash
-scripts/showcase-go-public-project.sh
-```
-
-该脚本默认克隆 `google/uuid` 的固定 commit，并验证 `go-test-1` 任务。详细说明见 [公开 Go 项目覆盖率闭环案例](./docs/showcase-public-go.md)。
-
-如果要展示 JS/TS 项目的 ready 与 manual-review 决策分流，可以运行：
-
-```bash
-scripts/showcase-js-public-project.sh
-```
-
-该脚本默认克隆 `unjs/ufo` 的固定 commit，并验证 `vitest-1,vitest-2`。详细说明见 [公开 JS/TS 项目覆盖率闭环案例](./docs/showcase-public-js.md)。
-
-更完整的跨语言质量回归可以运行：
-
-```bash
-go test ./...
-TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS=180 \
-TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS=180 \
-scripts/validate-regression-smoke.sh
-```
-
-重点查看 smoke 输出里的 `status_counts` 和 `action_counts`：真实 ready 样本应保持 `passed/ready`；内部实现、环境依赖、外部服务和数据库事务样本应保持对应 `manual_review_*` 分类。对 AI Agent 来说，这条路径展示的是“覆盖率任务 -> 生成测试 -> 运行测试 -> 结构化反馈 -> 下一步动作分类”，而不是把项目包装成普通测试生成器。
-
-真实项目样本和当前质量边界见 [真实项目验证质量报告](./docs/real-project-validation.md)。
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含最小 Agent demo、公开 Go showcase、公开 JS/TS showcase，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 
