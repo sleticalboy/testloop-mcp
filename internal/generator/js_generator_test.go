@@ -1856,6 +1856,95 @@ module.exports = { Widget };
 			forbidden: []string{"_resolveStringWithPlaceholders(undefined, 'test', undefined)"},
 		},
 		{
+			name:     "vitest env resolver unresolved strict placeholder branch",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  constructor(options = {}) {
+    this.strict = options.strict !== false
+  }
+
+  async _resolveStringWithPlaceholders(str, context, depth = 0) {
+    let resolvedValue = context.MISSING_TOKEN
+    if (resolvedValue === undefined) {
+      if (this.strict) {
+        throw new Error("Variable 'MISSING_TOKEN' not found")
+      }
+    }
+    return resolvedValue
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-env-1",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveStringWithPlaceholders",
+				LineRange:       "219-223",
+				GapType:         "branch",
+				TestName:        "covers EnvResolver unresolved strict placeholder branch",
+				MissingBranches: []string{"未覆盖 if 分支: resolvedValue === undefined"},
+				SuggestedInputs: []string{"构造字符串 '${MISSING_TOKEN}' 且 context 不包含 MISSING_TOKEN"},
+				AssertionFocus:  []string{"该分支应断言 Variable 'MISSING_TOKEN' not found"},
+			},
+			wants: []string{
+				"const instance = new EnvResolver({});",
+				"await expect(instance._resolveStringWithPlaceholders('${MISSING_TOKEN}', {}, 0)).rejects.toThrow();",
+			},
+			forbidden: []string{
+				"_resolveStringWithPlaceholders(undefined, 'test', undefined)",
+				"const result = await instance._resolveStringWithPlaceholders",
+			},
+		},
+		{
+			name:     "vitest env resolver command failure branch avoids max passes",
+			fileName: "env-resolver.js",
+			source: `export class EnvResolver {
+  constructor(options = {}) {
+    this.maxPasses = options.maxPasses || 10
+  }
+
+  async _resolveStringWithPlaceholders(str, context, depth = 0) {
+    if (depth > this.maxPasses) {
+      throw new Error('Max placeholder resolution depth exceeded')
+    }
+    const resolvedContent = 'cmd: failing-command'
+    const isCommand = resolvedContent.startsWith('cmd:')
+    try {
+      if (isCommand) {
+        throw new Error('Command failed')
+      }
+    } catch (error) {
+      if (this.strict) {
+        if (isCommand) {
+          throw new Error(` + "`cmd execution failed: ${error.message}`" + `)
+        }
+      }
+    }
+    return str
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-env-2",
+				Framework:       "vitest",
+				Target:          "EnvResolver._resolveStringWithPlaceholders",
+				LineRange:       "228-232",
+				GapType:         "error_path",
+				TestName:        "covers EnvResolver command failure branch",
+				MissingBranches: []string{"未覆盖 if 分支: isCommand"},
+				SuggestedInputs: []string{"构造字符串 '${cmd: failing-command}' 触发命令执行失败"},
+				AssertionFocus:  []string{"该分支应断言 cmd execution failed"},
+			},
+			wants: []string{
+				"const instance = new EnvResolver({});",
+				"await expect(instance._resolveStringWithPlaceholders('${cmd: failing-command}', {}, 0)).rejects.toThrow();",
+			},
+			forbidden: []string{
+				"new EnvResolver({ maxPasses: 0 })",
+				"_resolveStringWithPlaceholders('${MISSING}', {}, 1)",
+				"_resolveStringWithPlaceholders(undefined, 'test', undefined)",
+			},
+		},
+		{
 			name:     "vitest class placeholder plain return path",
 			fileName: "env-resolver.js",
 			source: `export class EnvResolver {

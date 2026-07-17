@@ -3105,9 +3105,35 @@ func jsPrivateEntryCandidatesForMethod(cls jsClassInfo, privateName string) []st
 
 func jsCoverageTaskWantsErrorAssertion(method jsFuncInfo, task *types.CoverageTestTask) bool {
 	if task != nil && taskTargetMatches(task.Target, method.ClassName, method.Name) {
+		if method.ClassName == "EnvResolver" && method.Name == "_resolveStringWithPlaceholders" &&
+			(jsCoverageTaskTargetsEnvResolverMissingPlaceholder(task) || jsCoverageTaskTargetsEnvResolverCommandFailure(task)) {
+			return true
+		}
 		return task.GapType == "error_path" || jsCoverageTaskMentions(task, "if 分支: e") || jsCoverageTaskMentions(task, "if (e)") || jsCoverageTaskTargetsThrowingBranch(method.Body, task)
 	}
 	return method.Analysis.Throws
+}
+
+func jsCoverageTaskTargetsEnvResolverMissingPlaceholder(task *types.CoverageTestTask) bool {
+	hints := jsCoverageTaskHints(task)
+	return strings.Contains(hints, "resolvedValue === undefined") ||
+		strings.Contains(hints, "MISSING_TOKEN") ||
+		strings.Contains(hints, "Variable '")
+}
+
+func jsCoverageTaskTargetsEnvResolverCommandFailure(task *types.CoverageTestTask) bool {
+	hints := jsCoverageTaskHints(task)
+	return strings.Contains(hints, "${cmd:") ||
+		strings.Contains(hints, "failing-command") ||
+		strings.Contains(hints, "cmd execution failed") ||
+		strings.Contains(hints, "isCommand")
+}
+
+func jsCoverageTaskTargetsEnvResolverMaxPasses(task *types.CoverageTestTask) bool {
+	hints := jsCoverageTaskHints(task)
+	return strings.Contains(hints, "maxPasses") ||
+		strings.Contains(hints, "Max placeholder resolution depth") ||
+		strings.Contains(hints, "depth")
 }
 
 func jsCoverageTaskTargetsThrowingBranch(body string, task *types.CoverageTestTask) bool {
@@ -3291,7 +3317,7 @@ func jsClassCoverageTaskConstructorOptions(method jsFuncInfo, task *types.Covera
 	}
 	body := method.Body
 	var options []string
-	if strings.Contains(body, "depth > this.maxPasses") {
+	if strings.Contains(body, "depth > this.maxPasses") && jsCoverageTaskTargetsEnvResolverMaxPasses(task) {
 		options = append(options, "maxPasses: 0")
 	}
 	if strings.Contains(body, "fallbackValue === undefined") && strings.Contains(body, "this.strict") {
@@ -3310,7 +3336,17 @@ func jsClassCoverageTaskInputOverrides(method jsFuncInfo, task *types.CoverageTe
 		jsSetParamOverride(method.Params, overrides, 0, "{ MISSING: null }")
 		jsSetParamOverride(method.Params, overrides, 1, "{}")
 	}
-	if task.GapType == "error_path" && strings.Contains(body, "depth > this.maxPasses") {
+	if method.ClassName == "EnvResolver" && method.Name == "_resolveStringWithPlaceholders" && jsCoverageTaskTargetsEnvResolverMissingPlaceholder(task) {
+		jsSetNamedParamOverride(method.Params, overrides, "str", "'${MISSING_TOKEN}'")
+		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
+		jsSetNamedParamOverride(method.Params, overrides, "depth", "0")
+	}
+	if method.ClassName == "EnvResolver" && method.Name == "_resolveStringWithPlaceholders" && jsCoverageTaskTargetsEnvResolverCommandFailure(task) {
+		jsSetNamedParamOverride(method.Params, overrides, "str", "'${cmd: failing-command}'")
+		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
+		jsSetNamedParamOverride(method.Params, overrides, "depth", "0")
+	}
+	if task.GapType == "error_path" && strings.Contains(body, "depth > this.maxPasses") && jsCoverageTaskTargetsEnvResolverMaxPasses(task) {
 		jsSetNamedParamOverride(method.Params, overrides, "str", "'${MISSING}'")
 		jsSetNamedParamOverride(method.Params, overrides, "context", "{}")
 		jsSetNamedParamOverride(method.Params, overrides, "depth", "1")

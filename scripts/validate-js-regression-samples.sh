@@ -35,7 +35,9 @@ top-N 覆盖率窗口。
                                     mcp-hub 真实项目目录。
                                     默认：/Users/binlee/code/open-source/mcp-hub
   TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS
-                                    默认：vitest-mcp-hub-repair-1
+                                    默认：vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3
+  TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS
+                                    默认：vitest-mcp-hub-env-1,vitest-mcp-hub-env-2
   TESTLOOP_JS_TEST_COMMAND
                                     默认：NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}
   TESTLOOP_VALIDATE_JS_STAGE_TIMEOUT_SECONDS
@@ -68,6 +70,7 @@ internal_dir="${TESTLOOP_JS_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/js-inte
 internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
 mcp_hub_dir="${TESTLOOP_JS_REGRESSION_MCP_HUB_DIR:-/Users/binlee/code/open-source/mcp-hub}"
 mcp_hub_repair_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS:-vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3}"
+mcp_hub_env_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS:-vitest-mcp-hub-env-1,vitest-mcp-hub-env-2}"
 js_test_command="${TESTLOOP_JS_TEST_COMMAND:-}"
 if [[ -z "$js_test_command" ]]; then
   js_test_command="NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runTestsByPath {path}"
@@ -174,5 +177,9 @@ mcp_hub_repair_tasks="$output_dir/mcp-hub-repair-tasks.jsonl"
 require_path dir "$mcp_hub_dir"
 "$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-repair "$mcp_hub_dir" "$mcp_hub_repair_tasks"
 run_sample "mcp-hub-repair" "$mcp_hub_dir" "$mcp_hub_repair_tasks" "$mcp_hub_repair_ids" "ready" "$vitest_test_command" "vitest"
+
+mcp_hub_env_tasks="$output_dir/mcp-hub-env-tasks.jsonl"
+"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-env "$mcp_hub_dir" "$mcp_hub_env_tasks"
+run_sample "mcp-hub-env" "$mcp_hub_dir" "$mcp_hub_env_tasks" "$mcp_hub_env_ids" "ready" "$vitest_test_command" "vitest"
 
 echo "js_regression_output_dir=$output_dir"

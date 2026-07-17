@@ -122,6 +122,62 @@ def js_mcp_hub_repair(project_dir: str) -> dict:
     ]
 
 
+def js_mcp_hub_env(project_dir: str) -> dict:
+    source = os.path.join(project_dir, "src", "utils", "env-resolver.js")
+    test_file = os.path.join(project_dir, "tests", "utils", "env-resolver.test.js")
+    common = {
+        "framework": "vitest",
+        "file": source,
+        "target": "EnvResolver._resolveStringWithPlaceholders",
+        "kind": "method",
+        "command": "npx vitest run tests/utils/env-resolver.test.js",
+        "test_file": test_file,
+        "confidence": 0.9,
+    }
+    return [
+        {
+            **common,
+            "id": "vitest-mcp-hub-env-1",
+            "line_range": "219-223",
+            "gap_type": "branch",
+            "missing_branches": [
+                "未覆盖 if 分支: resolvedValue === undefined"
+            ],
+            "uncovered_lines": [219, 220, 221, 222, 223],
+            "suggested_inputs": [
+                "构造字符串 '${MISSING_TOKEN}' 且 context 不包含 MISSING_TOKEN"
+            ],
+            "goal": "确认真实 mcp-hub 项目中 EnvResolver 严格模式变量缺失分支会生成 async reject 断言并进入 ready",
+            "test_name": "covers EnvResolver unresolved strict placeholder branch",
+            "assertion_focus": [
+                "该分支应断言 Variable 'MISSING_TOKEN' not found"
+            ],
+            "priority": 124,
+            "priority_reason": "real mcp-hub regression sample for strict placeholder resolution branch that used to be repair_generated_test",
+        },
+        {
+            **common,
+            "id": "vitest-mcp-hub-env-2",
+            "line_range": "228-232",
+            "gap_type": "error_path",
+            "missing_branches": [
+                "未覆盖 if 分支: isCommand"
+            ],
+            "uncovered_lines": [228, 229, 230, 231, 232],
+            "suggested_inputs": [
+                "构造字符串 '${cmd: failing-command}' 触发命令执行失败"
+            ],
+            "goal": "确认真实 mcp-hub 项目中 EnvResolver 命令执行失败分支不会被 maxPasses 错误路径抢占，并进入 ready",
+            "test_name": "covers EnvResolver command failure branch",
+            "assertion_focus": [
+                "该分支应断言 cmd execution failed"
+            ],
+            "priority": 125,
+            "priority_reason": "real mcp-hub regression sample for command-execution error path that previously passed through the wrong maxPasses branch",
+        },
+    ]
+
+
 def py_internal(project_dir: str) -> dict:
     source = os.path.join(project_dir, "src", "private_service.py")
     return {
@@ -235,6 +291,7 @@ def py_apk_station_database(project_dir: str) -> dict:
 
 
 PRESETS = {
+    "js-mcp-hub-env": js_mcp_hub_env,
     "js-mcp-hub-repair": js_mcp_hub_repair,
     "js-no-runtime": js_no_runtime,
     "js-internal": js_internal,
