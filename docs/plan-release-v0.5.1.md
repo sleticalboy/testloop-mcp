@@ -54,7 +54,7 @@ v0.5.1 发布重点见 [v0.5.1 发布说明草案](./plan-release-notes-v0.5.1.m
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.1`。
 - [ ] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.1`，或在 Homebrew tap 发布步骤中生成并验证。
 - [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
+- [x] 提交版本准备改动后确认远端 CI 通过：run `29591849021` passed。
 - [ ] 打 tag `v0.5.1` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.1` 验证 Release 资产完整。
@@ -64,4 +64,4 @@ v0.5.1 发布重点见 [v0.5.1 发布说明草案](./plan-release-notes-v0.5.1.m
 
 ## 当前结论
 
-v0.5.1 已完成候选发布资料、本地 release readiness 门禁、版本号切换和安装文档同步。当前不应直接打 tag；还需要提交版本准备改动后等待远端 CI，通过后再进入 tag、Release Artifacts、资产校验和 Homebrew tap 验证。
+v0.5.1 已完成候选发布资料、本地 release readiness 门禁、版本号切换、安装文档同步和版本准备提交后的远端 CI。下一步可以打 `v0.5.1` tag，并进入 Release Artifacts、资产校验、GitHub Release 正文和 Homebrew tap 验证。
