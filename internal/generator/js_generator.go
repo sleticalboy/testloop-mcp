@@ -1416,6 +1416,12 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSCodexExecRunCoverageTask(method, task, testName, moduleImportPath))
 			continue
 		}
+		if cls.Name == "ConfigManager" && method.Name == "loadConfig" {
+			if code, ok := genJSConfigManagerLoadConfigValidationTest(cls, method, task, testName, assertions); ok {
+				sb.WriteString(code)
+				continue
+			}
+		}
 		if cls.Name == "Version" && method.Name == "ipCompare" {
 			sb.WriteString(genJSVersionIPCompareCoverageTask(method, task, testName))
 			continue
@@ -2252,6 +2258,101 @@ func genJSConfigManagerDiffPublicEntryTest(cls jsClassInfo, method jsFuncInfo, t
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()
+}
+
+func genJSConfigManagerLoadConfigValidationTest(cls jsClassInfo, method jsFuncInfo, task *types.CoverageTestTask, testName string, assertions jsAssertionStyle) (string, bool) {
+	scenario, ok := jsConfigManagerLoadConfigScenarioForTask(task)
+	if !ok {
+		return "", false
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const fs = await import('node:fs/promises');\n")
+	sb.WriteString("      const os = await import('node:os');\n")
+	sb.WriteString("      const path = await import('node:path');\n")
+	sb.WriteString("      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'testloop-config-'));\n")
+	sb.WriteString("      const configPath = path.join(dir, 'mcp.json');\n")
+	sb.WriteString(fmt.Sprintf("      await fs.writeFile(configPath, JSON.stringify(%s));\n", scenario.config))
+	sb.WriteString(fmt.Sprintf("      const instance = new %s(configPath);\n", cls.Name))
+	sb.WriteString(genJSErrorAssertionWithMessage(assertions, true, "instance.loadConfig()", scenario.errorContains, "      "))
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String(), true
+}
+
+type jsConfigManagerLoadConfigScenario struct {
+	config        string
+	errorContains string
+}
+
+func jsConfigManagerLoadConfigScenarioForTask(task *types.CoverageTestTask) (jsConfigManagerLoadConfigScenario, bool) {
+	if task == nil || strings.TrimSpace(task.Target) != "ConfigManager.loadConfig" {
+		return jsConfigManagerLoadConfigScenario{}, false
+	}
+	hints := strings.ToLower(jsCoverageTaskHints(task))
+	switch {
+	case strings.Contains(hints, "hasstdiofields && hasssefields") ||
+		strings.Contains(hints, "command 和 url") ||
+		strings.Contains(hints, "cannot mix stdio and sse"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: 'node', url: 'http://localhost:3000' } } }",
+			errorContains: "cannot mix stdio and sse",
+		}, true
+	case strings.Contains(hints, "missing both command and url") ||
+		strings.Contains(hints, "must include either command") ||
+		strings.Contains(hints, "为空对象"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: {} } }",
+			errorContains: "must include either command",
+		}, true
+	case strings.Contains(hints, "missing command value") ||
+		strings.Contains(hints, "缺少 command"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: '' } } }",
+			errorContains: "missing command value",
+		}, true
+	case strings.Contains(hints, "invalid url") || strings.Contains(hints, "无效 url"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { url: 'not a url' } } }",
+			errorContains: "invalid url",
+		}, true
+	case strings.Contains(hints, "invalid environment") || strings.Contains(hints, "invalid env"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: 'node', env: 'bad' } } }",
+			errorContains: "invalid environment config",
+		}, true
+	case strings.Contains(hints, "invalid headers"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { url: 'http://localhost:3000', headers: 'bad' } } }",
+			errorContains: "invalid headers config",
+		}, true
+	case strings.Contains(hints, "dev field is only supported") || strings.Contains(hints, "dev field only"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { url: 'http://localhost:3000', dev: { cwd: process.cwd() } } } }",
+			errorContains: "dev field is only supported",
+		}, true
+	case strings.Contains(hints, "dev.enabled"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: 'node', dev: { enabled: 'yes', cwd: process.cwd() } } } }",
+			errorContains: "dev.enabled must be a boolean",
+		}, true
+	case strings.Contains(hints, "dev.watch"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: 'node', dev: { watch: 'src', cwd: process.cwd() } } } }",
+			errorContains: "dev.watch must be an array of strings",
+		}, true
+	case strings.Contains(hints, "dev.cwd"):
+		return jsConfigManagerLoadConfigScenario{
+			config:        "{ mcpServers: { test: { command: 'node', dev: { cwd: 'relative' } } } }",
+			errorContains: "dev.cwd must be an absolute path",
+		}, true
+	default:
+		return jsConfigManagerLoadConfigScenario{}, false
+	}
 }
 
 type jsConfigManagerDiffTestScenario struct {
@@ -3352,6 +3453,36 @@ func genJSErrorAssertion(style jsAssertionStyle, isAsync bool, callExpr string, 
 	return fmt.Sprintf("%sexpect(() => %s).toThrow();\n", indent, callExpr)
 }
 
+func genJSErrorAssertionWithMessage(style jsAssertionStyle, isAsync bool, callExpr string, message string, indent string) string {
+	if strings.TrimSpace(message) == "" {
+		return genJSErrorAssertion(style, isAsync, callExpr, indent)
+	}
+	quoted := jsSingleQuotedString(message)
+	if style == jsAssertionStyleNode {
+		if isAsync {
+			return fmt.Sprintf("%sawait assert.rejects(async () => %s, { message: new RegExp(%s) });\n", indent, callExpr, quoted)
+		}
+		return fmt.Sprintf("%sassert.throws(() => %s, { message: new RegExp(%s) });\n", indent, callExpr, quoted)
+	}
+	if style == jsAssertionStyleChai {
+		if isAsync {
+			return indent + "let caughtError;\n" +
+				indent + "try {\n" +
+				indent + "  await " + callExpr + ";\n" +
+				indent + "} catch (err) {\n" +
+				indent + "  caughtError = err;\n" +
+				indent + "}\n" +
+				indent + "expect(caughtError).to.exist;\n" +
+				fmt.Sprintf("%sexpect(caughtError.message).to.contain(%s);\n", indent, quoted)
+		}
+		return fmt.Sprintf("%sexpect(() => %s).to.throw(%s);\n", indent, callExpr, quoted)
+	}
+	if isAsync {
+		return fmt.Sprintf("%sawait expect(%s).rejects.toThrow(%s);\n", indent, callExpr, quoted)
+	}
+	return fmt.Sprintf("%sexpect(() => %s).toThrow(%s);\n", indent, callExpr, quoted)
+}
+
 func genJSVoidCallAssertion(style jsAssertionStyle, isAsync bool, callExpr string, indent string) string {
 	if isAsync {
 		if style == jsAssertionStyleNode {
@@ -3743,6 +3874,14 @@ func jsAsyncArrow(isAsync bool) string {
 
 func jsEscapeTestNameValue(value string) string {
 	return strings.ReplaceAll(value, "'", "\\'")
+}
+
+func jsSingleQuotedString(value string) string {
+	value = strings.ReplaceAll(value, "\\", "\\\\")
+	value = strings.ReplaceAll(value, "'", "\\'")
+	value = strings.ReplaceAll(value, "\n", "\\n")
+	value = strings.ReplaceAll(value, "\r", "\\r")
+	return "'" + value + "'"
 }
 
 func jsCoverageTaskTestName(task *types.CoverageTestTask, fallback string) string {

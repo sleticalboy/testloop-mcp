@@ -56,32 +56,70 @@ def js_internal(project_dir: str) -> dict:
 
 def js_mcp_hub_repair(project_dir: str) -> dict:
     source = os.path.join(project_dir, "src", "utils", "config.js")
-    return {
-        "id": "vitest-mcp-hub-repair-1",
+    test_file = os.path.join(project_dir, "tests", "utils", "config.test.js")
+    common = {
         "framework": "vitest",
         "file": source,
         "target": "ConfigManager.loadConfig",
         "kind": "method",
-        "line_range": "136-136",
         "gap_type": "branch",
-        "missing_branches": [
-            "未覆盖 if 分支: !this.configPaths || this.configPaths.length === 0"
-        ],
-        "uncovered_lines": [136],
-        "suggested_inputs": [
-            "构造没有 configPaths 或 configPaths 为空数组的 ConfigManager 实例"
-        ],
-        "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的错误路径会生成 async reject 断言并进入 ready",
         "command": "npx vitest run tests/utils/config.test.js",
-        "test_file": os.path.join(project_dir, "tests", "utils", "config.test.js"),
-        "test_name": "covers ConfigManager.loadConfig empty config paths branch",
+        "test_file": test_file,
         "assertion_focus": [
             "该分支应断言 ConfigError，生成测试需要使用 await expect(instance.loadConfig()).rejects.toThrow()"
         ],
-        "priority": 121,
-        "priority_reason": "real mcp-hub regression sample for an async throwing branch that used to be repair_generated_test",
         "confidence": 0.9,
     }
+    return [
+        {
+            **common,
+            "id": "vitest-mcp-hub-repair-1",
+            "line_range": "136-136",
+            "missing_branches": [
+                "未覆盖 if 分支: !this.configPaths || this.configPaths.length === 0"
+            ],
+            "uncovered_lines": [136],
+            "suggested_inputs": [
+                "构造没有 configPaths 或 configPaths 为空数组的 ConfigManager 实例"
+            ],
+            "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的空路径错误会生成 async reject 断言并进入 ready",
+            "test_name": "covers ConfigManager.loadConfig empty config paths branch",
+            "priority": 121,
+            "priority_reason": "real mcp-hub regression sample for an async throwing empty-path branch that used to be repair_generated_test",
+        },
+        {
+            **common,
+            "id": "vitest-mcp-hub-repair-2",
+            "line_range": "199-204",
+            "missing_branches": [
+                "未覆盖 if 分支: hasStdioFields && hasSseFields"
+            ],
+            "uncovered_lines": [199, 200, 201, 202, 203, 204],
+            "suggested_inputs": [
+                "构造同时包含 command 和 url 的 mcpServers 配置文件"
+            ],
+            "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的 stdio/sse 混用错误路径会生成配置文件输入并进入 ready",
+            "test_name": "covers ConfigManager.loadConfig mixed stdio and sse branch",
+            "priority": 122,
+            "priority_reason": "real mcp-hub regression sample for a config-file-driven async validation branch that used to be repair_generated_test",
+        },
+        {
+            **common,
+            "id": "vitest-mcp-hub-repair-3",
+            "line_range": "253-260",
+            "missing_branches": [
+                "未覆盖 else 分支: server missing both command and url"
+            ],
+            "uncovered_lines": [253, 254, 255, 256, 257, 258, 259, 260],
+            "suggested_inputs": [
+                "构造 mcpServers.test 为空对象的配置文件"
+            ],
+            "goal": "确认真实 mcp-hub 项目中 ConfigManager.loadConfig 的缺少 transport 配置错误路径会生成配置文件输入并进入 ready",
+            "test_name": "covers ConfigManager.loadConfig missing transport branch",
+            "priority": 123,
+            "priority_reason": "real mcp-hub regression sample for a config-file-driven async validation branch that used to be repair_generated_test",
+        },
+    ]
 
 
 def py_internal(project_dir: str) -> dict:
@@ -215,11 +253,16 @@ def main() -> int:
     args = parser.parse_args()
 
     project_dir = str(Path(args.project_dir).resolve())
-    task = PRESETS[args.preset](project_dir)
+    tasks = PRESETS[args.preset](project_dir)
+    if isinstance(tasks, dict):
+        tasks = [tasks]
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(task, ensure_ascii=False) + "\n", encoding="utf-8")
+    output.write_text(
+        "".join(json.dumps(task, ensure_ascii=False) + "\n" for task in tasks),
+        encoding="utf-8",
+    )
     return 0
 
 

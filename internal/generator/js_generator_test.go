@@ -1689,6 +1689,99 @@ module.exports = { Widget };
 			forbidden: []string{"const result = await instance.loadConfig();", "expect(result).toBeDefined();"},
 		},
 		{
+			name:     "vitest config manager load config mixed transport validation",
+			fileName: "config.js",
+			source: `export class ConfigManager {
+  constructor(configPathOrObject) {
+    this.configPaths = null
+    if (typeof configPathOrObject === 'string') {
+      this.configPaths = [configPathOrObject]
+    }
+  }
+
+  async loadConfig() {
+    const newConfig = { mcpServers: { test: { command: 'node', url: 'http://localhost:3000' } } }
+    for (const [name, server] of Object.entries(newConfig.mcpServers)) {
+      const hasStdioFields = server.command !== undefined
+      const hasSseFields = server.url !== undefined
+      if (hasStdioFields && hasSseFields) {
+        throw new Error(` + "`Server '${name}' cannot mix stdio and sse fields`" + `)
+      }
+    }
+    return { config: newConfig }
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-repair-2",
+				Framework:       "vitest",
+				Target:          "ConfigManager.loadConfig",
+				LineRange:       "199-204",
+				GapType:         "branch",
+				TestName:        "covers ConfigManager.loadConfig mixed stdio and sse branch",
+				MissingBranches: []string{"未覆盖 if 分支: hasStdioFields && hasSseFields"},
+				SuggestedInputs: []string{"构造同时包含 command 和 url 的 mcpServers 配置文件"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { ConfigManager } from './config';",
+				"const fs = await import('node:fs/promises');",
+				"const os = await import('node:os');",
+				"const path = await import('node:path');",
+				"await fs.writeFile(configPath, JSON.stringify({ mcpServers: { test: { command: 'node', url: 'http://localhost:3000' } } }));",
+				"const instance = new ConfigManager(configPath);",
+				"await expect(instance.loadConfig()).rejects.toThrow('cannot mix stdio and sse');",
+			},
+			forbidden: []string{"const instance = new ConfigManager({});", "const result = await instance.loadConfig();"},
+		},
+		{
+			name:     "vitest config manager load config missing transport validation",
+			fileName: "config.js",
+			source: `export class ConfigManager {
+  constructor(configPathOrObject) {
+    this.configPaths = null
+    if (typeof configPathOrObject === 'string') {
+      this.configPaths = [configPathOrObject]
+    }
+  }
+
+  async loadConfig() {
+    const newConfig = { mcpServers: { test: {} } }
+    for (const [name, server] of Object.entries(newConfig.mcpServers)) {
+      const hasStdioFields = server.command !== undefined
+      const hasSseFields = server.url !== undefined
+      if (hasStdioFields) {
+        server.type = 'stdio'
+      } else if (hasSseFields) {
+        server.type = 'sse'
+      } else {
+        throw new Error(` + "`Server '${name}' must include either command (for stdio) or url (for sse)`" + `)
+      }
+    }
+    return { config: newConfig }
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-repair-3",
+				Framework:       "vitest",
+				Target:          "ConfigManager.loadConfig",
+				LineRange:       "253-260",
+				GapType:         "branch",
+				TestName:        "covers ConfigManager.loadConfig missing transport branch",
+				MissingBranches: []string{"未覆盖 else 分支: server missing both command and url"},
+				SuggestedInputs: []string{"构造 mcpServers.test 为空对象的配置文件"},
+			},
+			wants: []string{
+				"import { describe, it, expect } from 'vitest';",
+				"import { ConfigManager } from './config';",
+				"await fs.writeFile(configPath, JSON.stringify({ mcpServers: { test: {} } }));",
+				"const instance = new ConfigManager(configPath);",
+				"await expect(instance.loadConfig()).rejects.toThrow('must include either command');",
+			},
+			forbidden: []string{"const instance = new ConfigManager({});", "const result = await instance.loadConfig();"},
+		},
+		{
 			name:     "vitest class strict fallback error path",
 			fileName: "env-resolver.js",
 			source: `export class EnvResolver {
