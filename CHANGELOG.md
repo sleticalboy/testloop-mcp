@@ -20,6 +20,7 @@
 - 新增 `docs/regression-smoke.md`，记录固定 smoke 的默认项目路径、JSONL 依赖、跳过开关、runner 约束以及 JS/Python fixture 样本边界。
 - 新增仓库内 `testdata/js-no-runtime`、`testdata/js-internal` fixture 与 `scripts/js-manual-review-runner.js`，让 JS regression smoke 可稳定覆盖 `manual_review_no_runtime` 和 `manual_review_internal`，不再依赖已漂移的外部 TS 项目样本。
 - 新增 Python name-mangled private method 生成规则、`testdata/py-internal` fixture 与 `scripts/py-manual-review-runner.py`，让 Python regression smoke 可稳定覆盖 `manual_review_internal`。
+- 新增 `scripts/fixture-task-jsonl.py`，统一生成 JS/Python fixture coverage task JSONL，避免 regression 脚本继续内联重复 JSON 构造逻辑。
 - Java coverage task 修正 Commons Codec `Metaphone.metaphone` 的弱 ready：目标 279 行被 JaCoCo 映射到被 `GN` 短路遮蔽的 `GNED` 侧，真实目标行命中校验后改为 `manual_review_unreachable`；`Soundex.getMaxLength` / `setMaxLength` 继续断言真实默认值和状态变化。
 - Java coverage task 命中裸类型变量数组或 varargs（例如 `T[]` / `T...`）时会生成 `manual_review_internal` 手审 smoke，避免输出不可编译的 `T[] result` 或重载歧义的 `addAll(null, null)`。
 - Java coverage task 补强 Apache Commons Lang `ClassUtils` 公共 helper 场景：`getShortClassName` 会用 JVM 数组编码输入覆盖对象数组和 primitive array 分支，`hierarchy` 会调用 `iterator.remove()` 覆盖 `UnsupportedOperationException` 路径，避免把未命中缺口的弱 ready 暴露给 Agent。

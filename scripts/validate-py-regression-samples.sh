@@ -141,37 +141,7 @@ run_sample "click-ready" "$click_dir" "$click_tasks" "$click_ready_ids" "ready"
 
 internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
-python3 - "$internal_dir" "$internal_tasks" <<'PY'
-import json
-import os
-import sys
-
-project_dir, output = sys.argv[1:]
-source = os.path.join(project_dir, "src", "private_service.py")
-task = {
-    "id": "pytest-internal-1",
-    "framework": "pytest",
-    "file": source,
-    "target": "PrivateService.__normalize",
-    "kind": "method",
-    "line_range": "5-7",
-    "gap_type": "branch",
-    "missing_branches": ["未覆盖 if 分支: value == \"\""],
-    "suggested_inputs": ["直接调用 __normalize(\"\") 会命中分支，但该方法会被 Python name mangling 隐藏"],
-    "goal": "确认 Python 双下划线私有方法会被降级为 internal 手审任务",
-    "command": "python3 scripts/py-manual-review-runner.py tests/test_private_service.py",
-    "test_file": os.path.join(project_dir, "tests", "test_private_service.py"),
-    "test_name": "test_private_method_requires_internal_review",
-    "assertion_focus": [
-        "Python name-mangled private method 不应从生成测试直接外部调用，应通过公开方法、测试 seam 或手审覆盖"
-    ],
-    "priority": 88,
-    "priority_reason": "repository fixture for stable Python internal manual-review smoke",
-    "confidence": 0.9,
-}
-with open(output, "w", encoding="utf-8") as handle:
-    handle.write(json.dumps(task, ensure_ascii=False) + "\n")
-PY
+"$repo_root/scripts/fixture-task-jsonl.py" py-internal "$internal_dir" "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
 echo "py_regression_output_dir=$output_dir"

@@ -148,70 +148,12 @@ run_sample "ip2region-ready" "$ip2region_dir" "$ip2region_tasks" "$ip2region_rea
 
 no_runtime_tasks="$output_dir/no-runtime-tasks.jsonl"
 require_path dir "$no_runtime_dir"
-python3 - "$no_runtime_dir" "$no_runtime_tasks" <<'PY'
-import json
-import os
-import sys
-
-project_dir, output = sys.argv[1:]
-source = os.path.join(project_dir, "src", "events.ts")
-task = {
-    "id": "jest-no-runtime-1",
-    "framework": "jest",
-    "file": source,
-    "target": "events.ts",
-    "kind": "file_level",
-    "line_range": "entire file",
-    "gap_type": "no_runtime",
-    "goal": "确认 events.ts 是 TypeScript 纯类型文件，没有可直接执行的运行时代码覆盖任务",
-    "command": "node scripts/js-manual-review-runner.js tests/events.test.ts",
-    "test_file": os.path.join(project_dir, "tests", "events.test.ts"),
-    "test_name": "marks type-only module as no runtime coverage",
-    "assertion_focus": [
-        "纯类型声明不会产生有意义的本地 JavaScript coverage task，应通过消费方运行时测试或类型检查验证"
-    ],
-    "priority": 90,
-    "priority_reason": "repository fixture for stable JS no-runtime manual-review smoke",
-    "confidence": 0.9,
-}
-with open(output, "w", encoding="utf-8") as handle:
-    handle.write(json.dumps(task, ensure_ascii=False) + "\n")
-PY
+"$repo_root/scripts/fixture-task-jsonl.py" js-no-runtime "$no_runtime_dir" "$no_runtime_tasks"
 run_sample "fixture-no-runtime" "$no_runtime_dir" "$no_runtime_tasks" "$no_runtime_ids" "manual_review_no_runtime" "$manual_review_command"
 
 internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
-python3 - "$internal_dir" "$internal_tasks" <<'PY'
-import json
-import os
-import sys
-
-project_dir, output = sys.argv[1:]
-source = os.path.join(project_dir, "src", "helper.ts")
-task = {
-    "id": "jest-internal-1",
-    "framework": "jest",
-    "file": source,
-    "target": "hidden",
-    "kind": "function",
-    "line_range": "5-7",
-    "gap_type": "branch",
-    "missing_branches": ["未覆盖 if 分支: value === \"\""],
-    "suggested_inputs": ["直接调用 hidden(\"\") 会命中分支，但 hidden 没有从 ESM 模块导出"],
-    "goal": "确认未导出的 TypeScript helper 会被降级为 internal 手审任务",
-    "command": "node scripts/js-manual-review-runner.js tests/helper.test.ts",
-    "test_file": os.path.join(project_dir, "tests", "helper.test.ts"),
-    "test_name": "marks unexported helper as internal manual review",
-    "assertion_focus": [
-        "未导出的 ESM helper 不能从外部生成测试直接 named import，应通过公开入口、测试 seam 或手审覆盖"
-    ],
-    "priority": 88,
-    "priority_reason": "repository fixture for stable JS internal manual-review smoke",
-    "confidence": 0.9,
-}
-with open(output, "w", encoding="utf-8") as handle:
-    handle.write(json.dumps(task, ensure_ascii=False) + "\n")
-PY
+"$repo_root/scripts/fixture-task-jsonl.py" js-internal "$internal_dir" "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
 echo "js_regression_output_dir=$output_dir"

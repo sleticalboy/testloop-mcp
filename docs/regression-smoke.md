@@ -67,6 +67,14 @@ TESTLOOP_REGRESSION_SKIP_PY=true scripts/validate-regression-smoke.sh
 
 ## 关键 runner
 
+仓库内 fixture 的 coverage task JSONL 由统一 helper 生成：
+
+```bash
+scripts/fixture-task-jsonl.py js-no-runtime ./testdata/js-no-runtime /tmp/js-no-runtime.jsonl
+scripts/fixture-task-jsonl.py js-internal ./testdata/js-internal /tmp/js-internal.jsonl
+scripts/fixture-task-jsonl.py py-internal ./testdata/py-internal /tmp/py-internal.jsonl
+```
+
 JS/ip2region 使用 Jest ESM，需要固定到单个生成测试文件，否则 `jest util.test.js` 会误匹配项目已有 `tests/util.test.js`：
 
 ```bash
