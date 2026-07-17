@@ -1408,6 +1408,14 @@ func genJSClassTestForCoverageTask(cls jsClassInfo, task *types.CoverageTestTask
 			sb.WriteString(genJSPrivateMethodManualReviewTest(cls, method, task, testName, assertions))
 			continue
 		}
+		if cls.Name == "DevWatcher" && method.Name == "stop" {
+			sb.WriteString(genJSDevWatcherStopLifecycleTest(method, task, testName))
+			continue
+		}
+		if cls.Name == "DevWatcher" && method.Name == "start" && jsCoverageTaskMentions(task, "DEV_WATCHER_ERROR") {
+			sb.WriteString(genJSDevWatcherStartErrorTest(method, task, testName))
+			continue
+		}
 		if cls.Name == "WorkspaceCacheManager" && method.Name == "updateWorkspaceState" && jsCoverageTaskMentions(task, "cache[workspaceKey]") {
 			sb.WriteString(genJSWorkspaceCacheUpdateStateTest(method, task, testName))
 			continue
@@ -2171,6 +2179,7 @@ func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
 	return jsCoverageTaskNeedsChokidarMock(task) ||
 		jsCoverageTaskNeedsOAuthProviderMocks(task) ||
 		jsCoverageTaskNeedsWorkspaceCacheSpies(task) ||
+		(task != nil && task.Target == "DevWatcher.stop") ||
 		(task != nil && task.Target == "SSEManager.setupAutoShutdown") ||
 		(task != nil && task.Target == "SSEManager.sendToClient") ||
 		jsCoverageTaskTargetsSSEAddConnectionClose(task) ||
@@ -2178,7 +2187,11 @@ func jsCoverageTaskNeedsVitestVi(task *types.CoverageTestTask) bool {
 }
 
 func jsCoverageTaskNeedsChokidarMock(task *types.CoverageTestTask) bool {
-	return task != nil && task.Target == "DevWatcher.#handleFileChange"
+	if task == nil {
+		return false
+	}
+	return task.Target == "DevWatcher.#handleFileChange" ||
+		(task.Target == "DevWatcher.start" && jsCoverageTaskMentions(task, "DEV_WATCHER_ERROR"))
 }
 
 func jsCoverageTaskNeedsOAuthProviderMocks(task *types.CoverageTestTask) bool {
@@ -3278,6 +3291,52 @@ func genJSDevWatcherHandleFileChangePublicEntryTest(method jsFuncInfo, task *typ
 	sb.WriteString("      } finally {\n")
 	sb.WriteString("        vi.useRealTimers();\n")
 	sb.WriteString("      }\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSDevWatcherStopLifecycleTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() });\n")
+	sb.WriteString("      const notWatchingResult = await instance.stop();\n")
+	sb.WriteString("      expect(notWatchingResult).toBeUndefined();\n")
+	sb.WriteString("      expect(instance.isWatching).toBe(false);\n")
+	sb.WriteString("      const watcher = { close: vi.fn().mockResolvedValue(undefined) };\n")
+	sb.WriteString("      instance.isWatching = true;\n")
+	sb.WriteString("      instance.watcher = watcher;\n")
+	sb.WriteString("      instance.debounceTimer = setTimeout(() => {}, 1000);\n")
+	sb.WriteString("      instance.changedFiles.add('src/app.js');\n")
+	sb.WriteString("      await instance.stop();\n")
+	sb.WriteString("      expect(watcher.close).toHaveBeenCalledTimes(1);\n")
+	sb.WriteString("      expect(instance.watcher).toBeNull();\n")
+	sb.WriteString("      expect(instance.isWatching).toBe(false);\n")
+	sb.WriteString("      expect(instance.debounceTimer).toBeNull();\n")
+	sb.WriteString("      expect(instance.changedFiles.size).toBe(0);\n")
+	sb.WriteString("    });\n\n")
+	sb.WriteString("  });\n\n")
+	return sb.String()
+}
+
+func genJSDevWatcherStartErrorTest(method jsFuncInfo, task *types.CoverageTestTask, testName string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  describe('%s', () => {\n", method.Name))
+	sb.WriteString(fmt.Sprintf("    it('%s', async () => {\n", jsEscapeTestNameValue(testName)))
+	if comment := coverageTaskComment(task); comment != "" {
+		sb.WriteString(fmt.Sprintf("      // coverage task: %s\n", comment))
+	}
+	sb.WriteString("      const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() });\n")
+	sb.WriteString("      await instance.start();\n")
+	sb.WriteString("      expect(instance.isWatching).toBe(true);\n")
+	sb.WriteString("      const watcherError = new Error('watch failed');\n")
+	sb.WriteString("      expect(() => instance.watcher.emit('error', watcherError)).not.toThrow();\n")
+	sb.WriteString("      await instance.stop();\n")
+	sb.WriteString("      expect(instance.isWatching).toBe(false);\n")
 	sb.WriteString("    });\n\n")
 	sb.WriteString("  });\n\n")
 	return sb.String()

@@ -19,7 +19,7 @@ scripts/validate-regression-smoke.sh
 | 语言 | 脚本 | 默认样本 | 期望结果 |
 | :--- | :--- | :--- | :--- |
 | Java | `scripts/validate-java-regression-samples.sh` | Commons Lang `junit-44/junit-50`，Commons Codec `junit-130`，Commons Lang `junit-52` | `ready`、`manual_review_unreachable`、`manual_review_internal` |
-| JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1`，仓库内 `testdata/js-internal` 的 `jest-internal-1`，mcp-hub `vitest-mcp-hub-repair-1/2/3`、`vitest-mcp-hub-env-1/2`、`vitest-mcp-hub-sse-1/2/3/4`、`vitest-mcp-hub-workspace-1/2/3` | `ready`、`manual_review_no_runtime`、`manual_review_internal`、`manual_review_environment` |
+| JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1`，仓库内 `testdata/js-internal` 的 `jest-internal-1`，mcp-hub `vitest-mcp-hub-repair-1/2/3`、`vitest-mcp-hub-env-1/2`、`vitest-mcp-hub-devwatcher-1/2`、`vitest-mcp-hub-sse-1/2/3/4`、`vitest-mcp-hub-workspace-1/2/3` | `ready`、`manual_review_no_runtime`、`manual_review_internal`、`manual_review_environment` |
 | Python | `scripts/validate-py-regression-samples.sh` | Click `pytest-1/pytest-3`，仓库内 `testdata/py-internal` 的 `pytest-internal-1`，haoy-apk-station backend 的 `pytest-apk-frontend-env-1/pytest-apk-download-external-1/pytest-apk-delete-db-1` | `ready`、`manual_review_internal`、`manual_review_environment`、`manual_review_external_service`、`manual_review_database` |
 
 输出目录默认是：
@@ -78,6 +78,7 @@ scripts/fixture-task-jsonl.py js-no-runtime ./testdata/js-no-runtime /tmp/js-no-
 scripts/fixture-task-jsonl.py js-internal ./testdata/js-internal /tmp/js-internal.jsonl
 scripts/fixture-task-jsonl.py js-mcp-hub-repair /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-repair.jsonl
 scripts/fixture-task-jsonl.py js-mcp-hub-env /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-env.jsonl
+scripts/fixture-task-jsonl.py js-mcp-hub-devwatcher /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-devwatcher.jsonl
 scripts/fixture-task-jsonl.py js-mcp-hub-sse /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-sse.jsonl
 scripts/fixture-task-jsonl.py js-mcp-hub-workspace /Users/binlee/code/open-source/mcp-hub /tmp/js-mcp-hub-workspace.jsonl
 scripts/fixture-task-jsonl.py py-internal ./testdata/py-internal /tmp/py-internal.jsonl
@@ -100,7 +101,7 @@ node scripts/js-manual-review-runner.js {path}
 
 该 runner 会从生成测试文件中提取 `describe(...)` 与 `it.skip(...)` 名称，并输出包含 test file、skipped test 名称、summary 和耗时的 Jest 风格文本。
 
-JS/mcp-hub 使用真实 Vitest 项目验证历史普通失败路径和环境依赖分类。`ConfigManager.loadConfig` 空 config paths 分支曾经会生成可运行但断言错误的测试；现在应识别该 `if (...) { throw ... }` 分支，并生成 `await expect(instance.loadConfig()).rejects.toThrow()`，预期结果是 `passed/ready`。`SSEManager.setupAutoShutdown` 需要用 `vi.useFakeTimers()`、fake `workspaceCache` 和一次性 `SIGTERM` listener 覆盖自动关闭 timer，不应 mock `process.emit`，否则会干扰 Vitest worker 内部通信；`SSEManager.addConnection` 的 close 生命周期需要用 `EventEmitter` request 触发 `req.emit('close')`，断言连接表清理、状态变更和 workspace cache 从 1 更新到 0；send failure 路径通过 throwing `res.write` 触发 `connection.send()` 返回 `false`、状态变为 `error`，再用 `broadcast` 清理 dead connection；`SSEManager.sendToClient` 固定缺失 client、disconnected client 返回 `false` 且不调用 `send`，connected client 委托 `connection.send`。`WorkspaceCacheManager.updateWorkspaceState` 和 `cleanupStaleEntries` 必须 mock `_withLock/_readCache/_writeCache`，其中 stale cleanup 还必须 mock `_isProcessRunning`，避免触碰真实 XDG cache/lock 文件和真实进程探测；`WorkspaceCacheManager._withLock` 依赖真实文件锁、重试时序和 stale lock 清理，固定样本预期生成 `manual_review_environment` skip，而不是直接调用真实 `_withLock`。
+JS/mcp-hub 使用真实 Vitest 项目验证历史普通失败路径和环境依赖分类。`ConfigManager.loadConfig` 空 config paths 分支曾经会生成可运行但断言错误的测试；现在应识别该 `if (...) { throw ... }` 分支，并生成 `await expect(instance.loadConfig()).rejects.toThrow()`，预期结果是 `passed/ready`。`DevWatcher.stop` 固定未 watching 早返回和 watching cleanup 生命周期，断言 debounce timer、changed files、watcher close、watcher 引用和 watching 状态被清理；`DevWatcher.start` 固定 chokidar watcher `error` 事件路径，要求通过 mock watcher 触发事件而不是启动真实文件监听。`SSEManager.setupAutoShutdown` 需要用 `vi.useFakeTimers()`、fake `workspaceCache` 和一次性 `SIGTERM` listener 覆盖自动关闭 timer，不应 mock `process.emit`，否则会干扰 Vitest worker 内部通信；`SSEManager.addConnection` 的 close 生命周期需要用 `EventEmitter` request 触发 `req.emit('close')`，断言连接表清理、状态变更和 workspace cache 从 1 更新到 0；send failure 路径通过 throwing `res.write` 触发 `connection.send()` 返回 `false`、状态变为 `error`，再用 `broadcast` 清理 dead connection；`SSEManager.sendToClient` 固定缺失 client、disconnected client 返回 `false` 且不调用 `send`，connected client 委托 `connection.send`。`WorkspaceCacheManager.updateWorkspaceState` 和 `cleanupStaleEntries` 必须 mock `_withLock/_readCache/_writeCache`，其中 stale cleanup 还必须 mock `_isProcessRunning`，避免触碰真实 XDG cache/lock 文件和真实进程探测；`WorkspaceCacheManager._withLock` 依赖真实文件锁、重试时序和 stale lock 清理，固定样本预期生成 `manual_review_environment` skip，而不是直接调用真实 `_withLock`。
 
 Python/Click 默认使用 `uv`：
 
@@ -124,7 +125,7 @@ Python/haoy-apk-station 还使用真实 FastAPI 删除应用路径验证 databas
 
 ## 当前边界
 
-- JS 默认 smoke 覆盖 `ready`、`manual_review_no_runtime`、`manual_review_internal` 和真实项目 `manual_review_environment`。仓库内 no-runtime/internal fixture 不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件、未导出 ESM helper 会被降级为可解析的手审任务；mcp-hub 样本用于防止真实 Vitest 项目里的 async throwing branch 从 `ready` 回退成 `repair_generated_test`，也用于防止 workspace cache 这类 XDG 文件锁/进程探测路径被误判成可安全直接运行的 ready 测试，并固定 SSE 自动关闭 timer 不能通过 mock `process.emit` 破坏测试 runner、连接断开不能退化成只注册空 `req.on` 的弱测试、发送失败不能退化成不可触达的空 `res.write` mock、定向发送不能退化成只测 missing client 的弱断言。
+- JS 默认 smoke 覆盖 `ready`、`manual_review_no_runtime`、`manual_review_internal` 和真实项目 `manual_review_environment`。仓库内 no-runtime/internal fixture 不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件、未导出 ESM helper 会被降级为可解析的手审任务；mcp-hub 样本用于防止真实 Vitest 项目里的 async throwing branch 从 `ready` 回退成 `repair_generated_test`，也用于防止 workspace cache 这类 XDG 文件锁/进程探测路径被误判成可安全直接运行的 ready 测试，并固定 DevWatcher stop 不能退化成只测未 watching 早返回、watcher error 不能启动真实 chokidar、SSE 自动关闭 timer 不能通过 mock `process.emit` 破坏测试 runner、连接断开不能退化成只注册空 `req.on` 的弱测试、发送失败不能退化成不可触达的空 `res.write` mock、定向发送不能退化成只测 missing client 的弱断言。
 - Python 默认 smoke 覆盖 `ready`、`manual_review_internal`、真实项目 `manual_review_environment`、真实项目 `manual_review_external_service` 和真实项目 `manual_review_database`。仓库内 Python internal fixture 用于稳定验证 name-mangled private method 会被降级为可解析的手审任务；haoy-apk-station 样本用于验证 FastAPI 动态前端入口这类导入时环境依赖不会被误当成普通 ready，也用于验证对象存储 endpoint timeout 会被归类为外部服务手审、SQLAlchemy 事务错误会被归类为数据库手审，而不是普通 repair。
 - ip2region 扩大窗口也会暴露 `repair_generated_test`，但那类普通失败没有固定为默认样本；当前默认 mcp-hub 样本固定的是历史 repair 已收敛的 `ConfigManager.loadConfig` 稳定错误路径。
 - 旧 ufo JSONL 包含 `manual_review_no_runtime`，但本机当前 ufo 目录只有发布产物，没有对应 `src/*.ts`，不适合作为固定样本。

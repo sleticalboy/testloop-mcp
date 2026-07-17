@@ -2030,18 +2030,30 @@ module.exports = { Widget };
 				ID:              "vitest-dev-watcher-stop-1",
 				Framework:       "vitest",
 				Target:          "DevWatcher.stop",
-				LineRange:       "13-13",
+				LineRange:       "122-143",
 				GapType:         "branch",
-				TestName:        "covers DevWatcher stop not watching",
-				SuggestedInputs: []string{"构造满足条件 `!this.isWatching` 的输入"},
+				TestName:        "covers DevWatcher stop lifecycle cleanup",
+				MissingBranches: []string{"未覆盖 stop 中 debounceTimer、changedFiles、watcher.close 清理路径"},
+				SuggestedInputs: []string{"构造 !isWatching 早返回", "设置 watcher/debounceTimer/changedFiles", "调用 stop"},
+				AssertionFocus:  []string{"应断言 close 被调用、watcher 清空、isWatching=false、debounceTimer=null、changedFiles 清空"},
 			},
 			wants: []string{
-				"import { DevWatcher } from './dev-watcher';",
+				"import { describe, it, expect, vi } from 'vitest';",
 				"const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() });",
-				"const result = await instance.stop();",
-				"expect(result).toBeDefined();",
+				"const notWatchingResult = await instance.stop();",
+				"expect(notWatchingResult).toBeUndefined();",
+				"const watcher = { close: vi.fn().mockResolvedValue(undefined) };",
+				"instance.isWatching = true;",
+				"instance.watcher = watcher;",
+				"instance.debounceTimer = setTimeout(() => {}, 1000);",
+				"instance.changedFiles.add('src/app.js');",
+				"await instance.stop();",
+				"expect(watcher.close).toHaveBeenCalledTimes(1);",
+				"expect(instance.watcher).toBeNull();",
+				"expect(instance.debounceTimer).toBeNull();",
+				"expect(instance.changedFiles.size).toBe(0);",
 			},
-			forbidden: []string{"new DevWatcher();", "rejects.toThrow()"},
+			forbidden: []string{"new DevWatcher();", "rejects.toThrow()", "expect(result).toBeDefined();"},
 		},
 		{
 			name:     "vitest function wraps ordinary error",
@@ -2220,6 +2232,62 @@ export class DevWatcher {
 				"expect(changes[0].relativeFiles).toContain(path.join('src', 'app.js'));",
 			},
 			forbidden: []string{"instance.#handleFileChange", "it.skip(", "manual_review_private"},
+		},
+		{
+			name:     "vitest dev watcher start error event uses chokidar mock",
+			fileName: "dev-watcher.js",
+			source: `import chokidar from "chokidar"
+
+export class DevWatcher {
+  constructor(serverName, devConfig) {
+    this.serverName = serverName
+    this.devConfig = { enabled: true, watch: [], cwd: devConfig.cwd, debounce: 500 }
+    this.watcher = null
+    this.isWatching = false
+  }
+
+  async start() {
+    this.watcher = chokidar.watch([])
+    this.watcher.on('error', (error) => {
+      logger.error('DEV_WATCHER_ERROR', 'Dev watcher error: ' + error.message, {}, false)
+    })
+    this.isWatching = true
+  }
+
+  async stop() {
+    if (!this.isWatching) {
+      return
+    }
+    if (this.watcher) {
+      await this.watcher.close()
+      this.watcher = null
+    }
+    this.isWatching = false
+  }
+}
+`,
+			task: types.CoverageTestTask{
+				ID:              "vitest-mcp-hub-devwatcher-2",
+				Framework:       "vitest",
+				Target:          "DevWatcher.start",
+				LineRange:       "72-75",
+				GapType:         "error_path",
+				TestName:        "covers DevWatcher watcher error event",
+				MissingBranches: []string{"未覆盖 watcher error 事件 DEV_WATCHER_ERROR 分支"},
+				SuggestedInputs: []string{"mock chokidar.watch 返回 EventEmitter watcher", "调用 start", "触发 watcher.emit('error')"},
+				AssertionFocus:  []string{"应断言 error 事件不抛出并可 stop 清理 watcher"},
+			},
+			wants: []string{
+				"vi.mock('chokidar'",
+				"const instance = new DevWatcher('test-server', { enabled: true, watch: [], cwd: process.cwd() });",
+				"await instance.start();",
+				"expect(instance.isWatching).toBe(true);",
+				"const watcherError = new Error('watch failed');",
+				"expect(() => instance.watcher.emit('error', watcherError)).not.toThrow();",
+				"await instance.stop();",
+				"expect(instance.isWatching).toBe(false);",
+			},
+			forbidden: []string{"await expect(instance.start()).rejects", "new DevWatcher();", "it.skip("},
 		},
 		{
 			name:     "vitest config manager private diff via loadConfig",
