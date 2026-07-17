@@ -142,14 +142,14 @@ testloop-mcp --doctor-config
 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
-该脚本会执行 `--doctor-config`、`--print-config=all | --check-config -`，并启动一次 HTTP 模式检查 `/healthz`。
+该脚本适合做基础安装验收：会执行 `--version`、`--doctor-config`、`--print-config=all | --check-config -`，并启动一次 HTTP 模式检查 `/healthz`。
 如果要确认 PATH 没有指到旧版本，可以加版本门禁：
 
 ```bash
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
-如果还要验证真实 MCP 客户端能通过 stdio 和 Streamable HTTP 启动该二进制并调用轻量工具：
+如果还要做深度协议验收，确认真实 MCP 客户端能通过 stdio 和 Streamable HTTP 启动该二进制并调用轻量工具：
 
 ```bash
 scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp

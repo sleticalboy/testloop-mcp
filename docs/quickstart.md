@@ -26,22 +26,20 @@ testloop-testgen --help
 
 ## 2. 自检
 
-如果是源码 checkout，直接运行安装后自检脚本：
+### 基础安装验收
+
+如果是源码 checkout，先运行安装后自检脚本：
 
 ```bash
 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
 ```
 
+这一步用于确认二进制可执行、`--version` / `--doctor-config` 可运行、客户端配置片段能 roundtrip 校验，并且 HTTP `/healthz` 可探活。
+
 如果要确认当前 PATH 指向的就是预期版本：
 
 ```bash
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.1 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
-```
-
-如果要进一步确认真实 MCP 客户端可以通过 stdio 和 HTTP 启动该二进制并调用工具：
-
-```bash
-scripts/verify-mcp-process-smoke.sh "$(command -v testloop-mcp)"
 ```
 
 如果当前机器 `127.0.0.1:18080` 已被占用：
@@ -54,6 +52,21 @@ TESTLOOP_MCP_VERIFY_HTTP_ADDR=127.0.0.1:18081 scripts/verify-client-setup.sh "$(
 
 ```bash
 TESTLOOP_MCP_VERIFY_SKIP_HTTP=true scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
+```
+
+### 深度协议验收
+
+如果要进一步确认真实 MCP 客户端可以通过 stdio 和 Streamable HTTP 启动该二进制并调用工具：
+
+```bash
+scripts/verify-mcp-process-smoke.sh "$(command -v testloop-mcp)"
+```
+
+这一步会调用 `tools/list` 和轻量 `parse_results`，并校验 `structuredContent` 与文本 JSON fallback 一致。只想验证单一路径时：
+
+```bash
+TESTLOOP_MCP_CLIENT_SMOKE_TRANSPORT=stdio scripts/verify-mcp-process-smoke.sh "$(command -v testloop-mcp)"
+TESTLOOP_MCP_CLIENT_SMOKE_TRANSPORT=http scripts/verify-mcp-process-smoke.sh "$(command -v testloop-mcp)"
 ```
 
 没有源码 checkout 时，可以手动执行同等检查：

@@ -26,6 +26,7 @@ required_commands = [
     "go run ./examples/agent-decision-demo",
     "go run ./examples/mcp-client-demo",
     "scripts/verify-client-setup.sh",
+    "scripts/verify-mcp-process-smoke.sh",
 ]
 
 failures = []
