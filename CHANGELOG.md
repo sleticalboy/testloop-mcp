@@ -11,6 +11,7 @@
 - 公开 Go / JS showcase 脚本新增远端 `git clone/fetch` 超时控制，默认 60 秒，可通过 `TESTLOOP_SHOWCASE_*_GIT_TIMEOUT` 调整，避免 GitHub 网络不可达时长时间挂起。
 - 公开 JS/TS showcase 已用远端 `unjs/ufo` 固定 commit 复验通过，默认 `vitest-1=manual_review_internal`、`vitest-2=ready` 决策信号保持稳定。
 - 新增 `scripts/summarize-showcase-output.py`，统一公开 showcase 的 JSONL summary 输出和 action 断言逻辑，避免 Go / JS 脚本重复维护。
+- 新增 `docs/plan-release-notes-v0.5.2.md` 和 `docs/plan-release-v0.5.2.md`，整理 v0.5.2 候选发布说明和本地 release readiness 门禁。
 
 ## v0.5.1 - 2026-07-17
 
