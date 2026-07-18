@@ -70,6 +70,14 @@ scripts/showcase-js-public-project.sh
 
 如果只想打印摘要、不做期望断言，可以把 `TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS` 设为空字符串。
 
+如果 GitHub 网络不稳定，或者已经有本地 checkout 和依赖，可以复用本地目录，并跳过安装：
+
+```bash
+TESTLOOP_SHOWCASE_JS_PROJECT_DIR=/tmp/testloop-showcase-ufo \
+TESTLOOP_SHOWCASE_JS_SKIP_INSTALL=true \
+scripts/showcase-js-public-project.sh /tmp/testloop-ufo-showcase.jsonl
+```
+
 如果已经有本地 checkout 和依赖，也可以直接运行底层验证脚本：
 
 ```bash

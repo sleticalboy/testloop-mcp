@@ -26,8 +26,9 @@ scripts/showcase-go-public-project.sh
 本地验证命令：
 
 ```bash
-TESTLOOP_VALIDATE_GO_TASK_IDS=go-test-1 \
-  scripts/validate-go-coverage-top-tasks.sh /tmp/testloop-showcase-google-uuid /tmp/testloop-google-uuid-task1.jsonl
+TESTLOOP_SHOWCASE_GO_PROJECT_DIR=/tmp/testloop-showcase-google-uuid \
+TESTLOOP_SHOWCASE_GO_OUTPUT=/tmp/testloop-google-uuid-showcase-local.jsonl \
+scripts/showcase-go-public-project.sh
 ```
 
 当前结果：
@@ -41,6 +42,8 @@ TESTLOOP_VALIDATE_GO_TASK_IDS=go-test-1 \
   "showcase_expectations": "pass"
 }
 ```
+
+最近一次本地 checkout 复验通过：`/tmp/testloop-showcase-google-uuid` 位于 commit `2d3c2a9cc518326daf99a383f07c4d3c44317e4d`，输出文件为 `/tmp/testloop-google-uuid-showcase-local.jsonl`。
 
 这个结果说明 Agent 可以把公开 Go 项目的覆盖率缺口转成单个 `validate_coverage_task`，并收到稳定的 `status=passed` / `action=ready` 决策信号。脚本仍保留 JSONL 明细，便于继续检查 `coverage_task`、`generated`、`run_result` 和 `metadata`。
 
@@ -56,6 +59,13 @@ scripts/showcase-go-public-project.sh
 ```
 
 如果只想打印摘要、不做期望断言，可以把 `TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS` 设为空字符串。
+
+如果 GitHub 网络不稳定，或者已经有本地 checkout，可以复用本地目录，脚本会跳过 clone/fetch/checkout：
+
+```bash
+TESTLOOP_SHOWCASE_GO_PROJECT_DIR=/tmp/testloop-showcase-google-uuid \
+scripts/showcase-go-public-project.sh /tmp/testloop-google-uuid-showcase.jsonl
+```
 
 `scripts/validate-go-coverage-top-tasks.sh` 也支持直接复用已有任务文件：
 
