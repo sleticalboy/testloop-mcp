@@ -16,6 +16,8 @@ required = [
     "name: testloop web first run",
     "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh",
     "TESTLOOP_MCP_VERSION=v0.5.6",
+    "TESTLOOP_MCP_REPO_REF",
+    "helper checkout 默认使用 `main`",
     "TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run",
     "TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-web-first-run",
     "TESTLOOP_FIRST_RUN_PROJECT_DIR=\"$PWD\"",

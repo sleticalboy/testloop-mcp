@@ -10,6 +10,8 @@
 - `first-run-context.txt`：可直接粘贴给 AI Agent 的最小上下文。
 - `first-run.log`：底层 onboarding 命令完整输出。
 
+`TESTLOOP_MCP_VERSION` 控制安装的二进制版本；helper checkout 默认使用 `main`，这样当前 main 上新增的首跑诊断脚本可以搭配已发布的稳定二进制使用。需要固定 helper 版本时，再显式设置 `TESTLOOP_MCP_REPO_REF`。
+
 ## Go server 模板
 
 ```yaml

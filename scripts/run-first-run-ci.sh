@@ -29,8 +29,8 @@ Environment:
   TESTLOOP_MCP_COMMAND                Existing testloop-mcp binary path/command.
   TESTLOOP_MCP_VERSION                Binary version to install. Default: latest.
   TESTLOOP_MCP_REPO_DIR               Existing testloop-mcp source checkout.
-  TESTLOOP_MCP_REPO_REF               Source ref to clone. Default: main, or
-                                      TESTLOOP_MCP_VERSION when it is not latest.
+  TESTLOOP_MCP_REPO_REF               Source ref to clone for helper scripts.
+                                      Default: main.
   TESTLOOP_MCP_INSTALL_DIR            Install dir. Default: $HOME/.local/bin
   TESTLOOP_MCP_REPO_URL               Source repo URL.
 
@@ -71,11 +71,7 @@ expect_version="${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
 [[ -d "$project_dir" ]] || fail "project directory does not exist: $project_dir"
 
 if [[ -z "$repo_ref" ]]; then
-  if [[ -n "$version" && "$version" != "latest" ]]; then
-    repo_ref="$version"
-  else
-    repo_ref="main"
-  fi
+  repo_ref="main"
 fi
 
 if [[ -z "$expect_version" && -n "$version" && "$version" != "latest" ]]; then

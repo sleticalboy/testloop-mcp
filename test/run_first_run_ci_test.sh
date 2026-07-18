@@ -145,4 +145,53 @@ assert_contains "$out" "testloop-mcp 9.9.9"
 assert_contains "$out" "helper_expect_version=9.9.9"
 assert_contains "$out" "helper_project_command=echo smoke"
 
+fake_git_bin="${tmp_dir}/fake-git-bin"
+mkdir -p "$fake_git_bin"
+cat >"$fake_git_bin/git" <<'SH'
+#!/usr/bin/env sh
+log="${TEST_FAKE_GIT_LOG:?TEST_FAKE_GIT_LOG required}"
+echo "$*" >> "$log"
+dest=""
+for arg in "$@"; do
+  dest="$arg"
+done
+mkdir -p "$dest/scripts"
+cat > "$dest/scripts/install.sh" <<'INSTALL'
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "$TESTLOOP_MCP_INSTALL_DIR"
+cat > "$TESTLOOP_MCP_INSTALL_DIR/testloop-mcp" <<'BIN'
+#!/usr/bin/env sh
+echo "testloop-mcp 8.8.8"
+BIN
+chmod +x "$TESTLOOP_MCP_INSTALL_DIR/testloop-mcp"
+INSTALL
+chmod +x "$dest/scripts/install.sh"
+cat > "$dest/scripts/doctor-first-run.sh" <<'DOCTOR'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "cloned_helper_expect_version=${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
+DOCTOR
+chmod +x "$dest/scripts/doctor-first-run.sh"
+SH
+chmod +x "$fake_git_bin/git"
+
+git_log="${tmp_dir}/fake-git.log"
+clone_install_dir="${tmp_dir}/clone-install-bin"
+copied_bootstrap="${tmp_dir}/copied-run-first-run-ci.sh"
+cp "${repo_root}/scripts/run-first-run-ci.sh" "$copied_bootstrap"
+chmod +x "$copied_bootstrap"
+run_expect_code 0 "$out" env \
+  PATH="$fake_git_bin:$PATH" \
+  TEST_FAKE_GIT_LOG="$git_log" \
+  TESTLOOP_MCP_REPO_URL=https://example.invalid/testloop-mcp.git \
+  TESTLOOP_MCP_VERSION=v8.8.8 \
+  TESTLOOP_MCP_INSTALL_DIR="$clone_install_dir" \
+  TESTLOOP_FIRST_RUN_PROJECT_DIR="$project_dir" \
+  bash "$copied_bootstrap" 'echo smoke'
+
+assert_contains "$git_log" "--branch main"
+assert_contains "$out" "testloop_mcp_binary=$clone_install_dir/testloop-mcp"
+assert_contains "$out" "cloned_helper_expect_version=8.8.8"
+
 echo "run first-run CI test passed"
