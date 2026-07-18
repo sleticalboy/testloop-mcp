@@ -47,6 +47,7 @@ jobs:
           sh test/showcase_scripts_test.sh
           sh test/showcase_summary_test.sh
           sh test/verification_report_test.sh
+          sh test/real_integration_cases_doc_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
           sh test/release_doc_index_test.sh
