@@ -162,6 +162,15 @@ TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 \
   scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
+Agent / CI 可以额外消费 summary JSON：
+
+```bash
+TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
+  scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
+
+go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summary.json
+```
+
 详细用法见 [用户项目验收报告](./docs/verification-report.md)。
 
 ### Codex
