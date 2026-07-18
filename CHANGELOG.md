@@ -5,6 +5,7 @@
 ### Added
 
 - 新增 `docs/real-integration-cases.md` 和 `test/real_integration_cases_doc_test.sh`，把 laoxia Go server / Vue web 的 onboarding report 实跑结果整理成可复用真实接入案例模板。
+- 新增 `docs/plan-release-notes-v0.5.5.md` 和 `docs/plan-release-v0.5.5.md`，整理 v0.5.5 候选发布说明和本地 release readiness 门禁。
 
 ### Changed
 
