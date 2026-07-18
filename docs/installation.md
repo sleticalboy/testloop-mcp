@@ -16,8 +16,31 @@ brew install testloop-mcp
 验证命令：
 
 ```bash
+testloop-mcp --version
 testloop-mcp --help
 testloop-testgen --help
+```
+
+如果 `testloop-mcp --version` 报 `flag provided but not defined: -version`，或版本不是当前文档中的 `0.5.4`，通常说明本机已经安装过旧二进制，或者 `PATH` 指到了旧位置。先刷新 tap 并升级：
+
+```bash
+brew update
+brew upgrade sleticalboy/tap/testloop-mcp
+testloop-mcp --version
+```
+
+如果 `brew update` 因网络或 Homebrew auto-update 卡住，而 `brew info testloop-mcp` 已经能看到 tap stable 是新版本，可以临时跳过 auto-update：
+
+```bash
+HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade sleticalboy/tap/testloop-mcp
+testloop-mcp --version
+```
+
+如果 `brew info testloop-mcp` 显示 stable 已是新版本，但 linked binary 仍然是旧版本，直接重装：
+
+```bash
+brew reinstall sleticalboy/tap/testloop-mcp
+testloop-mcp --version
 ```
 
 ## 安装脚本
@@ -240,6 +263,25 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 
 ```bash
 TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+```
+
+当版本门禁失败、或旧二进制没有 `--version` 时，脚本会输出 Homebrew 升级和重装建议。Homebrew 用户优先执行：
+
+```bash
+brew update
+brew upgrade sleticalboy/tap/testloop-mcp
+```
+
+Homebrew auto-update 慢或卡住时，可以在确认 tap 公式已经更新后临时跳过：
+
+```bash
+HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade sleticalboy/tap/testloop-mcp
+```
+
+如果升级后 `command -v testloop-mcp` 仍指向旧二进制，再执行：
+
+```bash
+brew reinstall sleticalboy/tap/testloop-mcp
 ```
 
 如果需要做深度协议验收，验证真实 MCP 客户端进程接入，而不仅是配置 roundtrip 和 HTTP 探活，可以运行：

@@ -60,6 +60,44 @@ test_verify_client_setup_rejects_version_mismatch() {
     exit 1
   fi
   assert_contains "$out" "error: version mismatch: expected 9.9.9, got 0.5.4"
+  assert_contains "$out" "brew upgrade sleticalboy/tap/testloop-mcp"
+}
+
+test_verify_client_setup_explains_missing_version_flag() {
+  old_binary="${tmp_dir}/old-testloop-mcp"
+  cat > "$old_binary" <<'SH'
+#!/usr/bin/env sh
+case "${1:-}" in
+  --print-config=codex)
+    exit 0
+    ;;
+  --version)
+    echo "flag provided but not defined: -version" >&2
+    exit 2
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+SH
+  chmod +x "$old_binary"
+
+  out="${tmp_dir}/old-version.out"
+  set +e
+  TESTLOOP_MCP_VERIFY_SKIP_HTTP=true \
+    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 \
+    bash "${repo_root}/scripts/verify-client-setup.sh" "$old_binary" > "$out" 2>&1
+  code=$?
+  set -e
+
+  if [ "$code" -eq 0 ]; then
+    echo "expected old binary verification to fail" >&2
+    exit 1
+  fi
+  assert_contains "$out" "error: --version failed for $old_binary"
+  assert_contains "$out" "flag provided but not defined: -version"
+  assert_contains "$out" "brew upgrade sleticalboy/tap/testloop-mcp"
+  assert_contains "$out" "brew reinstall sleticalboy/tap/testloop-mcp"
 }
 
 test_verify_client_setup_rejects_missing_binary() {
@@ -79,6 +117,7 @@ test_verify_client_setup_rejects_missing_binary() {
 test_verify_client_setup_passes_with_skip_http
 test_verify_client_setup_checks_expected_version
 test_verify_client_setup_rejects_version_mismatch
+test_verify_client_setup_explains_missing_version_flag
 test_verify_client_setup_rejects_missing_binary
 
 echo "client setup verification tests passed"

@@ -6,6 +6,10 @@
 
 - 新增 `docs/real-integration-cases.md` 和 `test/real_integration_cases_doc_test.sh`，把 laoxia Go server / Vue web 的 onboarding report 实跑结果整理成可复用真实接入案例模板。
 
+### Changed
+
+- `scripts/verify-client-setup.sh` 在旧二进制缺少 `--version` 或版本不匹配时输出 Homebrew 升级/重装建议，降低安装漂移排查成本。
+
 ## v0.5.4 - 2026-07-18
 
 ### Added

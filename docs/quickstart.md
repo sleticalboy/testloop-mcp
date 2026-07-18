@@ -20,8 +20,28 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 确认命令可用：
 
 ```bash
+testloop-mcp --version
 testloop-mcp --print-config=codex
 testloop-testgen --help
+```
+
+如果 `--version` 不存在或版本不是 `0.5.4`，先升级 Homebrew 安装：
+
+```bash
+brew update
+brew upgrade sleticalboy/tap/testloop-mcp
+```
+
+Homebrew auto-update 慢或卡住时，可以临时跳过自动更新：
+
+```bash
+HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade sleticalboy/tap/testloop-mcp
+```
+
+如果 linked binary 仍然是旧版本，再执行：
+
+```bash
+brew reinstall sleticalboy/tap/testloop-mcp
 ```
 
 ## 2. 自检

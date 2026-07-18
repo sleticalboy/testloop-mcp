@@ -39,6 +39,25 @@ fail() {
   exit 1
 }
 
+fail_version_check() {
+  reason="$1"
+  output="$2"
+  printf 'error: %s\n' "$reason" >&2
+  if [ -n "$output" ]; then
+    printf '%s\n' '--- version output ---' >&2
+    printf '%s\n' "$output" >&2
+  fi
+  cat >&2 <<'HINT'
+hint: this usually means an old testloop-mcp binary is installed or PATH points to an older copy.
+hint: for Homebrew installs, run:
+  brew update
+  brew upgrade sleticalboy/tap/testloop-mcp
+  # if the linked binary is still old:
+  brew reinstall sleticalboy/tap/testloop-mcp
+HINT
+  exit 1
+}
+
 log() {
   printf '==> %s\n' "$*"
 }
@@ -113,13 +132,13 @@ log "binary: $binary"
 "$binary" --print-config=codex --config-command="$binary" >/dev/null
 
 log "version"
-version_output="$("$binary" --version)"
-printf '%s\n' "$version_output" | grep -E '^testloop-mcp v?[0-9]+\.[0-9]+\.[0-9]+' >/dev/null 2>&1 || fail "--version returned unexpected output: $version_output"
+version_output="$("$binary" --version 2>&1)" || fail_version_check "--version failed for $binary" "$version_output"
+printf '%s\n' "$version_output" | grep -E '^testloop-mcp v?[0-9]+\.[0-9]+\.[0-9]+' >/dev/null 2>&1 || fail_version_check "--version returned unexpected output for $binary" "$version_output"
 if [ -n "$expected_version" ]; then
   expected_version="${expected_version#v}"
   actual_version="$(printf '%s\n' "$version_output" | awk '{print $2}')"
   actual_version="${actual_version#v}"
-  [ "$actual_version" = "$expected_version" ] || fail "version mismatch: expected $expected_version, got $actual_version"
+  [ "$actual_version" = "$expected_version" ] || fail_version_check "version mismatch: expected $expected_version, got $actual_version" "$version_output"
 fi
 
 log "doctor-config"
