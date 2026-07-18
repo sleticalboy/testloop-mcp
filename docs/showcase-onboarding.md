@@ -10,6 +10,18 @@
 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 ```
 
+如果要生成可转发的演示制品，而不是只看终端输出：
+
+```bash
+scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
+```
+
+默认会写出：
+
+- `/tmp/testloop-mcp-onboarding/verification-report.md`
+- `/tmp/testloop-mcp-onboarding/verification-summary.json`
+- `/tmp/testloop-mcp-onboarding/agent-decision.txt`
+
 如果要确认安装的是指定版本：
 
 ```bash
@@ -29,3 +41,5 @@ TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.3 scripts/showcase-onboarding.sh "$(comma
 这条路径适合 README、录屏和首次接入验收。它不依赖外部项目，也不会修改当前仓库业务文件。
 
 如果只是想确认安装和配置，运行 `scripts/verify-client-setup.sh` 即可。如果要证明真实 MCP 协议链路可用，再运行 `scripts/verify-mcp-process-smoke.sh` 或本脚本。
+
+如果面向接入方、README 录屏或 CI artifact，优先运行 `scripts/showcase-agent-onboarding-report.sh`。它会复用验收报告脚本和 summary 决策 demo，在失败时也尽量保留 Markdown / JSON / decision 输出，方便后续定位是安装、协议、Agent demo、公开 showcase 还是用户项目 smoke 的问题。

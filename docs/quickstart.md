@@ -132,3 +132,25 @@ go run ./examples/mcp-client-demo
 这个 demo 会展示 `run_tests -> repair_task -> rerun -> parse_coverage` 的最小 Agent 消费路径。
 
 预期输出和可重复验收方式见 [Agent 闭环展示案例](./showcase-agent-loop.md)。
+
+## 6. 生成演示制品
+
+如果要把首次接入路径完整留档，源码 checkout 可以直接运行：
+
+```bash
+scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
+```
+
+默认会生成三份文件：
+
+- `/tmp/testloop-mcp-onboarding/verification-report.md`：给人看的 Markdown 验收报告。
+- `/tmp/testloop-mcp-onboarding/verification-summary.json`：给 Agent / CI 读取的 summary JSON。
+- `/tmp/testloop-mcp-onboarding/agent-decision.txt`：summary 决策 demo 输出，包含 `agent_next_step`。
+
+如果只想看终端里的完整演示，不需要制品：
+
+```bash
+scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+```
+
+两条路径都不依赖外部项目；需要把自己的项目 smoke 纳入报告时，再使用 [用户项目验收报告](./verification-report.md) 中的 `TESTLOOP_REPORT_PROJECT_DIR` 和 `TESTLOOP_REPORT_PROJECT_COMMAND`。

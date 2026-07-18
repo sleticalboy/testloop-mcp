@@ -6,7 +6,8 @@ testloop-mcp 的展示路径分三层：默认 CI 保护基础契约，公开 sh
 
 | 场景 | 命令 | 是否进默认 CI | 说明 |
 | --- | --- | --- | --- |
-| 演示首次接入全路径 | `scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 串联基础安装验收、真实 MCP 进程协议验收和最小 Agent 闭环 demo。 |
+| 演示首次接入全路径 | `scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 串联基础安装验收、真实 MCP 进程协议验收和最小 Agent 闭环 demo，只看终端输出。 |
+| 生成 Agent onboarding 演示制品 | `scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 在完整首次接入路径基础上输出 Markdown、summary JSON 和 `agent_next_step` 决策文本。 |
 | 生成用户项目验收报告 | `scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md` | 否，脚本入口回归 | 聚合基础安装验收、真实 MCP 协议 smoke、最小 Agent demo，可 opt-in 公开 showcase 和用户项目 smoke。 |
 | 验证 Agent 最小闭环 | `go run ./examples/mcp-client-demo` | 是，脚本回归 | 不依赖外部项目，验证 `run_tests -> repair_task -> rerun -> parse_coverage` 和 `structuredContent` 消费路径。 |
 | 演示公开 Go 项目 | `scripts/showcase-go-public-project.sh` | 否 | 克隆固定 commit 的 `google/uuid`，验证 `go-test-1`，并断言 `passed/ready` 决策信号。 |
@@ -43,11 +44,12 @@ scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testlo
 
 ```bash
 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
 scripts/showcase-go-public-project.sh
 scripts/showcase-js-public-project.sh
 ```
 
-Onboarding showcase 证明首次接入路径可以从安装验收走到 Agent 闭环。Go showcase 证明 `validate_coverage_task` 可以在外部 Go 项目上给出 `passed/ready` 决策信号，并默认校验该信号不漂移。JS/TS showcase 证明 Agent 不应只看测试是否通过，还要读取 `action`：`ready` 可以进入下一个任务，`manual_review_internal` 应记录手审或寻找公共入口；脚本也会默认校验这两个 action。公开项目 showcase 都支持通过 `TESTLOOP_SHOWCASE_*_PROJECT_DIR` 复用本地 checkout，减少外网 clone 对演示的影响；远端 clone/fetch 默认 60 秒超时，可通过 `TESTLOOP_SHOWCASE_*_GIT_TIMEOUT` 调整。
+Onboarding showcase 证明首次接入路径可以从安装验收走到 Agent 闭环。`showcase-agent-onboarding-report.sh` 适合公开录屏、接入方验收和 CI artifact：它复用验收报告脚本生成 Markdown 与 summary JSON，再运行 summary 决策 demo，把 `agent_next_step` 单独落盘。Go showcase 证明 `validate_coverage_task` 可以在外部 Go 项目上给出 `passed/ready` 决策信号，并默认校验该信号不漂移。JS/TS showcase 证明 Agent 不应只看测试是否通过，还要读取 `action`：`ready` 可以进入下一个任务，`manual_review_internal` 应记录手审或寻找公共入口；脚本也会默认校验这两个 action。公开项目 showcase 都支持通过 `TESTLOOP_SHOWCASE_*_PROJECT_DIR` 复用本地 checkout，减少外网 clone 对演示的影响；远端 clone/fetch 默认 60 秒超时，可通过 `TESTLOOP_SHOWCASE_*_GIT_TIMEOUT` 调整。
 
 公开 showcase 的 JSONL 明细默认写入 `/tmp` 或用户指定路径，不提交到仓库。脚本会通过 `scripts/summarize-showcase-output.py` 输出精简 `showcase_summary=...` 并执行 action 断言；文档只归档这类 summary 和关键任务摘要。
 

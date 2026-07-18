@@ -568,6 +568,12 @@ go run ./examples/mcp-client-demo
 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 ```
 
+如果要把这条路径变成可转发的演示制品，同时输出 Markdown、summary JSON 和 Agent 下一步动作：
+
+```bash
+scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
+```
+
 如果要把验收结果留成 Markdown 制品，可以运行：
 
 ```bash

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `scripts/showcase-agent-onboarding-report.sh`，把 onboarding 验收报告、summary JSON 和 `agent_next_step` 决策输出收敛成一个公开演示入口。
+- 新增 `test/showcase_agent_onboarding_report_test.sh`，固定一键演示报告脚本的 artifact 路径、summary JSON 和 decision 输出契约。
+- 新增 `docs/plan-agent-onboarding-v0.5.4.md`，规划 v0.5.4 的公开 onboarding demo 收敛方向。
+
 ## v0.5.3 - 2026-07-18
 
 ### Added
