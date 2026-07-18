@@ -8,6 +8,21 @@
 - summary JSON 给 Agent / CI 看，适合判断失败归因和下一步动作。
 - 用户项目 smoke 命令由调用方显式传入，避免脚本猜测数据库、外部服务或前端构建环境。
 
+## 怎么选入口
+
+首次接入、刚安装完、或者希望失败时直接把上下文交给 AI Agent，优先用 `scripts/run-first-run-ci.sh`。它在 onboarding 三件套之外额外生成 `first-run-context.txt` 和 `first-run.log`，更适合排查安装、MCP transport、Agent demo 和用户项目 smoke 的综合问题。
+
+已经稳定接入，只想在 PR 或发布后确认当前项目 smoke 和 testloop-mcp 自检是否通过，使用 `scripts/run-onboarding-ci.sh`。它输出 Markdown、summary JSON 和 decision，artifact 更少，适合作为持续验收入口。
+
+维护者改 onboarding 或 first-run 模板后，使用外部项目演练脚本复验复制路径：
+
+```bash
+scripts/showcase-onboarding-ci-external-project.sh
+scripts/showcase-first-run-ci-external-project.sh
+```
+
+这两条演练会从非 testloop 项目目录执行下载版 bootstrap，防止模板不小心依赖仓库内路径。
+
 ## 推荐 workflow
 
 如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON 和 decision 输出，减少手写路径和决策命令。

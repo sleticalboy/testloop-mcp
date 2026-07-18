@@ -594,6 +594,8 @@ scripts/run-onboarding-ci.sh 'go test ./...'
 scripts/run-first-run-ci.sh 'go test ./...'
 ```
 
+两条 CI bootstrap 的选择规则见 [验收报告 CI 集成](./docs/verification-ci.md#怎么选入口)。
+
 如果要确认这条 bootstrap 路径在非 testloop 仓库里也能工作，可以运行外部项目演练：
 
 ```bash

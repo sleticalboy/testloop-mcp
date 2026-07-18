@@ -18,6 +18,7 @@
 - `scripts/doctor-first-run.sh` 会额外写出 `first-run-context.txt`，便于用户把首跑失败上下文交给 AI Agent。
 - 验收 CI 文档补充首跑诊断 CI 模板入口，区分 onboarding 三件套和 first-run 五件套。
 - README 和 showcase 索引补充首跑诊断 CI 外部项目演练入口。
+- 验收 CI 文档补充 onboarding 与 first-run bootstrap 的选择规则，README 增加直达链接。
 
 ## v0.5.6 - 2026-07-18
 
