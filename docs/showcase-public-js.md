@@ -24,6 +24,29 @@ scripts/showcase-js-public-project.sh
 
 ## 当前验证结果
 
+最新默认 showcase 复验命令：
+
+```bash
+TESTLOOP_SHOWCASE_JS_GIT_TIMEOUT=20 \
+scripts/showcase-js-public-project.sh /tmp/testloop-ufo-showcase-live.jsonl
+```
+
+最新默认 showcase 结果：
+
+```json
+{
+  "status_counts": {"passed": 2},
+  "action_counts": {"manual_review_internal": 1, "ready": 1},
+  "tasks": [
+    {"id": "vitest-1", "target": "s", "line_range": "14-14", "status": "passed", "action": "manual_review_internal", "skipped": 1},
+    {"id": "vitest-2", "target": "resolveURL", "line_range": "645-645", "status": "passed", "action": "ready", "skipped": 0}
+  ],
+  "showcase_expectations": "pass"
+}
+```
+
+该结果使用远端 clone/fetch 路径完成，实际 checkout commit 为 `f06c800d0c59f2a4a1b9ba65eb6cb61a84419be6`，输出文件为 `/tmp/testloop-ufo-showcase-live.jsonl`。
+
 本地验证命令：
 
 ```bash
