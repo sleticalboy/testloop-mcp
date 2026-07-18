@@ -13,15 +13,19 @@ doc = Path("docs/verification-ci.md")
 text = doc.read_text(encoding="utf-8")
 
 required_snippets = [
+    "scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp",
+    "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
+    "/tmp/testloop-onboarding/verification-report.md",
+    "/tmp/testloop-onboarding/verification-summary.json",
+    "/tmp/testloop-onboarding/agent-decision.txt",
     "TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json",
     "scripts/generate-verification-report.sh /tmp/testloop-mcp /tmp/testloop-report.md",
     "go run ./examples/verification-summary-decision-demo /tmp/testloop-summary.json",
     "actions/upload-artifact@v4",
     "if: always()",
-    "/tmp/testloop-report.md",
-    "/tmp/testloop-summary.json",
     "TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...'",
     "TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build'",
+    "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding",
     "./regression-smoke.md",
 ]
 
@@ -31,6 +35,7 @@ for snippet in required_snippets:
         failures.append(f"{doc}: missing required snippet {snippet!r}")
 
 command_paths = {
+    "scripts/showcase-agent-onboarding-report.sh": Path("scripts/showcase-agent-onboarding-report.sh"),
     "scripts/generate-verification-report.sh": Path("scripts/generate-verification-report.sh"),
     "go run ./examples/verification-summary-decision-demo": Path("examples/verification-summary-decision-demo/main.go"),
 }

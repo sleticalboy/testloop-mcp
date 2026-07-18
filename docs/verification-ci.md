@@ -8,7 +8,9 @@
 - summary JSON 给 Agent / CI 看，适合判断失败归因和下一步动作。
 - 用户项目 smoke 命令由调用方显式传入，避免脚本猜测数据库、外部服务或前端构建环境。
 
-## 最小 workflow
+## 推荐 workflow
+
+如果只是想把首次接入验收和用户项目 smoke 汇总成可上传制品，优先使用 `scripts/showcase-agent-onboarding-report.sh`。它会同时生成 Markdown、summary JSON 和 decision 输出，减少手写路径和决策命令。
 
 下面示例假设当前仓库已经能通过 `go install` 或 release asset 安装 `testloop-mcp`。如果是在 testloop-mcp 源码仓库内验证，也可以先 `go build -o /tmp/testloop-mcp .`，再把二进制路径传给脚本。
 
@@ -32,18 +34,13 @@ jobs:
       - name: Build testloop-mcp
         run: go build -o /tmp/testloop-mcp .
 
-      - name: Generate verification report
+      - name: Generate onboarding report
         run: |
-          set +e
-          TESTLOOP_REPORT_EXPECT_VERSION=0.5.3 \
-          TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json \
+          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.3 \
+          TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
           TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
           TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
-            scripts/generate-verification-report.sh /tmp/testloop-mcp /tmp/testloop-report.md
-          code=$?
-
-          go run ./examples/verification-summary-decision-demo /tmp/testloop-summary.json
-          exit "$code"
+            scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp
 
       - name: Upload verification report
         if: always()
@@ -51,16 +48,40 @@ jobs:
         with:
           name: testloop-verification-report
           path: |
-            /tmp/testloop-report.md
-            /tmp/testloop-summary.json
+            /tmp/testloop-onboarding/verification-report.md
+            /tmp/testloop-onboarding/verification-summary.json
+            /tmp/testloop-onboarding/agent-decision.txt
 ```
 
 这段 workflow 的关键点：
 
-- `set +e`：验收失败时仍继续运行决策 demo，并上传报告。
-- `code=$?` 和 `exit "$code"`：最后保留原始验收结果，CI 仍会正确失败。
+- `scripts/showcase-agent-onboarding-report.sh`：失败时也会尽量保留 Markdown / JSON / decision 输出。
 - `if: always()`：无论验收通过还是失败，都上传 Markdown 和 JSON。
 - `TESTLOOP_REPORT_PROJECT_COMMAND`：接入方显式指定自己的 smoke 命令。
+
+## 高级 workflow
+
+如果需要完全控制 Markdown、summary JSON 和 decision demo 的路径，可以直接调用底层验收报告脚本：
+
+```yaml
+- name: Generate verification report
+  run: |
+    set +e
+    TESTLOOP_REPORT_EXPECT_VERSION=0.5.3 \
+    TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json \
+    TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
+    TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
+      scripts/generate-verification-report.sh /tmp/testloop-mcp /tmp/testloop-report.md
+    code=$?
+
+    go run ./examples/verification-summary-decision-demo /tmp/testloop-summary.json
+    exit "$code"
+```
+
+高级用法的关键点：
+
+- `set +e`：验收失败时仍继续运行决策 demo，并上传报告。
+- `code=$?` 和 `exit "$code"`：最后保留原始验收结果，CI 仍会正确失败。
 
 ## 前端项目示例
 
@@ -78,15 +99,10 @@ Vue / React / Node 项目可以把用户项目 smoke 换成包管理器命令。
 
 - name: Generate web verification report
   run: |
-    set +e
-    TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-web-summary.json \
+    TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding \
     TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
     TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build' \
-      scripts/generate-verification-report.sh /tmp/testloop-mcp /tmp/testloop-web-report.md
-    code=$?
-
-    go run ./examples/verification-summary-decision-demo /tmp/testloop-web-summary.json
-    exit "$code"
+      scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp
 ```
 
 ## Agent 分流建议

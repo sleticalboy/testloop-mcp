@@ -22,10 +22,11 @@ v0.5.4 优先收敛公开可复现的 Agent onboarding demo。目标不是继续
 - [x] 新增 `docs/verification-summary-failures.md`，展示五类验收失败如何映射到 `agent_next_step`。
 - [x] 新增 `docs/fixtures/verification-summary/*.json`，固定安装、MCP 协议、Agent demo、公开 showcase 和用户项目 smoke 失败样例。
 - [x] 新增 `test/verification_summary_failure_fixtures_test.sh`，逐个 fixture 运行 decision demo 并校验 action。
+- [x] `docs/verification-ci.md` 已把 `scripts/showcase-agent-onboarding-report.sh` 作为推荐 workflow，底层 `generate-verification-report.sh` 保留为高级用法。
 
 ## 后续任务
 
 - [x] 在 quickstart 中把“首次接入验收”升级成两条路径：只看终端输出用 `showcase-onboarding.sh`，需要制品用 `showcase-agent-onboarding-report.sh`。
 - [x] 增加一个失败样例文档，展示 summary JSON 如何把安装、协议、Agent demo、公开 showcase 和用户项目 smoke 分流到不同 `agent_next_step`。
-- [ ] 评估是否把 onboarding report wrapper 放进 GitHub Actions 示例，减少接入方手写 env 和 artifact 路径。
+- [x] 评估是否把 onboarding report wrapper 放进 GitHub Actions 示例，减少接入方手写 env 和 artifact 路径。
 - [ ] v0.5.4 候选发布前跑一次真实安装二进制的 onboarding report，并把摘要记录到发布说明草案。

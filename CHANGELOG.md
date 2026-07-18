@@ -9,6 +9,10 @@
 - 新增 `docs/verification-summary-failures.md` 和 summary JSON 失败 fixture，展示安装、MCP 协议、Agent demo、公开 showcase、用户项目 smoke 失败时的 `agent_next_step` 分流。
 - 新增 `docs/plan-agent-onboarding-v0.5.4.md`，规划 v0.5.4 的公开 onboarding demo 收敛方向。
 
+### Changed
+
+- `docs/verification-ci.md` 优先推荐 `scripts/showcase-agent-onboarding-report.sh`，让接入方用更少环境变量生成 Markdown、summary JSON 和 decision artifact。
+
 ## v0.5.3 - 2026-07-18
 
 ### Added
