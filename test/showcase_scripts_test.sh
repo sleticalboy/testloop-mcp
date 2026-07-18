@@ -42,6 +42,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-onboarding.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
+  python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
 }
 
 test_onboarding_showcase_help_and_args() {

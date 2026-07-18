@@ -42,6 +42,7 @@ jobs:
           sh test/mcp_client_demo_test.sh
           sh test/agent_decision_demo_test.sh
           sh test/showcase_scripts_test.sh
+          sh test/showcase_summary_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
           sh test/release_doc_index_test.sh

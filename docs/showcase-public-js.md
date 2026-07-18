@@ -77,7 +77,7 @@ top5 结果：
 }
 ```
 
-这个结果比单纯 `passed/ready` 更适合展示 Agent 决策：`manual_review_internal` 表示目标是内部符号或不可直接从外部测试稳定构造，Agent 应记录手审或寻找公共入口；`ready` 表示生成测试已经通过，可以进入下一个 coverage task。
+这个结果比单纯 `passed/ready` 更适合展示 Agent 决策：`manual_review_internal` 表示目标是内部符号或不可直接从外部测试稳定构造，Agent 应记录手审或寻找公共入口；`ready` 表示生成测试已经通过，可以进入下一个 coverage task。仓库文档只记录精简 summary；完整 JSONL 明细默认保留在 `/tmp` 或用户指定输出路径。
 
 ## 可配置项
 

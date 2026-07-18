@@ -45,7 +45,7 @@ scripts/showcase-go-public-project.sh
 
 最近一次本地 checkout 复验通过：`/tmp/testloop-showcase-google-uuid` 位于 commit `2d3c2a9cc518326daf99a383f07c4d3c44317e4d`，输出文件为 `/tmp/testloop-google-uuid-showcase-local.jsonl`。
 
-这个结果说明 Agent 可以把公开 Go 项目的覆盖率缺口转成单个 `validate_coverage_task`，并收到稳定的 `status=passed` / `action=ready` 决策信号。脚本仍保留 JSONL 明细，便于继续检查 `coverage_task`、`generated`、`run_result` 和 `metadata`。
+这个结果说明 Agent 可以把公开 Go 项目的覆盖率缺口转成单个 `validate_coverage_task`，并收到稳定的 `status=passed` / `action=ready` 决策信号。脚本仍保留 JSONL 明细，便于继续检查 `coverage_task`、`generated`、`run_result` 和 `metadata`。仓库文档只记录精简 summary；完整 JSONL 明细默认保留在 `/tmp` 或用户指定输出路径。
 
 ## 可配置项
 
