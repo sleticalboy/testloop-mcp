@@ -1,4 +1,4 @@
-# v0.5.6 发布说明草案
+# v0.5.6 发布说明
 
 ## 标题
 
@@ -12,6 +12,12 @@ testloop-mcp v0.5.6
 - [x] 正式版本准备已更新 `main.go` MCP implementation version 到 `0.5.6`。
 - [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.6 - 2026-07-18`。
 - [x] 正式版本准备已同步 README、安装文档和必要的版本引用。
+- [x] Release Artifacts workflow `29648755666` 已通过，五平台资产和 `.sha256` 已上传。
+- [x] `scripts/verify-release-assets.sh v0.5.6` 已验证 10 个 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.6 发布说明。
+- [x] 仓库内 Formula 已使用 Release 真实 digest 更新到 `0.5.6`。
+- [x] Homebrew tap 已更新到 `testloop-mcp 0.5.6`，提交 `000a417` 已推送。
+- [x] Post-Release Verify run `29648990368` 已通过，覆盖资产清单和五平台安装脚本 dry run。
 
 ## 摘要
 
@@ -94,7 +100,7 @@ TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-v0.5.6-prep-onboarding \
 - v0.5.6 是 onboarding CI 接入体验 patch，不是生成质量或覆盖率算法版本。
 - `scripts/run-onboarding-ci.sh` 面向 CI bootstrap，不替代底层 `generate-verification-report.sh` 的高级参数能力。
 - 公开 showcase 仍默认关闭，避免首次接入 CI 依赖外部网络和公共仓库状态。
-- 当前仍不打 tag、不更新 Homebrew tap；正式版本准备通过后再进入发布链路。
+- 本机 `brew fetch` 当前在 GitHub Release 资产下载阶段卡住；远端 Post-Release Verify 已完成安装脚本 dry run，后续网络稳定后补跑本机 fetch。
 
 ## 本地验证
 
@@ -106,8 +112,11 @@ TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-v0.5.6-prep-onboarding \
 - [x] darwin arm64 打包 dry-run。
 - [x] `git diff --check`
 - [x] 正式版本准备后重新运行完整本地验证。
+- [x] Release Artifacts run `29648755666` passed。
+- [x] Post-Release Verify run `29648990368` passed。
 
 ## 发布备注
 
 - v0.5.6 适合作为“外部用户项目 Onboarding CI bootstrap + 失败分流”的 patch 版本。
 - 发布文案应突出：接入方可以复制最小 workflow，在成功和失败时都拿到 Agent 可消费的 artifact 与下一步动作。
+- GitHub Release：`https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.5.6`。

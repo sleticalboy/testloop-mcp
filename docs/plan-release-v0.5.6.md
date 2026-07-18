@@ -2,9 +2,9 @@
 
 ## 当前目标
 
-这是 v0.5.6 的候选发布准备和 release readiness 记录。当前阶段只整理候选内容和本地门禁，不切版本号、不打 tag、不更新 Homebrew tap。
+这是 v0.5.6 的发布准备、正式发布和发布后核验记录。
 
-v0.5.6 发布重点见 [v0.5.6 发布说明草案](./plan-release-notes-v0.5.6.md)：本轮主要是 Onboarding CI 复制模板、bootstrap 脚本、workflow YAML 可解析性、GitHub step summary 和失败路径排查。
+v0.5.6 发布重点见 [v0.5.6 发布说明](./plan-release-notes-v0.5.6.md)：本轮主要是 Onboarding CI 复制模板、bootstrap 脚本、workflow YAML 可解析性、GitHub step summary 和失败路径排查。
 
 ## 当前差异核对
 
@@ -88,16 +88,28 @@ v0.5.6 发布重点见 [v0.5.6 发布说明草案](./plan-release-notes-v0.5.6.m
 - [x] quickstart、onboarding、verification report、verification CI 示例中的版本门禁同步到 `0.5.6`。
 - [x] 测试中的版本期望同步到 `0.5.6`。
 - [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
-- [ ] 打 tag `v0.5.6` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.6` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.6 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.6` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.6`。
-- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过。
-- [ ] 本机 Homebrew tap 快进后运行 `HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp`，确认获取 `0.5.6`。
+- [x] 提交版本准备改动后确认远端 CI run `29648677800` passed。
+- [x] 打 tag `v0.5.6` 并推送。
+- [x] Release Artifacts workflow run `29648755666` passed，五平台资产和 `.sha256` 已生成。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.6` 验证 10 个 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.6 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.6` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.6`，提交 `000a417` 并推送。
+- [x] 手动触发 Post-Release Verify run `29648990368`，资产清单和五平台安装脚本 dry run 全部通过。
+- [x] 本机 Homebrew tap 已快进到 `000a417420e03c8dc278de28bce6d318e4880a1b`，`brew info --json=v2 sleticalboy/tap/testloop-mcp` 返回 `version=0.5.6`。
+- [ ] 本机 `HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp` 下载阶段无输出卡住；直接 `curl` Release 资产也卡在下载阶段。远端 Post-Release Verify 已覆盖安装脚本 dry run，后续网络稳定后补跑本机 fetch 即可。
+
+## 正式发布核验证据
+
+- [x] Release Artifacts：`29648755666` passed。
+- [x] Release 资产完整性：`scripts/verify-release-assets.sh v0.5.6` 输出 `Verified 10 release assets for sleticalboy/testloop-mcp@v0.5.6`。
+- [x] GitHub Release：`https://github.com/sleticalboy/testloop-mcp/releases/tag/v0.5.6`。
+- [x] 仓库内 Formula：`ruby -c Formula/testloop-mcp.rb` 通过，`brew style Formula/testloop-mcp.rb` 通过。
+- [x] Homebrew tap：`sleticalboy/homebrew-tap` 提交 `000a417 testloop-mcp 0.5.6` 已推送。
+- [x] 本机 tap 缓存：`brew info --json=v2 sleticalboy/tap/testloop-mcp` 返回 `version=0.5.6`、`tap_git_head=000a417420e03c8dc278de28bce6d318e4880a1b`。
+- [x] Post-Release Verify：`29648990368` passed，覆盖 Release manifest 和 linux amd64、linux arm64、darwin arm64、windows amd64、windows arm64 安装脚本 dry run。
+- [ ] 本机 fetch：`brew fetch` 和直接 `curl` 下载 Release asset 当前卡住，判断为本机到 GitHub Release 资产下载链路不稳定，不阻塞已通过的远端发布核验。
 
 ## 当前结论
 
-v0.5.6 版本准备已经完成：版本号、CHANGELOG 和当前文档版本引用已同步，本地完整门禁通过。Homebrew Formula 仍等正式 Release Artifacts 生成后再用真实 digest 更新。下一步应提交后等待远端 CI，通过后再打 `v0.5.6` tag。
+v0.5.6 已完成正式发布和远端发布后核验：Release Artifacts、Release 资产清单、GitHub Release 正文、仓库 Formula、Homebrew tap 和 Post-Release Verify 均已完成。唯一残余项是本机 `brew fetch` 因 GitHub Release 资产下载卡住未完成；tap 版本和远端安装 dry run 已验证，网络恢复后可补跑本机 fetch。
