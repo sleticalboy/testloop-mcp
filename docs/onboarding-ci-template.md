@@ -27,19 +27,14 @@ jobs:
         with:
           go-version: "1.24.x"
 
-      - name: Install testloop-mcp
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
       - name: Generate onboarding report
         run: |
-          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
+          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+          TESTLOOP_MCP_VERSION=v0.5.5 \
           TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
-          TESTLOOP_REPORT_TITLE='Go server testloop onboarding' \
-          TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
-          TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
-            scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
+          TESTLOOP_ONBOARDING_TITLE='Go server testloop onboarding' \
+          TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+            bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
 
       - name: Upload onboarding artifacts
         if: always()
@@ -82,19 +77,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install testloop-mcp
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
       - name: Generate onboarding report
         run: |
-          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
+          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+          TESTLOOP_MCP_VERSION=v0.5.5 \
           TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding \
-          TESTLOOP_REPORT_TITLE='Vue web testloop onboarding' \
-          TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
-          TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build' \
-            scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
+          TESTLOOP_ONBOARDING_TITLE='Vue web testloop onboarding' \
+          TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+            bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'
 
       - name: Upload onboarding artifacts
         if: always()

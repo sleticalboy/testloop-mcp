@@ -32,6 +32,7 @@ required_commands = [
     "go run ./examples/mcp-client-demo",
     "go run ./examples/verification-summary-decision-demo",
     "scripts/generate-verification-report.sh",
+    "scripts/run-onboarding-ci.sh",
     "scripts/showcase-agent-onboarding-report.sh",
     "scripts/showcase-onboarding.sh",
     "scripts/verify-client-setup.sh",

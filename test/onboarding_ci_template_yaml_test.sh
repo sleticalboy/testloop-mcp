@@ -74,6 +74,12 @@ missing_names = expected_names - seen_names
 if missing_names:
     failures.append(f"{doc}: missing workflow names: {', '.join(sorted(missing_names))}")
 
+for index, block in enumerate(blocks, start=1):
+    if "scripts/showcase-agent-onboarding-report.sh" in block:
+        failures.append(f"block {index}: external copy template must use scripts/run-onboarding-ci.sh bootstrap, not repo-local showcase script")
+    if "scripts/run-onboarding-ci.sh" not in block:
+        failures.append(f"block {index}: missing run-onboarding-ci bootstrap command")
+
 if failures:
     print("onboarding CI template YAML test failed:", file=sys.stderr)
     for failure in failures:

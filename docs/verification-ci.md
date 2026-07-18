@@ -10,9 +10,9 @@
 
 ## 推荐 workflow
 
-如果只是想把首次接入验收和用户项目 smoke 汇总成可上传制品，优先使用 `scripts/showcase-agent-onboarding-report.sh`。它会同时生成 Markdown、summary JSON 和 decision 输出，减少手写路径和决策命令。
+如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON 和 decision 输出，减少手写路径和决策命令。
 
-下面示例假设当前仓库已经能通过 `go install` 或 release asset 安装 `testloop-mcp`。如果是在 testloop-mcp 源码仓库内验证，也可以先 `go build -o /tmp/testloop-mcp .`，再把二进制路径传给脚本。
+下面示例适合直接复制到用户项目。更短的 Go / Vue 模板见 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
 
 ```yaml
 name: testloop verification
@@ -31,16 +31,13 @@ jobs:
         with:
           go-version: "1.24.x"
 
-      - name: Build testloop-mcp
-        run: go build -o /tmp/testloop-mcp .
-
       - name: Generate onboarding report
         run: |
-          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
+          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+          TESTLOOP_MCP_VERSION=v0.5.5 \
           TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
-          TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
-          TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
-            scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp
+          TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+            bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
 
       - name: Upload verification report
         if: always()
@@ -56,8 +53,9 @@ jobs:
 这段 workflow 的关键点：
 
 - `scripts/showcase-agent-onboarding-report.sh`：失败时也会尽量保留 Markdown / JSON / decision 输出。
+- `scripts/run-onboarding-ci.sh`：适合外部用户项目，负责准备 testloop-mcp 二进制和报告脚本。
 - `if: always()`：无论验收通过还是失败，都上传 Markdown 和 JSON。
-- `TESTLOOP_REPORT_PROJECT_COMMAND`：接入方显式指定自己的 smoke 命令。
+- `project-smoke-command`：接入方显式指定自己的 smoke 命令。
 
 ## 高级 workflow
 
@@ -99,10 +97,11 @@ Vue / React / Node 项目可以把用户项目 smoke 换成包管理器命令。
 
 - name: Generate web verification report
   run: |
+    curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+    TESTLOOP_MCP_VERSION=v0.5.5 \
     TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding \
-    TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
-    TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build' \
-      scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp
+    TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+      bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'
 ```
 
 ## Agent 分流建议

@@ -15,15 +15,13 @@ text = doc.read_text(encoding="utf-8")
 required_snippets = [
     "name: testloop onboarding",
     "name: testloop web onboarding",
-    "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install.sh | sh",
-    'echo "$HOME/.local/bin" >> "$GITHUB_PATH"',
-    "TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5",
+    "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh",
+    "TESTLOOP_MCP_VERSION=v0.5.5",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding",
-    "TESTLOOP_REPORT_PROJECT_DIR=\"$PWD\"",
-    "TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...'",
-    "TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build'",
-    'scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"',
+    "TESTLOOP_ONBOARDING_PROJECT_DIR=\"$PWD\"",
+    "bash /tmp/testloop-onboarding-ci.sh 'go test ./...'",
+    "bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'",
     "actions/upload-artifact@v4",
     "if: always()",
     "/tmp/testloop-onboarding/verification-report.md",
@@ -44,6 +42,7 @@ for snippet in required_snippets:
 
 linked_paths = [
     Path("scripts/install.sh"),
+    Path("scripts/run-onboarding-ci.sh"),
     Path("scripts/showcase-agent-onboarding-report.sh"),
     Path("docs/verification-ci.md"),
     Path("docs/real-integration-cases.md"),

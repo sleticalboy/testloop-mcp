@@ -574,6 +574,12 @@ scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
 ```
 
+如果是在用户项目 CI 里接入，优先使用 bootstrap 入口，避免手写多组 `TESTLOOP_*` 环境变量：
+
+```bash
+scripts/run-onboarding-ci.sh 'go test ./...'
+```
+
 如果要把验收结果留成 Markdown 制品，可以运行：
 
 ```bash
