@@ -43,6 +43,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/doctor-first-run.sh"
   bash -n "${repo_root}/scripts/run-first-run-ci.sh"
   bash -n "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
+  bash -n "${repo_root}/scripts/showcase-first-run-ci-external-project.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
@@ -74,6 +75,23 @@ test_external_onboarding_help_and_args() {
   out="${tmp_dir}/external-onboarding-type.out"
   run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
   assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE"
+}
+
+test_external_first_run_help_and_args() {
+  out="${tmp_dir}/external-first-run-help.out"
+  run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-first-run-ci-external-project.sh" --help
+  assert_contains "$out" "Usage: scripts/showcase-first-run-ci-external-project.sh"
+  assert_contains "$out" "TESTLOOP_EXTERNAL_FIRST_RUN_WORKDIR"
+  assert_contains "$out" "TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE"
+  assert_contains "$out" "TESTLOOP_MCP_COMMAND"
+
+  out="${tmp_dir}/external-first-run-args.out"
+  run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-first-run-ci-external-project.sh" extra
+  assert_contains "$out" "Usage: scripts/showcase-first-run-ci-external-project.sh"
+
+  out="${tmp_dir}/external-first-run-type.out"
+  run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-first-run-ci-external-project.sh"
+  assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE"
 }
 
 test_doctor_first_run_help_and_args() {
@@ -171,6 +189,7 @@ test_onboarding_showcase_help_and_args
 test_doctor_first_run_help_and_args
 test_run_first_run_ci_help_and_args
 test_external_onboarding_help_and_args
+test_external_first_run_help_and_args
 test_go_showcase_help_and_args
 test_go_showcase_git_timeout
 test_js_showcase_help_args_and_missing_pnpm
