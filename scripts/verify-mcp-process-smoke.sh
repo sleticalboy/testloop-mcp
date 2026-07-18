@@ -52,4 +52,7 @@ case "$command_path" in
     ;;
 esac
 
-go run "$repo_root/examples/mcp-process-smoke" --command "$command_path" --transport "$transport"
+(
+  cd "$repo_root"
+  go run ./examples/mcp-process-smoke --command "$command_path" --transport "$transport"
+)

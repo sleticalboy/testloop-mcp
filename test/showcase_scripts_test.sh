@@ -40,6 +40,7 @@ run_expect_code() {
 
 test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-onboarding.sh"
+  bash -n "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
@@ -54,6 +55,18 @@ test_onboarding_showcase_help_and_args() {
   out="${tmp_dir}/onboarding-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-onboarding.sh" one two
   assert_contains "$out" "Usage: scripts/showcase-onboarding.sh [testloop-mcp-binary]"
+}
+
+test_external_onboarding_help_and_args() {
+  out="${tmp_dir}/external-onboarding-help.out"
+  run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh" --help
+  assert_contains "$out" "Usage: scripts/showcase-onboarding-ci-external-project.sh"
+  assert_contains "$out" "TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR"
+  assert_contains "$out" "TESTLOOP_MCP_COMMAND"
+
+  out="${tmp_dir}/external-onboarding-args.out"
+  run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh" extra
+  assert_contains "$out" "Usage: scripts/showcase-onboarding-ci-external-project.sh"
 }
 
 test_go_showcase_help_and_args() {
@@ -124,6 +137,7 @@ SH
 
 test_showcase_scripts_are_valid_bash
 test_onboarding_showcase_help_and_args
+test_external_onboarding_help_and_args
 test_go_showcase_help_and_args
 test_go_showcase_git_timeout
 test_js_showcase_help_args_and_missing_pnpm

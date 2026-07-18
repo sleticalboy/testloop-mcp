@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `scripts/showcase-onboarding-ci-external-project.sh`、`docs/onboarding-ci-external-dry-run.md` 和文档测试，用临时非 testloop Go 项目验证 Onboarding CI bootstrap 的复制路径不依赖本仓库当前工作目录。
+
+### Changed
+
+- README 和 showcase 索引补充外部项目 Onboarding CI 演练入口，便于发布后复验接入文档。
+- `scripts/verify-mcp-process-smoke.sh` 进入 testloop-mcp 仓库后再执行 Go smoke，避免从用户项目 Go module cwd 调用时触发 `outside main module`。
+
 ## v0.5.6 - 2026-07-18
 
 ### Added

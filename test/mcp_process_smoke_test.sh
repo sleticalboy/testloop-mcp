@@ -24,8 +24,19 @@ assert_contains() {
 }
 
 out="${tmp_dir}/smoke.out"
-TESTLOOP_MCP_CLIENT_SMOKE_TRANSPORT=all \
-  bash "${repo_root}/scripts/verify-mcp-process-smoke.sh" "$binary" > "$out"
+external_project="${tmp_dir}/external-go-project"
+mkdir -p "$external_project"
+cat >"$external_project/go.mod" <<'EOF_GO_MOD'
+module example.com/testloop-external-smoke
+
+go 1.22
+EOF_GO_MOD
+
+(
+  cd "$external_project"
+  TESTLOOP_MCP_CLIENT_SMOKE_TRANSPORT=all \
+    bash "${repo_root}/scripts/verify-mcp-process-smoke.sh" "$binary" > "$out"
+)
 
 assert_contains "$out" "stdio: tools="
 assert_contains "$out" "http: tools="
