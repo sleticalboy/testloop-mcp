@@ -24,6 +24,8 @@ Environment:
                                     Set to empty to skip expectation checks.
   TESTLOOP_SHOWCASE_JS_OUTPUT     Output JSONL path, default /tmp/testloop-ufo-showcase.jsonl
   TESTLOOP_SHOWCASE_JS_TIMEOUT    Timeout seconds for baseline and task validation, default 180
+  TESTLOOP_SHOWCASE_JS_GIT_TIMEOUT
+                                    Timeout seconds for git clone/fetch, default 60.
   TESTLOOP_SHOWCASE_JS_SKIP_INSTALL
                                     Set to true to skip pnpm install for a prepared checkout.
 USAGE
@@ -50,12 +52,51 @@ project_dir="${TESTLOOP_SHOWCASE_JS_PROJECT_DIR:-}"
 task_ids="${TESTLOOP_SHOWCASE_JS_TASK_IDS:-vitest-1,vitest-2}"
 expect_actions="${TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS-vitest-1=manual_review_internal,vitest-2=ready}"
 timeout_seconds="${TESTLOOP_SHOWCASE_JS_TIMEOUT:-180}"
+git_timeout="${TESTLOOP_SHOWCASE_JS_GIT_TIMEOUT:-60}"
 skip_install="${TESTLOOP_SHOWCASE_JS_SKIP_INSTALL:-false}"
 output="${1:-${TESTLOOP_SHOWCASE_JS_OUTPUT:-/tmp/testloop-ufo-showcase.jsonl}}"
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT INT TERM
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  python3 - "$seconds" "$@" <<'PY'
+import os
+import signal
+import subprocess
+import sys
+
+seconds = float(sys.argv[1])
+cmd = sys.argv[2:]
+
+try:
+    proc = subprocess.Popen(cmd, start_new_session=True)
+except FileNotFoundError:
+    print(f"error: command not found: {cmd[0]}", file=sys.stderr)
+    sys.exit(127)
+
+try:
+    sys.exit(proc.wait(timeout=seconds))
+except subprocess.TimeoutExpired:
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.wait()
+    print(f"error: command timed out after {seconds:g}s: {' '.join(cmd)}", file=sys.stderr)
+    sys.exit(124)
+PY
+}
 
 if [[ -n "$project_dir" ]]; then
   [[ -d "$project_dir" ]] || {
@@ -72,8 +113,8 @@ if [[ -n "$project_dir" ]]; then
 else
   project_dir="${tmp_dir}/project"
   echo "==> clone public JS/TS project"
-  git clone --quiet --depth=1 "$repo" "$project_dir"
-  git -C "$project_dir" fetch --quiet --depth=1 origin "$ref"
+  run_with_timeout "$git_timeout" git clone --quiet --depth=1 "$repo" "$project_dir"
+  run_with_timeout "$git_timeout" git -C "$project_dir" fetch --quiet --depth=1 origin "$ref"
   git -C "$project_dir" checkout --quiet --detach "$ref"
   echo "repo=$repo"
   echo "ref=$(git -C "$project_dir" rev-parse HEAD)"

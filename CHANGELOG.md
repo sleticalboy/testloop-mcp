@@ -8,6 +8,7 @@
 - 新增 `scripts/verify-mcp-process-smoke.sh` 和 `examples/mcp-process-smoke`，用真实 MCP SDK 客户端通过 stdio / Streamable HTTP 启动安装后的二进制并调用轻量工具。
 - 公开 Go / JS showcase 脚本新增默认 action 期望校验，外部项目案例的 `ready` / `manual_review_internal` 决策信号漂移时会直接失败。
 - 公开 Go / JS showcase 脚本支持通过 `TESTLOOP_SHOWCASE_*_PROJECT_DIR` 复用本地 checkout，JS 脚本还支持 `TESTLOOP_SHOWCASE_JS_SKIP_INSTALL=true` 跳过依赖安装。
+- 公开 Go / JS showcase 脚本新增远端 `git clone/fetch` 超时控制，默认 60 秒，可通过 `TESTLOOP_SHOWCASE_*_GIT_TIMEOUT` 调整，避免 GitHub 网络不可达时长时间挂起。
 
 ## v0.5.1 - 2026-07-17
 

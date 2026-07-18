@@ -34,7 +34,7 @@ scripts/showcase-go-public-project.sh
 scripts/showcase-js-public-project.sh
 ```
 
-Onboarding showcase 证明首次接入路径可以从安装验收走到 Agent 闭环。Go showcase 证明 `validate_coverage_task` 可以在外部 Go 项目上给出 `passed/ready` 决策信号，并默认校验该信号不漂移。JS/TS showcase 证明 Agent 不应只看测试是否通过，还要读取 `action`：`ready` 可以进入下一个任务，`manual_review_internal` 应记录手审或寻找公共入口；脚本也会默认校验这两个 action。公开项目 showcase 都支持通过 `TESTLOOP_SHOWCASE_*_PROJECT_DIR` 复用本地 checkout，减少外网 clone 对演示的影响。
+Onboarding showcase 证明首次接入路径可以从安装验收走到 Agent 闭环。Go showcase 证明 `validate_coverage_task` 可以在外部 Go 项目上给出 `passed/ready` 决策信号，并默认校验该信号不漂移。JS/TS showcase 证明 Agent 不应只看测试是否通过，还要读取 `action`：`ready` 可以进入下一个任务，`manual_review_internal` 应记录手审或寻找公共入口；脚本也会默认校验这两个 action。公开项目 showcase 都支持通过 `TESTLOOP_SHOWCASE_*_PROJECT_DIR` 复用本地 checkout，减少外网 clone 对演示的影响；远端 clone/fetch 默认 60 秒超时，可通过 `TESTLOOP_SHOWCASE_*_GIT_TIMEOUT` 调整。
 
 详细说明：
 

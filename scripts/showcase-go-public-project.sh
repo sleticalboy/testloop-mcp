@@ -21,6 +21,8 @@ Environment:
                                     Expected task actions, default go-test-1=ready.
                                     Set to empty to skip expectation checks.
   TESTLOOP_SHOWCASE_GO_OUTPUT     Output JSONL path, default /tmp/testloop-google-uuid-showcase.jsonl
+  TESTLOOP_SHOWCASE_GO_GIT_TIMEOUT
+                                    Timeout seconds for git clone/fetch, default 60.
 USAGE
 }
 
@@ -39,11 +41,50 @@ ref="${TESTLOOP_SHOWCASE_GO_REF:-2d3c2a9cc518326daf99a383f07c4d3c44317e4d}"
 project_dir="${TESTLOOP_SHOWCASE_GO_PROJECT_DIR:-}"
 task_ids="${TESTLOOP_SHOWCASE_GO_TASK_IDS:-go-test-1}"
 expect_actions="${TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS-go-test-1=ready}"
+git_timeout="${TESTLOOP_SHOWCASE_GO_GIT_TIMEOUT:-60}"
 output="${1:-${TESTLOOP_SHOWCASE_GO_OUTPUT:-/tmp/testloop-google-uuid-showcase.jsonl}}"
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT INT TERM
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  python3 - "$seconds" "$@" <<'PY'
+import os
+import signal
+import subprocess
+import sys
+
+seconds = float(sys.argv[1])
+cmd = sys.argv[2:]
+
+try:
+    proc = subprocess.Popen(cmd, start_new_session=True)
+except FileNotFoundError:
+    print(f"error: command not found: {cmd[0]}", file=sys.stderr)
+    sys.exit(127)
+
+try:
+    sys.exit(proc.wait(timeout=seconds))
+except subprocess.TimeoutExpired:
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.wait()
+    print(f"error: command timed out after {seconds:g}s: {' '.join(cmd)}", file=sys.stderr)
+    sys.exit(124)
+PY
+}
 
 if [[ -n "$project_dir" ]]; then
   [[ -d "$project_dir" ]] || {
@@ -60,8 +101,8 @@ if [[ -n "$project_dir" ]]; then
 else
   project_dir="${tmp_dir}/project"
   echo "==> clone public Go project"
-  git clone --quiet --depth=1 "$repo" "$project_dir"
-  git -C "$project_dir" fetch --quiet --depth=1 origin "$ref"
+  run_with_timeout "$git_timeout" git clone --quiet --depth=1 "$repo" "$project_dir"
+  run_with_timeout "$git_timeout" git -C "$project_dir" fetch --quiet --depth=1 origin "$ref"
   git -C "$project_dir" checkout --quiet --detach "$ref"
   echo "repo=$repo"
   echo "ref=$(git -C "$project_dir" rev-parse HEAD)"

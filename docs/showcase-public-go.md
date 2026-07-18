@@ -55,6 +55,7 @@ TESTLOOP_SHOWCASE_GO_REF=2d3c2a9cc518326daf99a383f07c4d3c44317e4d \
 TESTLOOP_SHOWCASE_GO_TASK_IDS=go-test-1 \
 TESTLOOP_SHOWCASE_GO_EXPECT_ACTIONS=go-test-1=ready \
 TESTLOOP_SHOWCASE_GO_OUTPUT=/tmp/testloop-google-uuid-showcase.jsonl \
+TESTLOOP_SHOWCASE_GO_GIT_TIMEOUT=60 \
 scripts/showcase-go-public-project.sh
 ```
 
@@ -66,6 +67,8 @@ scripts/showcase-go-public-project.sh
 TESTLOOP_SHOWCASE_GO_PROJECT_DIR=/tmp/testloop-showcase-google-uuid \
 scripts/showcase-go-public-project.sh /tmp/testloop-google-uuid-showcase.jsonl
 ```
+
+远端 clone/fetch 默认 60 秒超时。网络不稳定时可以降低 `TESTLOOP_SHOWCASE_GO_GIT_TIMEOUT` 快速失败，或者优先使用 `TESTLOOP_SHOWCASE_GO_PROJECT_DIR` 复用本地 checkout。
 
 `scripts/validate-go-coverage-top-tasks.sh` 也支持直接复用已有任务文件：
 

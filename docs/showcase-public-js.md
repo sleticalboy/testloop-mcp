@@ -65,6 +65,7 @@ TESTLOOP_SHOWCASE_JS_TASK_IDS=vitest-1,vitest-2 \
 TESTLOOP_SHOWCASE_JS_EXPECT_ACTIONS=vitest-1=manual_review_internal,vitest-2=ready \
 TESTLOOP_SHOWCASE_JS_OUTPUT=/tmp/testloop-ufo-showcase.jsonl \
 TESTLOOP_SHOWCASE_JS_TIMEOUT=180 \
+TESTLOOP_SHOWCASE_JS_GIT_TIMEOUT=60 \
 scripts/showcase-js-public-project.sh
 ```
 
@@ -77,6 +78,8 @@ TESTLOOP_SHOWCASE_JS_PROJECT_DIR=/tmp/testloop-showcase-ufo \
 TESTLOOP_SHOWCASE_JS_SKIP_INSTALL=true \
 scripts/showcase-js-public-project.sh /tmp/testloop-ufo-showcase.jsonl
 ```
+
+远端 clone/fetch 默认 60 秒超时。网络不稳定时可以降低 `TESTLOOP_SHOWCASE_JS_GIT_TIMEOUT` 快速失败，或者优先使用 `TESTLOOP_SHOWCASE_JS_PROJECT_DIR` 复用本地 checkout。
 
 如果已经有本地 checkout 和依赖，也可以直接运行底层验证脚本：
 
