@@ -137,6 +137,8 @@ go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summar
 
 CI 集成示例见 [验收报告 CI 集成](./verification-ci.md)。
 
+失败分流样例见 [验收 Summary 失败分流样例](./verification-summary-failures.md)，其中包含安装、MCP 协议、Agent demo、公开 showcase 和用户项目 smoke 失败时的最小 summary JSON fixture。
+
 ## 真实项目 smoke 记录
 
 2026-07-18 用本机 `laoxia-scaffold-v1.0.0` 做过一次 server + web 验收报告试跑。该记录用于验证报告脚本在多项目场景下的可读性，不等同于 `validate_coverage_task` 的 top-N 生成质量 benchmark。

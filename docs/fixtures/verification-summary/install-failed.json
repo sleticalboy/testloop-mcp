@@ -1,0 +1,25 @@
+{
+  "title": "testloop-mcp 验收报告",
+  "generated_at": "2026-07-18T08:10:00Z",
+  "repository": "/path/to/testloop-mcp",
+  "git_ref": "example",
+  "binary": "/usr/local/bin/testloop-mcp",
+  "version_output": "testloop-mcp 0.5.2",
+  "markdown_report": "/tmp/testloop-install-failed-report.md",
+  "overall_status": "failed",
+  "failed_count": 1,
+  "sections": [
+    {
+      "name": "基础安装验收",
+      "status": "failed",
+      "exit_code": 1,
+      "reason": null
+    },
+    {
+      "name": "真实 MCP 协议 smoke",
+      "status": "skipped",
+      "exit_code": null,
+      "reason": "基础安装验收未通过"
+    }
+  ]
+}

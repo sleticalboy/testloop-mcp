@@ -21,6 +21,7 @@ required_entries = {
     "客户端集成说明": "./docs/client-integration.md",
     "MCP 客户端契约测试说明": "./docs/mcp-client-contract-tests.md",
     "用户项目验收报告": "./docs/verification-report.md",
+    "验收 summary 失败分流样例": "./docs/verification-summary-failures.md",
     "验收报告 CI 集成": "./docs/verification-ci.md",
 }
 
