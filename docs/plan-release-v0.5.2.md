@@ -10,9 +10,9 @@ v0.5.2 发布重点见 [v0.5.2 发布说明草案](./plan-release-notes-v0.5.2.m
 
 - [x] `docs/plan-release-notes-v0.5.2.md` 已创建。
 - [x] `docs/plan-release-v0.5.2.md` 已创建。
-- [x] 本地 release readiness 门禁已完成，当前仍不更新 `main.go` 版本号。
-- [x] 本地 release readiness 门禁已完成，当前仍不收敛 `CHANGELOG.md` 的 `Unreleased`。
-- [x] 本地 release readiness 门禁已完成，当前仍不同步 README 和安装文档到 `v0.5.2`。
+- [x] `main.go` MCP implementation version 已更新到 `0.5.2`。
+- [x] `CHANGELOG.md` 的 `Unreleased` 内容已收敛到 `v0.5.2 - 2026-07-18`。
+- [x] README、安装文档、quickstart 和 onboarding 文档已同步到 `v0.5.2`。
 - [x] 本地 release readiness 门禁已完成，当前仍不打 `v0.5.2` tag。
 - [ ] Homebrew Formula 暂不改 sha256；正式 Release Artifacts 生成后再通过真实 asset digest 更新 tap。
 
@@ -64,12 +64,12 @@ v0.5.2 发布重点见 [v0.5.2 发布说明草案](./plan-release-notes-v0.5.2.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.2`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.2 - 2026-07-18`。
-- [ ] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.2`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.2`。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.2`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.2 - 2026-07-18`。
+- [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.2`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.2`。
 - [ ] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.2`，使用 GitHub Release 真实 asset digest。
-- [ ] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
+- [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
 - [ ] 提交版本准备改动后确认远端 CI 通过。
 - [ ] 打 tag `v0.5.2` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -81,4 +81,4 @@ v0.5.2 发布重点见 [v0.5.2 发布说明草案](./plan-release-notes-v0.5.2.m
 
 ## 当前结论
 
-v0.5.2 候选准备和本地 release readiness 门禁已完成。下一步可以进入正式版本准备：更新 implementation version、收敛 CHANGELOG、同步 README/installation 版本引用，然后提交并等待远端 CI。
+v0.5.2 正式版本准备和版本准备后的完整本地验证已完成，等待提交后远端 CI 通过。CI 通过后可以打 `v0.5.2` tag，并进入 Release Artifacts、资产校验、GitHub Release 正文和 Homebrew tap 更新。
