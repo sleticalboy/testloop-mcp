@@ -16,6 +16,9 @@ required_snippets = [
     "scripts/run-onboarding-ci.sh",
     "bash /tmp/testloop-onboarding-ci.sh 'go test ./...'",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
+    "./first-run-ci-template.md",
+    "first-run-context.txt",
+    "first-run.log",
     "/tmp/testloop-onboarding/verification-report.md",
     "/tmp/testloop-onboarding/verification-summary.json",
     "/tmp/testloop-onboarding/agent-decision.txt",
@@ -40,6 +43,7 @@ command_paths = {
     "scripts/run-onboarding-ci.sh": Path("scripts/run-onboarding-ci.sh"),
     "scripts/showcase-agent-onboarding-report.sh": Path("scripts/showcase-agent-onboarding-report.sh"),
     "scripts/generate-verification-report.sh": Path("scripts/generate-verification-report.sh"),
+    "scripts/run-first-run-ci.sh": Path("scripts/run-first-run-ci.sh"),
     "go run ./examples/verification-summary-decision-demo": Path("examples/verification-summary-decision-demo/main.go"),
 }
 for command, path in command_paths.items():

@@ -588,6 +588,12 @@ scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
 scripts/run-onboarding-ci.sh 'go test ./...'
 ```
 
+如果希望 CI 同时上传可粘贴给 AI Agent 的首跑上下文，使用首跑诊断 bootstrap：
+
+```bash
+scripts/run-first-run-ci.sh 'go test ./...'
+```
+
 如果要确认这条 bootstrap 路径在非 testloop 仓库里也能工作，可以运行外部项目演练：
 
 ```bash
@@ -604,7 +610,7 @@ web/Node 模板可用 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node` 复验，
 scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
-更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含[首跑诊断](./docs/first-run-diagnostics.md)、[首跑诊断失败样例](./docs/first-run-failures.md)、安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 外部项目演练](./docs/onboarding-ci-external-dry-run.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含[首跑诊断](./docs/first-run-diagnostics.md)、[首跑诊断 CI 复制模板](./docs/first-run-ci-template.md)、[首跑诊断失败样例](./docs/first-run-failures.md)、安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 外部项目演练](./docs/onboarding-ci-external-dry-run.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 

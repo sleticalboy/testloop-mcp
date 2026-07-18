@@ -7,6 +7,7 @@
 - 新增 `scripts/showcase-onboarding-ci-external-project.sh`、`docs/onboarding-ci-external-dry-run.md` 和文档测试，用临时非 testloop Go 或 Node 项目验证 Onboarding CI bootstrap 的复制路径不依赖本仓库当前工作目录。
 - 新增 `scripts/doctor-first-run.sh`、`docs/first-run-diagnostics.md` 和脚本回归测试，把安装验收、真实 MCP transport、最小 Agent demo、可选用户项目 smoke 收敛成一条首跑诊断入口。
 - 新增 `docs/first-run-failures.md`、`docs/fixtures/first-run/*.txt` 和 fixture 测试，固定首跑失败时可粘贴给 AI Agent 的最小上下文。
+- 新增 `scripts/run-first-run-ci.sh`、`docs/first-run-ci-template.md` 和模板测试，为外部用户项目提供可复制的首跑诊断 CI bootstrap。
 
 ### Changed
 
@@ -14,6 +15,7 @@
 - `scripts/verify-mcp-process-smoke.sh` 进入 testloop-mcp 仓库后再执行 Go smoke，避免从用户项目 Go module cwd 调用时触发 `outside main module`。
 - quickstart 优先推荐首跑诊断脚本，用户可以直接按 `first_run_agent_next_step` 判断下一步。
 - `scripts/doctor-first-run.sh` 会额外写出 `first-run-context.txt`，便于用户把首跑失败上下文交给 AI Agent。
+- 验收 CI 文档补充首跑诊断 CI 模板入口，区分 onboarding 三件套和 first-run 五件套。
 
 ## v0.5.6 - 2026-07-18
 

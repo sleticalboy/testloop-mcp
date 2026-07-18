@@ -2,7 +2,7 @@
 
 这份文档说明如何在 GitHub Actions 中生成 testloop-mcp 的 Markdown + JSON 验收报告，并让 Agent / CI 根据 summary JSON 做下一步分流。
 
-目标不是替代项目自己的测试流水线，而是给接入方一个固定反馈入口。如果只需要最短可复制版本，先看 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
+目标不是替代项目自己的测试流水线，而是给接入方一个固定反馈入口。如果只需要最短可复制版本，先看 [Onboarding CI 复制模板](./onboarding-ci-template.md)。如果希望失败时额外上传可粘贴给 AI Agent 的 `first-run-context.txt` 和完整日志，使用 [首跑诊断 CI 复制模板](./first-run-ci-template.md)。
 
 - Markdown 报告给人看，适合上传 artifact 或贴到 issue / release checklist。
 - summary JSON 给 Agent / CI 看，适合判断失败归因和下一步动作。
@@ -120,6 +120,8 @@ CI 日志里优先看 `agent_next_step`：
 失败时不要只看 CI 最后一行。应下载 `testloop-verification-report` artifact，先读 summary JSON 的 failed section，再打开 Markdown 对应明细。
 
 更具体的失败排查顺序见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
+
+首跑诊断 CI 的 artifact 多包含 `first-run-context.txt` 和 `first-run.log`，适合失败时直接把上下文交给 AI Agent。复制模板见 [首跑诊断 CI 复制模板](./first-run-ci-template.md)。
 
 ## 适用边界
 
