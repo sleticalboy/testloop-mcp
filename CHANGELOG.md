@@ -8,6 +8,7 @@
 - 新增 `test/showcase_agent_onboarding_report_test.sh`，固定一键演示报告脚本的 artifact 路径、summary JSON 和 decision 输出契约。
 - 新增 `docs/verification-summary-failures.md` 和 summary JSON 失败 fixture，展示安装、MCP 协议、Agent demo、公开 showcase、用户项目 smoke 失败时的 `agent_next_step` 分流。
 - 新增 `docs/plan-agent-onboarding-v0.5.4.md`，规划 v0.5.4 的公开 onboarding demo 收敛方向。
+- 新增 `docs/plan-release-notes-v0.5.4.md` 和 `docs/plan-release-v0.5.4.md`，整理 v0.5.4 候选发布说明和本地 release readiness 门禁。
 
 ### Changed
 
