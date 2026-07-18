@@ -12,7 +12,7 @@ testloop-mcp v0.5.4
 - [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.4`。
 - [x] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.4 - 2026-07-18`。
 - [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
-- [ ] 正式发布前重新跑远端 CI、Release Artifacts、资产校验和 Homebrew tap 更新。
+- [x] 正式发布前重新跑远端 CI、Release Artifacts、资产校验和 Homebrew tap 更新。
 
 ## 摘要
 
@@ -86,6 +86,14 @@ v0.5.4 候选重点是把 v0.5.3 的验收报告能力继续收敛成“公开 o
 - [x] `/tmp/testloop-v0.5.4-prep-dist/testloop-mcp_v0.5.4_darwin_arm64.tar.gz.sha256` 校验通过。
 - [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
 - [x] `git diff --check`
+- [x] 远端 CI run `29638973367` 通过。
+- [x] `v0.5.4` tag 已推送，Release Artifacts run `29639038941` 通过。
+- [x] `scripts/verify-release-assets.sh v0.5.4`
+- [x] GitHub Release 正文已更新为正式 v0.5.4 发布说明。
+- [x] 仓库内 `Formula/testloop-mcp.rb` 已使用真实 Release asset digest 更新到 `0.5.4`，并通过 `ruby -c` 和 `brew style`。
+- [x] `sleticalboy/homebrew-tap` 已更新并推送到 `00b56f2`。
+- [x] 本机 Homebrew tap 已快进到 `00b56f2`，`HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp` 获取 `0.5.4` 成功。
+- [x] Post-Release Verify run `29639243485` 通过，五平台安装验收全部成功。
 
 ## 发布备注
 

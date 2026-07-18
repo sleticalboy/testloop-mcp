@@ -15,7 +15,7 @@ v0.5.4 发布重点见 [v0.5.4 发布说明草案](./plan-release-notes-v0.5.4.m
 - [x] `docs/verification-ci.md` 已优先推荐 onboarding report wrapper。
 - [x] README、quickstart、showcase、verification report、roadmap 和 release doc index 入口已同步。
 - [x] `main.go` MCP implementation version 已更新到 `0.5.4`。
-- [x] 仓库内 Homebrew Formula 暂不更新；正式 Release Artifacts 生成后再使用真实 asset digest 更新。
+- [x] 仓库内 Homebrew Formula 已用正式 Release Artifacts 的真实 asset digest 更新到 `0.5.4`。
 
 ## 候选内容
 
@@ -78,16 +78,16 @@ v0.5.4 发布重点见 [v0.5.4 发布说明草案](./plan-release-notes-v0.5.4.m
 - [x] quickstart、onboarding、verification report、verification CI 示例中的版本门禁同步到 `0.5.4`。
 - [x] 测试中的版本期望同步到 `0.5.4`。
 - [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
-- [ ] 打 tag `v0.5.4` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.4` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.4 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.4` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.4` 并推送。
-- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过。
-- [ ] 本机 Homebrew tap 快进后运行 `HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp`。
+- [x] 提交版本准备改动后确认远端 CI run `29638973367` 通过。
+- [x] 打 tag `v0.5.4` 并推送。
+- [x] 等待 Release Artifacts workflow run `29639038941` 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.4` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.4 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.4` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.4` 并推送到 `00b56f2`。
+- [x] 手动触发 Post-Release Verify run `29639243485`，确认五平台安装脚本 dry run 全部通过。
+- [x] 本机 Homebrew tap 快进后运行 `HOMEBREW_NO_AUTO_UPDATE=1 brew fetch --force sleticalboy/tap/testloop-mcp`，确认获取 `0.5.4`。
 
 ## 当前结论
 
-v0.5.4 正式版本准备已完成，本地完整验证通过。下一步是提交版本准备改动并等待远端 CI，通过后再打 `v0.5.4` tag。
+v0.5.4 已完成正式发布、Release Artifacts、资产校验、GitHub Release 正文更新、Homebrew tap 更新和 Post-Release Verify。发布收尾只剩提交并推送本仓库的 Formula 与发布记录更新。
