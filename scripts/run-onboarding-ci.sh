@@ -34,7 +34,7 @@ Environment:
   TESTLOOP_MCP_REPO_URL                Source repo URL.
 
 Examples:
-  TESTLOOP_MCP_VERSION=v0.5.5 scripts/run-onboarding-ci.sh 'go test ./...'
+  TESTLOOP_MCP_VERSION=v0.5.6 scripts/run-onboarding-ci.sh 'go test ./...'
   TESTLOOP_ONBOARDING_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build' \
     scripts/run-onboarding-ci.sh
 USAGE

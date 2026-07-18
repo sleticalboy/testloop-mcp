@@ -32,7 +32,7 @@ Environment:
 
 Examples:
   scripts/generate-verification-report.sh "$(command -v testloop-mcp)"
-  TESTLOOP_REPORT_EXPECT_VERSION=0.5.5 scripts/generate-verification-report.sh
+  TESTLOOP_REPORT_EXPECT_VERSION=0.5.6 scripts/generate-verification-report.sh
   TESTLOOP_REPORT_PROJECT_DIR=/path/to/project \
     TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
     scripts/generate-verification-report.sh "$(command -v testloop-mcp)" report.md

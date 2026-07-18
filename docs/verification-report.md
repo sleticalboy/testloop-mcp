@@ -30,7 +30,7 @@ TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
 发布后或 Homebrew 安装后，建议加上期望版本，防止 PATH 指到旧二进制：
 
 ```bash
-TESTLOOP_REPORT_EXPECT_VERSION=0.5.5 \
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.6 \
   scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
