@@ -46,6 +46,23 @@ brew reinstall sleticalboy/tap/testloop-mcp
 
 ## 2. 自检
 
+### 首跑诊断
+
+源码 checkout 推荐先跑首跑诊断，它会一次性输出状态、下一步动作和 artifact 路径：
+
+```bash
+scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
+```
+
+发布后或 Homebrew 安装后建议加版本门禁：
+
+```bash
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.6 \
+  scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
+```
+
+如果输出 `first_run_agent_next_step=ready`，说明安装、配置生成、真实 MCP transport 和最小 Agent 闭环都已经通过。详细说明见 [首跑诊断](./first-run-diagnostics.md)。
+
 ### 基础安装验收
 
 如果是源码 checkout，先运行安装后自检脚本：

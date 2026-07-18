@@ -40,6 +40,7 @@ run_expect_code() {
 
 test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-onboarding.sh"
+  bash -n "${repo_root}/scripts/doctor-first-run.sh"
   bash -n "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
@@ -72,6 +73,18 @@ test_external_onboarding_help_and_args() {
   out="${tmp_dir}/external-onboarding-type.out"
   run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
   assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE"
+}
+
+test_doctor_first_run_help_and_args() {
+  out="${tmp_dir}/doctor-first-run-help.out"
+  run_expect_code 0 "$out" bash "${repo_root}/scripts/doctor-first-run.sh" --help
+  assert_contains "$out" "Usage: scripts/doctor-first-run.sh [testloop-mcp-binary]"
+  assert_contains "$out" "TESTLOOP_FIRST_RUN_OUTPUT_DIR"
+  assert_contains "$out" "first_run_agent_next_step"
+
+  out="${tmp_dir}/doctor-first-run-args.out"
+  run_expect_code 2 "$out" bash "${repo_root}/scripts/doctor-first-run.sh" one two
+  assert_contains "$out" "Usage: scripts/doctor-first-run.sh [testloop-mcp-binary]"
 }
 
 test_go_showcase_help_and_args() {
@@ -142,6 +155,7 @@ SH
 
 test_showcase_scripts_are_valid_bash
 test_onboarding_showcase_help_and_args
+test_doctor_first_run_help_and_args
 test_external_onboarding_help_and_args
 test_go_showcase_help_and_args
 test_go_showcase_git_timeout
