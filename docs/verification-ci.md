@@ -36,7 +36,7 @@ jobs:
 
       - name: Generate onboarding report
         run: |
-          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 \
+          TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
           TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
           TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
           TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
@@ -67,7 +67,7 @@ jobs:
 - name: Generate verification report
   run: |
     set +e
-    TESTLOOP_REPORT_EXPECT_VERSION=0.5.4 \
+    TESTLOOP_REPORT_EXPECT_VERSION=0.5.5 \
     TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json \
     TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
     TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \

@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.5 的候选发布准备和 release readiness 记录。当前阶段只整理候选内容和本地门禁，不打 tag、不更新 Homebrew tap。
+这是 v0.5.5 的候选发布准备、正式版本准备和 release readiness 记录。当前阶段已切版本号并同步文档引用，但不打 tag、不更新 Homebrew tap。
 
 v0.5.5 发布重点见 [v0.5.5 发布说明草案](./plan-release-notes-v0.5.5.md)：本轮主要是真实接入案例模板、安装漂移诊断、Homebrew 升级/重装提示，以及真实安装态 onboarding 验收。
 
@@ -16,7 +16,8 @@ v0.5.5 发布重点见 [v0.5.5 发布说明草案](./plan-release-notes-v0.5.5.m
 - [x] `test/verify_client_setup_test.sh` 已覆盖安装漂移诊断提示。
 - [x] `docs/installation.md` 和 `docs/quickstart.md` 已补 Homebrew 升级/重装路径。
 - [x] README、showcase、CHANGELOG 和 roadmap 已同步本轮内容。
-- [x] 当前仍不切 `main.go` MCP implementation version，正式版本准备时再从 `0.5.4` 更新到 `0.5.5`。
+- [x] `main.go` MCP implementation version 已更新到 `0.5.5`。
+- [x] Homebrew Formula 暂不改 sha256；正式 Release Artifacts 生成后再通过真实 asset digest 更新 tap。
 
 ## 候选内容
 
@@ -67,9 +68,9 @@ v0.5.5 发布重点见 [v0.5.5 发布说明草案](./plan-release-notes-v0.5.5.m
 - [x] `go build -o /tmp/testloop-testgen-v0.5.5-prep ./cmd/testgen`
 - [x] `/tmp/testloop-mcp-v0.5.5-prep --help` 输出 usage。
 - [x] `/tmp/testloop-testgen-v0.5.5-prep --help` 输出 usage。
-- [x] `/opt/homebrew/bin/testloop-mcp --version` 输出 `testloop-mcp 0.5.4`。
-- [x] `TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"` 通过。
-- [x] `scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"` 使用真实安装二进制输出 `agent_next_step=ready`。
+- [x] `/tmp/testloop-mcp-v0.5.5-prep --version` 输出 `testloop-mcp 0.5.5`。
+- [x] 使用 `/tmp/testloop-mcp-v0.5.5-prep` 跑通 `TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 scripts/verify-client-setup.sh /tmp/testloop-mcp-v0.5.5-prep`。
+- [x] `scripts/showcase-agent-onboarding-report.sh /tmp/testloop-mcp-v0.5.5-prep` 输出 `agent_next_step=ready`。
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.5-prep-dist scripts/package-release-asset.sh v0.5.5 darwin_arm64 darwin arm64`
 - [x] `/tmp/testloop-v0.5.5-prep-dist/testloop-mcp_v0.5.5_darwin_arm64.tar.gz.sha256` 校验通过。
 - [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
@@ -77,13 +78,13 @@ v0.5.5 发布重点见 [v0.5.5 发布说明草案](./plan-release-notes-v0.5.5.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.5`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.5 - 2026-07-18`。
-- [ ] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.5`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.5`。
-- [ ] quickstart、onboarding、real integration cases、verification report、verification CI 示例中的版本门禁同步到 `0.5.5`。
-- [ ] 测试中的版本期望同步到 `0.5.5`。
-- [ ] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.5`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.5 - 2026-07-18`。
+- [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.5`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.5`。
+- [x] quickstart、onboarding、real integration cases、verification report、verification CI 示例中的版本门禁同步到 `0.5.5`。
+- [x] 测试中的版本期望同步到 `0.5.5`。
+- [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
 - [ ] 提交版本准备改动后确认远端 CI 通过。
 - [ ] 打 tag `v0.5.5` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -96,4 +97,4 @@ v0.5.5 发布重点见 [v0.5.5 发布说明草案](./plan-release-notes-v0.5.5.m
 
 ## 当前结论
 
-v0.5.5 候选内容已经具备 patch 发布价值：它补齐了真实项目接入模板，并把本机实际暴露的 Homebrew 旧版本漂移变成可诊断、可执行下一步的安装体验。当前阶段不发布；下一步如果进入正式版本准备，再切版本号、收敛 CHANGELOG、同步版本引用并走 tag / Release Artifacts / Homebrew tap 流程。
+v0.5.5 版本准备已经完成：版本号、CHANGELOG 和文档版本引用已同步，本地完整门禁通过。当前阶段不发布；下一步应提交后等待远端 CI，通过后再打 `v0.5.5` tag，并进入 Release Artifacts / 资产校验 / GitHub Release 正文 / Homebrew tap 验证。

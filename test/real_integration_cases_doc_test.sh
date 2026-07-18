@@ -13,7 +13,7 @@ assert_contains() {
 }
 
 assert_contains "scripts/showcase-agent-onboarding-report.sh"
-assert_contains "TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4"
+assert_contains "TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5"
 assert_contains "TESTLOOP_REPORT_PROJECT_DIR"
 assert_contains "TESTLOOP_REPORT_PROJECT_COMMAND"
 assert_contains "/tmp/testloop-laoxia-server-onboarding-v0.5.4"

@@ -14,21 +14,21 @@
 先确认要验收的二进制版本。发布后建议加版本门禁，避免 `PATH` 指向旧版本：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 \
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
   scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
 ```
 
 如果本机安装版本和源码版本不一致，可以先使用源码构建临时二进制跑案例，避免把安装漂移误判成项目接入失败：
 
 ```bash
-go build -o /tmp/testloop-mcp-v0.5.4-case .
-/tmp/testloop-mcp-v0.5.4-case --version
+go build -o /tmp/testloop-mcp-v0.5.5-case .
+/tmp/testloop-mcp-v0.5.5-case --version
 ```
 
 接入真实项目时，固定四个变量：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 \
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.5 \
 TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-my-project-onboarding \
 TESTLOOP_REPORT_TITLE='my-project 接入验收报告' \
 TESTLOOP_REPORT_PROJECT_DIR=/path/to/my-project \
