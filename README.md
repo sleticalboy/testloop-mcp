@@ -588,6 +588,8 @@ TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp \
   scripts/showcase-onboarding-ci-external-project.sh
 ```
 
+web/Node 模板可用 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node` 复验，或用 `all` 连续复验 Go 和 Node。
+
 如果要把验收结果留成 Markdown 制品，可以运行：
 
 ```bash

@@ -10,11 +10,16 @@ text = doc.read_text(encoding="utf-8")
 required = [
     "scripts/showcase-onboarding-ci-external-project.sh",
     "TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp",
+    "TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node",
+    "TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=all",
+    "pnpm install --frozen-lockfile && pnpm build",
     "external_onboarding_status=passed",
+    "external_onboarding_node_status=passed",
     "/tmp/testloop-external-onboarding/artifacts/verification-report.md",
     "/tmp/testloop-external-onboarding/artifacts/verification-summary.json",
     "/tmp/testloop-external-onboarding/artifacts/agent-decision.txt",
     "agent_next_step=ready",
+    "pnpm",
 ]
 
 missing = [item for item in required if item not in text]

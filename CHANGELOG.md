@@ -4,7 +4,7 @@
 
 ### Added
 
-- 新增 `scripts/showcase-onboarding-ci-external-project.sh`、`docs/onboarding-ci-external-dry-run.md` 和文档测试，用临时非 testloop Go 项目验证 Onboarding CI bootstrap 的复制路径不依赖本仓库当前工作目录。
+- 新增 `scripts/showcase-onboarding-ci-external-project.sh`、`docs/onboarding-ci-external-dry-run.md` 和文档测试，用临时非 testloop Go 或 Node 项目验证 Onboarding CI bootstrap 的复制路径不依赖本仓库当前工作目录。
 
 ### Changed
 

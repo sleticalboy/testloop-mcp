@@ -62,11 +62,16 @@ test_external_onboarding_help_and_args() {
   run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh" --help
   assert_contains "$out" "Usage: scripts/showcase-onboarding-ci-external-project.sh"
   assert_contains "$out" "TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR"
+  assert_contains "$out" "TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE"
   assert_contains "$out" "TESTLOOP_MCP_COMMAND"
 
   out="${tmp_dir}/external-onboarding-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh" extra
   assert_contains "$out" "Usage: scripts/showcase-onboarding-ci-external-project.sh"
+
+  out="${tmp_dir}/external-onboarding-type.out"
+  run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
+  assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE"
 }
 
 test_go_showcase_help_and_args() {
