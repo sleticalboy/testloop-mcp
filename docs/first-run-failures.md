@@ -34,7 +34,7 @@ first_run_context=/tmp/testloop-mcp-first-run/first-run-context.txt
 
 ```bash
 go build -o /tmp/testloop-mcp-first-run-failure .
-TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.6 \
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.7 \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-mcp-first-run-failed-check \
 TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-first-run-failed-project \
 TESTLOOP_FIRST_RUN_PROJECT_COMMAND='echo first run project failed; exit 7' \

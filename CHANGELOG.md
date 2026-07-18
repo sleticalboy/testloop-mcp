@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.7 - 2026-07-19
 
 ### Added
 
@@ -20,6 +20,7 @@
 - 验收 CI 文档补充首跑诊断 CI 模板入口，区分 onboarding 三件套和 first-run 五件套。
 - README 和 showcase 索引补充首跑诊断 CI 外部项目演练入口。
 - 验收 CI 文档补充 onboarding 与 first-run bootstrap 的选择规则，README 增加直达链接。
+- MCP server implementation version 更新为 `0.5.7`。
 
 ## v0.5.6 - 2026-07-18
 

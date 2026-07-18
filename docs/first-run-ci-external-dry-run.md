@@ -44,7 +44,7 @@ Node 模式会创建一个无第三方依赖的临时项目，先生成 `pnpm-lo
 ```bash
 go build -o /tmp/testloop-mcp-external-first-run .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-first-run \
-TESTLOOP_MCP_VERSION=v0.5.6 \
+TESTLOOP_MCP_VERSION=v0.5.7 \
   scripts/showcase-first-run-ci-external-project.sh
 ```
 
@@ -60,7 +60,7 @@ Node/web 命令形态演练：
 ```bash
 go build -o /tmp/testloop-mcp-external-first-run .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-first-run \
-TESTLOOP_MCP_VERSION=v0.5.6 \
+TESTLOOP_MCP_VERSION=v0.5.7 \
 TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=node \
   scripts/showcase-first-run-ci-external-project.sh
 ```

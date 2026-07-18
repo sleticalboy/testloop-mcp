@@ -25,7 +25,7 @@ testloop-mcp --print-config=codex
 testloop-testgen --help
 ```
 
-如果 `--version` 不存在或版本不是 `0.5.6`，先升级 Homebrew 安装：
+如果 `--version` 不存在或版本不是 `0.5.7`，先升级 Homebrew 安装：
 
 ```bash
 brew update
@@ -57,7 +57,7 @@ scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 发布后或 Homebrew 安装后建议加版本门禁：
 
 ```bash
-TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.6 \
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.7 \
   scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 ```
 
@@ -76,7 +76,7 @@ scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
 如果要确认当前 PATH 指向的就是预期版本：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.6 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.7 scripts/verify-client-setup.sh "$(command -v testloop-mcp)"
 ```
 
 如果当前机器 `127.0.0.1:18080` 已被占用：
