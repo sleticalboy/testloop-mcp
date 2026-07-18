@@ -16,7 +16,7 @@ Arguments:
 
 Environment:
   TESTLOOP_MCP_COMMAND                  Binary path or command name to verify.
-  TESTLOOP_MCP_VERIFY_EXPECT_VERSION    Optional expected version, for example 0.5.3.
+  TESTLOOP_MCP_VERIFY_EXPECT_VERSION    Optional expected version, for example 0.5.4.
   TESTLOOP_ONBOARDING_OUTPUT_DIR        Output directory. Default: /tmp/testloop-mcp-onboarding
   TESTLOOP_ONBOARDING_REPORT_MD         Markdown report path.
   TESTLOOP_ONBOARDING_SUMMARY_JSON      Summary JSON path.
@@ -27,7 +27,7 @@ are forwarded, including optional public showcases and user project smoke.
 
 Examples:
   scripts/showcase-agent-onboarding-report.sh
-  TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.3 scripts/showcase-agent-onboarding-report.sh
+  TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.4 scripts/showcase-agent-onboarding-report.sh
 USAGE
 }
 

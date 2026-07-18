@@ -14,7 +14,7 @@ v0.5.4 发布重点见 [v0.5.4 发布说明草案](./plan-release-notes-v0.5.4.m
 - [x] `docs/verification-summary-failures.md` 和 `docs/fixtures/verification-summary/*.json` 已加入。
 - [x] `docs/verification-ci.md` 已优先推荐 onboarding report wrapper。
 - [x] README、quickstart、showcase、verification report、roadmap 和 release doc index 入口已同步。
-- [x] `main.go` MCP implementation version 当前仍保持 `0.5.3`，正式版本准备时再更新。
+- [x] `main.go` MCP implementation version 已更新到 `0.5.4`。
 - [x] 仓库内 Homebrew Formula 暂不更新；正式 Release Artifacts 生成后再使用真实 asset digest 更新。
 
 ## 候选内容
@@ -71,13 +71,13 @@ v0.5.4 发布重点见 [v0.5.4 发布说明草案](./plan-release-notes-v0.5.4.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.4`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.4 - 2026-07-18`。
-- [ ] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.4`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.4`。
-- [ ] quickstart、onboarding、verification report、verification CI 示例中的版本门禁同步到 `0.5.4`。
-- [ ] 测试中的版本期望同步到 `0.5.4`。
-- [ ] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.4`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.4 - 2026-07-18`。
+- [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.4`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.4`。
+- [x] quickstart、onboarding、verification report、verification CI 示例中的版本门禁同步到 `0.5.4`。
+- [x] 测试中的版本期望同步到 `0.5.4`。
+- [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
 - [ ] 提交版本准备改动后确认远端 CI 通过。
 - [ ] 打 tag `v0.5.4` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -90,4 +90,4 @@ v0.5.4 发布重点见 [v0.5.4 发布说明草案](./plan-release-notes-v0.5.4.m
 
 ## 当前结论
 
-v0.5.4 候选发布资料已创建，本地 release readiness 门禁已通过。下一步是提交候选文档并等待远端 CI，通过后再决定是否进入正式版本准备。
+v0.5.4 正式版本准备已完成，本地完整验证通过。下一步是提交版本准备改动并等待远端 CI，通过后再打 `v0.5.4` tag。

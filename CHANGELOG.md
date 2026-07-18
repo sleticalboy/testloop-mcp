@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.4 - 2026-07-18
+
 ### Added
 
 - 新增 `scripts/showcase-agent-onboarding-report.sh`，把 onboarding 验收报告、summary JSON 和 `agent_next_step` 决策输出收敛成一个公开演示入口。
@@ -13,6 +15,7 @@
 ### Changed
 
 - `docs/verification-ci.md` 优先推荐 `scripts/showcase-agent-onboarding-report.sh`，让接入方用更少环境变量生成 Markdown、summary JSON 和 decision artifact。
+- MCP server implementation version 更新为 `0.5.4`。
 
 ## v0.5.3 - 2026-07-18
 

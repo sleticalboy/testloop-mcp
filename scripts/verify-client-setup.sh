@@ -21,8 +21,8 @@ Arguments:
 Environment:
   TESTLOOP_MCP_COMMAND             Binary path to verify.
   TESTLOOP_MCP_VERIFY_EXPECT_VERSION
-                                   Optional version to require, for example 0.5.3
-                                   or v0.5.3.
+                                   Optional version to require, for example 0.5.4
+                                   or v0.5.4.
   TESTLOOP_MCP_VERIFY_HTTP_ADDR    HTTP listen address for the health check.
                                    Default: 127.0.0.1:18080
   TESTLOOP_MCP_VERIFY_SKIP_HTTP    Set to true to skip the HTTP health check.

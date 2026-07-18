@@ -9,9 +9,9 @@ testloop-mcp v0.5.4
 - [x] 创建 v0.5.4 发布说明草案。
 - [x] 梳理 v0.5.3 之后的 Agent onboarding report、失败分流 fixture 和 CI 简化示例。
 - [x] 完成本地 release readiness 门禁。
-- [ ] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.4`。
-- [ ] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.4 - 2026-07-18`。
-- [ ] 正式版本准备时更新 README、安装文档和必要的版本引用。
+- [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.4`。
+- [x] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.4 - 2026-07-18`。
+- [x] 正式版本准备时更新 README、安装文档和必要的版本引用。
 - [ ] 正式发布前重新跑远端 CI、Release Artifacts、资产校验和 Homebrew tap 更新。
 
 ## 摘要
