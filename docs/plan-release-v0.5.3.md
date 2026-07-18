@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.3 的候选发布准备和 release readiness 记录。当前阶段只做候选准备和本地门禁，不切版本号、不打 tag、不更新 Homebrew tap。
+这是 v0.5.3 的候选发布准备、release readiness 和正式版本准备记录。当前阶段已经完成版本准备，仍不打 tag、不更新 Homebrew tap；这些保留到远端 CI 通过和 Release Artifacts 生成之后。
 
 v0.5.3 发布重点见 [v0.5.3 发布说明草案](./plan-release-notes-v0.5.3.md)：本轮主要是验收报告脚本、summary JSON、真实用户项目 smoke、Agent/CI 决策示例和 GitHub Actions 集成文档。
 
@@ -10,9 +10,9 @@ v0.5.3 发布重点见 [v0.5.3 发布说明草案](./plan-release-notes-v0.5.3.m
 
 - [x] `docs/plan-release-notes-v0.5.3.md` 已创建。
 - [x] `docs/plan-release-v0.5.3.md` 已创建。
-- [x] `main.go` MCP implementation version 仍为 `0.5.2`，正式版本准备时再更新到 `0.5.3`。
-- [x] `CHANGELOG.md` 的 `Unreleased` 暂不收敛，正式版本准备时再移动到 `v0.5.3 - 2026-07-18`。
-- [x] README、安装文档、quickstart 和 onboarding 文档中的当前 release 仍保留 `v0.5.2`，正式版本准备时再同步。
+- [x] `main.go` MCP implementation version 已更新到 `0.5.3`。
+- [x] `CHANGELOG.md` 的 `Unreleased` 内容已收敛到 `v0.5.3 - 2026-07-18`。
+- [x] README、安装文档、quickstart、onboarding 和验收报告文档已同步到 `v0.5.3`。
 - [x] 仓库内 Homebrew Formula 暂不更新；正式 Release Artifacts 生成后再使用真实 asset digest 更新。
 
 ## 候选内容
@@ -65,12 +65,12 @@ v0.5.3 发布重点见 [v0.5.3 发布说明草案](./plan-release-notes-v0.5.3.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.3`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.3 - 2026-07-18`。
-- [ ] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.3`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.3`。
-- [ ] quickstart、onboarding showcase 和验收报告示例中的版本门禁同步到 `0.5.3`。
-- [ ] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.3`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.3 - 2026-07-18`。
+- [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.3`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.3`。
+- [x] quickstart、onboarding showcase 和验收报告示例中的版本门禁同步到 `0.5.3`。
+- [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
 - [ ] 提交版本准备改动后确认远端 CI 通过。
 - [ ] 打 tag `v0.5.3` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -83,4 +83,4 @@ v0.5.3 发布重点见 [v0.5.3 发布说明草案](./plan-release-notes-v0.5.3.m
 
 ## 当前结论
 
-v0.5.3 候选内容已经明确，本地 release readiness 门禁已通过。下一步可以进入正式版本准备：更新版本号、收敛 CHANGELOG、同步文档版本引用，提交后等待远端 CI，再决定是否打 `v0.5.3` tag。
+v0.5.3 正式版本准备已完成，本地完整验证通过。下一步应提交后等待远端 CI，通过后再打 `v0.5.3` tag，并进入 Release Artifacts / 资产校验 / GitHub Release 正文 / Homebrew tap 验证。

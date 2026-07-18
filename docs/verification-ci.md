@@ -35,7 +35,7 @@ jobs:
       - name: Generate verification report
         run: |
           set +e
-          TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 \
+          TESTLOOP_REPORT_EXPECT_VERSION=0.5.3 \
           TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json \
           TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
           TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \

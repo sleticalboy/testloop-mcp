@@ -16,7 +16,7 @@ Arguments:
 
 Environment:
   TESTLOOP_MCP_COMMAND                  Binary path or command name to verify.
-  TESTLOOP_MCP_VERIFY_EXPECT_VERSION    Optional expected version, for example 0.5.2.
+  TESTLOOP_MCP_VERIFY_EXPECT_VERSION    Optional expected version, for example 0.5.3.
   TESTLOOP_MCP_VERIFY_HTTP_ADDR         HTTP listen address for setup verification.
                                         Default: 127.0.0.1:18081
   TESTLOOP_MCP_VERIFY_SKIP_HTTP         Set to true to skip setup HTTP /healthz.
@@ -25,7 +25,7 @@ Environment:
 Examples:
   scripts/showcase-onboarding.sh
   scripts/showcase-onboarding.sh /opt/homebrew/bin/testloop-mcp
-  TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.2 scripts/showcase-onboarding.sh
+  TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.3 scripts/showcase-onboarding.sh
 USAGE
 }
 
