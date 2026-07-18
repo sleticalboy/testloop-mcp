@@ -14,7 +14,7 @@ v0.5.2 发布重点见 [v0.5.2 发布说明草案](./plan-release-notes-v0.5.2.m
 - [x] `CHANGELOG.md` 的 `Unreleased` 内容已收敛到 `v0.5.2 - 2026-07-18`。
 - [x] README、安装文档、quickstart 和 onboarding 文档已同步到 `v0.5.2`。
 - [x] 本地 release readiness 门禁已完成，当前仍不打 `v0.5.2` tag。
-- [ ] Homebrew Formula 暂不改 sha256；正式 Release Artifacts 生成后再通过真实 asset digest 更新 tap。
+- [x] 仓库内 Homebrew Formula 已更新到 `0.5.2`，使用 GitHub Release 真实 asset digest。
 
 ## 候选内容
 
@@ -68,17 +68,17 @@ v0.5.2 发布重点见 [v0.5.2 发布说明草案](./plan-release-notes-v0.5.2.m
 - [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.2 - 2026-07-18`。
 - [x] 同步 README 中当前 Release、手动下载示例、Windows 下载示例到 `v0.5.2`。
 - [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.2`。
-- [ ] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.2`，使用 GitHub Release 真实 asset digest。
+- [x] 更新仓库内 `Formula/testloop-mcp.rb` 到 `0.5.2`，使用 GitHub Release 真实 asset digest。
 - [x] 重新运行完整验证：`go test ./...`、所有默认 shell 校验、脚本语法检查、主服务/CLI 构建、打包 dry-run。
-- [ ] 提交版本准备改动后确认远端 CI 通过。
-- [ ] 打 tag `v0.5.2` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.2` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.2 发布说明。
-- [ ] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过。
-- [ ] 更新 Homebrew tap 到 `0.5.2` 并推送。
-- [ ] 网络稳定时补跑本机 `brew fetch --force sleticalboy/tap/testloop-mcp`。
+- [x] 提交版本准备改动后确认远端 CI 通过：run `29629563807` passed。
+- [x] 打 tag `v0.5.2` 并推送。
+- [x] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29629630932` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.2` 验证 Release 资产完整：10 个必需资产已确认。
+- [x] 更新 GitHub Release 正文为正式 v0.5.2 发布说明。
+- [x] 手动触发 Post-Release Verify，确认五平台安装脚本 dry run 全部通过：run `29629793877` passed。
+- [x] 更新 Homebrew tap 到 `0.5.2` 并推送：提交 `c1945e8 testloop-mcp 0.5.2`。
+- [x] 本机 Homebrew tap 已快进到 `c1945e8`，`brew fetch --force sleticalboy/tap/testloop-mcp` 成功。
 
 ## 当前结论
 
-v0.5.2 正式版本准备和版本准备后的完整本地验证已完成，等待提交后远端 CI 通过。CI 通过后可以打 `v0.5.2` tag，并进入 Release Artifacts、资产校验、GitHub Release 正文和 Homebrew tap 更新。
+v0.5.2 已正式发布。远端 CI、Release Artifacts、GitHub Release 正文、资产清单、仓库内 Formula、Homebrew tap 同步、tap style 校验、Post-Release Verify 五平台安装 dry run 和本机 `brew fetch` 下载验证均已完成。
