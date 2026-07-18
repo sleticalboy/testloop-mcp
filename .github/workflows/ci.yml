@@ -49,6 +49,7 @@ jobs:
           sh test/verification_report_test.sh
           sh test/real_integration_cases_doc_test.sh
           sh test/onboarding_ci_template_doc_test.sh
+          sh test/onboarding_ci_template_yaml_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
           sh test/release_doc_index_test.sh

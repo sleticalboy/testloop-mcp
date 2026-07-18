@@ -5,6 +5,7 @@
 ### Added
 
 - 新增 `docs/onboarding-ci-template.md` 和 `test/onboarding_ci_template_doc_test.sh`，提供 Go server 与 Vue / Node 项目可复制的 onboarding CI workflow，固定 Markdown、summary JSON 和 `agent_next_step` artifact 路径。
+- 新增 `test/onboarding_ci_template_yaml_test.sh`，解析文档里的完整 workflow YAML 示例，防止复制模板语法漂移。
 
 ### Changed
 
