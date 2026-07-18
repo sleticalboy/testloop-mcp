@@ -21,6 +21,7 @@ Environment:
   TESTLOOP_MCP_COMMAND                  Binary path or command name to verify.
   TESTLOOP_REPORT_OUTPUT                Output Markdown path.
   TESTLOOP_REPORT_TITLE                 Report title. Default: testloop-mcp 验收报告
+  TESTLOOP_REPORT_SUMMARY_JSON          Optional machine-readable summary JSON path.
   TESTLOOP_REPORT_EXPECT_VERSION        Optional expected binary version.
   TESTLOOP_REPORT_SKIP_BASIC            Set to true to skip install verification.
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE    Set to true to skip MCP process smoke.
@@ -57,6 +58,7 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 command_path="${1:-${TESTLOOP_MCP_COMMAND:-}}"
 output="${2:-${TESTLOOP_REPORT_OUTPUT:-/tmp/testloop-mcp-verification-report.md}}"
 title="${TESTLOOP_REPORT_TITLE:-testloop-mcp 验收报告}"
+summary_json="${TESTLOOP_REPORT_SUMMARY_JSON:-}"
 expected_version="${TESTLOOP_REPORT_EXPECT_VERSION:-}"
 skip_basic="${TESTLOOP_REPORT_SKIP_BASIC:-false}"
 skip_process_smoke="${TESTLOOP_REPORT_SKIP_PROCESS_SMOKE:-false}"
@@ -98,6 +100,51 @@ write_output_block() {
   fi
 }
 
+write_summary_json() {
+  local json_output="$1"
+  mkdir -p "$(dirname "$json_output")"
+  python3 - "$summary_file" "$json_output" "$title" "$generated_at" "$repo_root" "$git_ref" "$binary" "${version_output:-unknown}" "$output" "$failed_count" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+summary_file, json_output, title, generated_at, repo_root, git_ref, binary, version_output, report_path, failed_count = sys.argv[1:]
+
+sections = []
+with open(summary_file, encoding="utf-8", newline="") as fh:
+    for row in csv.reader(fh, delimiter="\t"):
+        if not row:
+            continue
+        name, status, code = row[:3]
+        reason = row[3] if len(row) > 3 else ""
+        sections.append(
+            {
+                "name": name,
+                "status": status,
+                "exit_code": None if code == "-" else int(code),
+                "reason": reason or None,
+            }
+        )
+
+failed = int(failed_count)
+payload = {
+    "title": title,
+    "generated_at": generated_at,
+    "repository": repo_root,
+    "git_ref": git_ref,
+    "binary": binary,
+    "version_output": version_output,
+    "markdown_report": report_path,
+    "overall_status": "failed" if failed else "passed",
+    "failed_count": failed,
+    "sections": sections,
+}
+
+Path(json_output).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+}
+
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
@@ -128,7 +175,7 @@ run_section() {
     status="failed"
     failed_count=$((failed_count + 1))
   fi
-  printf '%s\t%s\t%s\n' "$name" "$status" "$code" >>"$summary_file"
+  printf '%s\t%s\t%s\t%s\n' "$name" "$status" "$code" "" >>"$summary_file"
 
   {
     printf '### %s\n\n' "$name"
@@ -144,7 +191,7 @@ skip_section() {
   local name="$1"
   local reason="$2"
   section_index=$((section_index + 1))
-  printf '%s\t%s\t%s\n' "$name" "skipped" "-" >>"$summary_file"
+  printf '%s\t%s\t%s\t%s\n' "$name" "skipped" "-" "$reason" >>"$summary_file"
   {
     printf '### %s\n\n' "$name"
     printf '%s\n' '- 状态：`skipped`'
@@ -218,7 +265,7 @@ mkdir -p "$(dirname "$output")"
   printf '## 汇总\n\n'
   printf '| 验收项 | 状态 | Exit code |\n'
   printf '| --- | --- | --- |\n'
-  while IFS="$(printf '\t')" read -r name status code; do
+  while IFS="$(printf '\t')" read -r name status code reason; do
     printf '| %s | `%s` | `%s` |\n' "$(markdown_escape_table_cell "$name")" "$status" "$code"
   done <"$summary_file"
 
@@ -227,6 +274,10 @@ mkdir -p "$(dirname "$output")"
 } >"$output"
 
 printf 'Wrote %s\n' "$output"
+if [[ -n "$summary_json" ]]; then
+  write_summary_json "$summary_json"
+  printf 'Wrote %s\n' "$summary_json"
+fi
 if [[ "$failed_count" -gt 0 ]]; then
   exit 1
 fi

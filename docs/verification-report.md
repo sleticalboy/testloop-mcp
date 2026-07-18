@@ -18,6 +18,13 @@ scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testlo
 
 报告会写入指定 Markdown 文件；任一已执行验收项失败时，脚本仍会写出报告，但最终返回非零 exit code。
 
+如果还需要给 Agent 或 CI 使用的机器可读结果，可以同时输出 summary JSON：
+
+```bash
+TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
+  scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
+```
+
 ## 版本门禁
 
 发布后或 Homebrew 安装后，建议加上期望版本，防止 PATH 指到旧二进制：
@@ -75,6 +82,7 @@ TESTLOOP_REPORT_PUBLIC_SHOWCASES=all \
 | `TESTLOOP_MCP_COMMAND` | 空 | 未通过第一个参数传二进制时使用。 |
 | `TESTLOOP_REPORT_OUTPUT` | `/tmp/testloop-mcp-verification-report.md` | 未通过第二个参数传报告路径时使用。 |
 | `TESTLOOP_REPORT_TITLE` | `testloop-mcp 验收报告` | Markdown H1 标题。 |
+| `TESTLOOP_REPORT_SUMMARY_JSON` | 空 | 可选 summary JSON 输出路径，适合 Agent / CI 消费。 |
 | `TESTLOOP_REPORT_EXPECT_VERSION` | 空 | 透传给基础安装验收脚本，用于版本门禁。 |
 | `TESTLOOP_REPORT_SKIP_BASIC` | `false` | 设为 `true` 跳过基础安装验收。 |
 | `TESTLOOP_REPORT_SKIP_PROCESS_SMOKE` | `false` | 设为 `true` 跳过真实 MCP 协议 smoke。 |
@@ -92,6 +100,25 @@ TESTLOOP_REPORT_PUBLIC_SHOWCASES=all \
 - 明细：每个已执行命令的 stdout / stderr。
 
 对 Agent 或维护者来说，最重要的是先看汇总表。如果只有用户项目 smoke 失败，通常说明接入项目自身测试环境或命令需要调整；如果基础安装验收或真实 MCP 协议 smoke 失败，应先修 testloop-mcp 安装、PATH、客户端配置或传输链路。
+
+summary JSON 包含同一批元数据和 section 汇总，推荐给自动化消费：
+
+```json
+{
+  "overall_status": "passed",
+  "failed_count": 0,
+  "sections": [
+    {
+      "name": "基础安装验收",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null
+    }
+  ]
+}
+```
+
+Markdown 适合发给人看，JSON 适合 Agent/CI 做分流。自动化侧建议优先读取 `overall_status` 和 `sections[].status`；当某个 section 是 `failed` 时，再打开 Markdown 明细查看 stdout / stderr。
 
 ## 真实项目 smoke 记录
 
