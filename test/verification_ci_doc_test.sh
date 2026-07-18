@@ -26,6 +26,7 @@ required_snippets = [
     "TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...'",
     "TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build'",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding",
+    "./onboarding-ci-template.md",
     "./regression-smoke.md",
 ]
 

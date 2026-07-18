@@ -2,7 +2,7 @@
 
 这份文档说明如何在 GitHub Actions 中生成 testloop-mcp 的 Markdown + JSON 验收报告，并让 Agent / CI 根据 summary JSON 做下一步分流。
 
-目标不是替代项目自己的测试流水线，而是给接入方一个固定反馈入口：
+目标不是替代项目自己的测试流水线，而是给接入方一个固定反馈入口。如果只需要最短可复制版本，先看 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
 
 - Markdown 报告给人看，适合上传 artifact 或贴到 issue / release checklist。
 - summary JSON 给 Agent / CI 看，适合判断失败归因和下一步动作。
