@@ -92,3 +92,34 @@ TESTLOOP_REPORT_PUBLIC_SHOWCASES=all \
 - 明细：每个已执行命令的 stdout / stderr。
 
 对 Agent 或维护者来说，最重要的是先看汇总表。如果只有用户项目 smoke 失败，通常说明接入项目自身测试环境或命令需要调整；如果基础安装验收或真实 MCP 协议 smoke 失败，应先修 testloop-mcp 安装、PATH、客户端配置或传输链路。
+
+## 真实项目 smoke 记录
+
+2026-07-18 用本机 `laoxia-scaffold-v1.0.0` 做过一次 server + web 验收报告试跑。该记录用于验证报告脚本在多项目场景下的可读性，不等同于 `validate_coverage_task` 的 top-N 生成质量 benchmark。
+
+Go server：
+
+```bash
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 \
+TESTLOOP_REPORT_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server \
+TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
+  scripts/generate-verification-report.sh /tmp/testloop-mcp-report /tmp/testloop-laoxia-server-report.md
+```
+
+结果：基础安装验收、真实 MCP 协议 smoke、最小 Agent 闭环 demo、用户项目 `go test ./...` 全部 `passed`。Go 项目输出包含 `gopsutil/disk` 的 macOS `IOMasterPort` deprecated warning，但测试 exit code 为 `0`。
+
+Vue web：
+
+```bash
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 \
+TESTLOOP_REPORT_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-web \
+TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build:prod' \
+  scripts/generate-verification-report.sh /tmp/testloop-mcp-report /tmp/testloop-laoxia-web-report.md
+```
+
+结果：基础安装验收、真实 MCP 协议 smoke、最小 Agent 闭环 demo、用户项目 `pnpm install --frozen-lockfile && pnpm build:prod` 全部 `passed`。Vue 构建输出包含 browserslist 数据过期和 bundle size warning，但构建 exit code 为 `0`。
+
+这次试跑确认两点：
+
+- 报告脚本适合同时覆盖 testloop-mcp 自身接入链路和用户项目 smoke。
+- 用户项目命令需要显式传入；不同项目的安装、构建、测试成本和环境依赖差异太大，不应由脚本默认猜测。

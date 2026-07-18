@@ -7,6 +7,7 @@
 - 新增 `scripts/generate-verification-report.sh`，可把基础安装验收、真实 MCP 协议 smoke、最小 Agent 闭环 demo、可选公开 showcase 和用户项目 smoke 聚合成 Markdown 验收报告。
 - 新增 `docs/verification-report.md` 和 README / showcase 索引入口，说明默认离线验收、公开 showcase opt-in、用户项目 smoke 命令和报告解读方式。
 - 新增 `test/verification_report_test.sh` 并纳入 CI，固定验收报告脚本的跳过项、用户项目成功项、失败 exit code 和报告内容。
+- `docs/verification-report.md` 新增 laoxia Go server 与 Vue web 的真实项目 smoke 记录，确认报告脚本可覆盖 server `go test ./...` 和 web `pnpm build:prod` 两类接入路径。
 
 ## v0.5.2 - 2026-07-18
 
