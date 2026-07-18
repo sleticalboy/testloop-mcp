@@ -171,7 +171,7 @@ TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
 go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summary.json
 ```
 
-详细用法见 [用户项目验收报告](./docs/verification-report.md)。
+详细用法见 [用户项目验收报告](./docs/verification-report.md) 和 [验收报告 CI 集成](./docs/verification-ci.md)。
 
 ### Codex
 

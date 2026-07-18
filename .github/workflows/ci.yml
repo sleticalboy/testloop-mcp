@@ -51,6 +51,7 @@ jobs:
           sh test/fixtures_index_test.sh
           sh test/fixture_decision_mapping_test.sh
           sh test/client_integration_doc_test.sh
+          sh test/verification_ci_doc_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .
