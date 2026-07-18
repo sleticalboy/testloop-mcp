@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/generate-verification-report.sh [testloop-mcp-binary] [output-md]
+
+Generate a Markdown verification report for a local testloop-mcp setup.
+
+Default sections:
+  1. Basic install verification through scripts/verify-client-setup.sh.
+  2. Real MCP process smoke through scripts/verify-mcp-process-smoke.sh.
+  3. Minimal Agent feedback loop through examples/mcp-client-demo.
+
+Optional sections:
+  - Public Go / JS showcase, enabled by TESTLOOP_REPORT_PUBLIC_SHOWCASES.
+  - A user project smoke command, enabled by TESTLOOP_REPORT_PROJECT_DIR and
+    TESTLOOP_REPORT_PROJECT_COMMAND.
+
+Environment:
+  TESTLOOP_MCP_COMMAND                  Binary path or command name to verify.
+  TESTLOOP_REPORT_OUTPUT                Output Markdown path.
+  TESTLOOP_REPORT_TITLE                 Report title. Default: testloop-mcp 验收报告
+  TESTLOOP_REPORT_EXPECT_VERSION        Optional expected binary version.
+  TESTLOOP_REPORT_SKIP_BASIC            Set to true to skip install verification.
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE    Set to true to skip MCP process smoke.
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO       Set to true to skip minimal Agent demo.
+  TESTLOOP_REPORT_PUBLIC_SHOWCASES      none, go, js, or all. Default: none.
+  TESTLOOP_REPORT_PROJECT_DIR           Optional user project directory.
+  TESTLOOP_REPORT_PROJECT_COMMAND       Optional smoke command run inside project dir.
+
+Examples:
+  scripts/generate-verification-report.sh "$(command -v testloop-mcp)"
+  TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 scripts/generate-verification-report.sh
+  TESTLOOP_REPORT_PROJECT_DIR=/path/to/project \
+    TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
+    scripts/generate-verification-report.sh "$(command -v testloop-mcp)" report.md
+USAGE
+}
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -gt 2 ]]; then
+  usage >&2
+  exit 2
+fi
+
+repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+command_path="${1:-${TESTLOOP_MCP_COMMAND:-}}"
+output="${2:-${TESTLOOP_REPORT_OUTPUT:-/tmp/testloop-mcp-verification-report.md}}"
+title="${TESTLOOP_REPORT_TITLE:-testloop-mcp 验收报告}"
+expected_version="${TESTLOOP_REPORT_EXPECT_VERSION:-}"
+skip_basic="${TESTLOOP_REPORT_SKIP_BASIC:-false}"
+skip_process_smoke="${TESTLOOP_REPORT_SKIP_PROCESS_SMOKE:-false}"
+skip_agent_demo="${TESTLOOP_REPORT_SKIP_AGENT_DEMO:-false}"
+public_showcases="${TESTLOOP_REPORT_PUBLIC_SHOWCASES:-none}"
+project_dir="${TESTLOOP_REPORT_PROJECT_DIR:-}"
+project_command="${TESTLOOP_REPORT_PROJECT_COMMAND:-}"
+
+resolve_binary() {
+  if [[ -n "$command_path" ]]; then
+    case "$command_path" in
+      */*)
+        [[ -x "$command_path" ]] || fail "binary is not executable: $command_path"
+        dir="$(cd "$(dirname "$command_path")" && pwd)"
+        printf '%s/%s' "$dir" "$(basename "$command_path")"
+        ;;
+      *)
+        resolved="$(command -v "$command_path" 2>/dev/null)" || fail "binary not found on PATH: $command_path"
+        printf '%s' "$resolved"
+        ;;
+    esac
+    return
+  fi
+
+  resolved="$(command -v testloop-mcp 2>/dev/null)" || fail "testloop-mcp not found on PATH; pass a binary path or set TESTLOOP_MCP_COMMAND"
+  printf '%s' "$resolved"
+}
+
+markdown_escape_table_cell() {
+  printf '%s' "$1" | sed 's/|/\\|/g'
+}
+
+write_output_block() {
+  local file="$1"
+  if [[ -s "$file" ]]; then
+    sed 's/[[:cntrl:]]//g' "$file"
+  else
+    printf '(no output)\n'
+  fi
+}
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT INT TERM
+
+summary_file="${tmp_dir}/summary.tsv"
+sections_file="${tmp_dir}/sections.md"
+: >"$summary_file"
+: >"$sections_file"
+
+binary="$(resolve_binary)"
+version_output="$("$binary" --version 2>/dev/null || true)"
+generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+git_ref="$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
+
+run_section() {
+  local name="$1"
+  shift
+  local out_file="${tmp_dir}/section-$((section_index + 1)).out"
+  section_index=$((section_index + 1))
+
+  printf '==> %s\n' "$name"
+  set +e
+  "$@" >"$out_file" 2>&1
+  local code=$?
+  set -e
+
+  local status="passed"
+  if [[ "$code" -ne 0 ]]; then
+    status="failed"
+    failed_count=$((failed_count + 1))
+  fi
+  printf '%s\t%s\t%s\n' "$name" "$status" "$code" >>"$summary_file"
+
+  {
+    printf '### %s\n\n' "$name"
+    printf '%s\n' "- 状态：\`$status\`"
+    printf '%s\n\n' "- Exit code：\`$code\`"
+    printf '```text\n'
+    write_output_block "$out_file"
+    printf '```\n\n'
+  } >>"$sections_file"
+}
+
+skip_section() {
+  local name="$1"
+  local reason="$2"
+  section_index=$((section_index + 1))
+  printf '%s\t%s\t%s\n' "$name" "skipped" "-" >>"$summary_file"
+  {
+    printf '### %s\n\n' "$name"
+    printf '%s\n' '- 状态：`skipped`'
+    printf '%s\n\n' "- 原因：$reason"
+  } >>"$sections_file"
+}
+
+section_index=0
+failed_count=0
+
+if [[ "$skip_basic" == "true" ]]; then
+  skip_section "基础安装验收" "TESTLOOP_REPORT_SKIP_BASIC=true"
+else
+  basic_env=()
+  basic_env+=("TESTLOOP_MCP_VERIFY_HTTP_ADDR=${TESTLOOP_MCP_VERIFY_HTTP_ADDR:-127.0.0.1:18082}")
+  if [[ -n "$expected_version" ]]; then
+    basic_env+=("TESTLOOP_MCP_VERIFY_EXPECT_VERSION=$expected_version")
+  fi
+  run_section "基础安装验收" env "${basic_env[@]}" "$repo_root/scripts/verify-client-setup.sh" "$binary"
+fi
+
+if [[ "$skip_process_smoke" == "true" ]]; then
+  skip_section "真实 MCP 协议 smoke" "TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true"
+else
+  run_section "真实 MCP 协议 smoke" "$repo_root/scripts/verify-mcp-process-smoke.sh" "$binary"
+fi
+
+if [[ "$skip_agent_demo" == "true" ]]; then
+  skip_section "最小 Agent 闭环 demo" "TESTLOOP_REPORT_SKIP_AGENT_DEMO=true"
+else
+  run_section "最小 Agent 闭环 demo" bash -lc "cd '$repo_root' && go run ./examples/mcp-client-demo"
+fi
+
+case "$public_showcases" in
+  none|"")
+    skip_section "公开 showcase" "TESTLOOP_REPORT_PUBLIC_SHOWCASES=none"
+    ;;
+  go)
+    run_section "公开 Go showcase" "$repo_root/scripts/showcase-go-public-project.sh" "${tmp_dir}/showcase-go.jsonl"
+    ;;
+  js)
+    run_section "公开 JS/TS showcase" "$repo_root/scripts/showcase-js-public-project.sh" "${tmp_dir}/showcase-js.jsonl"
+    ;;
+  all)
+    run_section "公开 Go showcase" "$repo_root/scripts/showcase-go-public-project.sh" "${tmp_dir}/showcase-go.jsonl"
+    run_section "公开 JS/TS showcase" "$repo_root/scripts/showcase-js-public-project.sh" "${tmp_dir}/showcase-js.jsonl"
+    ;;
+  *)
+    fail "unsupported TESTLOOP_REPORT_PUBLIC_SHOWCASES: $public_showcases"
+    ;;
+esac
+
+if [[ -n "$project_dir" || -n "$project_command" ]]; then
+  [[ -n "$project_dir" ]] || fail "TESTLOOP_REPORT_PROJECT_DIR is required when TESTLOOP_REPORT_PROJECT_COMMAND is set"
+  [[ -n "$project_command" ]] || fail "TESTLOOP_REPORT_PROJECT_COMMAND is required when TESTLOOP_REPORT_PROJECT_DIR is set"
+  [[ -d "$project_dir" ]] || fail "project directory does not exist: $project_dir"
+  run_section "用户项目 smoke" bash -lc "cd '$project_dir' && $project_command"
+else
+  skip_section "用户项目 smoke" "未设置 TESTLOOP_REPORT_PROJECT_DIR 和 TESTLOOP_REPORT_PROJECT_COMMAND"
+fi
+
+mkdir -p "$(dirname "$output")"
+{
+  printf '# %s\n\n' "$title"
+  printf '%s%s%s\n' '- 生成时间：`' "$generated_at" '`'
+  printf '%s%s%s\n' '- 仓库：`' "$repo_root" '`'
+  printf '%s%s%s\n' '- Git ref：`' "$git_ref" '`'
+  printf '%s%s%s\n' '- 二进制：`' "$binary" '`'
+  printf '%s%s%s\n\n' '- 版本输出：`' "${version_output:-unknown}" '`'
+
+  printf '## 汇总\n\n'
+  printf '| 验收项 | 状态 | Exit code |\n'
+  printf '| --- | --- | --- |\n'
+  while IFS="$(printf '\t')" read -r name status code; do
+    printf '| %s | `%s` | `%s` |\n' "$(markdown_escape_table_cell "$name")" "$status" "$code"
+  done <"$summary_file"
+
+  printf '\n## 明细\n\n'
+  cat "$sections_file"
+} >"$output"
+
+printf 'Wrote %s\n' "$output"
+if [[ "$failed_count" -gt 0 ]]; then
+  exit 1
+fi

@@ -155,6 +155,15 @@ TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.2 scripts/verify-client-setup.sh /absolut
 scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp
 ```
 
+如果要生成一份可复制的 Markdown 验收报告，可以把基础安装验收、真实 MCP 协议 smoke、最小 Agent demo 和可选用户项目命令聚合起来：
+
+```bash
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.2 \
+  scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
+```
+
+详细用法见 [用户项目验收报告](./docs/verification-report.md)。
+
 ### Codex
 
 `~/.codex/config.toml`:
@@ -550,7 +559,13 @@ go run ./examples/mcp-client-demo
 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 ```
 
-更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase，以及维护者使用的真实项目 regression smoke。
+如果要把验收结果留成 Markdown 制品，可以运行：
+
+```bash
+scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
+```
+
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 

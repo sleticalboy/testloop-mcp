@@ -20,11 +20,13 @@ required_entries = {
     "真实结构化 fixture": "./docs/fixtures.md",
     "客户端集成说明": "./docs/client-integration.md",
     "MCP 客户端契约测试说明": "./docs/mcp-client-contract-tests.md",
+    "用户项目验收报告": "./docs/verification-report.md",
 }
 
 required_commands = [
     "go run ./examples/agent-decision-demo",
     "go run ./examples/mcp-client-demo",
+    "scripts/generate-verification-report.sh",
     "scripts/showcase-onboarding.sh",
     "scripts/verify-client-setup.sh",
     "scripts/verify-mcp-process-smoke.sh",
