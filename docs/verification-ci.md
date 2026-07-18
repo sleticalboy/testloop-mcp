@@ -119,6 +119,8 @@ CI 日志里优先看 `agent_next_step`：
 
 失败时不要只看 CI 最后一行。应下载 `testloop-verification-report` artifact，先读 summary JSON 的 failed section，再打开 Markdown 对应明细。
 
+更具体的失败排查顺序见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
+
 ## 适用边界
 
 这条 CI 示例适合接入验收和发布后 smoke，不适合把所有公开 showcase 或真实项目 top-N regression 全部塞进默认 PR CI。公开 showcase 依赖 GitHub、npm registry 和外部项目状态，应继续使用 `TESTLOOP_REPORT_PUBLIC_SHOWCASES=go|js|all` 显式开启；真实项目 top-N 生成质量回归继续走 [固定 smoke 回归说明](./regression-smoke.md)。

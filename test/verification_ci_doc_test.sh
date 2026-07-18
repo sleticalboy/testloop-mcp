@@ -27,6 +27,7 @@ required_snippets = [
     "bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding",
     "./onboarding-ci-template.md",
+    "./onboarding-ci-failure-triage.md",
     "./regression-smoke.md",
 ]
 

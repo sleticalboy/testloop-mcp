@@ -5,6 +5,7 @@
 ### Added
 
 - 新增 `scripts/run-onboarding-ci.sh` 和 `test/run_onboarding_ci_test.sh`，把外部用户项目 CI 中的安装、脚本准备、项目 smoke 和 onboarding artifact 生成收敛成一个 bootstrap 入口。
+- 新增 `docs/onboarding-ci-failure-triage.md` 和 `test/onboarding_ci_failure_triage_doc_test.sh`，说明 onboarding CI 失败时如何读取 step summary、artifact 和 `agent_next_step`。
 - 新增 `docs/onboarding-ci-template.md` 和 `test/onboarding_ci_template_doc_test.sh`，提供 Go server 与 Vue / Node 项目可复制的 onboarding CI workflow，固定 Markdown、summary JSON 和 `agent_next_step` artifact 路径。
 - 新增 `test/onboarding_ci_template_yaml_test.sh`，解析文档里的完整 workflow YAML 示例，防止复制模板语法漂移。
 
@@ -13,6 +14,7 @@
 - README、showcase 和验收 CI 文档补充 Onboarding CI 复制模板入口，让首次接入用户优先复制最小 workflow，再按需阅读完整说明。
 - Onboarding CI 复制模板改用 `scripts/run-onboarding-ci.sh` bootstrap，避免外部用户仓库直接引用不存在的 repo-local `scripts/showcase-agent-onboarding-report.sh`。
 - 使用 `TESTLOOP_MCP_VERSION=v0.5.5 scripts/run-onboarding-ci.sh 'go test ./...'` 完成真实 dry-run，基础安装验收、真实 MCP 协议 smoke、最小 Agent demo 和用户项目 smoke 均通过，`agent_next_step=ready`。
+- `scripts/run-onboarding-ci.sh` 在 GitHub Actions 中会写入 `$GITHUB_STEP_SUMMARY`，失败时直接展示状态、失败数量、artifact 路径和下一步建议。
 
 ## v0.5.5 - 2026-07-18
 

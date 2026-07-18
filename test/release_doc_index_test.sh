@@ -22,6 +22,7 @@ required_entries = {
     "MCP 客户端契约测试说明": "./docs/mcp-client-contract-tests.md",
     "用户项目验收报告": "./docs/verification-report.md",
     "Onboarding CI 复制模板": "./docs/onboarding-ci-template.md",
+    "Onboarding CI 失败排查": "./docs/onboarding-ci-failure-triage.md",
     "真实接入案例模板": "./docs/real-integration-cases.md",
     "验收 summary 失败分流样例": "./docs/verification-summary-failures.md",
     "验收报告 CI 集成": "./docs/verification-ci.md",

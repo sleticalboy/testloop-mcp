@@ -171,7 +171,7 @@ TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
 go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summary.json
 ```
 
-详细用法见 [用户项目验收报告](./docs/verification-report.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md) 和 [验收报告 CI 集成](./docs/verification-ci.md)。
+详细用法见 [用户项目验收报告](./docs/verification-report.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md) 和 [验收报告 CI 集成](./docs/verification-ci.md)。
 
 ### Codex
 
@@ -586,7 +586,7 @@ scripts/run-onboarding-ci.sh 'go test ./...'
 scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
-更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 

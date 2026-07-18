@@ -145,6 +145,9 @@ resolve_binary() {
 }
 
 binary="$(resolve_binary "$command_path")"
+report_md="${TESTLOOP_ONBOARDING_REPORT_MD:-${output_dir}/verification-report.md}"
+summary_json="${TESTLOOP_ONBOARDING_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
+decision_out="${TESTLOOP_ONBOARDING_DECISION_OUT:-${output_dir}/agent-decision.txt}"
 
 printf 'testloop_mcp_repo=%s\n' "$repo_dir"
 printf 'testloop_mcp_binary=%s\n' "$binary"
@@ -162,4 +165,70 @@ if [[ -n "$expect_version" ]]; then
   env_args+=("TESTLOOP_MCP_VERIFY_EXPECT_VERSION=$expect_version")
 fi
 
+write_github_step_summary() {
+  [[ -n "${GITHUB_STEP_SUMMARY:-}" ]] || return 0
+
+  local overall_status="unknown"
+  local failed_count="unknown"
+  local agent_next_step="unknown"
+
+  if [[ -s "$summary_json" ]]; then
+    read -r overall_status failed_count < <(
+      python3 - "$summary_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+print(data.get("overall_status", "unknown"), data.get("failed_count", "unknown"))
+PY
+    )
+  fi
+
+  if [[ -s "$decision_out" ]]; then
+    agent_next_step="$(grep -E '^agent_next_step=' "$decision_out" | tail -n 1 | cut -d= -f2- || true)"
+    [[ -n "$agent_next_step" ]] || agent_next_step="unknown"
+  fi
+
+  {
+    printf '## testloop-mcp onboarding\n\n'
+    printf '%s%s%s\n' '- Status: `' "$overall_status" '`'
+    printf '%s%s%s\n' '- Failed sections: `' "$failed_count" '`'
+    printf '%s%s%s\n' '- agent_next_step: `' "$agent_next_step" '`'
+    printf '%s%s%s\n' '- Markdown report: `' "$report_md" '`'
+    printf '%s%s%s\n' '- Summary JSON: `' "$summary_json" '`'
+    printf '%s%s%s\n\n' '- Agent decision: `' "$decision_out" '`'
+    case "$agent_next_step" in
+      ready)
+        printf '%s\n' 'Next: continue with the real generation, repair, or coverage loop.'
+        ;;
+      fix-installation)
+        printf '%s\n' 'Next: inspect binary path, version gate, config roundtrip, and HTTP health output.'
+        ;;
+      inspect-user-project)
+        printf '%s\n' 'Next: inspect the user project smoke section in the Markdown report.'
+        ;;
+      inspect-mcp-transport)
+        printf '%s\n' 'Next: inspect stdio / Streamable HTTP MCP startup and transport configuration.'
+        ;;
+      inspect-agent-demo)
+        printf '%s\n' 'Next: inspect structured feedback loop and demo runner output.'
+        ;;
+      inspect-showcase)
+        printf '%s\n' 'Next: inspect external network, showcase checkout, or action expectation drift.'
+        ;;
+      *)
+        printf '%s\n' 'Next: download the onboarding artifacts and inspect verification-summary.json first.'
+        ;;
+    esac
+    printf '\n'
+  } >>"$GITHUB_STEP_SUMMARY"
+}
+
+set +e
 env "${env_args[@]}" "$repo_dir/scripts/showcase-agent-onboarding-report.sh" "$binary"
+onboarding_code=$?
+set -e
+
+write_github_step_summary
+exit "$onboarding_code"

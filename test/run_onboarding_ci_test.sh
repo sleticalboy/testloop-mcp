@@ -50,6 +50,7 @@ project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 out="${tmp_dir}/onboarding-ci.out"
 output_dir="${tmp_dir}/artifacts"
+step_summary="${tmp_dir}/step-summary.md"
 
 run_expect_code 0 "$out" env \
   TESTLOOP_MCP_REPO_DIR="$repo_root" \
@@ -60,6 +61,7 @@ run_expect_code 0 "$out" env \
   TESTLOOP_REPORT_SKIP_BASIC=true \
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
   TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  GITHUB_STEP_SUMMARY="$step_summary" \
   bash "${repo_root}/scripts/run-onboarding-ci.sh" 'printf "project smoke ok\n"'
 
 assert_contains "$out" "testloop_mcp_repo=$repo_root"
@@ -74,6 +76,33 @@ assert_contains "$out" "agent_next_step=ready"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
 assert_contains "$output_dir/agent-decision.txt" "agent_next_step=ready"
+assert_contains "$step_summary" "## testloop-mcp onboarding"
+assert_contains "$step_summary" 'Status: `passed`'
+assert_contains "$step_summary" 'Failed sections: `0`'
+assert_contains "$step_summary" 'agent_next_step: `ready`'
+assert_contains "$step_summary" "Markdown report: \`$output_dir/verification-report.md\`"
+
+failed_output_dir="${tmp_dir}/failed-artifacts"
+failed_step_summary="${tmp_dir}/failed-step-summary.md"
+run_expect_code 1 "$out" env \
+  TESTLOOP_MCP_REPO_DIR="$repo_root" \
+  TESTLOOP_MCP_COMMAND="$fake_binary" \
+  TESTLOOP_ONBOARDING_PROJECT_DIR="$project_dir" \
+  TESTLOOP_ONBOARDING_OUTPUT_DIR="$failed_output_dir" \
+  TESTLOOP_REPORT_SKIP_BASIC=true \
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  GITHUB_STEP_SUMMARY="$failed_step_summary" \
+  bash "${repo_root}/scripts/run-onboarding-ci.sh" 'echo project failed; exit 7'
+
+assert_contains "$out" "agent_next_step=inspect-user-project"
+assert_contains "$failed_output_dir/verification-report.md" "project failed"
+assert_contains "$failed_output_dir/verification-summary.json" '"overall_status": "failed"'
+assert_contains "$failed_output_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
+assert_contains "$failed_step_summary" 'Status: `failed`'
+assert_contains "$failed_step_summary" 'Failed sections: `1`'
+assert_contains "$failed_step_summary" 'agent_next_step: `inspect-user-project`'
+assert_contains "$failed_step_summary" 'Next: inspect the user project smoke section in the Markdown report.'
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/run-onboarding-ci.sh" --help
 assert_contains "$out" "Usage: scripts/run-onboarding-ci.sh [project-smoke-command]"
