@@ -568,7 +568,7 @@ go run ./examples/mcp-client-demo
 scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 ```
 
-这条首跑诊断会输出 `first_run_status`、`first_run_agent_next_step`、Markdown 报告、summary JSON、decision 和完整日志路径，适合安装后先确认本机是否能接入。
+这条首跑诊断会输出 `first_run_status`、`first_run_agent_next_step`、Markdown 报告、summary JSON、decision、可粘贴上下文和完整日志路径，适合安装后先确认本机是否能接入。
 
 如果只想看终端里的完整演示，可以运行：
 
@@ -604,7 +604,7 @@ web/Node 模板可用 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node` 复验，
 scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
-更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含[首跑诊断](./docs/first-run-diagnostics.md)、安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 外部项目演练](./docs/onboarding-ci-external-dry-run.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
+更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含[首跑诊断](./docs/first-run-diagnostics.md)、[首跑诊断失败样例](./docs/first-run-failures.md)、安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 外部项目演练](./docs/onboarding-ci-external-dry-run.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
 
 ## Roadmap
 

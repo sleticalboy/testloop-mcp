@@ -1,0 +1,12 @@
+testloop-mcp first-run diagnostic context
+first_run_status=failed
+first_run_failed_count=1
+first_run_agent_next_step=fix-installation
+first_run_next=inspect binary path, version, generated config, and HTTP healthz
+first_run_report=/tmp/testloop-install-failed-report.md
+first_run_summary_json=/tmp/testloop-install-failed-summary.json
+first_run_decision=/tmp/testloop-install-failed-decision.txt
+first_run_log=/tmp/testloop-install-failed.log
+
+Suggested prompt:
+请根据 first_run_agent_next_step 和 summary JSON，先判断失败属于安装、MCP transport、Agent demo、公开 showcase 还是用户项目 smoke，再给出下一步修复动作。不要直接改生成测试，先打开 Markdown report 里的失败 section。

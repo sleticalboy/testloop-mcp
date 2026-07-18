@@ -21,6 +21,7 @@ required_entries = {
     "客户端集成说明": "./docs/client-integration.md",
     "MCP 客户端契约测试说明": "./docs/mcp-client-contract-tests.md",
     "首跑诊断": "./docs/first-run-diagnostics.md",
+    "首跑诊断失败样例": "./docs/first-run-failures.md",
     "用户项目验收报告": "./docs/verification-report.md",
     "Onboarding CI 外部项目演练": "./docs/onboarding-ci-external-dry-run.md",
     "Onboarding CI 复制模板": "./docs/onboarding-ci-template.md",

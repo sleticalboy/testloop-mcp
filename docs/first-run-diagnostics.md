@@ -1,6 +1,6 @@
 # 首跑诊断
 
-`scripts/doctor-first-run.sh` 用于把安装后第一次验收收敛成一条命令。它会复用 onboarding report 流程，生成 Markdown 报告、summary JSON、Agent decision 和完整日志，并在终端输出稳定字段。
+`scripts/doctor-first-run.sh` 用于把安装后第一次验收收敛成一条命令。它会复用 onboarding report 流程，生成 Markdown 报告、summary JSON、Agent decision、可粘贴上下文和完整日志，并在终端输出稳定字段。
 
 ## 快速使用
 
@@ -34,6 +34,7 @@ first_run_agent_next_step=ready
 first_run_report=/tmp/testloop-mcp-first-run/verification-report.md
 first_run_summary_json=/tmp/testloop-mcp-first-run/verification-summary.json
 first_run_decision=/tmp/testloop-mcp-first-run/agent-decision.txt
+first_run_context=/tmp/testloop-mcp-first-run/first-run-context.txt
 first_run_log=/tmp/testloop-mcp-first-run/first-run.log
 ```
 
@@ -41,6 +42,7 @@ first_run_log=/tmp/testloop-mcp-first-run/first-run.log
 
 - `first_run_status` 来自 summary JSON 的 `overall_status`。
 - `first_run_agent_next_step` 来自 `agent-decision.txt`，用于告诉用户或 AI Agent 下一步做什么。
+- `first_run_context` 是可直接粘给 AI Agent 的最小上下文。
 - `first_run_log` 保存底层 onboarding 命令输出，便于排查脚本入口问题。
 
 ## 诊断边界
@@ -52,7 +54,7 @@ first_run_log=/tmp/testloop-mcp-first-run/first-run.log
 - 最小 Agent 闭环 demo：`run_tests -> repair_task -> rerun -> parse_coverage`。
 - 可选用户项目 smoke：由调用方显式传入命令。
 
-如果 `first_run_agent_next_step=ready`，说明安装和 MCP 传输链路已经可用，可以继续配置 Codex、Claude 或 Cursor，或进入真实项目验证。其他 action 的排查含义见 [用户项目验收报告](./verification-report.md) 和 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
+如果 `first_run_agent_next_step=ready`，说明安装和 MCP 传输链路已经可用，可以继续配置 Codex、Claude 或 Cursor，或进入真实项目验证。其他 action 的排查含义见 [首跑诊断失败样例](./first-run-failures.md)、[用户项目验收报告](./verification-report.md) 和 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
 
 ## 当前实跑记录
 
@@ -73,4 +75,5 @@ TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-mcp-first-run-check \
 - `first_run_report=/tmp/testloop-mcp-first-run-check/verification-report.md`
 - `first_run_summary_json=/tmp/testloop-mcp-first-run-check/verification-summary.json`
 - `first_run_decision=/tmp/testloop-mcp-first-run-check/agent-decision.txt`
+- `first_run_context=/tmp/testloop-mcp-first-run-check/first-run-context.txt`
 - `first_run_log=/tmp/testloop-mcp-first-run-check/first-run.log`

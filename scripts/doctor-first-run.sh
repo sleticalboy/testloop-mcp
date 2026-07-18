@@ -13,6 +13,7 @@ agent-readable status fields:
   - first_run_report
   - first_run_summary_json
   - first_run_decision
+  - first_run_context
   - first_run_log
 
 Arguments:
@@ -63,12 +64,13 @@ output_dir="${TESTLOOP_FIRST_RUN_OUTPUT_DIR:-/tmp/testloop-mcp-first-run}"
 report_md="${TESTLOOP_FIRST_RUN_REPORT_MD:-${output_dir}/verification-report.md}"
 summary_json="${TESTLOOP_FIRST_RUN_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
 decision_out="${TESTLOOP_FIRST_RUN_DECISION_OUT:-${output_dir}/agent-decision.txt}"
+context_out="${TESTLOOP_FIRST_RUN_CONTEXT_OUT:-${output_dir}/first-run-context.txt}"
 log_out="${TESTLOOP_FIRST_RUN_LOG:-${output_dir}/first-run.log}"
 expect_version="${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
 project_dir="${TESTLOOP_FIRST_RUN_PROJECT_DIR:-}"
 project_command="${TESTLOOP_FIRST_RUN_PROJECT_COMMAND:-}"
 
-mkdir -p "$output_dir" "$(dirname "$report_md")" "$(dirname "$summary_json")" "$(dirname "$decision_out")" "$(dirname "$log_out")"
+mkdir -p "$output_dir" "$(dirname "$report_md")" "$(dirname "$summary_json")" "$(dirname "$decision_out")" "$(dirname "$context_out")" "$(dirname "$log_out")"
 
 env_args=(
   "TESTLOOP_ONBOARDING_OUTPUT_DIR=$output_dir"
@@ -120,24 +122,46 @@ printf 'first_run_agent_next_step=%s\n' "$agent_next_step"
 printf 'first_run_report=%s\n' "$report_md"
 printf 'first_run_summary_json=%s\n' "$summary_json"
 printf 'first_run_decision=%s\n' "$decision_out"
+printf 'first_run_context=%s\n' "$context_out"
 printf 'first_run_log=%s\n' "$log_out"
 
 case "$agent_next_step" in
   ready)
-    printf '%s\n' 'first_run_next=install path is ready; continue with client config or project validation'
+    next_text='install path is ready; continue with client config or project validation'
     ;;
   fix-installation)
-    printf '%s\n' 'first_run_next=inspect binary path, version, generated config, and HTTP healthz'
+    next_text='inspect binary path, version, generated config, and HTTP healthz'
     ;;
   inspect-mcp-transport)
-    printf '%s\n' 'first_run_next=inspect stdio or Streamable HTTP MCP transport startup'
+    next_text='inspect stdio or Streamable HTTP MCP transport startup'
+    ;;
+  inspect-agent-demo)
+    next_text='inspect structuredContent feedback loop and demo runner output'
+    ;;
+  inspect-showcase)
+    next_text='inspect external network, showcase checkout, or action expectation drift'
     ;;
   inspect-user-project)
-    printf '%s\n' 'first_run_next=inspect user project smoke command and report details'
+    next_text='inspect user project smoke command and report details'
     ;;
   *)
-    printf '%s\n' 'first_run_next=open the summary JSON first, then inspect the Markdown report'
+    next_text='open the summary JSON first, then inspect the Markdown report'
     ;;
 esac
+printf 'first_run_next=%s\n' "$next_text"
+
+{
+  printf 'testloop-mcp first-run diagnostic context\n'
+  printf 'first_run_status=%s\n' "$status"
+  printf 'first_run_failed_count=%s\n' "$failed_count"
+  printf 'first_run_agent_next_step=%s\n' "$agent_next_step"
+  printf 'first_run_next=%s\n' "$next_text"
+  printf 'first_run_report=%s\n' "$report_md"
+  printf 'first_run_summary_json=%s\n' "$summary_json"
+  printf 'first_run_decision=%s\n' "$decision_out"
+  printf 'first_run_log=%s\n' "$log_out"
+  printf '\nSuggested prompt:\n'
+  printf '请根据 first_run_agent_next_step 和 summary JSON，先判断失败属于安装、MCP transport、Agent demo、公开 showcase 还是用户项目 smoke，再给出下一步修复动作。不要直接改生成测试，先打开 Markdown report 里的失败 section。\n'
+} >"$context_out"
 
 exit "$onboarding_code"

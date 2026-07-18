@@ -62,10 +62,14 @@ assert_contains "$out" "first_run_agent_next_step=ready"
 assert_contains "$out" "first_run_report=$output_dir/verification-report.md"
 assert_contains "$out" "first_run_summary_json=$output_dir/verification-summary.json"
 assert_contains "$out" "first_run_decision=$output_dir/agent-decision.txt"
+assert_contains "$out" "first_run_context=$output_dir/first-run-context.txt"
 assert_contains "$out" "first_run_log=$output_dir/first-run.log"
 assert_contains "$out" "first_run_next=install path is ready"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
 assert_contains "$output_dir/agent-decision.txt" "agent_next_step=ready"
+assert_contains "$output_dir/first-run-context.txt" "testloop-mcp first-run diagnostic context"
+assert_contains "$output_dir/first-run-context.txt" "first_run_agent_next_step=ready"
+assert_contains "$output_dir/first-run-context.txt" "Suggested prompt:"
 assert_contains "$output_dir/first-run.log" "onboarding_report=$output_dir/verification-report.md"
 
 project_dir="${tmp_dir}/project"
@@ -85,6 +89,8 @@ assert_contains "$out" "first_run_failed_count=1"
 assert_contains "$out" "first_run_agent_next_step=inspect-user-project"
 assert_contains "$out" "first_run_next=inspect user project smoke command"
 assert_contains "$failed_dir/verification-report.md" "project failed"
+assert_contains "$failed_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
+assert_contains "$failed_dir/first-run-context.txt" "不要直接改生成测试"
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/doctor-first-run.sh" --help
 assert_contains "$out" "Usage: scripts/doctor-first-run.sh [testloop-mcp-binary]"
