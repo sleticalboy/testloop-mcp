@@ -9,6 +9,7 @@
 - 新增 `docs/first-run-failures.md`、`docs/fixtures/first-run/*.txt` 和 fixture 测试，固定首跑失败时可粘贴给 AI Agent 的最小上下文。
 - 新增 `scripts/run-first-run-ci.sh`、`docs/first-run-ci-template.md` 和模板测试，为外部用户项目提供可复制的首跑诊断 CI bootstrap。
 - 新增 `scripts/showcase-first-run-ci-external-project.sh`、`docs/first-run-ci-external-dry-run.md` 和文档测试，用临时非 testloop Go 或 Node 项目验证首跑诊断 CI bootstrap 能生成五件套 artifact。
+- 新增 `docs/plan-release-notes-v0.5.7.md` 和 `docs/plan-release-v0.5.7.md`，整理 v0.5.7 候选发布说明和发布检查清单。
 
 ### Changed
 
