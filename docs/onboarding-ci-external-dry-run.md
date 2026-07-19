@@ -21,8 +21,9 @@ external_onboarding_status=passed
 - `/tmp/testloop-external-onboarding/artifacts/verification-report.md`
 - `/tmp/testloop-external-onboarding/artifacts/verification-summary.json`
 - `/tmp/testloop-external-onboarding/artifacts/agent-decision.txt`
+- `/tmp/testloop-external-onboarding/artifacts/agent-response.txt`
 
-其中 `verification-summary.json` 应为 `overall_status=passed`、`failed_count=0`，`agent-decision.txt` 应包含 `agent_next_step=ready`。
+其中 `verification-summary.json` 应为 `overall_status=passed`、`failed_count=0`，`agent-decision.txt` 和 `agent-response.txt` 都应包含 `agent_next_step=ready`。
 
 如果要验证 web 模板的命令形态，可以切换到 Node 模式：
 
@@ -37,12 +38,12 @@ Node 模式会创建一个无第三方依赖的临时项目，先生成 `pnpm-lo
 
 ## 当前实跑记录
 
-2026-07-19 使用当前仓库本地构建 v0.5.7 candidate 二进制完成一次 Go 演练：
+2026-07-19 使用当前仓库本地构建 v0.5.9 candidate 二进制完成一次 Go 演练：
 
 ```bash
 go build -o /tmp/testloop-mcp-external-onboarding .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-onboarding \
-TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_MCP_VERSION=v0.5.9 \
   scripts/showcase-onboarding-ci-external-project.sh
 ```
 
@@ -50,6 +51,7 @@ TESTLOOP_MCP_VERSION=v0.5.7 \
 
 - `external_onboarding_project=/tmp/testloop-external-onboarding/project-go`
 - `external_onboarding_output_dir=/tmp/testloop-external-onboarding/artifacts`
+- `external_onboarding_agent_response=/tmp/testloop-external-onboarding/artifacts/agent-response.txt`
 - `external_onboarding_status=passed`
 - `agent_next_step=ready`
 
@@ -58,7 +60,7 @@ TESTLOOP_MCP_VERSION=v0.5.7 \
 ```bash
 go build -o /tmp/testloop-mcp-external-onboarding .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-onboarding \
-TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_MCP_VERSION=v0.5.9 \
 TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node \
   scripts/showcase-onboarding-ci-external-project.sh
 ```
@@ -67,6 +69,7 @@ TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node \
 
 - `external_onboarding_node_project=/tmp/testloop-external-onboarding/project-node`
 - `external_onboarding_node_output_dir=/tmp/testloop-external-onboarding/artifacts`
+- `external_onboarding_node_agent_response=/tmp/testloop-external-onboarding/artifacts/agent-response.txt`
 - `external_onboarding_node_status=passed`
 - `external_onboarding_status=passed`
 - `agent_next_step=ready`
@@ -74,7 +77,9 @@ TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node \
 最终也复验了 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=all`，连续生成：
 
 - `/tmp/testloop-external-onboarding/artifacts/go/verification-summary.json`
+- `/tmp/testloop-external-onboarding/artifacts/go/agent-response.txt`
 - `/tmp/testloop-external-onboarding/artifacts/node/verification-summary.json`
+- `/tmp/testloop-external-onboarding/artifacts/node/agent-response.txt`
 
 两条路径均输出 `agent_next_step=ready`，最终输出 `external_onboarding_mode=all`、`external_onboarding_status=passed`。
 

@@ -16,7 +16,7 @@ Environment:
   TESTLOOP_EXTERNAL_ONBOARDING_BOOTSTRAP   Bootstrap script path. Default: <workdir>/testloop-onboarding-ci.sh
   TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE go, node, or all. Default: go.
   TESTLOOP_MCP_COMMAND                     Existing testloop-mcp binary path/command.
-  TESTLOOP_MCP_VERSION                     Expected binary version. Default: v0.5.6
+  TESTLOOP_MCP_VERSION                     Expected binary version. Default: v0.5.9
   TESTLOOP_MCP_REPO_DIR                    Existing testloop-mcp source checkout. Default: current repo.
 
 Examples:
@@ -40,7 +40,7 @@ workdir="${TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR:-/tmp/testloop-external-onboardi
 output_dir="${TESTLOOP_EXTERNAL_ONBOARDING_OUTPUT_DIR:-$workdir/artifacts}"
 bootstrap="${TESTLOOP_EXTERNAL_ONBOARDING_BOOTSTRAP:-$workdir/testloop-onboarding-ci.sh}"
 project_type="${TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE:-go}"
-version="${TESTLOOP_MCP_VERSION:-v0.5.6}"
+version="${TESTLOOP_MCP_VERSION:-v0.5.9}"
 repo_dir="${TESTLOOP_MCP_REPO_DIR:-$repo_root}"
 
 case "$project_type" in
@@ -140,14 +140,16 @@ run_external_onboarding() {
 
   local summary_json="$artifacts_dir/verification-summary.json"
   local decision_out="$artifacts_dir/agent-decision.txt"
+  local agent_response_out="$artifacts_dir/agent-response.txt"
 
-  python3 - "$summary_json" "$decision_out" <<'PY'
+  python3 - "$summary_json" "$decision_out" "$agent_response_out" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 decision = Path(sys.argv[2]).read_text(encoding="utf-8")
+response_path = Path(sys.argv[3])
 
 if summary.get("overall_status") != "passed":
     raise SystemExit(f"expected overall_status=passed, got {summary.get('overall_status')!r}")
@@ -155,12 +157,18 @@ if summary.get("failed_count") != 0:
     raise SystemExit(f"expected failed_count=0, got {summary.get('failed_count')!r}")
 if "agent_next_step=ready" not in decision:
     raise SystemExit("expected agent_next_step=ready")
+if not response_path.is_file():
+    raise SystemExit(f"expected agent-response.txt to exist: {response_path}")
+response = response_path.read_text(encoding="utf-8")
+if "agent_next_step=ready" not in response:
+    raise SystemExit("expected agent-response.txt to contain agent_next_step=ready")
 PY
 
   printf 'external_onboarding_%s_project=%s\n' "$kind" "$project_dir"
   printf 'external_onboarding_%s_output_dir=%s\n' "$kind" "$artifacts_dir"
   printf 'external_onboarding_%s_summary=%s\n' "$kind" "$summary_json"
   printf 'external_onboarding_%s_decision=%s\n' "$kind" "$decision_out"
+  printf 'external_onboarding_%s_agent_response=%s\n' "$kind" "$agent_response_out"
   printf 'external_onboarding_%s_status=passed\n' "$kind"
 
   if [[ "$project_type" != "all" ]]; then
@@ -168,6 +176,7 @@ PY
     printf 'external_onboarding_output_dir=%s\n' "$artifacts_dir"
     printf 'external_onboarding_summary=%s\n' "$summary_json"
     printf 'external_onboarding_decision=%s\n' "$decision_out"
+    printf 'external_onboarding_agent_response=%s\n' "$agent_response_out"
   fi
 }
 

@@ -18,6 +18,11 @@ required = [
     "/tmp/testloop-external-onboarding/artifacts/verification-report.md",
     "/tmp/testloop-external-onboarding/artifacts/verification-summary.json",
     "/tmp/testloop-external-onboarding/artifacts/agent-decision.txt",
+    "/tmp/testloop-external-onboarding/artifacts/agent-response.txt",
+    "external_onboarding_agent_response=/tmp/testloop-external-onboarding/artifacts/agent-response.txt",
+    "external_onboarding_node_agent_response=/tmp/testloop-external-onboarding/artifacts/agent-response.txt",
+    "/tmp/testloop-external-onboarding/artifacts/go/agent-response.txt",
+    "/tmp/testloop-external-onboarding/artifacts/node/agent-response.txt",
     "agent_next_step=ready",
     "pnpm",
 ]

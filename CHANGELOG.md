@@ -10,6 +10,7 @@
 - CI 失败 triage 和 first-run CI 模板已收敛读取优先级：新版 artifact 先看 `agent-response.txt`，旧版或机器分流再看 decision/context/summary/report。
 - 外部项目 first-run showcase 现在会校验并输出 `agent-response.txt`，确保复制型 bootstrap 的六件套 artifact 在真实 dry-run 中可用。
 - 新增 onboarding Agent 回复 demo 和目录入口，`scripts/run-onboarding-ci.sh` 现在会自动生成 `agent-response.txt`，让 onboarding artifact 与 first-run 的 Agent 消费体验对齐。
+- 外部项目 onboarding showcase 现在会校验并输出 `agent-response.txt`，确保复制型 onboarding bootstrap 的四件套 artifact 在真实 dry-run 中可用。
 
 ## v0.5.9 - 2026-07-19
 

@@ -684,6 +684,7 @@ TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp \
 ```
 
 web/Node 模板可用 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node` 复验，或用 `all` 连续复验 Go 和 Node。
+演练通过时会输出 `external_onboarding_agent_response`，确认 onboarding bootstrap 在外部项目中也生成了 Agent 回复草稿。
 
 如果要确认首跑诊断 bootstrap 在非 testloop 仓库里也能生成六件套 artifact，可以运行：
 
