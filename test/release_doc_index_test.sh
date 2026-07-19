@@ -13,6 +13,7 @@ readme = Path("README.md")
 text = readme.read_text(encoding="utf-8")
 
 required_entries = {
+    "接入方一页式验证指南": "./docs/adopter-verification-guide.md",
     "Agent 工作流": "./docs/agent-workflow.md",
     "Agent 结构化契约": "./docs/agent-contract.md",
     "Agent Action 决策表": "./docs/agent-action-guide.md",

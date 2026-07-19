@@ -1,0 +1,141 @@
+# 接入方一页式验证指南
+
+这份指南面向要把 testloop-mcp 接到自己项目里的用户。目标是少做选择：先确认本机安装可用，再把同一套反馈入口放进 CI，失败时把稳定上下文交给 AI Agent。
+
+## 1. 安装并确认版本
+
+推荐 Homebrew：
+
+```bash
+brew tap sleticalboy/tap
+brew install testloop-mcp
+testloop-mcp --version
+```
+
+当前文档期望版本是 `0.5.7`。如果版本不对：
+
+```bash
+brew update
+brew upgrade sleticalboy/tap/testloop-mcp
+brew reinstall sleticalboy/tap/testloop-mcp
+```
+
+源码 checkout 或临时二进制也可以直接传绝对路径给后续脚本。
+
+## 2. 本机首跑诊断
+
+首次接入先跑首跑诊断：
+
+```bash
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.7 \
+  scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
+```
+
+如果输出：
+
+```text
+first_run_agent_next_step=ready
+```
+
+说明安装、配置生成、真实 MCP transport 和最小 Agent 闭环都已通过。
+
+如果不是 `ready`，优先保留这些文件：
+
+- `verification-report.md`
+- `verification-summary.json`
+- `agent-decision.txt`
+- `first-run-context.txt`
+- `first-run.log`
+
+其中 `first-run-context.txt` 可以直接交给 AI Agent。
+
+## 3. CI 里怎么选
+
+首次接入、安装漂移排查、或者希望失败时直接给 Agent 上下文，用 first-run CI：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
+TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
+  bash /tmp/testloop-first-run-ci.sh 'go test ./...'
+```
+
+稳定接入后的 PR / 发布后 smoke，用 onboarding CI：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
+TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+  bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
+```
+
+前端项目把 smoke 命令换成：
+
+```bash
+pnpm install --frozen-lockfile && pnpm build
+```
+
+## 4. CI artifact 固定上传
+
+first-run CI 上传五件套：
+
+- `/tmp/testloop-first-run/verification-report.md`
+- `/tmp/testloop-first-run/verification-summary.json`
+- `/tmp/testloop-first-run/agent-decision.txt`
+- `/tmp/testloop-first-run/first-run-context.txt`
+- `/tmp/testloop-first-run/first-run.log`
+
+onboarding CI 上传三件套：
+
+- `/tmp/testloop-onboarding/verification-report.md`
+- `/tmp/testloop-onboarding/verification-summary.json`
+- `/tmp/testloop-onboarding/agent-decision.txt`
+
+GitHub Actions 里上传 artifact 时使用 `if: always()`，否则失败时最需要的上下文可能不会被保存。
+
+## 5. 失败时看哪个字段
+
+优先看 `agent-decision.txt`：
+
+```text
+agent_next_step=ready
+```
+
+常见 action：
+
+| action | 下一步 |
+| --- | --- |
+| `ready` | 接入链路通过，可以开始真实生成、修复或覆盖率补测。 |
+| `fix-installation` | 检查二进制路径、版本、Homebrew 链接或安装脚本输出。 |
+| `inspect-mcp-transport` | 检查 stdio / Streamable HTTP MCP 启动和客户端配置。 |
+| `inspect-agent-demo` | 检查结构化返回、最小 Agent demo 和 demo runner。 |
+| `inspect-user-project` | 检查用户项目 smoke，通常是依赖、环境变量、测试命令或项目自身失败。 |
+
+first-run CI 失败时，把 `first-run-context.txt` 交给 AI Agent；onboarding CI 失败时，把 `agent-decision.txt`、`verification-summary.json` 和 Markdown 报告里失败 section 交给 Agent。
+
+## 6. 改模板后如何自证
+
+维护者或团队改 CI 模板后，先用临时外部项目演练复制路径：
+
+```bash
+go build -o /tmp/testloop-mcp .
+TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp \
+TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=all \
+  scripts/showcase-first-run-ci-external-project.sh
+
+TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp \
+TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=all \
+  scripts/showcase-onboarding-ci-external-project.sh
+```
+
+两条都应输出 `external_*_status=passed`。
+
+## 相关文档
+
+- [5 分钟接入向导](./quickstart.md)
+- [验收报告 CI 集成](./verification-ci.md)
+- [首跑诊断](./first-run-diagnostics.md)
+- [首跑诊断 CI 复制模板](./first-run-ci-template.md)
+- [Onboarding CI 复制模板](./onboarding-ci-template.md)
