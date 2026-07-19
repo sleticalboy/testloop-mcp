@@ -68,13 +68,13 @@
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.10`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.10 - 2026-07-19`。
-- [ ] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.10`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.10`。
-- [ ] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.10`。
-- [ ] 测试中的版本期望同步到 `0.5.10`。
-- [ ] 重新运行完整本地验证，确认版本准备改动可发布。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.10`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.10 - 2026-07-19`。
+- [x] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.10`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.10`。
+- [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.10`。
+- [x] 测试中的版本期望同步到 `0.5.10`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.10` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -87,4 +87,4 @@
 
 ## 当前结论
 
-v0.5.10 候选内容已经完成本地功能验证、release readiness 门禁和候选计划远端 CI；下一步进入正式版本准备。
+v0.5.10 正式版本准备已完成本地验证；下一步提交版本准备改动并等待远端 CI，通过后打 tag、验证 Release Artifacts，并更新 GitHub Release 与 Homebrew tap。

@@ -38,12 +38,12 @@ Node 模式会创建一个无第三方依赖的临时项目，先生成 `pnpm-lo
 
 ## 当前实跑记录
 
-2026-07-19 使用当前仓库本地构建 v0.5.9 candidate 二进制完成一次 Go 演练：
+2026-07-19 使用当前仓库本地构建 v0.5.10 candidate 二进制完成一次 Go 演练：
 
 ```bash
 go build -o /tmp/testloop-mcp-external-onboarding .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-onboarding \
-TESTLOOP_MCP_VERSION=v0.5.9 \
+TESTLOOP_MCP_VERSION=v0.5.10 \
   scripts/showcase-onboarding-ci-external-project.sh
 ```
 
@@ -60,7 +60,7 @@ TESTLOOP_MCP_VERSION=v0.5.9 \
 ```bash
 go build -o /tmp/testloop-mcp-external-onboarding .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-external-onboarding \
-TESTLOOP_MCP_VERSION=v0.5.9 \
+TESTLOOP_MCP_VERSION=v0.5.10 \
 TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node \
   scripts/showcase-onboarding-ci-external-project.sh
 ```
