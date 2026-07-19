@@ -4,7 +4,7 @@
 
 ### Added
 
-- Java regression smoke now includes RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
+- Java regression smoke now includes repository-backed RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
 
 ### Fixed
 

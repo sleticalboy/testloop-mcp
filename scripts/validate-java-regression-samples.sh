@@ -33,7 +33,7 @@ run_tests -> JaCoCo 目标行命中校验闭环，避免每次都重跑完整 to
                                     默认：/tmp/testloop-commons-codec-taskids-junit130-results.jsonl
   TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE
                                     包含 RocketMQ StatusChecker ready 任务的 JSONL。
-                                    默认：/tmp/testloop-rocketmq-java-statuschecker-tasks.jsonl
+                                    默认：testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl
   TESTLOOP_JAVA_REGRESSION_READY_IDS
                                     默认：junit-44,junit-50
   TESTLOOP_JAVA_REGRESSION_MANUAL_IDS
@@ -76,7 +76,7 @@ rocketmq_dir="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_DIR:-/Users/binlee/code/free-w
 lang_ready_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_READY_TASKS_FILE:-/tmp/testloop-commons-lang-taskids-junit44-50-results.jsonl}"
 lang_manual_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_MANUAL_TASKS_FILE:-/tmp/testloop-commons-lang-typeutils-top5-results.jsonl}"
 codec_unreachable_tasks="${TESTLOOP_JAVA_REGRESSION_CODEC_UNREACHABLE_TASKS_FILE:-/tmp/testloop-commons-codec-taskids-junit130-results.jsonl}"
-rocketmq_statuschecker_tasks="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE:-/tmp/testloop-rocketmq-java-statuschecker-tasks.jsonl}"
+rocketmq_statuschecker_tasks="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE:-$repo_root/testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl}"
 rocketmq_coverage_command="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_COMMAND:-mvn -pl client -am -Dtest=StatusCheckerTest -DfailIfNoTests=false test jacoco:report -Dcheckstyle.skip -Dspotbugs.skip -DskipITs}"
 rocketmq_coverage_file="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_FILE:-client/target/site/jacoco/jacoco.xml}"
 
