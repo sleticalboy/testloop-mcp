@@ -106,6 +106,8 @@ go run ./examples/first-run-agent-response-demo \
 
 这两条路径都输出固定四段：结论、证据、下一步、暂不做。完整说明见 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)。
 
+first-run 和 onboarding 的 `agent-response.txt` 统一字段、读取顺序和客户端断言见 [Agent response artifact contract](./agent-response-artifact-contract.md)。
+
 ## 推荐客户端伪代码
 
 ```text
@@ -136,5 +138,6 @@ switch payload.status + "/" + payload.action:
 - [Agent Action 决策表](./agent-action-guide.md)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
 - [真实结构化 fixture](./fixtures.md)
+- [Agent response artifact contract](./agent-response-artifact-contract.md)
 - [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)
 - [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)

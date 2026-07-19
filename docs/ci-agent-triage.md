@@ -78,13 +78,14 @@ sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run-artifacts
 
 ## 6. onboarding artifact
 
-稳定接入后的 onboarding CI 没有 `first-run-context.txt` 和 `first-run.log`。这时按顺序粘：
+稳定接入后的 onboarding CI 没有 `first-run-context.txt` 和 `first-run.log`。新版 onboarding artifact 有 `agent-response.txt`，这时按顺序粘：
 
-1. `agent-decision.txt`
-2. `verification-summary.json` 中的 `overall_status`、`failed_count` 和失败 section
-3. `verification-report.md` 中失败 section 的 stdout / stderr
+1. `agent-response.txt`
+2. `agent-decision.txt`
+3. `verification-summary.json` 中的 `overall_status`、`failed_count` 和失败 section
+4. `verification-report.md` 中失败 section 的 stdout / stderr
 
-更完整的分流说明见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md) 和 [首跑诊断失败样例](./first-run-failures.md)。
+first-run 和 onboarding 的 `agent-response.txt` 统一读取规则见 [Agent response artifact contract](./agent-response-artifact-contract.md)。更完整的分流说明见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md) 和 [首跑诊断失败样例](./first-run-failures.md)。
 
 Agent 收到 `first-run-context.txt` 后的推荐回复格式见 [first-run Agent 回复格式](./first-run-agent-response.md)。
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `docs/agent-response-artifact-contract.md`，统一 first-run/onboarding `agent-response.txt` 的结构、字段、读取顺序和客户端断言。
+
+### Changed
+
+- README、CI 失败 triage 和客户端集成说明已收敛为失败后优先读取 `agent-response.txt`，再按需下钻 decision、summary 和 report。
+
 ## v0.5.10 - 2026-07-19
 
 ### Added
