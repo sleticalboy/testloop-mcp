@@ -17,9 +17,9 @@
 
 | 目录 | action | 内容 | Agent 下一步 |
 | --- | --- | --- | --- |
-| [user-project-smoke-failed](./fixtures/first-run-artifacts/user-project-smoke-failed/) | `inspect-user-project` | first-run 失败五件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`first-run-context.txt`、`first-run.log` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
+| [user-project-smoke-failed](./fixtures/first-run-artifacts/user-project-smoke-failed/) | `inspect-user-project` | first-run 失败六件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`first-run-context.txt`、`agent-response.txt`、`first-run.log` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
 
-这类 fixture 面向 CI artifact 消费方：可以直接把 `first-run-context.txt` 和 `verification-summary.json` 喂给 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)，不用每次都重新构造失败项目。
+这类 fixture 面向 CI artifact 消费方：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)，不用每次都重新构造失败项目。
 
 ## 稳定字段
 

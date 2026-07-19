@@ -627,10 +627,11 @@ jobs:
             /tmp/testloop-first-run/verification-summary.json
             /tmp/testloop-first-run/agent-decision.txt
             /tmp/testloop-first-run/first-run-context.txt
+            /tmp/testloop-first-run/agent-response.txt
             /tmp/testloop-first-run/first-run.log
 ```
 
-first-run 会输出 report、summary、decision、context 和 log 五件套；onboarding 会输出 report、summary 和 decision 三件套。失败时先看 `agent-decision.txt`，first-run 失败时直接把 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
+first-run 会输出 report、summary、decision、context、Agent 回复草稿和 log 六件套；onboarding 会输出 report、summary 和 decision 三件套。失败时先看 `agent-decision.txt`，first-run 失败时可以直接把 `agent-response.txt` 或 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
 
 CI 已经失败时，不要先贴完整红色日志。先下载 artifact，读取 `agent-decision.txt`，再把 `first-run-context.txt` 交给 Agent；最短排查格式见 [CI 失败后交给 Agent](./docs/ci-agent-triage.md)，Agent 应如何回复见 [first-run Agent 回复格式](./docs/first-run-agent-response.md)。如果要本地模拟 Agent 如何消费 artifact，可以运行 `sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run` 或 `go run ./examples/first-run-agent-response-demo`，完整用法见 [first-run artifact Agent 消费演示](./docs/first-run-agent-artifact-demo.md)，也可以直接读取 [first-run 失败 artifact fixture](./docs/fixtures/first-run-artifacts/user-project-smoke-failed/)。
 

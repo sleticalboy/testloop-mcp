@@ -47,6 +47,7 @@ first_run_agent_next_step=ready
 - `verification-summary.json`
 - `agent-decision.txt`
 - `first-run-context.txt`
+- `agent-response.txt`
 - `first-run.log`
 
 其中 `first-run-context.txt` 可以直接交给 AI Agent。

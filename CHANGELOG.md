@@ -5,6 +5,8 @@
 ### Added
 
 - 新增 `scripts/render-first-run-agent-response.sh`，可直接从 first-run artifact 目录渲染稳定 Agent 回复，减少接入方手动拼接 `first-run-context.txt` 和 `verification-summary.json` 的成本。
+- `scripts/run-first-run-ci.sh` 现在会在 first-run artifact 目录内额外生成 `agent-response.txt`，作为可直接交给 Agent 的四段回复草稿。
+- first-run 失败 artifact fixture 已升级为包含 `agent-response.txt` 的六件套，并用测试固定静态文件与目录入口实时渲染结果一致。
 
 ## v0.5.9 - 2026-07-19
 

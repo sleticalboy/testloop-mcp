@@ -12,6 +12,7 @@ checkout for helper scripts, then writes:
   - verification-summary.json
   - agent-decision.txt
   - first-run-context.txt
+  - agent-response.txt
   - first-run.log
 
 Arguments:
@@ -22,6 +23,9 @@ Environment:
   TESTLOOP_FIRST_RUN_PROJECT_DIR      Project directory. Default: current dir.
   TESTLOOP_FIRST_RUN_PROJECT_COMMAND  Smoke command run in the project dir.
   TESTLOOP_FIRST_RUN_OUTPUT_DIR       Output dir. Default: /tmp/testloop-first-run
+  TESTLOOP_FIRST_RUN_AGENT_RESPONSE_OUT
+                                      Agent response output path. Defaults to
+                                      $TESTLOOP_FIRST_RUN_OUTPUT_DIR/agent-response.txt
   TESTLOOP_FIRST_RUN_EXPECT_VERSION   Expected binary version. Defaults to
                                       TESTLOOP_MCP_VERSION without a leading v
                                       when TESTLOOP_MCP_VERSION is not latest.
@@ -144,6 +148,7 @@ report_md="${TESTLOOP_FIRST_RUN_REPORT_MD:-${output_dir}/verification-report.md}
 summary_json="${TESTLOOP_FIRST_RUN_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
 decision_out="${TESTLOOP_FIRST_RUN_DECISION_OUT:-${output_dir}/agent-decision.txt}"
 context_out="${TESTLOOP_FIRST_RUN_CONTEXT_OUT:-${output_dir}/first-run-context.txt}"
+agent_response_out="${TESTLOOP_FIRST_RUN_AGENT_RESPONSE_OUT:-${output_dir}/agent-response.txt}"
 log_out="${TESTLOOP_FIRST_RUN_LOG:-${output_dir}/first-run.log}"
 
 printf 'testloop_mcp_repo=%s\n' "$repo_dir"
@@ -202,8 +207,28 @@ PY
     printf '%s%s%s\n' '- Summary JSON: `' "$summary_json" '`'
     printf '%s%s%s\n' '- Agent decision: `' "$decision_out" '`'
     printf '%s%s%s\n' '- Agent context: `' "$context_out" '`'
+    if [[ -s "$agent_response_out" ]]; then
+      printf '%s%s%s\n' '- Agent response: `' "$agent_response_out" '`'
+    fi
     printf '%s%s%s\n\n' '- Full log: `' "$log_out" '`'
   } >>"$GITHUB_STEP_SUMMARY"
+}
+
+render_agent_response() {
+  [[ -s "$context_out" ]] || return 0
+  [[ -x "$repo_dir/scripts/render-first-run-agent-response.sh" ]] || return 0
+  if ! command -v go >/dev/null 2>&1; then
+    printf 'warning: go is not available; skipped agent-response.txt rendering\n' >&2
+    return 0
+  fi
+
+  local tmp_response="$tmp_dir/agent-response.txt"
+  if ! TESTLOOP_MCP_REPO_DIR="$repo_dir" \
+    "$repo_dir/scripts/render-first-run-agent-response.sh" "$output_dir" > "$tmp_response"; then
+    printf 'warning: failed to render agent-response.txt; continuing with first-run result\n' >&2
+    return 0
+  fi
+  mv "$tmp_response" "$agent_response_out"
 }
 
 set +e
@@ -211,5 +236,6 @@ env "${env_args[@]}" "$repo_dir/scripts/doctor-first-run.sh" "$binary"
 first_run_code=$?
 set -e
 
+render_agent_response
 write_github_step_summary
 exit "$first_run_code"

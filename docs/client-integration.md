@@ -63,6 +63,7 @@ docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 - `verification-summary.json`
 - `agent-decision.txt`
 - `first-run-context.txt`
+- `agent-response.txt`
 - `first-run.log`
 
 推荐客户端或 Agent 测试断言：
@@ -70,6 +71,7 @@ docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 - 先读取 `agent-decision.txt`，识别 `agent_next_step=inspect-user-project`。
 - 再读取 `first-run-context.txt`，识别 `first_run_agent_next_step=inspect-user-project`。
 - 需要失败细节时读取 `verification-summary.json`，定位 `failed_section=用户项目 smoke` 和 `exit_code=7`。
+- 如果存在 `agent-response.txt`，可以直接把它作为 Agent 回复草稿；不存在时用目录入口补渲染。
 - 最后打开 `verification-report.md` 的失败 section，而不是只消费 CI 最后一行错误。
 
 可用内置 demo 验证 Agent 回复：

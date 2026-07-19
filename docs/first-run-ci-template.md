@@ -8,6 +8,7 @@
 - `verification-summary.json`：给 Agent / CI 读取的结构化结果。
 - `agent-decision.txt`：最小下一步动作，核心字段是 `agent_next_step`。
 - `first-run-context.txt`：可直接粘贴给 AI Agent 的最小上下文。
+- `agent-response.txt`：由 `first-run-context.txt` 和可选 summary 渲染出的 Agent 四段回复草稿。
 - `first-run.log`：底层 onboarding 命令完整输出。
 
 `TESTLOOP_MCP_VERSION` 控制安装的二进制版本；helper checkout 默认使用 `main`，这样当前 main 上新增的首跑诊断脚本可以搭配已发布的稳定二进制使用。需要固定 helper 版本时，再显式设置 `TESTLOOP_MCP_REPO_REF`。
@@ -49,6 +50,7 @@ jobs:
             /tmp/testloop-first-run/verification-summary.json
             /tmp/testloop-first-run/agent-decision.txt
             /tmp/testloop-first-run/first-run-context.txt
+            /tmp/testloop-first-run/agent-response.txt
             /tmp/testloop-first-run/first-run.log
 ```
 
@@ -98,6 +100,7 @@ jobs:
             /tmp/testloop-web-first-run/verification-summary.json
             /tmp/testloop-web-first-run/agent-decision.txt
             /tmp/testloop-web-first-run/first-run-context.txt
+            /tmp/testloop-web-first-run/agent-response.txt
             /tmp/testloop-web-first-run/first-run.log
 ```
 
@@ -106,10 +109,11 @@ jobs:
 CI 失败时先打开 GitHub step summary。如果仍需要更多上下文，下载 artifact 后按顺序看：
 
 1. `first-run-context.txt`：直接粘给 AI Agent。
-2. `agent-decision.txt`：查看 `agent_next_step`。
-3. `verification-summary.json`：查看失败 section。
-4. `verification-report.md`：查看失败 section 的 stdout / stderr。
-5. `first-run.log`：排查 bootstrap 或脚本入口问题。
+2. `agent-response.txt`：查看脚本已经渲染出的 Agent 四段回复草稿。
+3. `agent-decision.txt`：查看 `agent_next_step`。
+4. `verification-summary.json`：查看失败 section。
+5. `verification-report.md`：查看失败 section 的 stdout / stderr。
+6. `first-run.log`：排查 bootstrap 或脚本入口问题。
 
 首跑失败 action 的含义见 [首跑诊断失败样例](./first-run-failures.md)。如果不需要 `first-run-context.txt` 和完整日志，只想保留 onboarding 三件套，可以使用 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
 
@@ -135,6 +139,7 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
 - `first_run_failed_count=0`
 - `first_run_agent_next_step=ready`
 - `first_run_context=/tmp/testloop-run-first-run-ci-go/first-run-context.txt`
+- `/tmp/testloop-run-first-run-ci-go/agent-response.txt` 包含 Agent 四段回复草稿。
 
 Node/web 项目：
 

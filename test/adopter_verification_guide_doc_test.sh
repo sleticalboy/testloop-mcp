@@ -23,6 +23,7 @@ required = [
     "verification-summary.json",
     "agent-decision.txt",
     "first-run-context.txt",
+    "agent-response.txt",
     "first-run.log",
     "if: always()",
     "agent_next_step=ready",

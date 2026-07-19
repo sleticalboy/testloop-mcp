@@ -26,3 +26,5 @@ go run ./examples/first-run-agent-response-demo \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/first-run-context.txt \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json
 ```
+
+fixture 已包含同样输出的 `agent-response.txt`，便于客户端不运行 demo 也能回归回复草稿消费逻辑。

@@ -48,6 +48,8 @@ sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run
 
 脚本会自动读取 `first-run-context.txt`，并在存在 `verification-summary.json` 时一起传给 demo。
 
+从当前 `run-first-run-ci.sh` 生成的 artifact 开始，目录里也会包含 `agent-response.txt`，内容就是这条目录入口的输出。这个文件适合直接作为 Agent 回复草稿；如果它不存在，说明 artifact 由旧版脚本生成，可以用上面的目录入口补渲染。
+
 也可以手动把真实 artifact 喂给 demo：
 
 ```bash

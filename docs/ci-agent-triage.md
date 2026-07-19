@@ -48,9 +48,16 @@ cat /tmp/testloop-first-run-artifacts/first-run-context.txt
 如果 Agent 需要更细日志，再补充：
 
 ```bash
+cat /tmp/testloop-first-run-artifacts/agent-response.txt
 cat /tmp/testloop-first-run-artifacts/verification-summary.json
 cat /tmp/testloop-first-run-artifacts/verification-report.md
 cat /tmp/testloop-first-run-artifacts/first-run.log
+```
+
+`agent-response.txt` 是 `run-first-run-ci.sh` 根据 artifact 目录自动渲染出的四段回复草稿；如果 artifact 来自旧版脚本没有这个文件，可以在 testloop-mcp 仓库里运行：
+
+```bash
+sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run-artifacts
 ```
 
 ## 4. 不要先贴什么
