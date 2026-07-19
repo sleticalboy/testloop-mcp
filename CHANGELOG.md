@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `docs/real-integration-cases.md` 更新为 v0.5.7 真实 first-run / onboarding CI bootstrap 实跑记录，覆盖 laoxia Go server 和 Vue web 项目，并保留 v0.5.4 onboarding 样例作为历史记录。
+- `docs/adopter-verification-guide.md` 补充 `PATH` 版本漂移与 `TESTLOOP_MCP_VERSION` bootstrap 版本门禁的区别，避免手动 MCP 客户端配置误用旧二进制。
+
 ## v0.5.7 - 2026-07-19
 
 ### Added

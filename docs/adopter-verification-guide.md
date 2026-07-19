@@ -22,6 +22,8 @@ brew reinstall sleticalboy/tap/testloop-mcp
 
 源码 checkout 或临时二进制也可以直接传绝对路径给后续脚本。
 
+注意区分两类版本检查：`testloop-mcp --version` 检查当前 `PATH` 上的二进制；CI bootstrap 中的 `TESTLOOP_MCP_VERSION=v0.5.7` 会下载并使用指定发布版本。真实接入时如果 bootstrap 通过但本机 `PATH` 仍是旧版本，CI 链路可以继续使用，但手动配置 Codex / Claude / Cursor 前仍应先升级或修正 `PATH`，避免客户端启动到旧二进制。
+
 ## 2. 本机首跑诊断
 
 首次接入先跑首跑诊断：

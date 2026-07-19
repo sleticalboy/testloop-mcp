@@ -16,6 +16,8 @@ required = [
     "scripts/run-first-run-ci.sh",
     "scripts/run-onboarding-ci.sh",
     "TESTLOOP_MCP_VERSION=v0.5.7",
+    "PATH",
+    "bootstrap 通过但本机 `PATH` 仍是旧版本",
     "pnpm install --frozen-lockfile && pnpm build",
     "verification-report.md",
     "verification-summary.json",

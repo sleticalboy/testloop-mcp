@@ -68,7 +68,170 @@ cat /tmp/testloop-my-project-onboarding/agent-decision.txt
 
 构建 warning 不等于失败。只有对应 section 的 exit code 非 0，才会让 summary 进入 failed。
 
-## laoxia server 样例
+## laoxia v0.5.7 CI bootstrap 实跑记录
+
+样例项目：
+
+- 根目录：`/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0`
+- Server：`car-admin-server`，Go 项目，本地仓库状态干净。
+- Web：`car-admin-web`，Vue 项目，使用 `pnpm-lock.yaml`，本地仓库状态干净。
+- 使用版本：`TESTLOOP_MCP_VERSION=v0.5.7`
+- 实际二进制：`/Users/binlee/.local/bin/testloop-mcp`
+- 版本输出：`testloop-mcp 0.5.7`
+
+这次演练按 [接入方一页式验证指南](./adopter-verification-guide.md) 执行，覆盖 first-run CI 和 onboarding CI 两条 bootstrap。执行后两个外部项目工作区仍保持干净，说明脚本只在指定 `/tmp/testloop-*` 输出目录写入验收制品，不会污染用户仓库。
+
+### Server first-run
+
+运行命令：
+
+```bash
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-laoxia-server-first-run \
+TESTLOOP_FIRST_RUN_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server \
+  scripts/run-first-run-ci.sh 'go test ./...'
+```
+
+验收结果：
+
+```text
+first_run_status=passed
+first_run_failed_count=0
+first_run_agent_next_step=ready
+```
+
+summary 结果：
+
+```text
+overall_status=passed
+failed_count=0
+version_output=testloop-mcp 0.5.7
+```
+
+section 结果：
+
+| 验收项 | 状态 | Exit code |
+| --- | --- | --- |
+| 基础安装验收 | `passed` | `0` |
+| 真实 MCP 协议 smoke | `passed` | `0` |
+| 最小 Agent 闭环 demo | `passed` | `0` |
+| 公开 showcase | `skipped` | `-` |
+| 用户项目 smoke | `passed` | `0` |
+
+本地制品路径：
+
+- `/tmp/testloop-laoxia-server-first-run/verification-report.md`
+- `/tmp/testloop-laoxia-server-first-run/verification-summary.json`
+- `/tmp/testloop-laoxia-server-first-run/agent-decision.txt`
+- `/tmp/testloop-laoxia-server-first-run/first-run-context.txt`
+- `/tmp/testloop-laoxia-server-first-run/first-run.log`
+
+项目侧 smoke 输出包含 macOS `IOMasterPort` deprecated warning，但 `go test ./...` 退出码为 0，因此只作为 warning 记录，不影响 testloop 接入链路判定。
+
+### Web first-run
+
+运行命令：
+
+```bash
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-laoxia-web-first-run \
+TESTLOOP_FIRST_RUN_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-web \
+  scripts/run-first-run-ci.sh 'pnpm install --frozen-lockfile && pnpm build:prod'
+```
+
+验收结果：
+
+```text
+first_run_status=passed
+first_run_failed_count=0
+first_run_agent_next_step=ready
+```
+
+summary 结果：
+
+```text
+overall_status=passed
+failed_count=0
+version_output=testloop-mcp 0.5.7
+```
+
+section 结果：
+
+| 验收项 | 状态 | Exit code |
+| --- | --- | --- |
+| 基础安装验收 | `passed` | `0` |
+| 真实 MCP 协议 smoke | `passed` | `0` |
+| 最小 Agent 闭环 demo | `passed` | `0` |
+| 公开 showcase | `skipped` | `-` |
+| 用户项目 smoke | `passed` | `0` |
+
+本地制品路径：
+
+- `/tmp/testloop-laoxia-web-first-run/verification-report.md`
+- `/tmp/testloop-laoxia-web-first-run/verification-summary.json`
+- `/tmp/testloop-laoxia-web-first-run/agent-decision.txt`
+- `/tmp/testloop-laoxia-web-first-run/first-run-context.txt`
+- `/tmp/testloop-laoxia-web-first-run/first-run.log`
+
+项目侧 smoke 输出包含 `pnpm approve-builds`、Browserslist 和 Webpack asset size warning，但 `pnpm install --frozen-lockfile && pnpm build:prod` 退出码为 0，因此只作为项目 warning 记录。
+
+### Server onboarding
+
+运行命令：
+
+```bash
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-laoxia-server-onboarding \
+TESTLOOP_ONBOARDING_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server \
+  scripts/run-onboarding-ci.sh 'go test ./...'
+```
+
+验收结果：
+
+```text
+overall_status=passed
+failed_count=0
+agent_next_step=ready
+```
+
+本地制品路径：
+
+- `/tmp/testloop-laoxia-server-onboarding/verification-report.md`
+- `/tmp/testloop-laoxia-server-onboarding/verification-summary.json`
+- `/tmp/testloop-laoxia-server-onboarding/agent-decision.txt`
+
+### Web onboarding
+
+运行命令：
+
+```bash
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-laoxia-web-onboarding \
+TESTLOOP_ONBOARDING_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-web \
+  scripts/run-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build:prod'
+```
+
+验收结果：
+
+```text
+overall_status=passed
+failed_count=0
+agent_next_step=ready
+```
+
+本地制品路径：
+
+- `/tmp/testloop-laoxia-web-onboarding/verification-report.md`
+- `/tmp/testloop-laoxia-web-onboarding/verification-summary.json`
+- `/tmp/testloop-laoxia-web-onboarding/agent-decision.txt`
+
+这次实跑说明：first-run CI 更适合首次接入和失败上下文收集，onboarding CI 更适合稳定接入后的 PR / 发布后 smoke；二者可以覆盖同一类 server / web 项目，差异只在 artifact 数量和失败上下文详细程度。
+
+## laoxia v0.5.4 历史 onboarding 样例
+
+下面保留 v0.5.4 时期使用 `scripts/showcase-agent-onboarding-report.sh` 的历史样例，用来说明项目接入模板的演进。新接入项目应优先复制上面的 v0.5.7 CI bootstrap 示例。
+
+### Server
 
 样例项目：
 
@@ -114,7 +277,7 @@ section 结果：
 - `/tmp/testloop-laoxia-server-onboarding-v0.5.4/verification-summary.json`
 - `/tmp/testloop-laoxia-server-onboarding-v0.5.4/agent-decision.txt`
 
-## laoxia web 样例
+### Web
 
 样例项目：
 
