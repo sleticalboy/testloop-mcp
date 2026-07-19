@@ -13,6 +13,7 @@
 - JS mcp-hub regression smoke task inputs are now stored under `testdata/js-mcp-hub/`, covering repair, env, DevWatcher, SSE, and workspace samples with relative paths.
 - Python haoy-apk-station regression smoke task inputs are now stored under `testdata/py-haoy-apk-station/`, covering environment, external-service, and database manual-review samples with relative paths.
 - `scripts/fixture-task-jsonl.py` help text and docs now clearly position it as a maintainer-only helper for rebuilding static regression fixture JSONL inputs.
+- `scripts/validate-regression-smoke.sh` now runs a preflight check by default to report missing project directories, static JSONL fixtures, and common local commands before starting the longer regression smoke.
 
 ### Fixed
 

@@ -19,7 +19,7 @@ testloop-mcp 的展示路径分三层：默认 CI 保护基础契约，公开 sh
 | 验证 Agent 最小闭环 | `go run ./examples/mcp-client-demo` | 是，脚本回归 | 不依赖外部项目，验证 `run_tests -> repair_task -> rerun -> parse_coverage` 和 `structuredContent` 消费路径。 |
 | 演示公开 Go 项目 | `scripts/showcase-go-public-project.sh` | 否 | 克隆固定 commit 的 `google/uuid`，验证 `go-test-1`，并断言 `passed/ready` 决策信号。 |
 | 演示公开 JS/TS 项目 | `scripts/showcase-js-public-project.sh` | 否 | 克隆固定 commit 的 `unjs/ufo`，验证 `vitest-1,vitest-2`，并断言 `ready` 与 `manual_review_internal` 分流。 |
-| 维护跨语言质量边界 | `scripts/validate-regression-smoke.sh` | 否 | 复用本机真实项目和 JSONL 样本，覆盖 Java + JS + Python 的 ready / manual-review / external-service / database 等分类。 |
+| 维护跨语言质量边界 | `scripts/validate-regression-smoke.sh` | 否 | 复用本机真实项目和仓库内静态 JSONL 样本，覆盖 Java + JS + Python 的 ready / manual-review / external-service / database 等分类。 |
 
 ## 默认 CI 保护什么
 

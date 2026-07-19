@@ -14,6 +14,12 @@ coverage task -> generate_tests -> run_tests -> parse/fix/coverage feedback
 scripts/validate-regression-smoke.sh
 ```
 
+总入口默认会先运行 `scripts/validate-regression-preflight.sh`，快速检查启用语言所需的真实项目目录、`testdata` JSONL 和常用命令是否存在。临时需要跳过前置检查时可以设置：
+
+```bash
+TESTLOOP_REGRESSION_SKIP_PREFLIGHT=true scripts/validate-regression-smoke.sh
+```
+
 默认会串联三组样本：
 
 | 语言 | 脚本 | 默认样本 | 期望结果 |

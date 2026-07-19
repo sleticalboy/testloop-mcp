@@ -18,6 +18,8 @@ usage() {
                                     true 时跳过 JS 样本。
   TESTLOOP_REGRESSION_SKIP_PY
                                     true 时跳过 Python 样本。
+  TESTLOOP_REGRESSION_SKIP_PREFLIGHT
+                                    true 时跳过前置目录、fixture 和命令检查。
   TESTLOOP_VALIDATE_* / TESTLOOP_JAVA_REGRESSION_* / TESTLOOP_JS_REGRESSION_* / TESTLOOP_PY_REGRESSION_*
                                     透传给各语言样本脚本。
 USAGE
@@ -44,6 +46,10 @@ env_bool() {
 }
 
 mkdir -p "$output_dir"
+
+if ! env_bool "${TESTLOOP_REGRESSION_SKIP_PREFLIGHT:-}"; then
+  "$script_dir/validate-regression-preflight.sh"
+fi
 
 if ! env_bool "${TESTLOOP_REGRESSION_SKIP_JAVA:-}"; then
   echo "==> java regression samples"
