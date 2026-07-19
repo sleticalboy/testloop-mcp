@@ -14,7 +14,7 @@ scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testlo
 
 1. `scripts/verify-client-setup.sh`：检查二进制、`--version`、`--doctor-config`、客户端配置 roundtrip 和 HTTP `/healthz`。
 2. `scripts/verify-mcp-process-smoke.sh`：用真实 MCP SDK 客户端通过 stdio / Streamable HTTP 启动二进制并调用轻量工具。
-3. `go run ./examples/mcp-client-demo`：验证 `run_tests -> repair_task -> rerun -> parse_coverage` 的最小 Agent 反馈闭环。
+3. `go run ./examples/mcp-client-demo`：验证 `run_tests.action -> fix_suggestions.category -> repair_task -> rerun.action -> parse_coverage` 的最小 Agent 反馈闭环。
 
 报告会写入指定 Markdown 文件；任一已执行验收项失败时，脚本仍会写出报告，但最终返回非零 exit code。
 

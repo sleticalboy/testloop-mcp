@@ -34,7 +34,7 @@ TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.12 scripts/showcase-onboarding.sh "$(comm
 
 1. `scripts/verify-client-setup.sh`：基础安装验收，确认二进制可执行、版本可读、客户端配置片段可 roundtrip 校验，并检查 HTTP `/healthz`。
 2. `scripts/verify-mcp-process-smoke.sh`：深度协议验收，使用真实 MCP SDK 客户端通过 stdio 和 Streamable HTTP 启动二进制，调用 `tools/list` 和轻量 `parse_results`，并校验 `structuredContent` 与文本 JSON fallback 一致。
-3. `go run ./examples/mcp-client-demo`：最小 Agent 闭环，演示 `run_tests -> repair_task -> rerun -> parse_coverage`。
+3. `go run ./examples/mcp-client-demo`：最小 Agent 闭环，演示 `run_tests.action -> fix_suggestions.category -> repair_task -> rerun.action -> parse_coverage`。
 
 ## 适用边界
 

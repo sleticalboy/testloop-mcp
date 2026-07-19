@@ -51,7 +51,7 @@ first_run_log=/tmp/testloop-mcp-first-run/first-run.log
 
 - 基础安装验收：二进制、版本、`--doctor-config`、配置 roundtrip 和 HTTP `/healthz`。
 - 真实 MCP 协议 smoke：stdio / Streamable HTTP 启动和轻量工具调用。
-- 最小 Agent 闭环 demo：`run_tests -> repair_task -> rerun -> parse_coverage`。
+- 最小 Agent 闭环 demo：`run_tests.action -> fix_suggestions.category -> repair_task -> rerun.action -> parse_coverage`。
 - 可选用户项目 smoke：由调用方显式传入命令。
 
 如果 `first_run_agent_next_step=ready`，说明安装和 MCP 传输链路已经可用，可以继续配置 Codex、Claude 或 Cursor，或进入真实项目验证。其他 action 的排查含义见 [首跑诊断失败样例](./first-run-failures.md)、[用户项目验收报告](./verification-report.md) 和 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
