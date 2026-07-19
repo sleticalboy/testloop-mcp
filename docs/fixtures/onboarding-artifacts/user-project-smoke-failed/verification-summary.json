@@ -4,7 +4,7 @@
   "repository": "/path/to/user-project",
   "git_ref": "fixture",
   "binary": "/usr/local/bin/testloop-mcp",
-  "version_output": "testloop-mcp 0.5.11",
+  "version_output": "testloop-mcp 0.5.12",
   "markdown_report": "docs/fixtures/onboarding-artifacts/user-project-smoke-failed/verification-report.md",
   "overall_status": "failed",
   "failed_count": 1,

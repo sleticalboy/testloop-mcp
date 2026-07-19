@@ -37,7 +37,7 @@ cat > "$fake_binary" <<'SH'
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.11"
+    echo "testloop-mcp 0.5.12"
     ;;
   *)
     echo "fake testloop-mcp"

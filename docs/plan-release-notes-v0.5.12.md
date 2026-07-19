@@ -10,8 +10,10 @@ testloop-mcp v0.5.12
 - [x] 梳理 v0.5.11 之后的 regression fixture 静态化、Click fixture 重建、全量 smoke 证据、preflight 诊断层、JSON summary 和中文准备清单渲染器。
 - [x] 本地 release readiness 复验已通过，覆盖完整测试矩阵、候选二进制构建、help/version、darwin arm64 打包 dry-run、sha256 和 tarball 内容检查。
 - [x] 最近 CI 已通过：`59124ba` 远端 CI run `29685059506` passed。
-- [ ] 尚未切版本号。
-- [ ] 尚未将 `CHANGELOG.md` 的 `Unreleased` 收敛为正式 `v0.5.12`。
+- [x] 正式版本准备已更新 `main.go` MCP implementation version 到 `0.5.12`。
+- [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.12 - 2026-07-19`。
+- [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.12`。
+- [x] 正式版本准备本地完整验证已通过。
 - [ ] 尚未打 tag、生成 Release 资产或更新 Homebrew tap。
 
 ## 摘要
@@ -70,18 +72,20 @@ v0.5.12 候选重点是把真实项目 regression smoke 从“依赖临时 JSONL
 - [x] `/tmp/testloop-mcp-current-candidate --version` 输出 `testloop-mcp 0.5.11`，说明候选阶段尚未切新版本号。
 - [x] `/tmp/testloop-mcp-current-candidate --help` 输出 usage，exit code 为 `2`。
 - [x] `/tmp/testloop-testgen-current-candidate --help` 输出 usage，exit code 为 `2`。
+- [x] 正式版本准备后 `/tmp/testloop-mcp-v0.5.12-release-prep --version` 输出 `testloop-mcp 0.5.12`。
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-current-candidate-dist scripts/package-release-asset.sh v0.5.12 darwin_arm64 darwin arm64`
 - [x] `cd /tmp/testloop-current-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.12_darwin_arm64.tar.gz.sha256`
 - [x] `tar -tzf /tmp/testloop-current-candidate-dist/testloop-mcp_v0.5.12_darwin_arm64.tar.gz`
+- [x] 正式版本准备复跑：版本相关文档/脚本测试、文档 gate、`go test ./...`、主服务/testgen 构建、`testloop-mcp 0.5.12` 版本输出、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
 - [x] `git diff --check`
 
 ## 发布前待办
 
 - [x] 完成候选发布检查清单 `docs/plan-release-v0.5.12.md`。
-- [ ] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.12`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.12 - 2026-07-19`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.12` / `v0.5.12`。
-- [ ] 跑完整正式发布前门禁和 release readiness。
+- [x] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.12`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.12 - 2026-07-19`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.12` / `v0.5.12`。
+- [x] 跑完整正式发布前门禁和 release readiness。
 - [ ] 提交版本准备后等待远端 CI。
 - [ ] 打 `v0.5.12` tag，生成 Release 资产，更新 GitHub Release。
 - [ ] 生成并更新 Homebrew Formula / tap。

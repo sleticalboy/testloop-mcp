@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.12 - 2026-07-19
+
 ### Added
 
 - Java regression smoke now includes repository-backed RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
@@ -16,6 +18,10 @@
 - `scripts/validate-regression-smoke.sh` now runs a preflight check by default to report missing project directories, static JSONL fixtures, and common local commands before starting the longer regression smoke.
 - Regression preflight now supports `TESTLOOP_REGRESSION_PREFLIGHT_FORMAT=json`, producing machine-readable `ok`, `missing_count`, `missing`, and `checks` fields for Agent workflows.
 - Added `scripts/render-regression-preflight-report.py` to convert preflight JSON summaries into a Chinese Markdown preparation checklist.
+
+### Changed
+
+- MCP server implementation version updated to `0.5.12`.
 
 ### Fixed
 

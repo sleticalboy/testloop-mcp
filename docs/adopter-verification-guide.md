@@ -12,7 +12,7 @@ brew install testloop-mcp
 testloop-mcp --version
 ```
 
-当前文档期望版本是 `0.5.11`。如果版本不对：
+当前文档期望版本是 `0.5.12`。如果版本不对：
 
 ```bash
 brew update
@@ -22,14 +22,14 @@ brew reinstall sleticalboy/tap/testloop-mcp
 
 源码 checkout 或临时二进制也可以直接传绝对路径给后续脚本。
 
-注意区分两类版本检查：`testloop-mcp --version` 检查当前 `PATH` 上的二进制；CI bootstrap 中的 `TESTLOOP_MCP_VERSION=v0.5.11` 会下载并使用指定发布版本。真实接入时如果 bootstrap 通过但本机 `PATH` 仍是旧版本，CI 链路可以继续使用，但手动配置 Codex / Claude / Cursor 前仍应先升级或修正 `PATH`，避免客户端启动到旧二进制。
+注意区分两类版本检查：`testloop-mcp --version` 检查当前 `PATH` 上的二进制；CI bootstrap 中的 `TESTLOOP_MCP_VERSION=v0.5.12` 会下载并使用指定发布版本。真实接入时如果 bootstrap 通过但本机 `PATH` 仍是旧版本，CI 链路可以继续使用，但手动配置 Codex / Claude / Cursor 前仍应先升级或修正 `PATH`，避免客户端启动到旧二进制。
 
 ## 2. 本机首跑诊断
 
 首次接入先跑首跑诊断：
 
 ```bash
-TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.11 \
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.12 \
   scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 ```
 
@@ -58,7 +58,7 @@ first_run_agent_next_step=ready
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.11 \
+TESTLOOP_MCP_VERSION=v0.5.12 \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
 TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-first-run-ci.sh 'go test ./...'
@@ -68,7 +68,7 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.11 \
+TESTLOOP_MCP_VERSION=v0.5.12 \
 TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
 TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-onboarding-ci.sh 'go test ./...'

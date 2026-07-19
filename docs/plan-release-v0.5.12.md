@@ -56,9 +56,11 @@
 - [x] `/tmp/testloop-mcp-current-candidate --version` 输出 `testloop-mcp 0.5.11`，正式版本准备前未提前切版本号。
 - [x] `/tmp/testloop-mcp-current-candidate --help` 输出 `Usage of`，exit code 为 `2`。
 - [x] `/tmp/testloop-testgen-current-candidate --help` 输出 `Usage: testgen`，exit code 为 `2`。
+- [x] 正式版本准备后 `/tmp/testloop-mcp-v0.5.12-release-prep --version` 输出 `testloop-mcp 0.5.12`。
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-current-candidate-dist scripts/package-release-asset.sh v0.5.12 darwin_arm64 darwin arm64`
 - [x] `cd /tmp/testloop-current-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.12_darwin_arm64.tar.gz.sha256`
 - [x] `tar -tzf /tmp/testloop-current-candidate-dist/testloop-mcp_v0.5.12_darwin_arm64.tar.gz`，内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+- [x] 正式版本准备复跑：版本相关文档/脚本测试、文档 gate、`go test ./...`、主服务/testgen 构建、`testloop-mcp 0.5.12` 版本输出、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
 - [x] `git diff --check`
 - [x] `e669ed9` 远端 CI run `29682473349` passed，覆盖 Python Click regression fixture 重建入仓。
 - [x] `b74fe40` 远端 CI run `29682968710` passed，覆盖仓库内 manual-review regression fixture。
@@ -89,11 +91,11 @@
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.12`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.12 - 2026-07-19`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `v0.5.12`。
-- [ ] 测试中的版本期望同步到 `0.5.12`。
-- [ ] 重新运行完整本地验证，确认版本准备改动可发布。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.12`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.12 - 2026-07-19`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `v0.5.12`。
+- [x] 测试中的版本期望同步到 `0.5.12`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.12` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -105,4 +107,4 @@
 
 ## 当前结论
 
-v0.5.12 已具备候选发布草案和本地 release readiness 证据。当前仍处于候选阶段，下一步是提交发布草案并等待 main CI；通过后再决定是否进入正式版本准备。
+v0.5.12 正式版本准备的文件同步和本地验证已经完成。下一步是提交版本准备改动并等待 main CI；CI 通过后再决定是否打 `v0.5.12` tag 和进入 Release Artifacts 流程。
