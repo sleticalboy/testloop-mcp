@@ -81,6 +81,7 @@ func TestAgentJSONContractFields(t *testing.T) {
 				"status",
 				"test_file",
 				"generated_cases",
+				"action",
 				"preview",
 				"context",
 				"coverage_task",

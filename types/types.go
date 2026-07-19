@@ -67,6 +67,7 @@ type GenerateTestsOutput struct {
 	Status         string                 `json:"status"`
 	TestFile       string                 `json:"test_file"`
 	GeneratedCases int                    `json:"generated_cases"`
+	Action         string                 `json:"action,omitempty"`
 	Preview        string                 `json:"preview,omitempty"`
 	Context        *TestGenerationContext `json:"context,omitempty"`
 	CoverageTask   *CoverageTestTask      `json:"coverage_task,omitempty"`

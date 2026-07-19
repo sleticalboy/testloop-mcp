@@ -932,6 +932,40 @@ func TestAdd(t *testing.T) {}
 	}
 }
 
+func TestHandleGenerateTestsStaticGoTodoSkeletonActionManualReview(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "alias.go")
+	src := `package utils
+
+func SliceMapper[T any, U any](src []T, mapper func(T) U) []U {
+	dst := make([]U, 0, len(src))
+	for _, v := range src {
+		dst = append(dst, mapper(v))
+	}
+	return dst
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Action != "manual_review" {
+		t.Fatalf("action = %q, want manual_review; preview:\n%s", generated.Action, generated.Preview)
+	}
+	if !strings.Contains(generated.Preview, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
+		t.Fatalf("expected TODO skip preview:\n%s", generated.Preview)
+	}
+}
+
 func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.js")
@@ -2205,6 +2239,28 @@ func TestCountGeneratedCasesByLanguage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := countGeneratedCases(tt.code, tt.ext); got != tt.want {
 				t.Fatalf("countGeneratedCases = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGeneratedTestsAction(t *testing.T) {
+	tests := []struct {
+		name string
+		ext  string
+		code string
+		want string
+	}{
+		{name: "go ready", ext: ".go", code: "func TestAdd(t *testing.T) {}", want: "ready"},
+		{name: "go todo skip", ext: ".go", code: `func TestAdd(t *testing.T) { t.Skip("TODO: fill in meaningful test inputs and expected values") }`, want: "manual_review"},
+		{name: "js manual review", ext: ".ts", code: "it.skip('manual', () => {})", want: "manual_review"},
+		{name: "python manual review", ext: ".py", code: "__import__('pytest').skip('manual_review_internal: helper')", want: "manual_review"},
+		{name: "java manual review", ext: ".java", code: "org.junit.jupiter.api.Assumptions.assumeTrue(false, \"manual_review_unreachable: line\")", want: "manual_review"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := generatedTestsAction(tt.code, tt.ext); got != tt.want {
+				t.Fatalf("generatedTestsAction = %q, want %q", got, tt.want)
 			}
 		})
 	}
