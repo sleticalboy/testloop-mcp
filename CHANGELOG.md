@@ -20,6 +20,7 @@
 - `docs/adopter-verification-guide.md` 已补 artifact manifest/schema 验收入口，把 CI artifact 消费纳入一页式接入清单。
 - `docs/quickstart.md` 已补 artifact manifest/schema 快速验证入口，并新增 quickstart 文档测试固定关键命令和链接。
 - `docs/installation.md` 已从安装后自检段落指向 artifact manifest/schema 消费回归，并新增 installation 文档测试。
+- `docs/fixtures.md` 已补 artifact manifest/schema 维护规则，manifest 测试会固定 `$schema` 指针、schema 文件和维护命令。
 
 ## v0.5.10 - 2026-07-19
 

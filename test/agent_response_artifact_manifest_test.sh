@@ -13,8 +13,23 @@ from pathlib import Path
 
 manifest_path = Path(sys.argv[1])
 data = json.loads(manifest_path.read_text(encoding="utf-8"))
+schema_path = manifest_path.with_name("agent-response-artifact-manifest.schema.json")
+index_text = Path("docs/fixtures.md").read_text(encoding="utf-8")
 
 failures = []
+if data.get("$schema") != "./agent-response-artifact-manifest.schema.json":
+    failures.append("$schema must point to ./agent-response-artifact-manifest.schema.json")
+if not schema_path.is_file():
+    failures.append(f"missing manifest schema file: {schema_path}")
+for snippet in (
+    "agent-response-artifact-manifest.schema.json",
+    "tools/agent_response_artifact_manifest_schema_test.go",
+    "sh test/agent_response_manifest_demo_test.sh",
+    "go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1",
+):
+    if snippet not in index_text:
+        failures.append(f"docs/fixtures.md missing maintenance snippet: {snippet}")
+
 if data.get("schema_version") != 1:
     failures.append("schema_version must be 1")
 

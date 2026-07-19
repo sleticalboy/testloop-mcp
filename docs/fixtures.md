@@ -75,3 +75,18 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 - `TestHandleValidateCoverageTaskNeedsBetterInputFixture`
 
 如果只是 `raw_output`、测试耗时或临时路径变化，不应扩大 fixture 字段；优先在投影函数中继续过滤不稳定信息。
+
+修改 first-run/onboarding artifact fixture 或 `agent-response-artifact-manifest.json` 时，还必须同步：
+
+- `docs/fixtures/agent-response-artifact-manifest.schema.json`
+- `tools/agent_response_artifact_manifest_schema_test.go`
+- `examples/agent-response-manifest-demo` 的输出断言
+- README、quickstart、接入方一页式验证指南和 MCP 客户端契约测试说明里的 manifest/schema 入口
+
+推荐至少运行：
+
+```bash
+sh test/agent_response_artifact_manifest_test.sh
+sh test/agent_response_manifest_demo_test.sh
+go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
+```
