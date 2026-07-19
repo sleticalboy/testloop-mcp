@@ -1,0 +1,37 @@
+{
+  "title": "testloop-mcp onboarding 验收报告",
+  "generated_at": "2026-07-19T04:25:00Z",
+  "repository": "/path/to/user-project",
+  "git_ref": "fixture",
+  "binary": "/usr/local/bin/testloop-mcp",
+  "version_output": "testloop-mcp 0.5.9",
+  "markdown_report": "docs/fixtures/onboarding-artifacts/user-project-smoke-failed/verification-report.md",
+  "overall_status": "failed",
+  "failed_count": 1,
+  "sections": [
+    {
+      "name": "基础安装验收",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null
+    },
+    {
+      "name": "真实 MCP 协议 smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null
+    },
+    {
+      "name": "最小 Agent 闭环 demo",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null
+    },
+    {
+      "name": "用户项目 smoke",
+      "status": "failed",
+      "exit_code": 7,
+      "reason": null
+    }
+  ]
+}

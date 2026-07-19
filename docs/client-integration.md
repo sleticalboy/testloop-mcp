@@ -49,15 +49,16 @@ go run ./examples/agent-decision-demo
 
 ## CI artifact fixture
 
-除了 `validate_coverage_task` 的 MCP 结构化返回，接入方还需要测试“CI 失败后把 artifact 交给 Agent”的路径。这类输入不是 MCP tool 返回值，而是 `run-first-run-ci.sh` 产出的文件包。
+除了 `validate_coverage_task` 的 MCP 结构化返回，接入方还需要测试“CI 失败后把 artifact 交给 Agent”的路径。这类输入不是 MCP tool 返回值，而是 `run-first-run-ci.sh` 或 `run-onboarding-ci.sh` 产出的文件包。
 
-仓库提供一份完整 fixture：
+仓库提供两类完整 fixture：
 
 ```text
 docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+docs/fixtures/onboarding-artifacts/user-project-smoke-failed/
 ```
 
-它包含：
+first-run fixture 包含：
 
 - `verification-report.md`
 - `verification-summary.json`
@@ -66,10 +67,17 @@ docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 - `agent-response.txt`
 - `first-run.log`
 
+onboarding fixture 包含：
+
+- `verification-report.md`
+- `verification-summary.json`
+- `agent-decision.txt`
+- `agent-response.txt`
+
 推荐客户端或 Agent 测试断言：
 
 - 先读取 `agent-decision.txt`，识别 `agent_next_step=inspect-user-project`。
-- 再读取 `first-run-context.txt`，识别 `first_run_agent_next_step=inspect-user-project`。
+- first-run artifact 再读取 `first-run-context.txt`，识别 `first_run_agent_next_step=inspect-user-project`。
 - 需要失败细节时读取 `verification-summary.json`，定位 `failed_section=用户项目 smoke` 和 `exit_code=7`。
 - 如果存在 `agent-response.txt`，可以直接把它作为 Agent 回复草稿；不存在时用目录入口补渲染。
 - 最后打开 `verification-report.md` 的失败 section，而不是只消费 CI 最后一行错误。
@@ -79,6 +87,13 @@ docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 ```bash
 sh scripts/render-first-run-agent-response.sh \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+```
+
+onboarding artifact 用对应目录入口：
+
+```bash
+sh scripts/render-onboarding-agent-response.sh \
+  docs/fixtures/onboarding-artifacts/user-project-smoke-failed/
 ```
 
 也可以手动指定文件：

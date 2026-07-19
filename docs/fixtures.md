@@ -21,6 +21,14 @@
 
 这类 fixture 面向 CI artifact 消费方：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)，不用每次都重新构造失败项目。
 
+## onboarding artifact fixture
+
+| 目录 | action | 内容 | Agent 下一步 |
+| --- | --- | --- | --- |
+| [user-project-smoke-failed](./fixtures/onboarding-artifacts/user-project-smoke-failed/) | `inspect-user-project` | onboarding 失败四件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`agent-response.txt` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
+
+这类 fixture 面向已经稳定接入后的 PR / 发布后 smoke：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 `scripts/render-onboarding-agent-response.sh`，不用每次都重新构造失败项目。
+
 ## 稳定字段
 
 `validate_coverage_task` fixture 有意保留 Agent 决策需要的字段：

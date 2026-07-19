@@ -1,0 +1,17 @@
+结论：testloop-mcp onboarding 链路本身是通的，失败发生在用户项目 smoke。
+
+证据：
+- agent_next_step=inspect-user-project
+- overall_status=failed
+- failed_count=1
+- failed_section=用户项目 smoke
+- exit_code=7
+- markdown_report=docs/fixtures/onboarding-artifacts/user-project-smoke-failed/verification-report.md
+
+下一步：
+- 打开 verification-report.md 中“用户项目 smoke”这一节，先看项目测试/构建命令的 stdout / stderr。
+- 在用户项目目录复跑同一条 smoke 命令，确认依赖、环境变量或测试本身是否失败。
+
+暂不做：
+- 不先修改 testloop-mcp 安装或 MCP transport。
+- 不先生成/修改测试，除非项目 smoke 的失败日志明确指向测试缺失或断言失败。
