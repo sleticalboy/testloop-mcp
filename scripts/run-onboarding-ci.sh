@@ -11,6 +11,7 @@ checkout for report helpers, then writes:
   - verification-report.md
   - verification-summary.json
   - agent-decision.txt
+  - agent-response.txt
 
 Arguments:
   project-smoke-command  Optional smoke command. Defaults to
@@ -20,6 +21,9 @@ Environment:
   TESTLOOP_ONBOARDING_PROJECT_DIR      Project directory. Default: current dir.
   TESTLOOP_ONBOARDING_PROJECT_COMMAND  Smoke command run in the project dir.
   TESTLOOP_ONBOARDING_OUTPUT_DIR       Output dir. Default: /tmp/testloop-onboarding
+  TESTLOOP_ONBOARDING_AGENT_RESPONSE_OUT
+                                       Agent response output path. Defaults to
+                                       $TESTLOOP_ONBOARDING_OUTPUT_DIR/agent-response.txt
   TESTLOOP_ONBOARDING_TITLE            Report title.
 
   TESTLOOP_MCP_COMMAND                 Existing testloop-mcp binary path/command.
@@ -148,6 +152,7 @@ binary="$(resolve_binary "$command_path")"
 report_md="${TESTLOOP_ONBOARDING_REPORT_MD:-${output_dir}/verification-report.md}"
 summary_json="${TESTLOOP_ONBOARDING_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
 decision_out="${TESTLOOP_ONBOARDING_DECISION_OUT:-${output_dir}/agent-decision.txt}"
+agent_response_out="${TESTLOOP_ONBOARDING_AGENT_RESPONSE_OUT:-${output_dir}/agent-response.txt}"
 
 printf 'testloop_mcp_repo=%s\n' "$repo_dir"
 printf 'testloop_mcp_binary=%s\n' "$binary"
@@ -197,7 +202,11 @@ PY
     printf '%s%s%s\n' '- agent_next_step: `' "$agent_next_step" '`'
     printf '%s%s%s\n' '- Markdown report: `' "$report_md" '`'
     printf '%s%s%s\n' '- Summary JSON: `' "$summary_json" '`'
-    printf '%s%s%s\n\n' '- Agent decision: `' "$decision_out" '`'
+    printf '%s%s%s\n' '- Agent decision: `' "$decision_out" '`'
+    if [[ -s "$agent_response_out" ]]; then
+      printf '%s%s%s\n' '- Agent response: `' "$agent_response_out" '`'
+    fi
+    printf '\n'
     case "$agent_next_step" in
       ready)
         printf '%s\n' 'Next: continue with the real generation, repair, or coverage loop.'
@@ -225,10 +234,28 @@ PY
   } >>"$GITHUB_STEP_SUMMARY"
 }
 
+render_agent_response() {
+  [[ -s "$summary_json" ]] || return 0
+  [[ -x "$repo_dir/scripts/render-onboarding-agent-response.sh" ]] || return 0
+  if ! command -v go >/dev/null 2>&1; then
+    printf 'warning: go is not available; skipped agent-response.txt rendering\n' >&2
+    return 0
+  fi
+
+  local tmp_response="$tmp_dir/agent-response.txt"
+  if ! TESTLOOP_MCP_REPO_DIR="$repo_dir" \
+    "$repo_dir/scripts/render-onboarding-agent-response.sh" "$output_dir" > "$tmp_response"; then
+    printf 'warning: failed to render agent-response.txt; continuing with onboarding result\n' >&2
+    return 0
+  fi
+  mv "$tmp_response" "$agent_response_out"
+}
+
 set +e
 env "${env_args[@]}" "$repo_dir/scripts/showcase-agent-onboarding-report.sh" "$binary"
 onboarding_code=$?
 set -e
 
+render_agent_response
 write_github_step_summary
 exit "$onboarding_code"

@@ -1,10 +1,11 @@
 # Onboarding CI 复制模板
 
-这份模板面向第一次把 `testloop-mcp` 接入真实项目的团队。目标是少解释、少分支，让接入方复制后只改项目 smoke 命令，就能在 GitHub Actions 里拿到三类制品：
+这份模板面向第一次把 `testloop-mcp` 接入真实项目的团队。目标是少解释、少分支，让接入方复制后只改项目 smoke 命令，就能在 GitHub Actions 里拿到四类制品：
 
 - `verification-report.md`：给人看的完整验收报告。
 - `verification-summary.json`：给 Agent / CI 读取的结构化结果。
 - `agent-decision.txt`：最小下一步动作，核心字段是 `agent_next_step`。
+- `agent-response.txt`：按 summary 渲染出的 Agent 四段回复草稿。
 
 ## Go server 模板
 
@@ -45,6 +46,7 @@ jobs:
             /tmp/testloop-onboarding/verification-report.md
             /tmp/testloop-onboarding/verification-summary.json
             /tmp/testloop-onboarding/agent-decision.txt
+            /tmp/testloop-onboarding/agent-response.txt
 ```
 
 ## Vue / Node 模板
@@ -95,15 +97,17 @@ jobs:
             /tmp/testloop-web-onboarding/verification-report.md
             /tmp/testloop-web-onboarding/verification-summary.json
             /tmp/testloop-web-onboarding/agent-decision.txt
+            /tmp/testloop-web-onboarding/agent-response.txt
 ```
 
 ## 接入后看什么
 
 CI 失败时不要只看最后一行日志。先下载 artifact，再按这个顺序看：
 
-1. `agent-decision.txt`：如果 `agent_next_step=ready`，说明 testloop-mcp 自检和用户项目 smoke 都通过。
-2. `verification-summary.json`：看 `failed_count` 和失败 section 的 `name/status/exit_code`。
-3. `verification-report.md`：看失败 section 的 stdout / stderr 明细。
+1. `agent-response.txt`：先看脚本已经渲染出的 Agent 四段回复草稿。
+2. `agent-decision.txt`：如果 `agent_next_step=ready`，说明 testloop-mcp 自检和用户项目 smoke 都通过。
+3. `verification-summary.json`：看 `failed_count` 和失败 section 的 `name/status/exit_code`。
+4. `verification-report.md`：看失败 section 的 stdout / stderr 明细。
 
 常见 `agent_next_step`：
 

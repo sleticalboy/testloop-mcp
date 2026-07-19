@@ -10,9 +10,9 @@
 
 ## 怎么选入口
 
-首次接入、刚安装完、或者希望失败时直接把上下文交给 AI Agent，优先用 `scripts/run-first-run-ci.sh`。它在 onboarding 三件套之外额外生成 `first-run-context.txt` 和 `first-run.log`，更适合排查安装、MCP transport、Agent demo 和用户项目 smoke 的综合问题。
+首次接入、刚安装完、或者希望失败时直接把上下文交给 AI Agent，优先用 `scripts/run-first-run-ci.sh`。它在 onboarding 四件套之外额外生成 `first-run-context.txt` 和 `first-run.log`，更适合排查安装、MCP transport、Agent demo 和用户项目 smoke 的综合问题。
 
-已经稳定接入，只想在 PR 或发布后确认当前项目 smoke 和 testloop-mcp 自检是否通过，使用 `scripts/run-onboarding-ci.sh`。它输出 Markdown、summary JSON 和 decision，artifact 更少，适合作为持续验收入口。
+已经稳定接入，只想在 PR 或发布后确认当前项目 smoke 和 testloop-mcp 自检是否通过，使用 `scripts/run-onboarding-ci.sh`。它输出 Markdown、summary JSON、decision 和 Agent 回复草稿，artifact 更少，适合作为持续验收入口。
 
 维护者改 onboarding 或 first-run 模板后，使用外部项目演练脚本复验复制路径：
 
@@ -25,7 +25,7 @@ scripts/showcase-first-run-ci-external-project.sh
 
 ## 推荐 workflow
 
-如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON 和 decision 输出，减少手写路径和决策命令。
+如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON、decision 和 Agent 回复草稿，减少手写路径和决策命令。
 
 下面示例适合直接复制到用户项目。更短的 Go / Vue 模板见 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
 
@@ -63,6 +63,7 @@ jobs:
             /tmp/testloop-onboarding/verification-report.md
             /tmp/testloop-onboarding/verification-summary.json
             /tmp/testloop-onboarding/agent-decision.txt
+            /tmp/testloop-onboarding/agent-response.txt
 ```
 
 这段 workflow 的关键点：
@@ -132,7 +133,7 @@ CI 日志里优先看 `agent_next_step`：
 | `inspect-showcase` | 优先排查外部网络、本地 checkout 或 action 期望。 |
 | `inspect-user-project` | 优先查看用户项目 smoke 输出，通常是依赖、环境变量、测试命令或项目自身失败。 |
 
-失败时不要只看 CI 最后一行。应下载 `testloop-verification-report` artifact，先读 summary JSON 的 failed section，再打开 Markdown 对应明细。
+失败时不要只看 CI 最后一行。应下载 `testloop-verification-report` artifact，先读 `agent-response.txt`；需要机器分流时再读 decision，需要下钻时再看 summary JSON 的 failed section 和 Markdown 对应明细。
 
 更具体的失败排查顺序见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
 

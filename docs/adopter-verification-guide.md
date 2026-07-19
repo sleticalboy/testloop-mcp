@@ -88,13 +88,15 @@ first-run CI 上传六件套：
 - `/tmp/testloop-first-run/verification-summary.json`
 - `/tmp/testloop-first-run/agent-decision.txt`
 - `/tmp/testloop-first-run/first-run-context.txt`
+- `/tmp/testloop-first-run/agent-response.txt`
 - `/tmp/testloop-first-run/first-run.log`
 
-onboarding CI 上传三件套：
+onboarding CI 上传四件套：
 
 - `/tmp/testloop-onboarding/verification-report.md`
 - `/tmp/testloop-onboarding/verification-summary.json`
 - `/tmp/testloop-onboarding/agent-decision.txt`
+- `/tmp/testloop-onboarding/agent-response.txt`
 
 GitHub Actions 里上传 artifact 时使用 `if: always()`，否则失败时最需要的上下文可能不会被保存。
 
@@ -116,7 +118,7 @@ agent_next_step=ready
 | `inspect-agent-demo` | 检查结构化返回、最小 Agent demo 和 demo runner。 |
 | `inspect-user-project` | 检查用户项目 smoke，通常是依赖、环境变量、测试命令或项目自身失败。 |
 
-first-run CI 失败时，把 `first-run-context.txt` 交给 AI Agent；onboarding CI 失败时，把 `agent-decision.txt`、`verification-summary.json` 和 Markdown 报告里失败 section 交给 Agent。
+first-run CI 失败时，优先把 `agent-response.txt` 交给 AI Agent；旧版 artifact 没有回复草稿时再交 `first-run-context.txt`。onboarding CI 失败时，也优先把 `agent-response.txt` 交给 Agent；需要下钻时再补 `agent-decision.txt`、`verification-summary.json` 和 Markdown 报告里失败 section。
 
 ## 6. 改模板后如何自证
 

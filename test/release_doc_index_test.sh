@@ -45,6 +45,7 @@ required_commands = [
     "go run ./examples/verification-summary-decision-demo",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",
+    "sh scripts/render-onboarding-agent-response.sh",
     "scripts/run-first-run-ci.sh",
     "scripts/generate-verification-report.sh",
     "scripts/run-onboarding-ci.sh",
@@ -67,6 +68,8 @@ required_phrases = [
     "first-run 失败 artifact fixture",
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
     "first-run-context.txt",
+    "onboarding artifact",
+    "Agent 回复草稿四件套",
     "真实 server / web 实跑记录",
 ]
 

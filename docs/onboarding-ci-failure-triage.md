@@ -12,6 +12,7 @@
 - `Markdown report`
 - `Summary JSON`
 - `Agent decision`
+- `Agent response`
 
 如果 `agent_next_step=ready`，说明 onboarding 链路和用户项目 smoke 都通过。否则按 `agent_next_step` 分流。
 
@@ -22,12 +23,14 @@
 - `verification-report.md`
 - `verification-summary.json`
 - `agent-decision.txt`
+- `agent-response.txt`
 
 排查顺序：
 
-1. 先读 `agent-decision.txt`，确认 `agent_next_step`。
-2. 再读 `verification-summary.json`，确认 `overall_status`、`failed_count` 和失败 section。
-3. 最后读 `verification-report.md`，查看失败 section 的 stdout / stderr。
+1. 先读 `agent-response.txt`，查看脚本已经渲染出的 Agent 四段回复草稿。
+2. 再读 `agent-decision.txt`，确认 `agent_next_step`。
+3. 再读 `verification-summary.json`，确认 `overall_status`、`failed_count` 和失败 section。
+4. 最后读 `verification-report.md`，查看失败 section 的 stdout / stderr。
 
 ## 分流表
 
@@ -44,6 +47,9 @@
 建议把下面三段一起给 AI Agent：
 
 ```text
+agent-response.txt:
+<粘贴完整内容；新版 artifact 优先使用这份 Agent 四段回复草稿>
+
 agent-decision.txt:
 <粘贴完整内容>
 

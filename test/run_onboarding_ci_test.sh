@@ -73,6 +73,8 @@ assert_contains "$out" "onboarding_report=$output_dir/verification-report.md"
 assert_contains "$out" "onboarding_summary_json=$output_dir/verification-summary.json"
 assert_contains "$out" "onboarding_decision=$output_dir/agent-decision.txt"
 assert_contains "$out" "agent_next_step=ready"
+assert_contains "$output_dir/agent-response.txt" "结论：testloop-mcp onboarding 链路通过"
+assert_contains "$output_dir/agent-response.txt" "- agent_next_step=ready"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
 assert_contains "$output_dir/agent-decision.txt" "agent_next_step=ready"
@@ -81,6 +83,7 @@ assert_contains "$step_summary" 'Status: `passed`'
 assert_contains "$step_summary" 'Failed sections: `0`'
 assert_contains "$step_summary" 'agent_next_step: `ready`'
 assert_contains "$step_summary" "Markdown report: \`$output_dir/verification-report.md\`"
+assert_contains "$step_summary" "Agent response: \`$output_dir/agent-response.txt\`"
 
 failed_output_dir="${tmp_dir}/failed-artifacts"
 failed_step_summary="${tmp_dir}/failed-step-summary.md"
@@ -99,10 +102,14 @@ assert_contains "$out" "agent_next_step=inspect-user-project"
 assert_contains "$failed_output_dir/verification-report.md" "project failed"
 assert_contains "$failed_output_dir/verification-summary.json" '"overall_status": "failed"'
 assert_contains "$failed_output_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
+assert_contains "$failed_output_dir/agent-response.txt" "结论：testloop-mcp onboarding 链路本身是通的，失败发生在用户项目 smoke。"
+assert_contains "$failed_output_dir/agent-response.txt" "- failed_section=用户项目 smoke"
+assert_contains "$failed_output_dir/agent-response.txt" "- exit_code=7"
 assert_contains "$failed_step_summary" 'Status: `failed`'
 assert_contains "$failed_step_summary" 'Failed sections: `1`'
 assert_contains "$failed_step_summary" 'agent_next_step: `inspect-user-project`'
 assert_contains "$failed_step_summary" 'Next: inspect the user project smoke section in the Markdown report.'
+assert_contains "$failed_step_summary" "Agent response: \`$failed_output_dir/agent-response.txt\`"
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/run-onboarding-ci.sh" --help
 assert_contains "$out" "Usage: scripts/run-onboarding-ci.sh [project-smoke-command]"
