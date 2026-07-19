@@ -111,8 +111,14 @@ func GenerateJestTests(srcPath string) (string, error) {
 // for the requested JavaScript framework. Empty, Jest, and Vitest use Jest-style
 // matchers; Mocha uses Chai assertions.
 func GenerateJavaScriptTestsWithFramework(srcPath, framework string) (string, error) {
+	return GenerateJavaScriptTestsWithFrameworkAndTestFile(srcPath, framework, "")
+}
+
+// GenerateJavaScriptTestsWithFrameworkAndTestFile reads JS/TS source and
+// generates tests whose source import path is relative to testFile when set.
+func GenerateJavaScriptTestsWithFrameworkAndTestFile(srcPath, framework, testFile string) (string, error) {
 	framework = normalizeJavaScriptTestFramework(framework)
-	return generateJavaScriptTests(srcPath, &types.CoverageTestTask{Framework: framework}, false)
+	return generateJavaScriptTests(srcPath, &types.CoverageTestTask{Framework: framework, TestFile: testFile}, false)
 }
 
 // GenerateJavaScriptTestsForCoverageTask generates JS/TS tests from a coverage
@@ -166,7 +172,6 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		return "// 未发现需要生成测试的函数或类", nil
 	}
 
-	moduleName := stripExt(baseName(srcPath))
 	testPath := generatorTestPath(srcPath, task)
 	moduleImportPath := jsSourceModuleImportPath(srcPath, testPath)
 
@@ -198,7 +203,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 			buf.WriteString(jsTypeValueImportLinesForTargets(funcs, classes, typeMocks, testPath))
 		}
 	} else {
-		buf.WriteString(fmt.Sprintf("const { %s } = require('./%s');\n\n", joinExportNames(funcs, classes), moduleName))
+		buf.WriteString(fmt.Sprintf("const { %s } = require('%s');\n\n", joinExportNames(funcs, classes), moduleImportPath))
 	}
 
 	for _, fn := range funcs {

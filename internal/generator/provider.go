@@ -84,6 +84,7 @@ type TestGenerationRequest struct {
 type GenerateTestsOptions struct {
 	CoverageTask *types.CoverageTestTask
 	Framework    string
+	TestFile     string
 }
 
 type StaticProvider struct{}
@@ -354,7 +355,7 @@ func generateTestsStaticWithOptions(srcPath string, opts GenerateTestsOptions) (
 		return generateTestsForCoverageTask(srcPath, opts.CoverageTask)
 	}
 	if framework := effectiveGenerationFramework(srcPath, opts); isJavaScriptPath(srcPath) && framework != "" {
-		return GenerateJavaScriptTestsWithFramework(srcPath, framework)
+		return GenerateJavaScriptTestsWithFrameworkAndTestFile(srcPath, framework, opts.TestFile)
 	}
 	return GenerateTestsStatic(srcPath)
 }

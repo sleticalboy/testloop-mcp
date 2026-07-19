@@ -200,6 +200,40 @@ func TestRunTestgenWritesExplicitOutput(t *testing.T) {
 	}
 }
 
+func TestRunTestgenJavaScriptExplicitOutputUsesRelativeSourceImport(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src")
+	testDir := filepath.Join(dir, "tests")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
+		t.Fatalf("mkdir tests: %v", err)
+	}
+	source := filepath.Join(srcDir, "user.js")
+	if err := os.WriteFile(source, []byte(`export function listUsers(params) {
+  return request({ url: '/users', method: 'get', params });
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	output := filepath.Join(testDir, "user.test.js")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{source, output}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	content, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	if !strings.Contains(string(content), "import { listUsers } from '../src/user';") {
+		t.Fatalf("generated JS test import should be relative to explicit output path:\n%s", content)
+	}
+}
+
 func TestRunTestgenReportsWriteError(t *testing.T) {
 	dir := t.TempDir()
 	source := writeSource(t, dir)

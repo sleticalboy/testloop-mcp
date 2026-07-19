@@ -51,7 +51,9 @@ func runTestgen(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	code, err := generator.GenerateTestsWithProvider(context.Background(), srcFile, provider)
+	code, err := generator.GenerateTestsWithProviderOptions(context.Background(), srcFile, provider, generator.GenerateTestsOptions{
+		TestFile: outputFile,
+	})
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: %v\n", err)
 		if provider.Name() == "llm-command" {
