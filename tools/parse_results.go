@@ -27,6 +27,7 @@ func HandleParseResults(ctx context.Context, req *mcp.CallToolRequest, input par
 
 	// 调用统一解析接口
 	result := parser.ParseTestOutput(output, framework)
+	annotateTestResultAction(&result)
 
 	return structuredToolResult(result)
 }
@@ -39,5 +40,6 @@ func parseResults(input parseResultsInput) (types.TestResult, error) {
 	}
 
 	result := parser.ParseTestOutput(input.Output, framework)
+	annotateTestResultAction(&result)
 	return result, nil
 }

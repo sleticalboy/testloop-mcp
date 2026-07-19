@@ -119,8 +119,11 @@ func TestHandleParseResultsDefaultsToGoTest(t *testing.T) {
 	if parsed.Framework != "go-test" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
 		t.Fatalf("unexpected parsed result: %+v", parsed)
 	}
+	if parsed.Action != "ready" {
+		t.Fatalf("action = %q, want ready", parsed.Action)
+	}
 	structured := structuredContentAs[types.TestResult](t, result)
-	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.Passed != parsed.Passed {
+	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.Action != parsed.Action || structured.Passed != parsed.Passed {
 		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
 	}
 }

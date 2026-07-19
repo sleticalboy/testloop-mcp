@@ -644,6 +644,9 @@ func coverageTaskValidationAction(result *types.TestResult) string {
 		return "inspect_test_runner"
 	}
 	if result.Status == "pass" {
+		if result.Action == "manual_review" {
+			return "manual_review"
+		}
 		return "ready"
 	}
 	if len(result.FixSuggestions) > 0 {

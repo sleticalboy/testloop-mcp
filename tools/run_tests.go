@@ -127,6 +127,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	if input.IncludeFixSuggestions && result.Status == "fail" && len(result.Failures) > 0 {
 		result.FixSuggestions = generateRunTestFixSuggestions(input, result.Failures)
 	}
+	annotateTestResultAction(&result)
 	return structuredToolResult(result)
 }
 

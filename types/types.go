@@ -3,6 +3,7 @@ package types
 // TestResult 单次测试执行结果
 type TestResult struct {
 	Status          string          `json:"status"`
+	Action          string          `json:"action,omitempty"`
 	Framework       string          `json:"framework,omitempty"`
 	Total           int             `json:"total,omitempty"`
 	Passed          int             `json:"passed"`

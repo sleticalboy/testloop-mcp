@@ -306,11 +306,14 @@ func TestHandleRunTestsExecutesGoTest(t *testing.T) {
 	if parsed.Framework != "go-test" || parsed.Status != "pass" || parsed.Passed != 1 || parsed.Failed != 0 {
 		t.Fatalf("unexpected result: %+v", parsed)
 	}
+	if parsed.Action != "ready" {
+		t.Fatalf("action = %q, want ready", parsed.Action)
+	}
 	if parsed.CoveragePercent != 100 {
 		t.Fatalf("coverage = %.1f, want 100.0", parsed.CoveragePercent)
 	}
 	structured := structuredContentAs[types.TestResult](t, result)
-	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.CoveragePercent != parsed.CoveragePercent {
+	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.Action != parsed.Action || structured.CoveragePercent != parsed.CoveragePercent {
 		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
 	}
 }
@@ -334,6 +337,9 @@ func TestHandleRunTestsParsesGoFailure(t *testing.T) {
 	}
 	if parsed.Status != "fail" || parsed.Failed != 1 || len(parsed.Failures) != 1 {
 		t.Fatalf("unexpected failure result: %+v", parsed)
+	}
+	if parsed.Action != "inspect_failures" {
+		t.Fatalf("action = %q, want inspect_failures", parsed.Action)
 	}
 	if parsed.Failures[0].TestName != "TestAdd" || !strings.Contains(parsed.Failures[0].Error, "boom") {
 		t.Fatalf("unexpected failure: %+v", parsed.Failures[0])
@@ -371,6 +377,9 @@ func TestHandleRunTestsCanIncludeFixSuggestions(t *testing.T) {
 	if len(parsed.FixSuggestions) != 1 {
 		t.Fatalf("fix_suggestions len = %d, want 1: %+v", len(parsed.FixSuggestions), parsed.FixSuggestions)
 	}
+	if parsed.Action != "apply_fix_suggestions" {
+		t.Fatalf("action = %q, want apply_fix_suggestions", parsed.Action)
+	}
 	suggestion := parsed.FixSuggestions[0]
 	if suggestion.Category != "expectation_mismatch" ||
 		suggestion.ContextFile != filepath.Join(dir, "calc_test.go") ||
@@ -384,6 +393,35 @@ func TestHandleRunTestsCanIncludeFixSuggestions(t *testing.T) {
 		len(suggestion.RepairTask.EditableFiles) != 2 ||
 		suggestion.RepairTask.SuggestedCommands[0] != "go test ./..." {
 		t.Fatalf("unexpected repair task: %+v", suggestion.RepairTask)
+	}
+}
+
+func TestHandleRunTestsAllSkippedActionManualReview(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	t.Skip("manual_review: add real assertions")
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      dir,
+		Framework: "go-test",
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "pass" || parsed.Passed != 0 || parsed.Skipped != 1 || parsed.Total != 1 {
+		t.Fatalf("unexpected skipped result: %+v", parsed)
+	}
+	if parsed.Action != "manual_review" {
+		t.Fatalf("action = %q, want manual_review", parsed.Action)
+	}
+	structured := structuredContentAs[types.TestResult](t, result)
+	if structured.Action != parsed.Action || structured.Skipped != parsed.Skipped {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
 	}
 }
 

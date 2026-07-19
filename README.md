@@ -298,7 +298,9 @@ artifact_count=2
 | `source_code` | string | — | 源码文件路径，用于生成修复上下文 |
 | `test_code` | string | — | 测试文件路径，用于生成修复上下文 |
 
-**返回：** `{ status, framework, total, passed, failed, skipped, coverage_percent, failures[], fix_suggestions[], raw_output }`
+**返回：** `{ status, action, framework, total, passed, failed, skipped, coverage_percent, failures[], fix_suggestions[], raw_output }`
+
+`action` 给 Agent 做下一步分流：`ready` 表示至少有真实测试通过且当前没有失败；`manual_review` 表示命令通过但没有真实执行通过的用例，例如全部 skipped/TODO，不应当成有效覆盖；`apply_fix_suggestions` 表示失败结果已内联 `fix_suggestions[]`；`inspect_failures` 表示需要读取 `failures[]`；`inspect_test_runner` 表示测试命令异常但没有具体失败用例。
 
 `coverage=true` 时，Rust 会额外调用 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin` 并回填 `coverage_percent`；Java Maven/Gradle 项目会执行 JaCoCo report 任务并从 XML 报告回填 `coverage_percent`。也可以通过 `parse_coverage` 直接解析已有 LCOV/JaCoCo XML 文件。
 

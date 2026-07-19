@@ -17,6 +17,7 @@ func TestAgentJSONContractFields(t *testing.T) {
 			typ:  reflect.TypeOf(TestResult{}),
 			fields: []string{
 				"status",
+				"action",
 				"framework",
 				"total",
 				"passed",
