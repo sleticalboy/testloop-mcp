@@ -533,6 +533,40 @@ func TestHandleRunTestsPytestRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsPytestImportErrorFixSuggestion(t *testing.T) {
+	dir := writeTempPytestPackage(t)
+	installFakePython3(t, pytestImportErrorOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "test_calc.py"),
+		Framework:             "pytest",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "calc.py"),
+		TestCode:              filepath.Join(dir, "test_calc.py"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Action != "apply_fix_suggestions" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected pytest import error result: %+v", parsed)
+	}
+	if len(parsed.FixSuggestions) != 1 {
+		t.Fatalf("fix_suggestions len = %d, want 1: %+v", len(parsed.FixSuggestions), parsed.FixSuggestions)
+	}
+	suggestion := parsed.FixSuggestions[0]
+	if suggestion.Category != "python_import_error" ||
+		suggestion.RepairTask == nil ||
+		suggestion.RepairTask.Category != "python_import_error" ||
+		!strings.Contains(suggestion.SuggestedFix, "Python import 失败") {
+		t.Fatalf("unexpected python import suggestion: %+v", suggestion)
+	}
+}
+
 func TestHandleRunTestsJestRepairTaskGolden(t *testing.T) {
 	dir := writeTempJestPackage(t)
 	installFakeNpx(t, jestFailureOutput())
@@ -1610,6 +1644,22 @@ func pytestFailureOutput() string {
 		"",
 		"calc.py:7: ValueError",
 		"============================== 1 failed in 0.01s ===============================",
+	}, "\n")
+}
+
+func pytestImportErrorOutput() string {
+	return strings.Join([]string{
+		"==================================== ERRORS ====================================",
+		"________________________ ERROR collecting test_calc.py ________________________",
+		"ImportError while importing test module '/tmp/project/test_calc.py'.",
+		"Traceback:",
+		"test_calc.py:1: in <module>",
+		"    from missing_app import VALUE",
+		"E   ModuleNotFoundError: No module named 'missing_app'",
+		"=========================== short test summary info ============================",
+		"ERROR test_calc.py",
+		"!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!",
+		"=============================== 1 error in 0.01s ===============================",
 	}, "\n")
 }
 
