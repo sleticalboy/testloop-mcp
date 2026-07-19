@@ -24,13 +24,13 @@ run_tests -> JaCoCo 目标行命中校验闭环，避免每次都重跑完整 to
                                     默认：/Users/binlee/code/free-works/haoying/rocketmq-clients/java
   TESTLOOP_JAVA_REGRESSION_LANG_READY_TASKS_FILE
                                     包含 Commons Lang ready 任务的 JSONL。
-                                    默认：/tmp/testloop-commons-lang-taskids-junit44-50-results.jsonl
+                                    默认：testdata/java-commons-lang/ready-hit-tasks.jsonl
   TESTLOOP_JAVA_REGRESSION_LANG_MANUAL_TASKS_FILE
                                     包含 Commons Lang 手审任务的 JSONL。
-                                    默认：/tmp/testloop-commons-lang-typeutils-top5-results.jsonl
+                                    默认：testdata/java-commons-lang/manual-internal-tasks.jsonl
   TESTLOOP_JAVA_REGRESSION_CODEC_UNREACHABLE_TASKS_FILE
                                     包含 Commons Codec 不可达任务的 JSONL。
-                                    默认：/tmp/testloop-commons-codec-taskids-junit130-results.jsonl
+                                    默认：testdata/java-commons-codec/unreachable-tasks.jsonl
   TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE
                                     包含 RocketMQ StatusChecker ready 任务的 JSONL。
                                     默认：testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl
@@ -73,9 +73,9 @@ output_dir="${TESTLOOP_JAVA_REGRESSION_OUTPUT_DIR:-/tmp/testloop-java-regression
 lang_dir="${TESTLOOP_JAVA_REGRESSION_LANG_DIR:-/tmp/testloop-commons-lang}"
 codec_dir="${TESTLOOP_JAVA_REGRESSION_CODEC_DIR:-/tmp/testloop-commons-codec}"
 rocketmq_dir="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_DIR:-/Users/binlee/code/free-works/haoying/rocketmq-clients/java}"
-lang_ready_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_READY_TASKS_FILE:-/tmp/testloop-commons-lang-taskids-junit44-50-results.jsonl}"
-lang_manual_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_MANUAL_TASKS_FILE:-/tmp/testloop-commons-lang-typeutils-top5-results.jsonl}"
-codec_unreachable_tasks="${TESTLOOP_JAVA_REGRESSION_CODEC_UNREACHABLE_TASKS_FILE:-/tmp/testloop-commons-codec-taskids-junit130-results.jsonl}"
+lang_ready_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_READY_TASKS_FILE:-$repo_root/testdata/java-commons-lang/ready-hit-tasks.jsonl}"
+lang_manual_tasks="${TESTLOOP_JAVA_REGRESSION_LANG_MANUAL_TASKS_FILE:-$repo_root/testdata/java-commons-lang/manual-internal-tasks.jsonl}"
+codec_unreachable_tasks="${TESTLOOP_JAVA_REGRESSION_CODEC_UNREACHABLE_TASKS_FILE:-$repo_root/testdata/java-commons-codec/unreachable-tasks.jsonl}"
 rocketmq_statuschecker_tasks="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE:-$repo_root/testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl}"
 rocketmq_coverage_command="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_COMMAND:-mvn -pl client -am -Dtest=StatusCheckerTest -DfailIfNoTests=false test jacoco:report -Dcheckstyle.skip -Dspotbugs.skip -DskipITs}"
 rocketmq_coverage_file="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_FILE:-client/target/site/jacoco/jacoco.xml}"

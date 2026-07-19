@@ -5,6 +5,7 @@
 ### Added
 
 - Java regression smoke now includes repository-backed RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
+- Java regression smoke task inputs for Commons Lang ready/internal and Commons Codec unreachable samples are now stored under `testdata/`, reducing dependence on local `/tmp` JSONL files.
 
 ### Fixed
 
