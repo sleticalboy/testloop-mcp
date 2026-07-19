@@ -20,6 +20,12 @@ scripts/validate-regression-smoke.sh
 TESTLOOP_REGRESSION_SKIP_PREFLIGHT=true scripts/validate-regression-smoke.sh
 ```
 
+Agent 或自动化脚本需要结构化诊断时，可以单独运行 JSON 模式。stdout 会输出 `ok`、`missing_count`、`missing` 和 `checks`，退出码仍表示是否满足前置条件：
+
+```bash
+TESTLOOP_REGRESSION_PREFLIGHT_FORMAT=json scripts/validate-regression-preflight.sh
+```
+
 默认会串联三组样本：
 
 | 语言 | 脚本 | 默认样本 | 期望结果 |
