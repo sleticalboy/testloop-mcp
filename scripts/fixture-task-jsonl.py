@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Regenerate static regression fixture task JSONL for maintainers.
+
+The default regression smoke scripts read checked-in files under testdata/.
+This helper is only for rebuilding or adding those fixture inputs when a
+representative sample intentionally changes.
+"""
 
 import argparse
 import json
@@ -556,10 +562,21 @@ PRESETS = {
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate a fixed fixture coverage task JSONL.")
-    parser.add_argument("preset", choices=sorted(PRESETS))
-    parser.add_argument("project_dir")
-    parser.add_argument("output")
+    parser = argparse.ArgumentParser(
+        description="Regenerate static regression fixture coverage task JSONL.",
+        epilog=(
+            "Default smoke scripts read checked-in testdata/*.jsonl files. "
+            "Use this helper only when rebuilding or adding fixture inputs.\n\n"
+            "Example:\n"
+            "  scripts/fixture-task-jsonl.py py-apk-station-database "
+            "/path/to/haoy-apk-station/backend "
+            "testdata/py-haoy-apk-station/database-tasks.jsonl"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("preset", choices=sorted(PRESETS), help="fixture preset to regenerate")
+    parser.add_argument("project_dir", help="source project root used to resolve absolute task paths")
+    parser.add_argument("output", help="output JSONL path, normally under testdata/")
     args = parser.parse_args()
 
     project_dir = str(Path(args.project_dir).resolve())

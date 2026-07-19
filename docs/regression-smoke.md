@@ -81,7 +81,7 @@ TESTLOOP_REGRESSION_SKIP_JS=true scripts/validate-regression-smoke.sh
 TESTLOOP_REGRESSION_SKIP_PY=true scripts/validate-regression-smoke.sh
 ```
 
-## 关键 runner
+## 重建 fixture 输入
 
 固定 smoke 默认任务输入已经迁入 `testdata/` 静态 JSONL。`scripts/fixture-task-jsonl.py` 仍保留为重建/新增 fixture 的辅助工具，不再是默认 smoke 的运行时依赖：
 
@@ -90,6 +90,10 @@ scripts/fixture-task-jsonl.py py-apk-station-environment /Users/binlee/code/free
 scripts/fixture-task-jsonl.py py-apk-station-external-service /Users/binlee/code/free-works/haoy-apk-station/backend /tmp/py-apk-station-external-service.jsonl
 scripts/fixture-task-jsonl.py py-apk-station-database /Users/binlee/code/free-works/haoy-apk-station/backend /tmp/py-apk-station-database.jsonl
 ```
+
+重建后应把输出复制到对应 `testdata/<sample>/*.jsonl`，并运行对应的 fixture test 和 regression smoke，确认 ID、目标行段、推荐测试文件以及期望 action 没有漂移。
+
+## 关键 runner
 
 JS/ip2region 使用 Jest ESM，需要固定到单个生成测试文件，否则 `jest util.test.js` 会误匹配项目已有 `tests/util.test.js`：
 
