@@ -23,6 +23,7 @@ required_snippets = [
     "docs/fixtures/onboarding-artifacts/user-project-smoke-failed/",
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
+    "./fixtures/agent-response-artifact-manifest.json",
     "go run ./examples/first-run-agent-response-demo",
     "first_run_agent_next_step=inspect-user-project",
     "agent_next_step=inspect-user-project",

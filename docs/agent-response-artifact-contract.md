@@ -66,6 +66,10 @@ CI 失败时按这个顺序读取：
 - [first-run 用户项目 smoke 失败](./fixtures/first-run-artifacts/user-project-smoke-failed/)
 - [onboarding 用户项目 smoke 失败](./fixtures/onboarding-artifacts/user-project-smoke-failed/)
 
+机器可读索引：
+
+- [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
+
 ## 相关文档
 
 - [CI 失败后交给 Agent](./ci-agent-triage.md)

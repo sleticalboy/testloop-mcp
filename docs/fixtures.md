@@ -4,6 +4,8 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
+Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，用于客户端测试直接发现 first-run / onboarding artifact fixture、必备文件、固定字段和 fallback 顺序。
+
 ## validate_coverage_task fixture 列表
 
 | 文件 | status/action | 来源 | Agent 下一步 |

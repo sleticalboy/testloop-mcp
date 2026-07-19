@@ -20,7 +20,7 @@ expected_actions = {
 }
 
 text = index.read_text(encoding="utf-8")
-fixtures = sorted(fixture_dir.glob("*.json"))
+fixtures = sorted(fixture_dir.glob("validate-coverage-task-*.json"))
 
 failures = []
 seen_actions = set()

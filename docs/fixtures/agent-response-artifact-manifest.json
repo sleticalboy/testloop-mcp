@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "description": "Machine-readable fixture manifest for testloop CI agent-response.txt artifacts.",
+  "artifacts": [
+    {
+      "kind": "first-run",
+      "directory": "docs/fixtures/first-run-artifacts/user-project-smoke-failed",
+      "agent_response": "agent-response.txt",
+      "decision": "agent-decision.txt",
+      "summary": "verification-summary.json",
+      "report": "verification-report.md",
+      "optional_context": "first-run-context.txt",
+      "optional_log": "first-run.log",
+      "action_field": "first_run_agent_next_step",
+      "expected_action": "inspect-user-project",
+      "expected_failed_section": "用户项目 smoke",
+      "expected_exit_code": 7,
+      "required_response_fields": [
+        "first_run_agent_next_step",
+        "failed_section",
+        "exit_code",
+        "first_run_report"
+      ],
+      "fallback_order": [
+        "agent-response.txt",
+        "agent-decision.txt",
+        "first-run-context.txt",
+        "verification-summary.json",
+        "verification-report.md",
+        "first-run.log"
+      ]
+    },
+    {
+      "kind": "onboarding",
+      "directory": "docs/fixtures/onboarding-artifacts/user-project-smoke-failed",
+      "agent_response": "agent-response.txt",
+      "decision": "agent-decision.txt",
+      "summary": "verification-summary.json",
+      "report": "verification-report.md",
+      "action_field": "agent_next_step",
+      "expected_action": "inspect-user-project",
+      "expected_failed_section": "用户项目 smoke",
+      "expected_exit_code": 7,
+      "required_response_fields": [
+        "agent_next_step",
+        "overall_status",
+        "failed_count",
+        "failed_section",
+        "exit_code",
+        "markdown_report"
+      ],
+      "fallback_order": [
+        "agent-response.txt",
+        "agent-decision.txt",
+        "verification-summary.json",
+        "verification-report.md"
+      ]
+    }
+  ]
+}
