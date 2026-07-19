@@ -259,6 +259,15 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 
 这个脚本适合做基础安装验收：它会依次验证二进制可执行、`--version` 可运行、`--doctor-config` 可运行、`--print-config=all` 与 `--check-config -` 可以闭环，并启动一次 HTTP 模式检查 `/healthz`。如果当前机器的 `127.0.0.1:18080` 已被占用，可以通过 `TESTLOOP_MCP_VERIFY_HTTP_ADDR=127.0.0.1:18081` 指定其他端口；只想验证 stdio 配置时可以设置 `TESTLOOP_MCP_VERIFY_SKIP_HTTP=true`。
 
+如果要继续验证客户端或 Agent 对 CI artifact 的消费路径，源码 checkout 中可以运行：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+artifact manifest 的结构契约见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。更短的接入顺序见 [5 分钟接入向导](./quickstart.md)，完整客户端回归模板见 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
+
 如果需要确认安装产物没有指向旧版本，可以加版本门禁：
 
 ```bash
