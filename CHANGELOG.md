@@ -14,6 +14,7 @@
 - README、CI 失败 triage 和客户端集成说明已收敛为失败后优先读取 `agent-response.txt`，再按需下钻 decision、summary 和 report。
 - `docs/client-integration.md` 和 `docs/fixtures.md` 已链接 Agent response artifact manifest，减少客户端手写 fixture 路径和字段映射。
 - `docs/client-integration.md` 和 Agent response contract 已补 manifest demo 命令。
+- `docs/mcp-client-contract-tests.md` 已补 CI artifact manifest/schema 回归模板，覆盖 schema 校验、fallback 顺序和 first-run/onboarding action 字段差异。
 
 ## v0.5.10 - 2026-07-19
 

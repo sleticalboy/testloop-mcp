@@ -54,7 +54,7 @@ sh test/agent_decision_demo_test.sh
 
 ## 接入方 CI 模板
 
-如果客户端项目使用 JavaScript/TypeScript，可以把 fixture 放到 `test/fixtures/`，并在 CI 中加入类似检查：
+如果客户端项目使用 JavaScript/TypeScript，可以把 `validate_coverage_task` fixture 放到 `test/fixtures/`，并在 CI 中加入类似检查：
 
 ```bash
 node test/validate-testloop-fixtures.mjs
@@ -86,10 +86,41 @@ assert content[0].text can be parsed as equivalent JSON fallback
 
 仓库内对应参考是 `test/e2e`，它覆盖 stdio 和 Streamable HTTP 两条真实 MCP 接入路径。
 
+## CI artifact manifest 回归
+
+客户端如果消费 GitHub Actions artifact，还应把 `agent-response.txt` 这条路径纳入契约测试。这里测试的不是 MCP 返回值，而是 CI 失败后下载到本地的 artifact 目录。
+
+推荐最小流程：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.json
+curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.schema.json
+npx --yes ajv-cli validate \
+  -s agent-response-artifact-manifest.schema.json \
+  -d agent-response-artifact-manifest.json
+```
+
+如果客户端 CI 不想引入 JSON Schema 校验器，至少应运行仓库内 demo，确认 manifest 指向的 artifact fixture、必备字段和 fallback 顺序仍然可消费：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+客户端自己的测试建议额外断言：
+
+- `schema_version=1`。
+- 每个 artifact 都先读取 `agent-response.txt`。
+- `fallback_order[0]` 固定为 `agent-response.txt`。
+- `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
+- `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。
+
 ## 相关入口
 
 - [客户端集成说明](./client-integration.md)
 - [Agent 结构化契约](./agent-contract.md)
 - [Agent Action 决策表](./agent-action-guide.md)
 - [真实结构化 fixture](./fixtures.md)
+- [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
+- [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
