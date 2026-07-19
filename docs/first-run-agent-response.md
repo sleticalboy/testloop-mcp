@@ -1,6 +1,6 @@
 # first-run Agent 回复格式
 
-这份文档面向 AI Coding Agent。用户把 `first-run-context.txt` 粘过来后，Agent 不应该直接开始改测试或猜测日志含义，而应该先按 `first_run_agent_next_step` 分流。
+这份文档面向 AI Coding Agent。新版 first-run artifact 如果已经包含 `agent-response.txt`，可以直接把它作为回复草稿；用户只粘 `first-run-context.txt` 时，Agent 不应该直接开始改测试或猜测日志含义，而应该先按 `first_run_agent_next_step` 分流。
 
 ## 回复结构
 
@@ -25,7 +25,7 @@
 如果上下文不完整，先要求用户补 artifact，而不是猜：
 
 ```text
-我需要先看到 agent-decision.txt 和 first-run-context.txt。只有 GitHub Actions 最后一行错误不足以判断是安装、MCP transport、Agent demo 还是用户项目 smoke 失败。
+我需要先看到 agent-response.txt；如果没有这个文件，再补 agent-decision.txt 和 first-run-context.txt。只有 GitHub Actions 最后一行错误不足以判断是安装、MCP transport、Agent demo 还是用户项目 smoke 失败。
 ```
 
 ## 分流动作
@@ -100,8 +100,8 @@ Agent 应回复：
 
 ```text
 这段日志不足以判断失败层级。请下载 testloop-first-run artifact，并至少粘贴：
-1. agent-decision.txt
-2. first-run-context.txt
+1. agent-response.txt
+2. 如果没有 agent-response.txt，再粘贴 agent-decision.txt 和 first-run-context.txt
 
 如果没有 first-run-context.txt，再补 verification-summary.json 和 verification-report.md 的失败 section。
 ```

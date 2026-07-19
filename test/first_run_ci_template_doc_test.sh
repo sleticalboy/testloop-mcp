@@ -37,6 +37,7 @@ required = [
     "/tmp/testloop-web-first-run/first-run-context.txt",
     "/tmp/testloop-web-first-run/agent-response.txt",
     "/tmp/testloop-web-first-run/first-run.log",
+    "Agent 四段回复草稿",
     "./first-run-failures.md",
     "./onboarding-ci-template.md",
 ]

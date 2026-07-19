@@ -13,7 +13,17 @@ gh run download <run-id> -n testloop-first-run -D /tmp/testloop-first-run-artifa
 
 如果 workflow 或 artifact 名称改过，把命令里的 `"testloop first-run smoke"` 和 `testloop-first-run` 换成你的实际名称。
 
-## 2. 先读 decision
+## 2. 快速路径：先读 Agent 回复草稿
+
+新版 `run-first-run-ci.sh` 会在 artifact 中生成 `agent-response.txt`。如果这个文件存在，先看它：
+
+```bash
+cat /tmp/testloop-first-run-artifacts/agent-response.txt
+```
+
+它已经按“结论 / 证据 / 下一步 / 暂不做”整理过，可直接作为 Agent 回复草稿。需要机器分流、旧版 artifact 没有这个文件，或者要确认 action 来源时，再继续读 `agent-decision.txt` 和 `first-run-context.txt`。
+
+## 3. 再读 decision
 
 ```bash
 cat /tmp/testloop-first-run-artifacts/agent-decision.txt
@@ -29,9 +39,9 @@ cat /tmp/testloop-first-run-artifacts/agent-decision.txt
 | `inspect-agent-demo` | 先查最小 Agent demo、结构化返回或本仓库 Go 运行环境。 |
 | `inspect-user-project` | 先查用户项目 smoke 命令、依赖、环境变量和测试/构建输出。 |
 
-## 3. 粘贴最小上下文
+## 4. 粘贴最小上下文
 
-first-run 失败时优先把 `first-run-context.txt` 原样交给 Agent：
+first-run 失败时，如果没有 `agent-response.txt`，或 Agent 需要自己重新判断，优先把 `first-run-context.txt` 原样交给 Agent：
 
 ```bash
 cat /tmp/testloop-first-run-artifacts/first-run-context.txt
@@ -48,26 +58,25 @@ cat /tmp/testloop-first-run-artifacts/first-run-context.txt
 如果 Agent 需要更细日志，再补充：
 
 ```bash
-cat /tmp/testloop-first-run-artifacts/agent-response.txt
 cat /tmp/testloop-first-run-artifacts/verification-summary.json
 cat /tmp/testloop-first-run-artifacts/verification-report.md
 cat /tmp/testloop-first-run-artifacts/first-run.log
 ```
 
-`agent-response.txt` 是 `run-first-run-ci.sh` 根据 artifact 目录自动渲染出的四段回复草稿；如果 artifact 来自旧版脚本没有这个文件，可以在 testloop-mcp 仓库里运行：
+如果 artifact 来自旧版脚本没有 `agent-response.txt`，可以在 testloop-mcp 仓库里运行：
 
 ```bash
 sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run-artifacts
 ```
 
-## 4. 不要先贴什么
+## 5. 不要先贴什么
 
 - 不要只贴 GitHub Actions 最后一行错误。
 - 不要先贴完整 `first-run.log`，除非 Agent 已经要求看底层日志。
 - 不要在 `agent_next_step=fix-installation` 时让 Agent 先改业务测试。
 - 不要在 `agent_next_step=inspect-user-project` 时继续排查 MCP transport，先看用户项目 smoke。
 
-## 5. onboarding artifact
+## 6. onboarding artifact
 
 稳定接入后的 onboarding CI 没有 `first-run-context.txt` 和 `first-run.log`。这时按顺序粘：
 
@@ -79,7 +88,7 @@ sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run-artifacts
 
 Agent 收到 `first-run-context.txt` 后的推荐回复格式见 [first-run Agent 回复格式](./first-run-agent-response.md)。
 
-## 6. 失败态实跑记录
+## 7. 失败态实跑记录
 
 2026-07-19 使用外部临时项目和故意失败的 smoke 命令复验 first-run triage：
 
@@ -101,6 +110,7 @@ first_run_status=failed
 first_run_failed_count=1
 first_run_agent_next_step=inspect-user-project
 first_run_context=/tmp/testloop-first-run-failure-triage/first-run-context.txt
+agent_response=/tmp/testloop-first-run-failure-triage/agent-response.txt
 ```
 
 `verification-summary.json` 中只有“用户项目 smoke”失败：
@@ -118,4 +128,4 @@ exit_code=7
 testloop intentional project failure
 ```
 
-这说明 `agent-decision.txt` 足够让 Agent 先选择 `inspect-user-project`，`first-run-context.txt` 足够作为第一段粘贴上下文；只有需要查看项目 stdout / stderr 时，才需要继续打开 Markdown report。
+这说明 `agent-response.txt` 足够作为第一段 Agent 回复草稿；`agent-decision.txt` 和 `first-run-context.txt` 仍足够让 Agent 重新选择 `inspect-user-project`。只有需要查看项目 stdout / stderr 时，才需要继续打开 Markdown report。

@@ -108,9 +108,9 @@ jobs:
 
 CI 失败时先打开 GitHub step summary。如果仍需要更多上下文，下载 artifact 后按顺序看：
 
-1. `first-run-context.txt`：直接粘给 AI Agent。
-2. `agent-response.txt`：查看脚本已经渲染出的 Agent 四段回复草稿。
-3. `agent-decision.txt`：查看 `agent_next_step`。
+1. `agent-response.txt`：查看脚本已经渲染出的 Agent 四段回复草稿。
+2. `first-run-context.txt`：旧版 artifact 没有回复草稿时，直接粘给 AI Agent。
+3. `agent-decision.txt`：查看 `agent_next_step`，用于机器分流或复核。
 4. `verification-summary.json`：查看失败 section。
 5. `verification-report.md`：查看失败 section 的 stdout / stderr。
 6. `first-run.log`：排查 bootstrap 或脚本入口问题。
