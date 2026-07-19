@@ -460,6 +460,72 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderIncludesResolvedBarrelImportedTypePayload(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	dir := t.TempDir()
+	modelDir := filepath.Join(dir, "models")
+	if err := os.MkdirAll(modelDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `import type { UserDTO } from './models';
+
+export async function loadUser(response: Response): Promise<UserDTO> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "index.ts"), []byte(`export type { ExternalUser as UserDTO } from './user';
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "user.ts"), []byte(`export interface ExternalUser {
+  userId: number;
+  email: string;
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	requestPath := filepath.Join(t.TempDir(), "request.json")
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+cat > "`+requestPath+`"
+cat <<'EOF'
+{"code":"import { loadUser } from './api';\n\nit('uses llm output', async () => {\n  await loadUser({ json: async () => ({ userId: 1, email: 'user@example.com' }) });\n});\n"}
+EOF
+`)
+
+	_, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, ExternalLLMProvider{Command: command}, GenerateTestsOptions{
+		Framework: "vitest",
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+
+	raw, err := os.ReadFile(requestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var req TestGenerationRequest
+	if err := json.Unmarshal(raw, &req); err != nil {
+		t.Fatalf("parse provider request: %v\n%s", err, raw)
+	}
+	target := findProviderTarget(req.Context.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", req.Context.Targets)
+	}
+	assertProviderSliceContains(t, target.PayloadNotes, "return annotation imported type UserDTO from './models' resolved from models/user.ts")
+	if !strings.Contains(req.StaticCode, "json: async () => ({ userId: 1, email: 'user@example.com' })") ||
+		!strings.Contains(req.StaticCode, "expect(result).toEqual({ userId: 1, email: 'user@example.com' });") {
+		t.Fatalf("provider static_code missing barrel imported type payload:\n%s", req.StaticCode)
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsRejectsProviderEmptyOutput(t *testing.T) {
 	srcPath := writeProviderSource(t)
 

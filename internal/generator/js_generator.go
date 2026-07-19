@@ -74,8 +74,8 @@ var jsTSIdentifierRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 
 var (
 	jsNamedImportRe      = regexp.MustCompile(`(?m)import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
-	jsExportStarRe       = regexp.MustCompile(`(?m)export\s+\*\s+from\s+['"]([^'"]+)['"]`)
-	jsExportNamedFromRe  = regexp.MustCompile(`(?m)export\s+\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
+	jsExportStarRe       = regexp.MustCompile(`(?m)export\s+(?:type\s+)?\*\s+from\s+['"]([^'"]+)['"]`)
+	jsExportNamedFromRe  = regexp.MustCompile(`(?m)export\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]`)
 	jsConstructorMockKey = "__testloop_constructor_mock__:"
 	jsEnumMockKey        = "__testloop_enum_mock__:"
 )
@@ -1728,7 +1728,7 @@ func jsImportedTypeMocksSeen(srcPath string, source string, seen map[string]bool
 			}
 			continue
 		}
-		resolvedPath, ok := jsResolveImportedSymbolPath(srcPath, imported.Module, imported.ImportedName, nil)
+		resolvedPath, resolvedName, ok := jsResolveImportedSymbolPath(srcPath, imported.Module, imported.ImportedName, nil)
 		if !ok {
 			continue
 		}
@@ -1743,14 +1743,14 @@ func jsImportedTypeMocksSeen(srcPath string, source string, seen map[string]bool
 			}
 		}
 		if decls := jsExtractTSTypeDecls(text); len(decls) > 0 {
-			if decl, ok := decls[imported.ImportedName]; ok {
-				result[localName] = jsImportedTypeMock{Name: localName, ImportedName: imported.ImportedName, Module: imported.Module, Decl: decl, IsValue: strings.HasPrefix(decl, jsEnumMockKey), FilePath: resolvedPath}
+			if decl, ok := decls[resolvedName]; ok {
+				result[localName] = jsImportedTypeMock{Name: localName, ImportedName: resolvedName, Module: imported.Module, Decl: decl, IsValue: strings.HasPrefix(decl, jsEnumMockKey), FilePath: resolvedPath}
 				continue
 			}
 		}
 		_, classes, _ := parseJSWithTreeSitter(data, strings.ToLower(filepath.Ext(resolvedPath)))
 		for _, cls := range classes {
-			if cls.Name != imported.ImportedName || !cls.IsExported {
+			if cls.Name != resolvedName || !cls.IsExported {
 				continue
 			}
 			result[localName] = jsImportedTypeMock{
@@ -1812,9 +1812,9 @@ func jsParseImportSpecifier(spec string) (importedName string, localName string)
 	return importedName, localName
 }
 
-func jsResolveImportedSymbolPath(srcPath string, module string, symbol string, seen map[string]bool) (string, bool) {
+func jsResolveImportedSymbolPath(srcPath string, module string, symbol string, seen map[string]bool) (string, string, bool) {
 	if !strings.HasPrefix(module, ".") || symbol == "" {
-		return "", false
+		return "", "", false
 	}
 	for _, candidate := range jsImportModuleFileCandidates(srcPath, module) {
 		key := candidate + "#" + symbol
@@ -1832,13 +1832,13 @@ func jsResolveImportedSymbolPath(srcPath string, module string, symbol string, s
 		}
 		text := string(data)
 		if jsFileExportsSymbol(text, symbol) {
-			return candidate, true
+			return candidate, symbol, true
 		}
-		if path, ok := jsResolveReExportedSymbolPath(candidate, text, symbol, nextSeen); ok {
-			return path, true
+		if path, resolvedName, ok := jsResolveReExportedSymbolPath(candidate, text, symbol, nextSeen); ok {
+			return path, resolvedName, true
 		}
 	}
-	return "", false
+	return "", "", false
 }
 
 func jsImportModuleFileCandidates(srcPath string, module string) []string {
@@ -1864,7 +1864,7 @@ func jsFileExportsSymbol(source string, symbol string) bool {
 	if pattern.MatchString(source) {
 		return true
 	}
-	for _, match := range regexp.MustCompile(`(?m)export\s+\{([^}]*)\}`).FindAllStringSubmatch(source, -1) {
+	for _, match := range regexp.MustCompile(`(?m)export\s+(?:type\s+)?\{([^}]*)\}\s*(?:;|$)`).FindAllStringSubmatch(source, -1) {
 		if len(match) < 2 {
 			continue
 		}
@@ -1878,7 +1878,7 @@ func jsFileExportsSymbol(source string, symbol string) bool {
 	return false
 }
 
-func jsResolveReExportedSymbolPath(currentPath string, source string, symbol string, seen map[string]bool) (string, bool) {
+func jsResolveReExportedSymbolPath(currentPath string, source string, symbol string, seen map[string]bool) (string, string, bool) {
 	for _, match := range jsExportNamedFromRe.FindAllStringSubmatch(source, -1) {
 		if len(match) < 3 {
 			continue
@@ -1886,20 +1886,20 @@ func jsResolveReExportedSymbolPath(currentPath string, source string, symbol str
 		for _, part := range strings.Split(match[1], ",") {
 			name, local := jsParseImportSpecifier(part)
 			if name == symbol || local == symbol {
-				if path, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[2]), name, seen); ok {
-					return path, true
+				if path, resolvedName, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[2]), name, seen); ok {
+					return path, resolvedName, true
 				}
 			}
 		}
 	}
 	for _, match := range jsExportStarRe.FindAllStringSubmatch(source, -1) {
 		if len(match) >= 2 {
-			if path, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[1]), symbol, seen); ok {
-				return path, true
+			if path, resolvedName, ok := jsResolveImportedSymbolPath(currentPath, strings.TrimSpace(match[1]), symbol, seen); ok {
+				return path, resolvedName, true
 			}
 		}
 	}
-	return "", false
+	return "", "", false
 }
 
 func jsConstructorMockExpression(name string, params []jsParamInfo) string {

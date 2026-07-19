@@ -187,6 +187,50 @@ export async function loadExternal(response: Response): Promise<ExternalUser> {
 	}
 }
 
+func TestBuildGenerationContext_JSResolvedBarrelReExportedTypePayloadNotes(t *testing.T) {
+	dir := t.TempDir()
+	modelDir := filepath.Join(dir, "models")
+	if err := os.MkdirAll(modelDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `import type { UserDTO } from './models';
+
+export async function loadUser(response: Response): Promise<UserDTO> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "index.ts"), []byte(`export type { ExternalUser as UserDTO } from './user';
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "user.ts"), []byte(`export interface ExternalUser {
+  userId: number;
+  email: string;
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := BuildGenerationContext(srcPath)
+	if ctx == nil {
+		t.Fatal("expected generation context")
+	}
+	target := findTarget(ctx.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", ctx.Targets)
+	}
+	assertContains(t, target.PayloadNotes, "return annotation imported type UserDTO from './models' resolved from models/user.ts")
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "read candidate source files") || strings.Contains(note, "falls back to { ok: true }") {
+			t.Fatalf("resolved barrel re-exported type should not emit fallback or candidate note: %+v", target.PayloadNotes)
+		}
+	}
+}
+
 func TestBuildGenerationContextCoverageTaskForStaticLanguages(t *testing.T) {
 	task := types.CoverageTestTask{
 		ID:        "go-1",
