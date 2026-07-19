@@ -14,6 +14,7 @@ testloop-mcp v0.5.12
 - [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.12 - 2026-07-19`。
 - [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.12`。
 - [x] 正式版本准备本地完整验证已通过。
+- [x] 正式版本准备提交 `4815012` 远端 CI run `29685640306` passed。
 - [ ] 尚未打 tag、生成 Release 资产或更新 Homebrew tap。
 
 ## 摘要
@@ -77,6 +78,7 @@ v0.5.12 候选重点是把真实项目 regression smoke 从“依赖临时 JSONL
 - [x] `cd /tmp/testloop-current-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.12_darwin_arm64.tar.gz.sha256`
 - [x] `tar -tzf /tmp/testloop-current-candidate-dist/testloop-mcp_v0.5.12_darwin_arm64.tar.gz`
 - [x] 正式版本准备复跑：版本相关文档/脚本测试、文档 gate、`go test ./...`、主服务/testgen 构建、`testloop-mcp 0.5.12` 版本输出、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
+- [x] 正式版本准备提交 `4815012` 远端 CI run `29685640306` passed。
 - [x] `git diff --check`
 
 ## 发布前待办
@@ -86,7 +88,7 @@ v0.5.12 候选重点是把真实项目 regression smoke 从“依赖临时 JSONL
 - [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.12 - 2026-07-19`。
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.12` / `v0.5.12`。
 - [x] 跑完整正式发布前门禁和 release readiness。
-- [ ] 提交版本准备后等待远端 CI。
+- [x] 提交版本准备后等待远端 CI。
 - [ ] 打 `v0.5.12` tag，生成 Release 资产，更新 GitHub Release。
 - [ ] 生成并更新 Homebrew Formula / tap。
 - [ ] 触发 Post-Release Verify，确认五平台安装脚本 dry run 通过。

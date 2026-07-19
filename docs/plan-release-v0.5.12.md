@@ -73,6 +73,7 @@
 - [x] `df6619c` 远端 CI run `29684677073` passed，覆盖 preflight JSON output。
 - [x] `f9295b4` 远端 CI run `29684888366` passed，覆盖 preflight report 渲染。
 - [x] `59124ba` 远端 CI run `29685059506` passed，覆盖 release readiness 记录。
+- [x] `4815012` 远端 CI run `29685640306` passed，覆盖 v0.5.12 正式版本准备。
 
 ## 发布前门禁
 
@@ -96,7 +97,7 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `v0.5.12`。
 - [x] 测试中的版本期望同步到 `0.5.12`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.12` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.12` 验证 Release 资产完整。
@@ -107,4 +108,4 @@
 
 ## 当前结论
 
-v0.5.12 正式版本准备的文件同步和本地验证已经完成。下一步是提交版本准备改动并等待 main CI；CI 通过后再决定是否打 `v0.5.12` tag 和进入 Release Artifacts 流程。
+v0.5.12 正式版本准备的文件同步、本地验证和 main CI 都已完成。下一步是决定是否打 `v0.5.12` tag 并进入 Release Artifacts 流程。
