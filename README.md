@@ -562,6 +562,36 @@ go run ./examples/mcp-client-demo
 
 预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
+### 用户项目接入：直接复制
+
+首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
+TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
+  bash /tmp/testloop-first-run-ci.sh 'go test ./...'
+```
+
+稳定接入后的 PR / 发布后 smoke，复制 onboarding bootstrap：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
+TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
+  bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
+```
+
+Vue / Node 项目把最后的 smoke 命令换成：
+
+```bash
+pnpm install --frozen-lockfile && pnpm build
+```
+
+first-run 会输出 report、summary、decision、context 和 log 五件套；onboarding 会输出 report、summary 和 decision 三件套。失败时先看 `agent-decision.txt`，first-run 失败时直接把 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
+
 如果要演示完整首次接入路径，可以运行：
 
 ```bash
@@ -569,8 +599,6 @@ scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 ```
 
 这条首跑诊断会输出 `first_run_status`、`first_run_agent_next_step`、Markdown 报告、summary JSON、decision、可粘贴上下文和完整日志路径，适合安装后先确认本机是否能接入。
-
-接入方只想按一页清单完成本机和 CI 验证时，先看 [接入方一页式验证指南](./docs/adopter-verification-guide.md)。
 
 如果只想看终端里的完整演示，可以运行：
 

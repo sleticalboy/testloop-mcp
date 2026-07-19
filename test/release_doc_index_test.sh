@@ -34,6 +34,8 @@ required_entries = {
 }
 
 required_commands = [
+    "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh",
+    "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh",
     "go run ./examples/agent-decision-demo",
     "go run ./examples/mcp-client-demo",
     "go run ./examples/verification-summary-decision-demo",
@@ -48,6 +50,14 @@ required_commands = [
     "scripts/verify-mcp-process-smoke.sh",
 ]
 
+required_phrases = [
+    "用户项目接入：直接复制",
+    "复制 first-run bootstrap",
+    "复制 onboarding bootstrap",
+    "first-run-context.txt",
+    "真实 server / web 实跑记录",
+]
+
 failures = []
 for label, target in required_entries.items():
     if target not in text:
@@ -60,6 +70,10 @@ for label, target in required_entries.items():
 for command in required_commands:
     if command not in text:
         failures.append(f"{readme}: missing release doc index command {command!r}")
+
+for phrase in required_phrases:
+    if phrase not in text:
+        failures.append(f"{readme}: missing release doc index phrase {phrase!r}")
 
 if failures:
     print("release doc index test failed:", file=sys.stderr)
