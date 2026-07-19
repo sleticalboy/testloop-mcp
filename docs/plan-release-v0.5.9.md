@@ -65,14 +65,14 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 - [x] 测试中的版本期望同步到 `0.5.9`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [x] 提交版本准备改动后确认远端 CI run `29670649066` passed。
-- [ ] 打 tag `v0.5.9` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.9` 验证 10 个 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.9 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.9` 更新仓库内 Formula。
+- [x] 打 tag `v0.5.9` 并推送。
+- [x] Release Artifacts workflow run `29670770869` 已生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.9` 验证 10 个 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.9 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.9` 更新仓库内 Formula。
 - [ ] 更新 Homebrew tap 到 `0.5.9` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.9 正式版本准备改动、本地完整验证和远端 CI 已完成，适合作为 Agent artifact 消费体验 patch。下一步打 `v0.5.9` tag，并进入 Release Artifacts、GitHub Release 和 Homebrew tap 流程。
+v0.5.9 tag、Release Artifacts、资产校验、GitHub Release 正文和仓库内 Formula 更新已完成。下一步更新 Homebrew tap 到 `0.5.9`，再触发 Post-Release Verify。
