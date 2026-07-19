@@ -21,8 +21,10 @@ testloop-mcp v0.5.12
 - [x] `scripts/verify-release-assets.sh v0.5.12` 已验证 10 个 Release 资产完整。
 - [x] GitHub Release 正文已更新为正式发布说明。
 - [x] 仓库内 Formula 已更新到 `0.5.12`。
-- [ ] Homebrew tap 尚未完成更新。
-- [ ] Post-Release Verify 尚未完成。
+- [x] Homebrew Tap workflow run `29688974741` success，但因 `HOMEBREW_TAP_TOKEN` 未配置而跳过 PR 创建。
+- [x] Homebrew tap 已通过本地脚本直接更新并推送，tap commit 为 `7d78be8`。
+- [x] Post-Release Verify run `29689015033` passed。
+- [x] 本机 Homebrew tap 抽查已确认 stable `0.5.12`，`brew audit --formula --strict` 通过。
 
 ## 摘要
 
@@ -98,8 +100,8 @@ v0.5.12 候选重点是把真实项目 regression smoke 从“依赖临时 JSONL
 - [x] 提交版本准备后等待远端 CI。
 - [x] 打 `v0.5.12` tag，生成 Release 资产，更新 GitHub Release。
 - [x] 生成仓库内 Homebrew Formula。
-- [ ] 更新 Homebrew tap。
-- [ ] 触发 Post-Release Verify，确认五平台安装脚本 dry run 通过。
+- [x] 更新 Homebrew tap。
+- [x] 触发 Post-Release Verify，确认五平台安装脚本 dry run 通过。
 
 ## 发布备注
 

@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.12 发布说明草案](./plan-release-notes-v0.5.12.md)。
 
-当前已完成版本准备、tag、GitHub Release、Release Artifacts 和 Release 资产清单校验。后续收尾集中在 Homebrew tap、Post-Release Verify 和发布记录回填。
+当前已完成版本准备、tag、GitHub Release、Release Artifacts、Release 资产清单校验、Homebrew tap 更新、Post-Release Verify 和本机 Homebrew tap 抽查。后续收尾集中在发布记录提交。
 
 ## 当前差异核对
 
@@ -79,6 +79,14 @@
 - [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.12` 验证 10 个 Release 资产完整。
 - [x] `scripts/generate-homebrew-formula.sh v0.5.12`
 - [x] `ruby -c Formula/testloop-mcp.rb`
+- [x] `2cea4b8` 远端 CI run `29688905594` passed，覆盖仓库内 Formula 与发布记录更新。
+- [x] Homebrew Tap workflow run `29688974741` success，但因 `HOMEBREW_TAP_TOKEN` 未配置而跳过 PR 创建。
+- [x] 使用 `TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.5.12 /tmp/testloop-mcp-homebrew-tap-v0.5.12` 直接更新 tap。
+- [x] `sleticalboy/homebrew-tap` commit `7d78be8` 已推送，提交信息为 `testloop-mcp 0.5.12`。
+- [x] Post-Release Verify run `29689015033` passed，资产清单和五平台安装脚本 dry run 均通过。
+- [x] 本机 Homebrew tap 使用 HTTPS fetch 快进到 `7d78be8`，`brew info sleticalboy/tap/testloop-mcp` 显示 stable `0.5.12`。
+- [x] `HOMEBREW_NO_AUTO_UPDATE=1 brew audit --formula --strict sleticalboy/tap/testloop-mcp`
+- [x] `curl -I -L --max-time 30` 访问 `testloop-mcp_v0.5.12_darwin_arm64.tar.gz` 返回 302 到 200。
 
 ## 发布前门禁
 
@@ -108,9 +116,9 @@
 - [x] 使用 `scripts/verify-release-assets.sh v0.5.12` 验证 Release 资产完整。
 - [x] 更新 GitHub Release 正文为正式 v0.5.12 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.12` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.12` 并推送。
-- [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
+- [x] 更新 Homebrew tap 到 `0.5.12` 并推送。
+- [x] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.12 已完成 tag、GitHub Release、Release Artifacts、资产清单校验和仓库内 Formula 更新。下一步是提交 Formula 与发布记录，然后更新 Homebrew tap 并触发 Post-Release Verify。
+v0.5.12 已完成正式发布、Release Artifacts、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap、Post-Release Verify 和本机 Homebrew tap 抽查。下一步回到主线产品价值，继续打磨 Agent 消费覆盖率任务与真实项目闭环。
