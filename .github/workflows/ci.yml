@@ -54,6 +54,7 @@ jobs:
           sh test/onboarding_ci_template_yaml_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
+          sh test/go_cli_duplicate_name_smoke_test.sh
           sh test/java_regression_fixture_test.sh
           sh test/js_regression_fixture_test.sh
           sh test/js_ts_barrel_cli_smoke_test.sh
