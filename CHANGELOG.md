@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.11 - 2026-07-19
+
 ### Added
 
 - 新增 `docs/agent-response-artifact-contract.md`，统一 first-run/onboarding `agent-response.txt` 的结构、字段、读取顺序和客户端断言。
@@ -24,6 +26,7 @@
 - 新增 `docs/plan-release-notes-v0.5.11.md`，整理 v0.5.10 之后的 Agent/客户端 artifact 消费契约候选发布边界。
 - 新增 `docs/plan-release-v0.5.11.md`，整理 v0.5.11 候选发布检查清单和正式发布前待办。
 - v0.5.11 候选 release readiness 预检已通过，并已记录到发布说明草案和发布检查清单。
+- MCP server implementation version 更新为 `0.5.11`。
 
 ## v0.5.10 - 2026-07-19
 

@@ -37,7 +37,7 @@ cat >"$fake_binary" <<'SH'
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.10"
+    echo "testloop-mcp 0.5.11"
     ;;
   *)
     echo "fake testloop-mcp"
@@ -50,7 +50,7 @@ out="${tmp_dir}/first-run.out"
 output_dir="${tmp_dir}/first-run"
 run_expect_code 0 "$out" env \
   TESTLOOP_FIRST_RUN_OUTPUT_DIR="$output_dir" \
-  TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.10 \
+  TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.11 \
   TESTLOOP_REPORT_SKIP_BASIC=true \
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
   TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
