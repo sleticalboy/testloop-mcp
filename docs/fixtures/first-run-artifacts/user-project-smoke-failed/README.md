@@ -15,6 +15,13 @@
 可用 demo 消费：
 
 ```bash
+sh scripts/render-first-run-agent-response.sh \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+```
+
+也可以手动指定文件：
+
+```bash
 go run ./examples/first-run-agent-response-demo \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/first-run-context.txt \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json

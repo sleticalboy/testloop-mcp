@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- 新增 `scripts/render-first-run-agent-response.sh`，可直接从 first-run artifact 目录渲染稳定 Agent 回复，减少接入方手动拼接 `first-run-context.txt` 和 `verification-summary.json` 的成本。
+
 ## v0.5.9 - 2026-07-19
 
 ### Added

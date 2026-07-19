@@ -40,7 +40,15 @@ go run ./examples/first-run-agent-response-demo \
 gh run download <run-id> --name testloop-first-run --dir /tmp/testloop-first-run
 ```
 
-再把真实 artifact 喂给 demo：
+如果已经有完整 artifact 目录，可以直接使用目录入口：
+
+```bash
+sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run
+```
+
+脚本会自动读取 `first-run-context.txt`，并在存在 `verification-summary.json` 时一起传给 demo。
+
+也可以手动把真实 artifact 喂给 demo：
 
 ```bash
 go run ./examples/first-run-agent-response-demo \
@@ -61,6 +69,8 @@ go run ./examples/first-run-agent-response-demo \
 ```
 
 这个测试固定了从 CI 失败五件套到 Agent 四段回复的整条链路。
+
+目录入口由 `test/render_first_run_agent_response_test.sh` 固定回归：它覆盖完整 artifact 目录、只有 `first-run-context.txt` 的目录，以及缺少上下文文件时的错误提示。
 
 ## fixture 包
 

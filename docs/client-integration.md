@@ -75,12 +75,19 @@ docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 可用内置 demo 验证 Agent 回复：
 
 ```bash
+sh scripts/render-first-run-agent-response.sh \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+```
+
+也可以手动指定文件：
+
+```bash
 go run ./examples/first-run-agent-response-demo \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/first-run-context.txt \
   docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json
 ```
 
-这条路径输出固定四段：结论、证据、下一步、暂不做。完整说明见 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)。
+这两条路径都输出固定四段：结论、证据、下一步、暂不做。完整说明见 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)。
 
 ## 推荐客户端伪代码
 
