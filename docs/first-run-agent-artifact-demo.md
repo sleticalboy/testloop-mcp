@@ -70,7 +70,7 @@ go run ./examples/first-run-agent-response-demo \
   "$artifact_dir/verification-summary.json"
 ```
 
-这个测试固定了从 CI 失败五件套到 Agent 四段回复的整条链路。
+这个测试固定了从 CI 失败 artifact 到 Agent 四段回复的整条链路。
 
 目录入口由 `test/render_first_run_agent_response_test.sh` 固定回归：它覆盖完整 artifact 目录、只有 `first-run-context.txt` 的目录，以及缺少上下文文件时的错误提示。
 
@@ -82,7 +82,7 @@ go run ./examples/first-run-agent-response-demo \
 docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 ```
 
-它包含 first-run 失败时应上传的五件套，适合客户端或 Agent 集成测试直接读取，不需要每次都重新构造失败项目。
+它包含 first-run 失败时应上传的六件套，适合客户端或 Agent 集成测试直接读取，不需要每次都重新构造失败项目。
 
 ## 边界
 

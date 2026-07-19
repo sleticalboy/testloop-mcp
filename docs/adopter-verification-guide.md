@@ -82,7 +82,7 @@ pnpm install --frozen-lockfile && pnpm build
 
 ## 4. CI artifact 固定上传
 
-first-run CI 上传五件套：
+first-run CI 上传六件套：
 
 - `/tmp/testloop-first-run/verification-report.md`
 - `/tmp/testloop-first-run/verification-summary.json`

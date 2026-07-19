@@ -1,6 +1,6 @@
 # user-project-smoke-failed
 
-这是一份 first-run 失败 artifact 五件套 fixture，用于测试 AI Agent 或客户端如何消费 `run-first-run-ci.sh` 的失败输出。
+这是一份 first-run 失败 artifact 六件套 fixture，用于测试 AI Agent 或客户端如何消费 `run-first-run-ci.sh` 的失败输出。
 
 场景：testloop-mcp 安装、MCP transport 和最小 Agent demo 均已跳过或通过，用户项目 smoke 命令失败，`agent_next_step` 应分流到 `inspect-user-project`。
 

@@ -1,6 +1,6 @@
 # 首跑诊断 CI 外部项目演练
 
-这个演练用于验证 `scripts/run-first-run-ci.sh` 的复制路径不依赖 testloop-mcp 仓库作为当前工作目录，并且能在外部用户项目里生成首跑诊断五件套。
+这个演练用于验证 `scripts/run-first-run-ci.sh` 的复制路径不依赖 testloop-mcp 仓库作为当前工作目录，并且能在外部用户项目里生成首跑诊断六件套。
 
 脚本默认会在 `/tmp` 创建一个最小 Go 项目，把 bootstrap 脚本复制到临时路径，然后从这个外部项目目录执行：
 
@@ -22,9 +22,10 @@ external_first_run_status=passed
 - `/tmp/testloop-external-first-run/artifacts/verification-summary.json`
 - `/tmp/testloop-external-first-run/artifacts/agent-decision.txt`
 - `/tmp/testloop-external-first-run/artifacts/first-run-context.txt`
+- `/tmp/testloop-external-first-run/artifacts/agent-response.txt`
 - `/tmp/testloop-external-first-run/artifacts/first-run.log`
 
-其中 `verification-summary.json` 应为 `overall_status=passed`、`failed_count=0`，`agent-decision.txt` 应包含 `agent_next_step=ready`，`first-run-context.txt` 应包含 `first_run_agent_next_step=ready`。
+其中 `verification-summary.json` 应为 `overall_status=passed`、`failed_count=0`，`agent-decision.txt` 应包含 `agent_next_step=ready`，`first-run-context.txt` 和 `agent-response.txt` 都应包含 `first_run_agent_next_step=ready`。
 
 如果要验证 web 模板的命令形态，可以切换到 Node 模式：
 
@@ -52,6 +53,7 @@ TESTLOOP_MCP_VERSION=v0.5.7 \
 
 - `external_first_run_project=/tmp/testloop-external-first-run/project-go`
 - `external_first_run_output_dir=/tmp/testloop-external-first-run/artifacts`
+- `external_first_run_agent_response=/tmp/testloop-external-first-run/artifacts/agent-response.txt`
 - `external_first_run_status=passed`
 - `first_run_agent_next_step=ready`
 
@@ -70,6 +72,7 @@ TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=node \
 - `external_first_run_node_project=/tmp/testloop-external-first-run/project-node`
 - `external_first_run_node_output_dir=/tmp/testloop-external-first-run/artifacts`
 - `external_first_run_node_context=/tmp/testloop-external-first-run/artifacts/first-run-context.txt`
+- `external_first_run_node_agent_response=/tmp/testloop-external-first-run/artifacts/agent-response.txt`
 - `external_first_run_node_status=passed`
 - `external_first_run_status=passed`
 - `first_run_agent_next_step=ready`
@@ -78,8 +81,10 @@ TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=node \
 
 - `/tmp/testloop-external-first-run/artifacts/go/verification-summary.json`
 - `/tmp/testloop-external-first-run/artifacts/go/first-run-context.txt`
+- `/tmp/testloop-external-first-run/artifacts/go/agent-response.txt`
 - `/tmp/testloop-external-first-run/artifacts/node/verification-summary.json`
 - `/tmp/testloop-external-first-run/artifacts/node/first-run-context.txt`
+- `/tmp/testloop-external-first-run/artifacts/node/agent-response.txt`
 
 两条路径均输出 `first_run_agent_next_step=ready`，最终输出 `external_first_run_mode=all`、`external_first_run_status=passed`。
 

@@ -679,7 +679,7 @@ TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp \
 
 web/Node 模板可用 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node` 复验，或用 `all` 连续复验 Go 和 Node。
 
-如果要确认首跑诊断 bootstrap 在非 testloop 仓库里也能生成五件套 artifact，可以运行：
+如果要确认首跑诊断 bootstrap 在非 testloop 仓库里也能生成六件套 artifact，可以运行：
 
 ```bash
 go build -o /tmp/testloop-mcp .

@@ -8,6 +8,7 @@
 - `scripts/run-first-run-ci.sh` 现在会在 first-run artifact 目录内额外生成 `agent-response.txt`，作为可直接交给 Agent 的四段回复草稿。
 - first-run 失败 artifact fixture 已升级为包含 `agent-response.txt` 的六件套，并用测试固定静态文件与目录入口实时渲染结果一致。
 - CI 失败 triage 和 first-run CI 模板已收敛读取优先级：新版 artifact 先看 `agent-response.txt`，旧版或机器分流再看 decision/context/summary/report。
+- 外部项目 first-run showcase 现在会校验并输出 `agent-response.txt`，确保复制型 bootstrap 的六件套 artifact 在真实 dry-run 中可用。
 
 ## v0.5.9 - 2026-07-19
 

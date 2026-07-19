@@ -141,9 +141,10 @@ run_external_first_run() {
   local summary_json="$artifacts_dir/verification-summary.json"
   local decision_out="$artifacts_dir/agent-decision.txt"
   local context_out="$artifacts_dir/first-run-context.txt"
+  local agent_response_out="$artifacts_dir/agent-response.txt"
   local log_out="$artifacts_dir/first-run.log"
 
-  python3 - "$summary_json" "$decision_out" "$context_out" "$log_out" <<'PY'
+  python3 - "$summary_json" "$decision_out" "$context_out" "$agent_response_out" "$log_out" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -151,7 +152,8 @@ from pathlib import Path
 summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 decision = Path(sys.argv[2]).read_text(encoding="utf-8")
 context = Path(sys.argv[3]).read_text(encoding="utf-8")
-log_path = Path(sys.argv[4])
+agent_response = Path(sys.argv[4]).read_text(encoding="utf-8")
+log_path = Path(sys.argv[5])
 
 if summary.get("overall_status") != "passed":
     raise SystemExit(f"expected overall_status=passed, got {summary.get('overall_status')!r}")
@@ -161,6 +163,8 @@ if "agent_next_step=ready" not in decision:
     raise SystemExit("expected agent_next_step=ready in decision")
 if "first_run_agent_next_step=ready" not in context:
     raise SystemExit("expected first_run_agent_next_step=ready in context")
+if "first_run_agent_next_step=ready" not in agent_response:
+    raise SystemExit("expected first_run_agent_next_step=ready in agent response")
 if not log_path.exists() or log_path.stat().st_size == 0:
     raise SystemExit("expected non-empty first-run.log")
 PY
@@ -170,6 +174,7 @@ PY
   printf 'external_first_run_%s_summary=%s\n' "$kind" "$summary_json"
   printf 'external_first_run_%s_decision=%s\n' "$kind" "$decision_out"
   printf 'external_first_run_%s_context=%s\n' "$kind" "$context_out"
+  printf 'external_first_run_%s_agent_response=%s\n' "$kind" "$agent_response_out"
   printf 'external_first_run_%s_log=%s\n' "$kind" "$log_out"
   printf 'external_first_run_%s_status=passed\n' "$kind"
 
@@ -179,6 +184,7 @@ PY
     printf 'external_first_run_summary=%s\n' "$summary_json"
     printf 'external_first_run_decision=%s\n' "$decision_out"
     printf 'external_first_run_context=%s\n' "$context_out"
+    printf 'external_first_run_agent_response=%s\n' "$agent_response_out"
     printf 'external_first_run_log=%s\n' "$log_out"
   fi
 }
