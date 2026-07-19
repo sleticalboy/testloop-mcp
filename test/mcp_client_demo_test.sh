@@ -20,11 +20,12 @@ assert_contains() {
   fi
 }
 
-assert_contains "$out" "1. run_tests: status=fail failed=1 suggestions=1"
+assert_contains "$out" "1. run_tests: status=fail action=apply_fix_suggestions failed=1 suggestions=1"
 assert_contains "$out" "2. repair_task:"
+assert_contains "$out" "category=expectation_mismatch"
 assert_contains "$out" "target=calc_test.go"
 assert_contains "$out" "command=go test ./..."
-assert_contains "$out" "3. rerun: status=pass passed=1 coverage=100.0"
+assert_contains "$out" "3. rerun: status=pass action=ready passed=1 coverage=100.0"
 assert_contains "$out" "4. parse_coverage: total=100.0 tasks=0"
 assert_contains "$out" "agent_next_step=use structuredContent first"
 

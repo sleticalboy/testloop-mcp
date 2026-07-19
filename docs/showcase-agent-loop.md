@@ -21,18 +21,18 @@ sh test/mcp_client_demo_test.sh
 输出应包含以下关键步骤：
 
 ```text
-1. run_tests: status=fail failed=1 suggestions=1
-2. repair_task: category=generic_failure target=calc_test.go command=go test ./...
-3. rerun: status=pass passed=1 coverage=100.0
+1. run_tests: status=fail action=apply_fix_suggestions failed=1 suggestions=1
+2. repair_task: category=expectation_mismatch target=calc_test.go command=go test ./...
+3. rerun: status=pass action=ready passed=1 coverage=100.0
 4. parse_coverage: total=100.0 tasks=0
 agent_next_step=use structuredContent first; fall back to text JSON only for older clients
 ```
 
 这些行分别对应 Agent 的四个决策点：
 
-1. `run_tests` 返回失败结果，并在同一个响应中提供 `fix_suggestions[]`。
-2. Agent 读取 `fix_suggestions[].repair_task`，用结构化字段决定目标文件、复跑命令和修复范围。
-3. 修复后再次调用 `run_tests coverage=true`，用测试状态和覆盖率确认闭环收敛。
+1. `run_tests` 返回失败结果，并用 `action=apply_fix_suggestions` 明确下一步应读取修复建议。
+2. Agent 读取 `fix_suggestions[].repair_task` 和 `category`，用结构化字段决定目标文件、复跑命令和修复范围。
+3. 修复后再次调用 `run_tests coverage=true`，用 `status=pass/action=ready` 和覆盖率确认闭环收敛。
 4. 调用 `parse_coverage` 读取覆盖率结果，确认没有新的补测任务。
 
 ## 验收边界

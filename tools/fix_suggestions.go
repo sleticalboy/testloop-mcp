@@ -254,6 +254,9 @@ func isExpectationMismatch(failure types.TestFailure, lowerError string) bool {
 	if strings.TrimSpace(failure.Expected) != "" && strings.TrimSpace(failure.Received) != "" {
 		return true
 	}
+	if got, want := extractExpectedActualFromAssertion(failure.Error); got != "" && want != "" {
+		return true
+	}
 	return (strings.Contains(lowerError, "got") && strings.Contains(lowerError, "want")) ||
 		(strings.Contains(lowerError, "expected") && (strings.Contains(lowerError, "received") ||
 			strings.Contains(lowerError, " to be ") ||
@@ -355,6 +358,7 @@ func valueAfterToken(errorMsg, lowerError, token, endToken string) string {
 
 func extractExpectedActualFromAssertion(errorMsg string) (string, string) {
 	patterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)=\s*(.+?),\s*want\s+(.+)$`),
 		regexp.MustCompile(`(?i)expected\s+(.+?)\s+to\s+(?:be|equal)\s+(.+?)(?:\s*//.*)?$`),
 		regexp.MustCompile(`(?i)expected\s+(.+?)\s+to\s+(?:deep\s+)?equal\s+(.+)$`),
 	}

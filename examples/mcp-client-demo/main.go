@@ -49,7 +49,12 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("1. run_tests: status=%s failed=%d suggestions=%d\n", failed.Status, failed.Failed, len(failed.FixSuggestions))
+	fmt.Printf("1. run_tests: status=%s action=%s failed=%d suggestions=%d\n",
+		failed.Status,
+		failed.Action,
+		failed.Failed,
+		len(failed.FixSuggestions),
+	)
 
 	repair := firstRepairTask(failed.FixSuggestions)
 	if repair == nil {
@@ -75,7 +80,12 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("3. rerun: status=%s passed=%d coverage=%.1f\n", passed.Status, passed.Passed, passed.CoveragePercent)
+	fmt.Printf("3. rerun: status=%s action=%s passed=%d coverage=%.1f\n",
+		passed.Status,
+		passed.Action,
+		passed.Passed,
+		passed.CoveragePercent,
+	)
 
 	coverageFile := filepath.Join(projectDir, "coverage.out")
 	if err := runGoCoverage(ctx, projectDir, coverageFile); err != nil {

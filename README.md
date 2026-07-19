@@ -573,7 +573,7 @@ scripts/validate-regression-smoke.sh
 go run ./examples/mcp-client-demo
 ```
 
-预期输出会包含 `run_tests: status=fail`、`repair_task`、`rerun: status=pass` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
+预期输出会包含 `run_tests: status=fail action=apply_fix_suggestions`、`repair_task: category=...`、`rerun: status=pass action=ready` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
 ### 用户项目接入：直接复制
 
