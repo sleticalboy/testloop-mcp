@@ -28,6 +28,15 @@
       "reason": null
     },
     {
+      "name": "独立 CLI 生成动作 smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null,
+      "signals": {
+        "action": "manual_review"
+      }
+    },
+    {
       "name": "用户项目 smoke",
       "status": "failed",
       "exit_code": 7,

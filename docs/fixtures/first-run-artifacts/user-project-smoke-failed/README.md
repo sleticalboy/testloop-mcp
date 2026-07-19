@@ -2,7 +2,7 @@
 
 这是一份 first-run 失败 artifact 六件套 fixture，用于测试 AI Agent 或客户端如何消费 `run-first-run-ci.sh` 的失败输出。
 
-场景：testloop-mcp 安装、MCP transport 和最小 Agent demo 均已跳过或通过，用户项目 smoke 命令失败，`agent_next_step` 应分流到 `inspect-user-project`。
+场景：testloop-mcp 安装、MCP transport、最小 Agent demo 和独立 CLI 生成动作 smoke 均通过，用户项目 smoke 命令失败，`agent_next_step` 应分流到 `inspect-user-project`。独立 CLI 生成动作 smoke 会在 summary 中保留 `signals.action=manual_review`，用于确认 skipped/TODO 测试草稿不会被误读为有效覆盖。
 
 文件：
 

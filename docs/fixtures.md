@@ -4,7 +4,7 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
-Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段和 fallback 顺序，并通过 `summary_schema` 找到 `verification-summary.json` 的结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)。其中 `sections[].signals.action` 是可选的 section 级动作信号。
+Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段、fallback 顺序和 `expected_section_signals`，并通过 `summary_schema` 找到 `verification-summary.json` 的结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)。其中 `sections[].signals.action` 是可选的 section 级动作信号。
 
 ## run_tests fixture 列表
 
@@ -25,7 +25,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 
 | 目录 | action | 内容 | Agent 下一步 |
 | --- | --- | --- | --- |
-| [user-project-smoke-failed](./fixtures/first-run-artifacts/user-project-smoke-failed/) | `inspect-user-project` | first-run 失败六件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`first-run-context.txt`、`agent-response.txt`、`first-run.log` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
+| [user-project-smoke-failed](./fixtures/first-run-artifacts/user-project-smoke-failed/) | `inspect-user-project` | first-run 失败六件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`first-run-context.txt`、`agent-response.txt`、`first-run.log`；summary 保留 `独立 CLI 生成动作 smoke` 的 `signals.action=manual_review` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令；不要把 CLI 生成动作 smoke 的 `manual_review` 当作整体验收失败。 |
 
 这类 fixture 面向 CI artifact 消费方：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)，不用每次都重新构造失败项目。
 
@@ -33,7 +33,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 
 | 目录 | action | 内容 | Agent 下一步 |
 | --- | --- | --- | --- |
-| [user-project-smoke-failed](./fixtures/onboarding-artifacts/user-project-smoke-failed/) | `inspect-user-project` | onboarding 失败四件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`agent-response.txt` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
+| [user-project-smoke-failed](./fixtures/onboarding-artifacts/user-project-smoke-failed/) | `inspect-user-project` | onboarding 失败四件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`agent-response.txt`；summary 保留 `独立 CLI 生成动作 smoke` 的 `signals.action=manual_review` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令；不要把 CLI 生成动作 smoke 的 `manual_review` 当作整体验收失败。 |
 
 这类 fixture 面向已经稳定接入后的 PR / 发布后 smoke：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 `scripts/render-onboarding-agent-response.sh`，不用每次都重新构造失败项目。
 
@@ -92,6 +92,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 - `tools/agent_response_artifact_manifest_schema_test.go`
 - `tools/verification_summary_schema_test.go`
 - `examples/agent-response-manifest-demo` 的输出断言
+- `expected_section_signals` 与 fixture summary / `agent-response.txt` 中的 `section_signal`
 - README、quickstart、接入方一页式验证指南和 MCP 客户端契约测试说明里的 manifest/schema 入口
 
 推荐至少运行：

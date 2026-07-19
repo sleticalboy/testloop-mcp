@@ -2,9 +2,10 @@
 
 这是一份稳定的 onboarding CI 失败 artifact 包，用于客户端、编辑器插件或 Agent 测试失败消费逻辑。场景固定为：
 
-- testloop-mcp 安装、MCP transport 和最小 Agent 闭环通过。
+- testloop-mcp 安装、MCP transport、最小 Agent 闭环和独立 CLI 生成动作 smoke 通过。
 - 用户项目 smoke 命令失败，exit code 为 `7`。
 - `agent_next_step=inspect-user-project`。
+- summary 中的 `signals.action=manual_review` 来自独立 CLI 生成动作 smoke，用于确认 skipped/TODO 测试草稿不会被误读为有效覆盖。
 
 包含文件：
 

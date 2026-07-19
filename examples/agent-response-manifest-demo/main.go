@@ -15,20 +15,35 @@ type manifest struct {
 }
 
 type artifact struct {
-	Kind                   string   `json:"kind"`
-	Directory              string   `json:"directory"`
-	AgentResponse          string   `json:"agent_response"`
-	Decision               string   `json:"decision"`
-	Summary                string   `json:"summary"`
-	Report                 string   `json:"report"`
-	OptionalContext        string   `json:"optional_context"`
-	OptionalLog            string   `json:"optional_log"`
-	ActionField            string   `json:"action_field"`
-	ExpectedAction         string   `json:"expected_action"`
-	ExpectedFailedSection  string   `json:"expected_failed_section"`
-	ExpectedExitCode       int      `json:"expected_exit_code"`
-	RequiredResponseFields []string `json:"required_response_fields"`
-	FallbackOrder          []string `json:"fallback_order"`
+	Kind                   string          `json:"kind"`
+	Directory              string          `json:"directory"`
+	AgentResponse          string          `json:"agent_response"`
+	Decision               string          `json:"decision"`
+	Summary                string          `json:"summary"`
+	Report                 string          `json:"report"`
+	OptionalContext        string          `json:"optional_context"`
+	OptionalLog            string          `json:"optional_log"`
+	ActionField            string          `json:"action_field"`
+	ExpectedAction         string          `json:"expected_action"`
+	ExpectedFailedSection  string          `json:"expected_failed_section"`
+	ExpectedExitCode       int             `json:"expected_exit_code"`
+	ExpectedSectionSignals []sectionSignal `json:"expected_section_signals"`
+	RequiredResponseFields []string        `json:"required_response_fields"`
+	FallbackOrder          []string        `json:"fallback_order"`
+}
+
+type sectionSignal struct {
+	Section string `json:"section"`
+	Action  string `json:"action"`
+}
+
+type summary struct {
+	Sections []summarySection `json:"sections"`
+}
+
+type summarySection struct {
+	Name    string            `json:"name"`
+	Signals map[string]string `json:"signals"`
 }
 
 func main() {
@@ -75,6 +90,7 @@ func run(args []string) error {
 			artifact.ExpectedExitCode,
 		)
 		fmt.Printf("   directory=%s\n", artifact.Directory)
+		fmt.Printf("   expected_section_signals=%s\n", formatSectionSignals(artifact.ExpectedSectionSignals))
 		fmt.Printf("   required_response_fields=%s\n", strings.Join(artifact.RequiredResponseFields, ","))
 		fmt.Printf("   fallback_order=%s\n", strings.Join(artifact.FallbackOrder, " > "))
 	}
@@ -126,6 +142,9 @@ func validateArtifact(artifact artifact) error {
 	if artifact.ActionField == "" || artifact.ExpectedAction == "" {
 		return fmt.Errorf("missing action field or expected action")
 	}
+	if len(artifact.ExpectedSectionSignals) == 0 {
+		return fmt.Errorf("missing expected section signals")
+	}
 	if len(artifact.RequiredResponseFields) == 0 {
 		return fmt.Errorf("missing required response fields")
 	}
@@ -146,5 +165,47 @@ func validateArtifact(artifact artifact) error {
 	if !strings.Contains(responseText, artifact.ActionField+"="+artifact.ExpectedAction) {
 		return fmt.Errorf("agent response missing expected action")
 	}
+	if err := validateExpectedSectionSignals(artifact); err != nil {
+		return err
+	}
 	return nil
+}
+
+func validateExpectedSectionSignals(artifact artifact) error {
+	data, err := os.ReadFile(filepath.Join(artifact.Directory, artifact.Summary))
+	if err != nil {
+		return err
+	}
+	var parsed summary
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return fmt.Errorf("summary invalid JSON: %w", err)
+	}
+	for _, expected := range artifact.ExpectedSectionSignals {
+		if expected.Section == "" || expected.Action == "" {
+			return fmt.Errorf("expected section signal is incomplete")
+		}
+		found := false
+		for _, section := range parsed.Sections {
+			if section.Name != expected.Section {
+				continue
+			}
+			if section.Signals["action"] != expected.Action {
+				return fmt.Errorf("summary section %s action signal = %q, want %q", expected.Section, section.Signals["action"], expected.Action)
+			}
+			found = true
+			break
+		}
+		if !found {
+			return fmt.Errorf("summary missing section signal %s action=%s", expected.Section, expected.Action)
+		}
+	}
+	return nil
+}
+
+func formatSectionSignals(signals []sectionSignal) string {
+	parts := make([]string, 0, len(signals))
+	for _, signal := range signals {
+		parts = append(parts, signal.Section+":"+signal.Action)
+	}
+	return strings.Join(parts, ",")
 }

@@ -42,9 +42,14 @@ assert_contains "$fixture_dir/agent-decision.txt" "agent_next_step=inspect-user-
 assert_contains "$fixture_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
 assert_contains "$fixture_dir/agent-response.txt" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
 assert_contains "$fixture_dir/agent-response.txt" "- failed_section=用户项目 smoke"
+assert_contains "$fixture_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$fixture_dir/verification-summary.json" '"overall_status": "failed"'
 assert_contains "$fixture_dir/verification-summary.json" '"failed_count": 1'
+assert_contains "$fixture_dir/verification-summary.json" '"name": "独立 CLI 生成动作 smoke"'
+assert_contains "$fixture_dir/verification-summary.json" '"signals": {'
+assert_contains "$fixture_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$fixture_dir/verification-report.md" "project failed from fixture"
+assert_contains "$fixture_dir/verification-report.md" "provider=static action=manual_review"
 assert_contains "${repo_root}/docs/fixtures.md" "./fixtures/first-run-artifacts/user-project-smoke-failed/"
 assert_contains "${repo_root}/docs/fixtures.md" "first-run artifact fixture"
 assert_contains "${repo_root}/docs/fixtures.md" "first-run-context.txt"
@@ -58,6 +63,7 @@ out="${tmp_dir}/response.out"
 assert_contains "$out" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
 assert_contains "$out" "- failed_section=用户项目 smoke"
 assert_contains "$out" "- exit_code=7"
+assert_contains "$out" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 
 sh "${repo_root}/scripts/render-first-run-agent-response.sh" "$fixture_dir" > "${tmp_dir}/rendered-response.out"
 cmp "$fixture_dir/agent-response.txt" "${tmp_dir}/rendered-response.out"

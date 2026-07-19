@@ -88,6 +88,24 @@ for artifact in artifacts or []:
     if summary.get("failed_count") != 1:
         failures.append(f"{kind}: summary failed_count must be 1")
 
+    for signal in artifact.get("expected_section_signals", []):
+        section_name = signal.get("section")
+        expected_action = signal.get("action")
+        matched_sections = [
+            section for section in summary.get("sections", [])
+            if section.get("name") == section_name
+        ]
+        if not matched_sections:
+            failures.append(f"{kind}: summary missing expected signal section {section_name!r}")
+            continue
+        actual_action = matched_sections[0].get("signals", {}).get("action")
+        if actual_action != expected_action:
+            failures.append(
+                f"{kind}: summary signal {section_name!r} action mismatch: {actual_action!r}"
+            )
+        if f"- section_signal={section_name} action={expected_action}" not in response:
+            failures.append(f"{kind}: response missing section_signal={section_name} action={expected_action}")
+
     failed_sections = [
         section for section in summary.get("sections", [])
         if section.get("status") == "failed"

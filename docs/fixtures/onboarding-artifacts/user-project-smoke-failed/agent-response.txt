@@ -6,6 +6,7 @@
 - failed_count=1
 - failed_section=用户项目 smoke
 - exit_code=7
+- section_signal=独立 CLI 生成动作 smoke action=manual_review
 - markdown_report=docs/fixtures/onboarding-artifacts/user-project-smoke-failed/verification-report.md
 
 下一步：

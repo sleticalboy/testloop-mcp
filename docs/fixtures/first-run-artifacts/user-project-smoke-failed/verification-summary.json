@@ -4,7 +4,7 @@
   "repository": "/path/to/user-project",
   "git_ref": "fixture",
   "binary": "/usr/local/bin/testloop-mcp",
-  "version_output": "testloop-mcp 0.5.8",
+  "version_output": "testloop-mcp 0.5.12",
   "markdown_report": "docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-report.md",
   "overall_status": "failed",
   "failed_count": 1,
@@ -26,6 +26,15 @@
       "status": "passed",
       "exit_code": 0,
       "reason": null
+    },
+    {
+      "name": "独立 CLI 生成动作 smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null,
+      "signals": {
+        "action": "manual_review"
+      }
     },
     {
       "name": "用户项目 smoke",

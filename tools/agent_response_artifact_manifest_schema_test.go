@@ -42,6 +42,15 @@ func TestAgentResponseArtifactManifestSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects missing expected section signals", func(t *testing.T) {
+		candidate := cloneJSONMap(t, manifest)
+		artifact := firstManifestArtifact(t, candidate)
+		delete(artifact, "expected_section_signals")
+		if err := resolved.Validate(candidate); err == nil {
+			t.Fatalf("expected schema validation to reject missing expected_section_signals")
+		}
+	})
+
 	t.Run("rejects invalid artifact kind", func(t *testing.T) {
 		candidate := cloneJSONMap(t, manifest)
 		artifact := firstManifestArtifact(t, candidate)

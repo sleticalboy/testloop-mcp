@@ -12,6 +12,17 @@ Status: `passed`
 
 Status: `passed`
 
+## 独立 CLI 生成动作 smoke
+
+Status: `passed`
+
+Output:
+
+```text
+provider=static action=manual_review
+testgen action smoke passed
+```
+
 ## 用户项目 smoke
 
 Status: `failed`

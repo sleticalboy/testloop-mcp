@@ -118,6 +118,7 @@ go run ./examples/agent-response-manifest-demo \
 - `fallback_order[0]` 固定为 `agent-response.txt`。
 - `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
 - `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。
+- 按 manifest 的 `expected_section_signals` 校验 `verification-summary.json` 和 `agent-response.txt` 都保留 `独立 CLI 生成动作 smoke:manual_review`。
 - `verification-summary.json` 允许可选 `sections[].signals.action`，例如 `manual_review`，但该信号不等于整体失败。
 
 ## 相关入口

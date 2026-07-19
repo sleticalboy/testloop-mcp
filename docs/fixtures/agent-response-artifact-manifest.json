@@ -17,6 +17,12 @@
       "expected_action": "inspect-user-project",
       "expected_failed_section": "用户项目 smoke",
       "expected_exit_code": 7,
+      "expected_section_signals": [
+        {
+          "section": "独立 CLI 生成动作 smoke",
+          "action": "manual_review"
+        }
+      ],
       "required_response_fields": [
         "first_run_agent_next_step",
         "failed_section",
@@ -43,6 +49,12 @@
       "expected_action": "inspect-user-project",
       "expected_failed_section": "用户项目 smoke",
       "expected_exit_code": 7,
+      "expected_section_signals": [
+        {
+          "section": "独立 CLI 生成动作 smoke",
+          "action": "manual_review"
+        }
+      ],
       "required_response_fields": [
         "agent_next_step",
         "overall_status",
