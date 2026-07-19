@@ -1,6 +1,6 @@
 # 用户项目验收报告
 
-`scripts/generate-verification-report.sh` 用于把 testloop-mcp 的安装验收、真实 MCP 协议 smoke、最小 Agent 闭环 demo，以及可选的公开 showcase / 用户项目 smoke 聚合成一份 Markdown 报告。
+`scripts/generate-verification-report.sh` 用于把 testloop-mcp 的安装验收、真实 MCP 协议 smoke、最小 Agent 闭环 demo、独立 CLI 生成动作 smoke，以及可选的公开 showcase / 用户项目 smoke 聚合成一份 Markdown 报告。
 
 它适合发布后核验、接入方验收、录屏前检查和用户项目试跑记录。默认路径不访问公网；公开 Go / JS showcase 需要显式开启。
 
@@ -10,11 +10,14 @@
 scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
-默认会执行三段稳定验收：
+默认会执行四段稳定验收：
 
 1. `scripts/verify-client-setup.sh`：检查二进制、`--version`、`--doctor-config`、客户端配置 roundtrip 和 HTTP `/healthz`。
 2. `scripts/verify-mcp-process-smoke.sh`：用真实 MCP SDK 客户端通过 stdio / Streamable HTTP 启动二进制并调用轻量工具。
 3. `go run ./examples/mcp-client-demo`：验证 `run_tests.action -> fix_suggestions.category -> repair_task -> rerun.action -> parse_coverage` 的最小 Agent 反馈闭环。
+4. `testloop-testgen` / `go run ./cmd/testgen`：生成一个 Go 静态测试草稿，并断言输出包含 `action=manual_review`。
+
+独立 CLI 生成动作 smoke 专门防止 TODO/skipped 草稿在报告里被误读成有效覆盖率补丁。默认会优先使用主二进制旁边的 `testloop-testgen`，其次使用当前源码 `go run ./cmd/testgen`，最后才使用 PATH 上的 `testloop-testgen`，避免本机旧 CLI 把报告误带偏。如果只想验证 MCP 服务，可设置 `TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true` 跳过；如果需要指定 CLI 入口，可设置 `TESTLOOP_REPORT_TESTGEN_COMMAND`。
 
 报告会写入指定 Markdown 文件；任一已执行验收项失败时，脚本仍会写出报告，但最终返回非零 exit code。
 
@@ -87,6 +90,8 @@ TESTLOOP_REPORT_PUBLIC_SHOWCASES=all \
 | `TESTLOOP_REPORT_SKIP_BASIC` | `false` | 设为 `true` 跳过基础安装验收。 |
 | `TESTLOOP_REPORT_SKIP_PROCESS_SMOKE` | `false` | 设为 `true` 跳过真实 MCP 协议 smoke。 |
 | `TESTLOOP_REPORT_SKIP_AGENT_DEMO` | `false` | 设为 `true` 跳过最小 Agent 闭环 demo。 |
+| `TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE` | `false` | 设为 `true` 跳过独立 CLI 生成动作 smoke。 |
+| `TESTLOOP_REPORT_TESTGEN_COMMAND` | 空 | 覆盖 testgen CLI 命令；默认优先 sibling `testloop-testgen`，其次 `go run ./cmd/testgen`，最后 PATH。 |
 | `TESTLOOP_REPORT_PUBLIC_SHOWCASES` | `none` | 控制公开 showcase：`none`、`go`、`js`、`all`。 |
 | `TESTLOOP_REPORT_PROJECT_DIR` | 空 | 用户项目目录。 |
 | `TESTLOOP_REPORT_PROJECT_COMMAND` | 空 | 在用户项目目录中执行的 smoke 命令。 |

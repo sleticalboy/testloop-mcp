@@ -11,6 +11,7 @@ Default sections:
   1. Basic install verification through scripts/verify-client-setup.sh.
   2. Real MCP process smoke through scripts/verify-mcp-process-smoke.sh.
   3. Minimal Agent feedback loop through examples/mcp-client-demo.
+  4. Standalone testgen CLI action smoke.
 
 Optional sections:
   - Public Go / JS showcase, enabled by TESTLOOP_REPORT_PUBLIC_SHOWCASES.
@@ -26,6 +27,9 @@ Environment:
   TESTLOOP_REPORT_SKIP_BASIC            Set to true to skip install verification.
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE    Set to true to skip MCP process smoke.
   TESTLOOP_REPORT_SKIP_AGENT_DEMO       Set to true to skip minimal Agent demo.
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE    Set to true to skip testgen CLI action smoke.
+  TESTLOOP_REPORT_TESTGEN_COMMAND       Optional testgen command. Defaults to a sibling
+                                        testloop-testgen binary, go run, then PATH.
   TESTLOOP_REPORT_PUBLIC_SHOWCASES      none, go, js, or all. Default: none.
   TESTLOOP_REPORT_PROJECT_DIR           Optional user project directory.
   TESTLOOP_REPORT_PROJECT_COMMAND       Optional smoke command run inside project dir.
@@ -63,6 +67,8 @@ expected_version="${TESTLOOP_REPORT_EXPECT_VERSION:-}"
 skip_basic="${TESTLOOP_REPORT_SKIP_BASIC:-false}"
 skip_process_smoke="${TESTLOOP_REPORT_SKIP_PROCESS_SMOKE:-false}"
 skip_agent_demo="${TESTLOOP_REPORT_SKIP_AGENT_DEMO:-false}"
+skip_testgen_smoke="${TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE:-false}"
+testgen_command="${TESTLOOP_REPORT_TESTGEN_COMMAND:-}"
 public_showcases="${TESTLOOP_REPORT_PUBLIC_SHOWCASES:-none}"
 project_dir="${TESTLOOP_REPORT_PROJECT_DIR:-}"
 project_command="${TESTLOOP_REPORT_PROJECT_COMMAND:-}"
@@ -187,6 +193,60 @@ run_section() {
   } >>"$sections_file"
 }
 
+run_testgen_action_smoke() {
+  local smoke_dir="${tmp_dir}/testgen-action-smoke"
+  local source="${smoke_dir}/alias.go"
+  local output="${smoke_dir}/alias_test.go"
+  local command_line
+  local quoted_source
+  local quoted_output
+  mkdir -p "$smoke_dir"
+  cat >"$source" <<'GO'
+package alias
+
+func SliceMapper[T any, U any](src []T, mapper func(T) U) []U {
+	dst := make([]U, 0, len(src))
+	for _, v := range src {
+		dst = append(dst, mapper(v))
+	}
+	return dst
+}
+GO
+
+  printf -v quoted_source '%q' "$source"
+  printf -v quoted_output '%q' "$output"
+  if [[ -n "$testgen_command" ]]; then
+    command_line="${testgen_command} ${quoted_source} ${quoted_output}"
+  else
+    local sibling
+    sibling="$(dirname "$binary")/testloop-testgen"
+    if [[ -x "$sibling" ]]; then
+      printf -v command_line '%q %q %q' "$sibling" "$source" "$output"
+    elif command -v go >/dev/null 2>&1; then
+      command_line="go run ./cmd/testgen ${quoted_source} ${quoted_output}"
+    elif command -v testloop-testgen >/dev/null 2>&1; then
+      command_line="testloop-testgen ${quoted_source} ${quoted_output}"
+    else
+      printf 'error: testloop-testgen is not on PATH and go is not available for go run fallback\n' >&2
+      return 1
+    fi
+  fi
+
+  printf 'command: %s\n' "$command_line"
+  local cli_output
+  cli_output="$(cd "$repo_root" && bash -lc "$command_line")"
+  printf '%s\n' "$cli_output"
+  case "$cli_output" in
+    *"action=manual_review"*) ;;
+    *)
+      printf 'error: expected testgen output to contain action=manual_review\n' >&2
+      return 1
+      ;;
+  esac
+  grep -F 't.Skip("TODO: fill in meaningful test inputs and expected values")' "$output" >/dev/null
+  printf 'testgen action smoke passed\n'
+}
+
 skip_section() {
   local name="$1"
   local reason="$2"
@@ -223,6 +283,12 @@ if [[ "$skip_agent_demo" == "true" ]]; then
   skip_section "最小 Agent 闭环 demo" "TESTLOOP_REPORT_SKIP_AGENT_DEMO=true"
 else
   run_section "最小 Agent 闭环 demo" bash -lc "cd '$repo_root' && go run ./examples/mcp-client-demo"
+fi
+
+if [[ "$skip_testgen_smoke" == "true" ]]; then
+  skip_section "独立 CLI 生成动作 smoke" "TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true"
+else
+  run_section "独立 CLI 生成动作 smoke" run_testgen_action_smoke
 fi
 
 case "$public_showcases" in

@@ -74,6 +74,7 @@ run_expect_code 0 "$out" env \
   TESTLOOP_REPORT_SKIP_BASIC=true \
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
   TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
   TESTLOOP_REPORT_SUMMARY_JSON="$summary_json" \
   TESTLOOP_REPORT_PROJECT_DIR="$project_dir" \
   TESTLOOP_REPORT_PROJECT_COMMAND='printf "project smoke ok\n"' \
@@ -83,6 +84,7 @@ assert_contains "$out" "Wrote $report"
 assert_contains "$out" "Wrote $summary_json"
 assert_contains "$report" "# testloop-mcp 验收报告"
 assert_contains "$report" '| 基础安装验收 | `skipped` | `-` |'
+assert_contains "$report" '| 独立 CLI 生成动作 smoke | `skipped` | `-` |'
 assert_contains "$report" '| 用户项目 smoke | `passed` | `0` |'
 assert_contains "$report" "project smoke ok"
 assert_contains "$report" '版本输出：`testloop-mcp 0.5.12`'
@@ -100,6 +102,7 @@ run_expect_code 1 "$out" env \
   TESTLOOP_REPORT_SKIP_BASIC=true \
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
   TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
   TESTLOOP_REPORT_SUMMARY_JSON="$failed_summary_json" \
   TESTLOOP_REPORT_PROJECT_DIR="$project_dir" \
   TESTLOOP_REPORT_PROJECT_COMMAND='echo project failed; exit 7' \
@@ -111,5 +114,20 @@ assert_json_field "$failed_summary_json" "data['overall_status']" "failed"
 assert_json_field "$failed_summary_json" "data['failed_count']" "1"
 assert_json_field "$failed_summary_json" "data['sections'][-1]['status']" "failed"
 assert_json_field "$failed_summary_json" "data['sections'][-1]['exit_code']" "7"
+
+action_report="${tmp_dir}/action-report.md"
+action_summary_json="${tmp_dir}/action-summary.json"
+run_expect_code 0 "$out" env \
+  TESTLOOP_REPORT_SKIP_BASIC=true \
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SUMMARY_JSON="$action_summary_json" \
+  bash "${repo_root}/scripts/generate-verification-report.sh" "$fake_binary" "$action_report"
+
+assert_contains "$action_report" '| 独立 CLI 生成动作 smoke | `passed` | `0` |'
+assert_contains "$action_report" "action=manual_review"
+assert_contains "$action_report" "testgen action smoke passed"
+assert_json_field "$action_summary_json" "data['overall_status']" "passed"
+assert_json_field "$action_summary_json" "[section for section in data['sections'] if section['name'] == '独立 CLI 生成动作 smoke'][0]['status']" "passed"
 
 echo "verification report test passed"
