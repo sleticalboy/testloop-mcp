@@ -2654,6 +2654,51 @@ public class StatusChecker {
 			t.Fatalf("expected %q in receive generated code:\n%s", want, receiveCode)
 		}
 	}
+
+	_, emptyBodyCode, err := GenerateJavaTestsForCoverageTask(source, "StatusChecker.java", &types.CoverageTestTask{
+		Target:         "StatusChecker.check",
+		LineRange:      "84-84",
+		TestName:       "shouldCoverStatusCheckerCheckGap",
+		GapType:        "error_path",
+		AssertionFocus: []string{"覆盖未执行行: 84"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(empty body) error = %v", err)
+	}
+	for _, want := range []string{
+		".setCode(apache.rocketmq.v2.Code.MESSAGE_BODY_EMPTY)",
+		"Assertions.fail(\"expected PayloadEmptyException\");",
+		"} catch (PayloadEmptyException expected) {",
+		"} catch (org.apache.rocketmq.client.apis.ClientException e) {",
+	} {
+		if !strings.Contains(emptyBodyCode, want) {
+			t.Fatalf("expected %q in empty body generated code:\n%s", want, emptyBodyCode)
+		}
+	}
+
+	_, defaultCode, err := GenerateJavaTestsForCoverageTask(source, "StatusChecker.java", &types.CoverageTestTask{
+		Target:         "StatusChecker.check",
+		LineRange:      "107-109",
+		TestName:       "shouldCoverStatusCheckerCheckGap",
+		GapType:        "statement",
+		AssertionFocus: []string{"覆盖未执行行: 107,108,109"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaTestsForCoverageTask(default) error = %v", err)
+	}
+	for _, want := range []string{
+		".setCode(apache.rocketmq.v2.Code.NOT_IMPLEMENTED)",
+		"Assertions.fail(\"expected UnsupportedException\");",
+		"} catch (UnsupportedException expected) {",
+		"} catch (org.apache.rocketmq.client.apis.ClientException e) {",
+	} {
+		if !strings.Contains(defaultCode, want) {
+			t.Fatalf("expected %q in default generated code:\n%s", want, defaultCode)
+		}
+	}
+	if strings.Contains(defaultCode, "apache.rocketmq.v2.Code.UNRECOGNIZED") {
+		t.Fatalf("default branch should use a valid enum constant instead of UNRECOGNIZED:\n%s", defaultCode)
+	}
 }
 
 func TestGenerateJavaTestsForCoverageTaskUsesStaticFactoryForPrivateConstructor(t *testing.T) {

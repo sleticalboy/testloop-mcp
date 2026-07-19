@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Java coverage task generation now maps RocketMQ `StatusChecker.check` line ranges to concrete protobuf `Code` values and expected exception branches, including the default switch path, so JaCoCo target-hit validation no longer reports weak ready tests for these error paths.
+
 ## v0.5.11 - 2026-07-19
 
 ### Added

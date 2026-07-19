@@ -1702,16 +1702,11 @@ func javaWriteStatusCheckerCheckTask(b *strings.Builder, m javaFuncInfo, task *t
 	if m.ClassName != "StatusChecker" || m.Name != "check" || len(m.Params) != 2 {
 		return false
 	}
-	code := "apache.rocketmq.v2.Code.OK"
-	request := "new Object()"
-	if javaTaskMentions(task, "future.getRequest") {
-		code = "apache.rocketmq.v2.Code.MESSAGE_NOT_FOUND"
-		request = "apache.rocketmq.v2.ReceiveMessageRequest.newBuilder().build()"
-	}
+	checkCase := javaStatusCheckerCheckCaseForTask(task)
 	b.WriteString(fmt.Sprintf("%s    final apache.rocketmq.v2.Status status = apache.rocketmq.v2.Status.newBuilder()\n", indent))
-	b.WriteString(fmt.Sprintf("%s            .setCode(%s)\n", indent, code))
+	b.WriteString(fmt.Sprintf("%s            .setCode(%s)\n", indent, checkCase.code))
 	b.WriteString(fmt.Sprintf("%s            .build();\n", indent))
-	b.WriteString(fmt.Sprintf("%s    final Object request = %s;\n", indent, request))
+	b.WriteString(fmt.Sprintf("%s    final Object request = %s;\n", indent, checkCase.request))
 	b.WriteString(fmt.Sprintf("%s    final io.grpc.Metadata metadata = new io.grpc.Metadata();\n", indent))
 	b.WriteString(fmt.Sprintf("%s    metadata.put(\n", indent))
 	b.WriteString(fmt.Sprintf("%s            io.grpc.Metadata.Key.of(\n", indent))
@@ -1724,12 +1719,97 @@ func javaWriteStatusCheckerCheckTask(b *strings.Builder, m javaFuncInfo, task *t
 	b.WriteString(fmt.Sprintf("%s    final org.apache.rocketmq.client.java.rpc.RpcFuture<Object, Object> future =\n", indent))
 	b.WriteString(fmt.Sprintf("%s            new org.apache.rocketmq.client.java.rpc.RpcFuture<>(context, request,\n", indent))
 	b.WriteString(fmt.Sprintf("%s                    com.google.common.util.concurrent.Futures.immediateFuture(new Object()));\n", indent))
+	if checkCase.expectedException != "" {
+		b.WriteString(fmt.Sprintf("%s    try {\n", indent))
+		b.WriteString(fmt.Sprintf("%s        StatusChecker.check(status, future);\n", indent))
+		b.WriteString(fmt.Sprintf("%s        %s.fail(\"expected %s\");\n", indent, assertions, checkCase.expectedException))
+		b.WriteString(fmt.Sprintf("%s    } catch (%s expected) {\n", indent, checkCase.expectedException))
+		b.WriteString(fmt.Sprintf("%s        // expected\n", indent))
+		b.WriteString(fmt.Sprintf("%s    } catch (org.apache.rocketmq.client.apis.ClientException e) {\n", indent))
+		b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
+		b.WriteString(fmt.Sprintf("%s    }\n", indent))
+		return true
+	}
 	b.WriteString(fmt.Sprintf("%s    try {\n", indent))
 	b.WriteString(fmt.Sprintf("%s        StatusChecker.check(status, future);\n", indent))
 	b.WriteString(fmt.Sprintf("%s    } catch (org.apache.rocketmq.client.apis.ClientException e) {\n", indent))
 	b.WriteString(fmt.Sprintf("%s        %s.fail(e.getMessage());\n", indent, assertions))
 	b.WriteString(fmt.Sprintf("%s    }\n", indent))
 	return true
+}
+
+type javaStatusCheckerCheckCase struct {
+	code              string
+	request           string
+	expectedException string
+}
+
+func javaStatusCheckerCheckCaseForTask(task *types.CoverageTestTask) javaStatusCheckerCheckCase {
+	checkCase := javaStatusCheckerCheckCase{
+		code:    "apache.rocketmq.v2.Code.OK",
+		request: "new Object()",
+	}
+	start, end, hasRange := javaCoverageTaskLineRange(task)
+	if javaTaskMentions(task, "future.getRequest") || (hasRange && javaLineRangeOverlaps(start, end, 72, 74)) {
+		checkCase.code = "apache.rocketmq.v2.Code.MESSAGE_NOT_FOUND"
+		checkCase.request = "apache.rocketmq.v2.ReceiveMessageRequest.newBuilder().build()"
+		return checkCase
+	}
+	if !hasRange {
+		return checkCase
+	}
+	switch {
+	case javaLineRangeOverlaps(start, end, 64, 64):
+		checkCase.code = "apache.rocketmq.v2.Code.BAD_REQUEST"
+		checkCase.expectedException = "BadRequestException"
+	case javaLineRangeOverlaps(start, end, 65, 66):
+		checkCase.code = "apache.rocketmq.v2.Code.UNAUTHORIZED"
+		checkCase.expectedException = "UnauthorizedException"
+	case javaLineRangeOverlaps(start, end, 67, 68):
+		checkCase.code = "apache.rocketmq.v2.Code.PAYMENT_REQUIRED"
+		checkCase.expectedException = "PaymentRequiredException"
+	case javaLineRangeOverlaps(start, end, 69, 70):
+		checkCase.code = "apache.rocketmq.v2.Code.FORBIDDEN"
+		checkCase.expectedException = "ForbiddenException"
+	case javaLineRangeOverlaps(start, end, 76, 79):
+		checkCase.code = "apache.rocketmq.v2.Code.NOT_FOUND"
+		checkCase.expectedException = "NotFoundException"
+	case javaLineRangeOverlaps(start, end, 80, 82):
+		checkCase.code = "apache.rocketmq.v2.Code.PAYLOAD_TOO_LARGE"
+		checkCase.expectedException = "PayloadTooLargeException"
+	case javaLineRangeOverlaps(start, end, 83, 84):
+		checkCase.code = "apache.rocketmq.v2.Code.MESSAGE_BODY_EMPTY"
+		checkCase.expectedException = "PayloadEmptyException"
+	case javaLineRangeOverlaps(start, end, 85, 86):
+		checkCase.code = "apache.rocketmq.v2.Code.TOO_MANY_REQUESTS"
+		checkCase.expectedException = "TooManyRequestsException"
+	case javaLineRangeOverlaps(start, end, 87, 88):
+		checkCase.code = "apache.rocketmq.v2.Code.LITE_TOPIC_QUOTA_EXCEEDED"
+		checkCase.expectedException = "LiteTopicQuotaExceededException"
+	case javaLineRangeOverlaps(start, end, 89, 90):
+		checkCase.code = "apache.rocketmq.v2.Code.LITE_SUBSCRIPTION_QUOTA_EXCEEDED"
+		checkCase.expectedException = "LiteSubscriptionQuotaExceededException"
+	case javaLineRangeOverlaps(start, end, 91, 93):
+		checkCase.code = "apache.rocketmq.v2.Code.REQUEST_HEADER_FIELDS_TOO_LARGE"
+		checkCase.expectedException = "RequestHeaderFieldsTooLargeException"
+	case javaLineRangeOverlaps(start, end, 94, 97):
+		checkCase.code = "apache.rocketmq.v2.Code.INTERNAL_ERROR"
+		checkCase.expectedException = "InternalErrorException"
+	case javaLineRangeOverlaps(start, end, 98, 101):
+		checkCase.code = "apache.rocketmq.v2.Code.PROXY_TIMEOUT"
+		checkCase.expectedException = "ProxyTimeoutException"
+	case javaLineRangeOverlaps(start, end, 102, 105):
+		checkCase.code = "apache.rocketmq.v2.Code.UNSUPPORTED"
+		checkCase.expectedException = "UnsupportedException"
+	case javaLineRangeOverlaps(start, end, 106, 109):
+		checkCase.code = "apache.rocketmq.v2.Code.NOT_IMPLEMENTED"
+		checkCase.expectedException = "UnsupportedException"
+	}
+	return checkCase
+}
+
+func javaLineRangeOverlaps(start int, end int, targetStart int, targetEnd int) bool {
+	return start <= targetEnd && end >= targetStart
 }
 
 func javaWriteInflightRequestCountInterceptorTask(b *strings.Builder, m javaFuncInfo, task *types.CoverageTestTask, assertions string, indent string) bool {
