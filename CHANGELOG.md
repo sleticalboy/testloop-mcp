@@ -22,6 +22,7 @@
 - `docs/installation.md` 已从安装后自检段落指向 artifact manifest/schema 消费回归，并新增 installation 文档测试。
 - `docs/fixtures.md` 已补 artifact manifest/schema 维护规则，manifest 测试会固定 `$schema` 指针、schema 文件和维护命令。
 - 新增 `docs/plan-release-notes-v0.5.11.md`，整理 v0.5.10 之后的 Agent/客户端 artifact 消费契约候选发布边界。
+- 新增 `docs/plan-release-v0.5.11.md`，整理 v0.5.11 候选发布检查清单和正式发布前待办。
 
 ## v0.5.10 - 2026-07-19
 
