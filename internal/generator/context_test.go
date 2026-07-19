@@ -174,7 +174,12 @@ export async function loadExternal(response: Response): Promise<ExternalUser> {
 	if target.ReturnTypeExpr != "Promise<ExternalUser>" {
 		t.Fatalf("unexpected return type expr: %+v", target)
 	}
-	assertContains(t, target.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
+	assertContains(t, target.PayloadNotes, "return annotation imported type ExternalUser from './types' resolved from types.ts")
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "read candidate source files") {
+			t.Fatalf("resolved imported type should not emit candidate source note: %+v", target.PayloadNotes)
+		}
+	}
 	for _, note := range target.PayloadNotes {
 		if strings.Contains(note, "falls back to { ok: true }") {
 			t.Fatalf("resolved imported type should not emit fallback note: %+v", target.PayloadNotes)
@@ -375,7 +380,7 @@ func TestGenerationContextTargetHelpers(t *testing.T) {
 			Returns:    []string{"prefix + text"},
 			Boundaries: []jsBoundary{{Param: "prefix", Value: "'>'"}},
 		},
-	}, "method", nil, "")
+	}, "method", nil, "", nil)
 	if js.Name != "formatText" || js.Kind != "method" || js.ClassName != "Formatter" || !js.Async || !js.HasErrorPath {
 		t.Fatalf("unexpected JS target metadata: %+v", js)
 	}

@@ -256,11 +256,11 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 		if fn.IsMethod {
 			continue
 		}
-		ctx.Targets = append(ctx.Targets, jsTarget(fn, "function", ctx.Imports, srcPath))
+		ctx.Targets = append(ctx.Targets, jsTarget(fn, "function", ctx.Imports, srcPath, typeMocks))
 	}
 	for _, cls := range classes {
 		for _, method := range cls.Methods {
-			ctx.Targets = append(ctx.Targets, jsTarget(method, "method", ctx.Imports, srcPath))
+			ctx.Targets = append(ctx.Targets, jsTarget(method, "method", ctx.Imports, srcPath, typeMocks))
 		}
 	}
 
@@ -270,7 +270,7 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 	return ctx
 }
 
-func jsTarget(fn jsFuncInfo, kind string, imports []string, srcPath string) types.TestTarget {
+func jsTarget(fn jsFuncInfo, kind string, imports []string, srcPath string, typeMocks map[string]jsImportedTypeMock) types.TestTarget {
 	target := types.TestTarget{
 		Name:              fn.Name,
 		Kind:              kind,
@@ -280,7 +280,7 @@ func jsTarget(fn jsFuncInfo, kind string, imports []string, srcPath string) type
 		ReturnType:        fn.Analysis.ReturnType,
 		ReturnTypeExpr:    fn.Analysis.ReturnTypeExpr,
 		ReturnExpressions: fn.Analysis.Returns,
-		PayloadNotes:      jsPayloadFallbackNotes(fn.Analysis, imports, srcPath),
+		PayloadNotes:      jsPayloadFallbackNotes(fn.Analysis, imports, srcPath, typeMocks),
 		HasErrorPath:      fn.Analysis.Throws,
 		BoundaryCases:     jsBoundaryLabels(fn.Analysis.Boundaries),
 	}
@@ -290,13 +290,13 @@ func jsTarget(fn jsFuncInfo, kind string, imports []string, srcPath string) type
 	return target
 }
 
-func jsPayloadFallbackNotes(analysis jsFuncAnalysis, imports []string, srcPath string) []string {
+func jsPayloadFallbackNotes(analysis jsFuncAnalysis, imports []string, srcPath string, typeMocks map[string]jsImportedTypeMock) []string {
 	typeExpr := strings.TrimSpace(analysis.ReturnTypeExpr)
 	if typeExpr == "" {
 		return nil
 	}
 	inner := jsPayloadNoteTypeExpr(typeExpr)
-	importNotes := jsPayloadImportNotes(inner, imports, srcPath)
+	importNotes := jsPayloadImportNotes(inner, imports, srcPath, typeMocks)
 	if _, ok := jsMockPayloadFromTSTypeWithDecls(typeExpr, analysis.TSTypeDecls); ok {
 		return importNotes
 	}
@@ -370,7 +370,7 @@ type jsImportTypeHint struct {
 	Namespace bool
 }
 
-func jsPayloadImportNotes(typeExpr string, imports []string, srcPath string) []string {
+func jsPayloadImportNotes(typeExpr string, imports []string, srcPath string, typeMocks map[string]jsImportedTypeMock) []string {
 	typeExpr = jsNormalizeTSTypeExpr(typeExpr)
 	if typeExpr == "" || len(imports) == 0 {
 		return nil
@@ -391,22 +391,32 @@ func jsPayloadImportNotes(typeExpr string, imports []string, srcPath string) []s
 			continue
 		}
 		seen[key] = true
-		notes = append(notes, jsImportTypeHintNote(hint, srcPath))
+		notes = append(notes, jsImportTypeHintNote(hint, srcPath, typeMocks))
 	}
 	return notes
 }
 
-func jsImportTypeHintNote(hint jsImportTypeHint, srcPath string) string {
+func jsImportTypeHintNote(hint jsImportTypeHint, srcPath string, typeMocks map[string]jsImportedTypeMock) string {
 	if hint.Namespace {
 		if candidates := jsImportCandidateFiles(srcPath, hint.Module); len(candidates) > 0 {
 			return "return annotation references namespace import " + hint.Name + " from '" + hint.Module + "'; read candidate source files: " + strings.Join(candidates, ", ")
 		}
 		return "return annotation references namespace import " + hint.Name + " from package '" + hint.Module + "'; static payload does not inspect package types"
 	}
+	if mock, ok := typeMocks[hint.Name]; ok && mock.Module == hint.Module && mock.FilePath != "" {
+		return "return annotation imported type " + hint.Name + " from '" + hint.Module + "' resolved from " + jsImportedTypeMockRelPath(srcPath, mock.FilePath)
+	}
 	if candidates := jsImportCandidateFiles(srcPath, hint.Module); len(candidates) > 0 {
 		return "return annotation references imported type " + hint.Name + " from '" + hint.Module + "'; read candidate source files: " + strings.Join(candidates, ", ")
 	}
 	return "return annotation references imported type " + hint.Name + " from package '" + hint.Module + "'; static payload does not inspect package types"
+}
+
+func jsImportedTypeMockRelPath(srcPath string, mockPath string) string {
+	if rel, err := filepath.Rel(filepath.Dir(srcPath), mockPath); err == nil {
+		return filepath.ToSlash(rel)
+	}
+	return filepath.ToSlash(mockPath)
 }
 
 func jsImportTypeHints(imports []string) map[string]jsImportTypeHint {

@@ -443,6 +443,12 @@ EOF
 	if target == nil {
 		t.Fatalf("loadUser target not found: %+v", req.Context.Targets)
 	}
+	assertProviderSliceContains(t, target.PayloadNotes, "return annotation imported type ExternalUser from './types' resolved from types.ts")
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "read candidate source files") {
+			t.Fatalf("resolved imported type should not emit candidate source note: %+v", target.PayloadNotes)
+		}
+	}
 	for _, note := range target.PayloadNotes {
 		if strings.Contains(note, "falls back to { ok: true }") {
 			t.Fatalf("resolved imported type should not emit fallback note: %+v", target.PayloadNotes)
