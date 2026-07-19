@@ -8,6 +8,7 @@
   "required": [
     "$schema",
     "schema_version",
+    "summary_schema",
     "description",
     "artifacts"
   ],
@@ -19,6 +20,10 @@
     "schema_version": {
       "type": "integer",
       "const": 1
+    },
+    "summary_schema": {
+      "type": "string",
+      "const": "./verification-summary.schema.json"
     },
     "description": {
       "type": "string",

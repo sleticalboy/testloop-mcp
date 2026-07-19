@@ -4,7 +4,7 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
-Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段和 fallback 顺序。`verification-summary.json` 的结构契约见 [verification-summary.schema.json](./fixtures/verification-summary.schema.json)，其中 `sections[].signals.action` 是可选的 section 级动作信号。
+Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段和 fallback 顺序，并通过 `summary_schema` 找到 `verification-summary.json` 的结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)。其中 `sections[].signals.action` 是可选的 section 级动作信号。
 
 ## run_tests fixture 列表
 

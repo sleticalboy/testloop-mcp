@@ -32,6 +32,11 @@ for snippet in (
 
 if data.get("schema_version") != 1:
     failures.append("schema_version must be 1")
+if data.get("summary_schema") != "./verification-summary.schema.json":
+    failures.append("summary_schema must point to ./verification-summary.schema.json")
+summary_schema_path = manifest_path.with_name("verification-summary.schema.json")
+if not summary_schema_path.is_file():
+    failures.append(f"missing verification summary schema file: {summary_schema_path}")
 
 artifacts = data.get("artifacts")
 if not isinstance(artifacts, list) or not artifacts:

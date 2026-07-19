@@ -10,6 +10,7 @@ import (
 
 type manifest struct {
 	SchemaVersion int        `json:"schema_version"`
+	SummarySchema string     `json:"summary_schema"`
 	Artifacts     []artifact `json:"artifacts"`
 }
 
@@ -54,7 +55,12 @@ func run(args []string) error {
 		return fmt.Errorf("unsupported schema_version: %d", m.SchemaVersion)
 	}
 
+	if err := validateSummarySchema(args[0], m.SummarySchema); err != nil {
+		return err
+	}
+
 	fmt.Printf("manifest_schema_version=%d\n", m.SchemaVersion)
+	fmt.Printf("summary_schema=%s\n", m.SummarySchema)
 	fmt.Printf("artifact_count=%d\n", len(m.Artifacts))
 	for i, artifact := range m.Artifacts {
 		if err := validateArtifact(artifact); err != nil {
@@ -71,6 +77,20 @@ func run(args []string) error {
 		fmt.Printf("   directory=%s\n", artifact.Directory)
 		fmt.Printf("   required_response_fields=%s\n", strings.Join(artifact.RequiredResponseFields, ","))
 		fmt.Printf("   fallback_order=%s\n", strings.Join(artifact.FallbackOrder, " > "))
+	}
+	return nil
+}
+
+func validateSummarySchema(manifestPath, rel string) error {
+	if rel == "" {
+		return fmt.Errorf("missing summary_schema")
+	}
+	if filepath.IsAbs(rel) {
+		return fmt.Errorf("summary_schema must be relative")
+	}
+	path := filepath.Join(filepath.Dir(manifestPath), rel)
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("summary_schema is not readable: %w", err)
 	}
 	return nil
 }

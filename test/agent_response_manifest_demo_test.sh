@@ -23,6 +23,7 @@ err="${tmp_dir}/manifest-demo.err"
   docs/fixtures/agent-response-artifact-manifest.json) > "$out"
 
 assert_contains "$out" "manifest_schema_version=1"
+assert_contains "$out" "summary_schema=./verification-summary.schema.json"
 assert_contains "$out" "artifact_count=2"
 assert_contains "$out" "kind=first-run action_field=first_run_agent_next_step expected_action=inspect-user-project"
 assert_contains "$out" "kind=onboarding action_field=agent_next_step expected_action=inspect-user-project"
