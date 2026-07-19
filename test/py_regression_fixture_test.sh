@@ -95,5 +95,41 @@ assert_rows(
     },
 )
 
+assert_rows(
+    "testdata/py-haoy-apk-station/environment-tasks.jsonl",
+    {
+        "pytest-apk-frontend-env-1": {
+            "target": "serve_frontend",
+            "line_range": "84-89",
+            "file": "app/main.py",
+            "test_file": "tests/test_main_frontend_testloop.py",
+        },
+    },
+)
+
+assert_rows(
+    "testdata/py-haoy-apk-station/external-service-tasks.jsonl",
+    {
+        "pytest-apk-download-external-1": {
+            "target": "download_apk",
+            "line_range": "550-570",
+            "file": "app/api/apps.py",
+            "test_file": "tests/test_apps_download_external_testloop.py",
+        },
+    },
+)
+
+assert_rows(
+    "testdata/py-haoy-apk-station/database-tasks.jsonl",
+    {
+        "pytest-apk-delete-db-1": {
+            "target": "delete_app",
+            "line_range": "668-672",
+            "file": "app/api/apps.py",
+            "test_file": "tests/test_apps_delete_database_testloop.py",
+        },
+    },
+)
+
 print("py regression fixture test passed")
 PY

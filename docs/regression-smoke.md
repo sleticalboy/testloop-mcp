@@ -45,7 +45,7 @@ scripts/validate-regression-smoke.sh
 | JS / mcp-hub | `/Users/binlee/code/open-source/mcp-hub` | `testdata/js-mcp-hub/repair-tasks.jsonl`、`testdata/js-mcp-hub/env-tasks.jsonl`、`testdata/js-mcp-hub/devwatcher-tasks.jsonl`、`testdata/js-mcp-hub/sse-tasks.jsonl`、`testdata/js-mcp-hub/workspace-tasks.jsonl` |
 | Python / Click | `/tmp/testloop-click-sample` | `testdata/py-click/ready-hit-tasks.jsonl` |
 | Python / internal fixture | `./testdata/py-internal` | `testdata/py-internal/internal-tasks.jsonl` |
-| Python / haoy-apk-station | `/Users/binlee/code/free-works/haoy-apk-station/backend` | 运行时临时生成到输出目录 |
+| Python / haoy-apk-station | `/Users/binlee/code/free-works/haoy-apk-station/backend` | `testdata/py-haoy-apk-station/environment-tasks.jsonl`、`testdata/py-haoy-apk-station/external-service-tasks.jsonl`、`testdata/py-haoy-apk-station/database-tasks.jsonl` |
 
 路径不一致时，用对应环境变量覆盖：
 
@@ -83,7 +83,7 @@ TESTLOOP_REGRESSION_SKIP_PY=true scripts/validate-regression-smoke.sh
 
 ## 关键 runner
 
-真实外部项目 fixture 中，haoy-apk-station 这类 Python 样本仍由统一 helper 在输出目录生成；JS no-runtime、JS internal、JS mcp-hub、Python internal 和 Click ready 样本已经迁入 `testdata/` 静态 JSONL：
+固定 smoke 默认任务输入已经迁入 `testdata/` 静态 JSONL。`scripts/fixture-task-jsonl.py` 仍保留为重建/新增 fixture 的辅助工具，不再是默认 smoke 的运行时依赖：
 
 ```bash
 scripts/fixture-task-jsonl.py py-apk-station-environment /Users/binlee/code/free-works/haoy-apk-station/backend /tmp/py-apk-station-environment.jsonl
@@ -139,7 +139,7 @@ Python/haoy-apk-station 还使用真实 FastAPI 删除应用路径验证 databas
 ## 当前边界
 
 - JS 默认 smoke 覆盖 `ready`、`manual_review_no_runtime`、`manual_review_internal` 和真实项目 `manual_review_environment`。仓库内 no-runtime/internal fixture 的任务输入已迁入 `testdata/js-no-runtime/no-runtime-tasks.jsonl` 和 `testdata/js-internal/internal-tasks.jsonl`；这两组不是性能或真实业务样本，只用于稳定验证 TypeScript 纯类型文件、未导出 ESM helper 会被降级为可解析的手审任务。mcp-hub 样本输入已迁入 `testdata/js-mcp-hub/*.jsonl`，用于防止真实 Vitest 项目里的 async throwing branch 从 `ready` 回退成 `repair_generated_test`，也用于防止 workspace cache 这类 XDG 文件锁/进程探测路径被误判成可安全直接运行的 ready 测试，并固定 DevWatcher stop 不能退化成只测未 watching 早返回、watcher error 不能启动真实 chokidar、SSE 自动关闭 timer 不能通过 mock `process.emit` 破坏测试 runner、连接断开不能退化成只注册空 `req.on` 的弱测试、发送失败不能退化成不可触达的空 `res.write` mock、定向发送不能退化成只测 missing client 的弱断言。
-- Python 默认 smoke 覆盖 `ready`、`manual_review_internal`、真实项目 `manual_review_environment`、真实项目 `manual_review_external_service` 和真实项目 `manual_review_database`。Click ready fixture 已迁入仓库 `testdata/py-click/ready-hit-tasks.jsonl`，当前固定 `get_binary_stream`、`get_text_stream`、`get_app_dir`、`make_str`、`PacifyFlushWrapper.flush`、`safecall` 和 `_expand_args` 七个 Click `8.2.1` utils 样本；仓库内 Python internal fixture 的任务输入已迁入 `testdata/py-internal/internal-tasks.jsonl`，用于稳定验证 name-mangled private method 会被降级为可解析的手审任务；haoy-apk-station 样本用于验证 FastAPI 动态前端入口这类导入时环境依赖不会被误当成普通 ready，也用于验证对象存储 endpoint timeout 会被归类为外部服务手审、SQLAlchemy 事务错误会被归类为数据库手审，而不是普通 repair。
+- Python 默认 smoke 覆盖 `ready`、`manual_review_internal`、真实项目 `manual_review_environment`、真实项目 `manual_review_external_service` 和真实项目 `manual_review_database`。Click ready fixture 已迁入仓库 `testdata/py-click/ready-hit-tasks.jsonl`，当前固定 `get_binary_stream`、`get_text_stream`、`get_app_dir`、`make_str`、`PacifyFlushWrapper.flush`、`safecall` 和 `_expand_args` 七个 Click `8.2.1` utils 样本；仓库内 Python internal fixture 的任务输入已迁入 `testdata/py-internal/internal-tasks.jsonl`，用于稳定验证 name-mangled private method 会被降级为可解析的手审任务；haoy-apk-station 样本输入已迁入 `testdata/py-haoy-apk-station/*.jsonl`，用于验证 FastAPI 动态前端入口这类导入时环境依赖不会被误当成普通 ready，也用于验证对象存储 endpoint timeout 会被归类为外部服务手审、SQLAlchemy 事务错误会被归类为数据库手审，而不是普通 repair。
 - ip2region 扩大窗口也会暴露 `repair_generated_test`，但那类普通失败没有固定为默认样本；当前默认 mcp-hub 样本固定的是历史 repair 已收敛的 `ConfigManager.loadConfig` 稳定错误路径。
 - 旧 ufo JSONL 包含 `manual_review_no_runtime`，但本机当前 ufo 目录只有发布产物，没有对应 `src/*.ts`，不适合作为固定样本。
 - Codex SDK TypeScript 的旧 JSONL 包含更真实的 `manual_review_internal`，但当前本地 workspace 的独立 `node_modules` 不包含 Jest，复用时会被 runner 依赖污染，不适合作为默认样本。
