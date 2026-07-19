@@ -1,0 +1,49 @@
+{
+  "status": "fail",
+  "action": "apply_fix_suggestions",
+  "framework": "go-test",
+  "total": 1,
+  "passed": 0,
+  "failed": 1,
+  "skipped": 0,
+  "coverage_percent": 0,
+  "failures": [
+    {
+      "test_name": "TestAdd",
+      "file": "calc_test.go",
+      "line": 7,
+      "error": "Add(2, 2) = 4, want 5"
+    }
+  ],
+  "fix_suggestions": [
+    {
+      "file": "calc_test.go",
+      "line": 7,
+      "issue": "Add(2, 2) = 4, want 5",
+      "category": "expectation_mismatch",
+      "context_file": "calc_test.go",
+      "context_line": 7,
+      "suggested_fix": "期望值不匹配\n  实际值: 4\n  期望值: 5\n\n可能的原因和修复建议：\n1. 如果期望值错误，修正测试断言中的 want/expected 值。\n2. 如果实际值错误，优先检查目标函数的返回路径和边界条件。\n3. 对比失败输入下的实现分支，确认是否漏处理空值、零值、负值或错误返回。\n\n测试附近行：\nt.Fatalf(\"Add(2, 2) = %d, want 5\", got)\n",
+      "confidence": 0.8,
+      "repair_task": {
+        "id": "repair-expectation_mismatch-testadd",
+        "test_name": "TestAdd",
+        "category": "expectation_mismatch",
+        "issue": "Add(2, 2) = 4, want 5",
+        "target_file": "calc_test.go",
+        "target_line": 7,
+        "context_file": "calc_test.go",
+        "context_line": 7,
+        "context_snippet": "\t\tt.Fatalf(\"Add(2, 2) = %d, want 5\", got)",
+        "editable_files": [
+          "calc.go",
+          "calc_test.go"
+        ],
+        "suggested_commands": [
+          "go test ./..."
+        ],
+        "assertion_focus": "对比实际值和期望值，判断应修正测试断言还是实现返回路径。"
+      }
+    }
+  ]
+}

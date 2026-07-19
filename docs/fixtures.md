@@ -6,6 +6,12 @@
 
 Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段和 fallback 顺序。
 
+## run_tests fixture 列表
+
+| 文件 | status/action | category | 来源 | Agent 下一步 |
+| --- | --- | --- | --- | --- |
+| [run-tests/apply-fix-suggestions.json](./fixtures/run-tests/apply-fix-suggestions.json) | `fail/apply_fix_suggestions` | `expectation_mismatch` | 临时 Go 项目，失败断言触发 `run_tests include_fix_suggestions=true` | 读取 `fix_suggestions[0].repair_task`，按 `editable_files` 和 `suggested_commands` 修复后复跑。 |
+
 ## validate_coverage_task fixture 列表
 
 | 文件 | status/action | 来源 | Agent 下一步 |
@@ -32,6 +38,8 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 这类 fixture 面向已经稳定接入后的 PR / 发布后 smoke：可以直接读取 `agent-response.txt`，也可以把 artifact 目录交给 `scripts/render-onboarding-agent-response.sh`，不用每次都重新构造失败项目。
 
 ## 稳定字段
+
+`run_tests` fixture 有意保留 `status/action`、测试统计、`failures[]`、`fix_suggestions[].category` 和 `fix_suggestions[].repair_task`，并过滤 `raw_output`。
 
 `validate_coverage_task` fixture 有意保留 Agent 决策需要的字段：
 
@@ -67,8 +75,9 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 
 ## 维护方式
 
-修改 `validate_coverage_task`、`run_tests`、parser、fix suggestion 或静态生成器时，如果真实结构化输出语义变化，应同步更新对应 fixture 和文档。测试入口在 `tools/validate_coverage_task_test.go`：
+修改 `validate_coverage_task`、`run_tests`、parser、fix suggestion 或静态生成器时，如果真实结构化输出语义变化，应同步更新对应 fixture 和文档。测试入口：
 
+- `tools/run_tests_fixture_test.go` 中的 `TestHandleRunTestsActionCategoryFixture`
 - `TestHandleValidateCoverageTaskReadyFixture`
 - `TestHandleValidateCoverageTaskManualReviewInternalFixture`
 - `TestHandleValidateCoverageTaskApplyFixSuggestionsFixture`

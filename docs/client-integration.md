@@ -33,6 +33,7 @@ go run ./examples/agent-decision-demo
 
 | fixture | 期望客户端动作 |
 | --- | --- |
+| [run-tests/apply-fix-suggestions.json](./fixtures/run-tests/apply-fix-suggestions.json) | 对普通 `run_tests` 失败结果读取 `action`、`fix_suggestions[0].category` 和 `repair_task`。 |
 | [validate-coverage-task-ready.json](./fixtures/validate-coverage-task-ready.json) | 接受生成测试，进入下一个 coverage task。 |
 | [validate-coverage-task-manual-review-internal.json](./fixtures/validate-coverage-task-manual-review-internal.json) | 记录手审原因，不继续自动修同一个生成测试。 |
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | 读取 `repair_task`，按限定文件和命令执行修复闭环。 |
@@ -41,6 +42,7 @@ go run ./examples/agent-decision-demo
 建议客户端测试至少断言：
 
 - 能从 fixture 解析 `status` 和 `action`。
+- `run_tests` 的 `fail/apply_fix_suggestions` 能定位 `fix_suggestions[0].category` 和 `fix_suggestions[0].repair_task`。
 - `passed/ready` 不读取 `run_result.fix_suggestions`。
 - `manual_review_*` 不触发自动修复循环。
 - `failed/apply_fix_suggestions` 能定位 `run_result.fix_suggestions[0].repair_task.target_file`、`editable_files` 和 `suggested_commands`。
