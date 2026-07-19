@@ -24,12 +24,16 @@ assert_contains "first_run_agent_next_step=<action>"
 assert_contains "agent_next_step=<action>"
 assert_contains "failed_section=<section name>"
 assert_contains "exit_code=<code>"
+assert_contains "section_signal=<section name> action=<action>"
+assert_contains "sections[].signals"
+assert_contains "action=manual_review"
 assert_contains '先读 `agent-response.txt`'
 assert_contains "first-run-context.txt"
 assert_contains "./fixtures/first-run-artifacts/user-project-smoke-failed/"
 assert_contains "./fixtures/onboarding-artifacts/user-project-smoke-failed/"
 assert_contains "./fixtures/agent-response-artifact-manifest.json"
 assert_contains "./fixtures/agent-response-artifact-manifest.schema.json"
+assert_contains "./fixtures/verification-summary.schema.json"
 assert_contains "go run ./examples/agent-response-manifest-demo"
 assert_contains "./ci-agent-triage.md"
 assert_contains "./client-integration.md"
@@ -39,6 +43,7 @@ for path in \
   "${repo_root}/docs/fixtures/onboarding-artifacts/user-project-smoke-failed" \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.schema.json" \
+  "${repo_root}/docs/fixtures/verification-summary.schema.json" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
   "${repo_root}/docs/ci-agent-triage.md" \
   "${repo_root}/docs/client-integration.md"
