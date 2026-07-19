@@ -24,6 +24,8 @@ top-N 覆盖率窗口。
   TESTLOOP_PY_REGRESSION_INTERNAL_DIR
                                     仓库内 Python internal fixture 目录。
                                     默认：testdata/py-internal
+  TESTLOOP_PY_REGRESSION_INTERNAL_TASKS_FILE
+                                    默认：testdata/py-internal/internal-tasks.jsonl
   TESTLOOP_PY_REGRESSION_INTERNAL_IDS
                                     默认：pytest-internal-1
   TESTLOOP_PY_REGRESSION_APK_STATION_DIR
@@ -62,6 +64,7 @@ click_dir="${TESTLOOP_PY_REGRESSION_CLICK_DIR:-/tmp/testloop-click-sample}"
 click_tasks="${TESTLOOP_PY_REGRESSION_CLICK_TASKS_FILE:-$repo_root/testdata/py-click/ready-hit-tasks.jsonl}"
 click_ready_ids="${TESTLOOP_PY_REGRESSION_CLICK_READY_IDS:-pytest-19,pytest-20,pytest-21,pytest-22,pytest-23,pytest-32,pytest-33}"
 internal_dir="${TESTLOOP_PY_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/py-internal}"
+internal_tasks="${TESTLOOP_PY_REGRESSION_INTERNAL_TASKS_FILE:-$repo_root/testdata/py-internal/internal-tasks.jsonl}"
 internal_ids="${TESTLOOP_PY_REGRESSION_INTERNAL_IDS:-pytest-internal-1}"
 apk_station_dir="${TESTLOOP_PY_REGRESSION_APK_STATION_DIR:-/Users/binlee/code/free-works/haoy-apk-station/backend}"
 apk_station_ids="${TESTLOOP_PY_REGRESSION_APK_STATION_IDS:-pytest-apk-frontend-env-1}"
@@ -155,9 +158,8 @@ mkdir -p "$output_dir"
 
 run_sample "click-ready" "$click_dir" "$click_tasks" "$click_ready_ids" "ready"
 
-internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
-"$repo_root/scripts/fixture-task-jsonl.py" py-internal "$internal_dir" "$internal_tasks"
+require_path file "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
 apk_station_tasks="$output_dir/apk-station-environment-tasks.jsonl"

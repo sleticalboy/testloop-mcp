@@ -52,5 +52,31 @@ assert_rows(
     },
 )
 
+assert_rows(
+    "testdata/js-no-runtime/no-runtime-tasks.jsonl",
+    {
+        "jest-no-runtime-1": {
+            "framework": "jest",
+            "target": "events.ts",
+            "line_range": "entire file",
+            "file": "src/events.ts",
+            "test_file": "tests/events.test.ts",
+        },
+    },
+)
+
+assert_rows(
+    "testdata/js-internal/internal-tasks.jsonl",
+    {
+        "jest-internal-1": {
+            "framework": "jest",
+            "target": "hidden",
+            "line_range": "5-7",
+            "file": "src/helper.ts",
+            "test_file": "tests/helper.test.ts",
+        },
+    },
+)
+
 print("js regression fixture test passed")
 PY

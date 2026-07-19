@@ -24,11 +24,15 @@ top-N 覆盖率窗口。
   TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR
                                     仓库内 TypeScript no-runtime fixture 目录。
                                     默认：testdata/js-no-runtime
+  TESTLOOP_JS_REGRESSION_NO_RUNTIME_TASKS_FILE
+                                    默认：testdata/js-no-runtime/no-runtime-tasks.jsonl
   TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS
                                     默认：jest-no-runtime-1
   TESTLOOP_JS_REGRESSION_INTERNAL_DIR
                                     仓库内 TypeScript internal fixture 目录。
                                     默认：testdata/js-internal
+  TESTLOOP_JS_REGRESSION_INTERNAL_TASKS_FILE
+                                    默认：testdata/js-internal/internal-tasks.jsonl
   TESTLOOP_JS_REGRESSION_INTERNAL_IDS
                                     默认：jest-internal-1
   TESTLOOP_JS_REGRESSION_MCP_HUB_DIR
@@ -73,8 +77,10 @@ ip2region_dir="${TESTLOOP_JS_REGRESSION_IP2REGION_DIR:-/Users/binlee/code/open-s
 ip2region_tasks="${TESTLOOP_JS_REGRESSION_IP2REGION_TASKS_FILE:-$repo_root/testdata/js-ip2region/ready-hit-tasks.jsonl}"
 ip2region_ready_ids="${TESTLOOP_JS_REGRESSION_IP2REGION_READY_IDS:-jest-1,jest-2}"
 no_runtime_dir="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR:-$repo_root/testdata/js-no-runtime}"
+no_runtime_tasks="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_TASKS_FILE:-$repo_root/testdata/js-no-runtime/no-runtime-tasks.jsonl}"
 no_runtime_ids="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS:-jest-no-runtime-1}"
 internal_dir="${TESTLOOP_JS_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/js-internal}"
+internal_tasks="${TESTLOOP_JS_REGRESSION_INTERNAL_TASKS_FILE:-$repo_root/testdata/js-internal/internal-tasks.jsonl}"
 internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
 mcp_hub_dir="${TESTLOOP_JS_REGRESSION_MCP_HUB_DIR:-/Users/binlee/code/open-source/mcp-hub}"
 mcp_hub_repair_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS:-vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3}"
@@ -175,14 +181,12 @@ mkdir -p "$output_dir"
 
 run_sample "ip2region-ready" "$ip2region_dir" "$ip2region_tasks" "$ip2region_ready_ids" "ready"
 
-no_runtime_tasks="$output_dir/no-runtime-tasks.jsonl"
 require_path dir "$no_runtime_dir"
-"$repo_root/scripts/fixture-task-jsonl.py" js-no-runtime "$no_runtime_dir" "$no_runtime_tasks"
+require_path file "$no_runtime_tasks"
 run_sample "fixture-no-runtime" "$no_runtime_dir" "$no_runtime_tasks" "$no_runtime_ids" "manual_review_no_runtime" "$manual_review_command"
 
-internal_tasks="$output_dir/internal-tasks.jsonl"
 require_path dir "$internal_dir"
-"$repo_root/scripts/fixture-task-jsonl.py" js-internal "$internal_dir" "$internal_tasks"
+require_path file "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
 mcp_hub_repair_tasks="$output_dir/mcp-hub-repair-tasks.jsonl"
