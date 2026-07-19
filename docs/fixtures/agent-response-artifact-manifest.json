@@ -1,4 +1,5 @@
 {
+  "$schema": "./agent-response-artifact-manifest.schema.json",
   "schema_version": 1,
   "description": "Machine-readable fixture manifest for testloop CI agent-response.txt artifacts.",
   "artifacts": [

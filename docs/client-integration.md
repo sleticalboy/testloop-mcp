@@ -108,7 +108,7 @@ go run ./examples/first-run-agent-response-demo \
 
 first-run 和 onboarding 的 `agent-response.txt` 统一字段、读取顺序和客户端断言见 [Agent response artifact contract](./agent-response-artifact-contract.md)。
 
-如果希望测试自动发现 artifact fixture，可以读取 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，其中固定了 first-run / onboarding 的目录、必备文件、期望 action 和 fallback 顺序。
+如果希望测试自动发现 artifact fixture，可以读取 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，其中固定了 first-run / onboarding 的目录、必备文件、期望 action 和 fallback 顺序。manifest 的 JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，适合客户端生成类型或做契约校验。
 
 仓库提供了一个最小 manifest 消费 demo：
 
@@ -149,5 +149,6 @@ switch payload.status + "/" + payload.action:
 - [真实结构化 fixture](./fixtures.md)
 - [Agent response artifact contract](./agent-response-artifact-contract.md)
 - [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
+- [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
 - [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)
 - [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)

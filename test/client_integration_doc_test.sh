@@ -24,6 +24,7 @@ required_snippets = [
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
     "./fixtures/agent-response-artifact-manifest.json",
+    "./fixtures/agent-response-artifact-manifest.schema.json",
     "go run ./examples/agent-response-manifest-demo",
     "go run ./examples/first-run-agent-response-demo",
     "first_run_agent_next_step=inspect-user-project",

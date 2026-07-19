@@ -69,6 +69,7 @@ required_phrases = [
     "Agent response artifact contract",
     "agent-response artifact manifest",
     "docs/fixtures/agent-response-artifact-manifest.json",
+    "agent-response-artifact-manifest.schema.json",
     "first-run Agent 回复格式",
     "first-run 失败 artifact fixture",
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",

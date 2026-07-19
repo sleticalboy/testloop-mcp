@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.schema.json",
+  "title": "testloop-mcp agent-response artifact manifest",
+  "description": "Machine-readable contract for CI agent-response artifact fixtures.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "description",
+    "artifacts"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./agent-response-artifact-manifest.schema.json"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "directory",
+        "agent_response",
+        "decision",
+        "summary",
+        "report",
+        "action_field",
+        "expected_action",
+        "expected_failed_section",
+        "expected_exit_code",
+        "required_response_fields",
+        "fallback_order"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "first-run",
+            "onboarding"
+          ]
+        },
+        "directory": {
+          "type": "string",
+          "pattern": "^docs/fixtures/(first-run|onboarding)-artifacts/[^/]+$"
+        },
+        "agent_response": {
+          "type": "string",
+          "const": "agent-response.txt"
+        },
+        "decision": {
+          "type": "string",
+          "const": "agent-decision.txt"
+        },
+        "summary": {
+          "type": "string",
+          "const": "verification-summary.json"
+        },
+        "report": {
+          "type": "string",
+          "const": "verification-report.md"
+        },
+        "optional_context": {
+          "type": "string",
+          "const": "first-run-context.txt"
+        },
+        "optional_log": {
+          "type": "string",
+          "const": "first-run.log"
+        },
+        "action_field": {
+          "type": "string",
+          "enum": [
+            "first_run_agent_next_step",
+            "agent_next_step"
+          ]
+        },
+        "expected_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_failed_section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_exit_code": {
+          "type": "integer"
+        },
+        "required_response_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "agent_next_step",
+              "exit_code",
+              "failed_count",
+              "failed_section",
+              "first_run_agent_next_step",
+              "first_run_report",
+              "markdown_report",
+              "overall_status"
+            ]
+          }
+        },
+        "fallback_order": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "prefixItems": [
+            {
+              "type": "string",
+              "const": "agent-response.txt"
+            }
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "agent-response.txt",
+              "agent-decision.txt",
+              "first-run-context.txt",
+              "verification-summary.json",
+              "verification-report.md",
+              "first-run.log"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "first-run"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "optional_context",
+              "optional_log"
+            ],
+            "properties": {
+              "directory": {
+                "const": "docs/fixtures/first-run-artifacts/user-project-smoke-failed"
+              },
+              "action_field": {
+                "const": "first_run_agent_next_step"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "onboarding"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "directory": {
+                "const": "docs/fixtures/onboarding-artifacts/user-project-smoke-failed"
+              },
+              "action_field": {
+                "const": "agent_next_step"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -6,6 +6,7 @@
 
 - 新增 `docs/agent-response-artifact-contract.md`，统一 first-run/onboarding `agent-response.txt` 的结构、字段、读取顺序和客户端断言。
 - 新增 `docs/fixtures/agent-response-artifact-manifest.json`，为客户端测试提供 first-run/onboarding artifact fixture 的机器可读索引。
+- 新增 `docs/fixtures/agent-response-artifact-manifest.schema.json` 和 Go schema 回归测试，固定 artifact manifest 的机器可读结构。
 - 新增 `examples/agent-response-manifest-demo`，演示客户端如何读取 manifest 自动枚举并校验 artifact fixture。
 
 ### Changed

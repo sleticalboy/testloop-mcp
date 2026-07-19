@@ -69,6 +69,7 @@ CI 失败时按这个顺序读取：
 机器可读索引：
 
 - [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
+- [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
 
 最小消费 demo：
 
