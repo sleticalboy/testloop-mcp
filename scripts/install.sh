@@ -149,11 +149,18 @@ fi
 
 (
   cd "$tmp_dir"
+  checksum_found=false
   if download "${base_url}/checksums.txt" checksums.txt 2>/dev/null; then
-    grep "  ${asset}\$" checksums.txt > selected-checksum.txt || fail "checksum for ${asset} not found"
-  elif download "${base_url}/${asset}.sha256" selected-checksum.txt 2>/dev/null; then
-    :
-  else
+    if grep "  ${asset}\$" checksums.txt > selected-checksum.txt; then
+      checksum_found=true
+    fi
+  fi
+  if [ "$checksum_found" = false ]; then
+    if download "${base_url}/${asset}.sha256" selected-checksum.txt 2>/dev/null; then
+      checksum_found=true
+    fi
+  fi
+  if [ "$checksum_found" = false ]; then
     fail "checksum for ${asset} not found"
   fi
   cmd="$(checksum_cmd)"

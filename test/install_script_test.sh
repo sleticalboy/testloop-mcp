@@ -54,6 +54,10 @@ case "$url" in
     cp "${TESTLOOP_FAKE_FIXTURES}/testloop-mcp_v9.9.9_windows_amd64.zip" "$out"
     ;;
   */checksums.txt)
+    if [ "${TESTLOOP_FAKE_CHECKSUMS_MODE:-}" = "missing-asset" ]; then
+      printf '0000000000000000000000000000000000000000000000000000000000000000  unrelated.zip\n' > "$out"
+      exit 0
+    fi
     exit 22
     ;;
   */testloop-mcp_v9.9.9_windows_amd64.zip.sha256)
@@ -159,6 +163,28 @@ test_windows_zip_sha256_fallback() {
   assert_log_contains "$curl_log" "${asset_name}.sha256"
 }
 
+test_checksums_without_asset_falls_back_to_single_sha256() {
+  install_dir="${tmp_dir}/install-checksums-missing-asset"
+  curl_log="${tmp_dir}/curl-checksums-missing-asset.log"
+  : > "$curl_log"
+
+  PATH="${fake_bin}:$PATH" \
+    TESTLOOP_FAKE_CURL_LOG="$curl_log" \
+    TESTLOOP_FAKE_FIXTURES="$fixture_dir" \
+    TESTLOOP_FAKE_CHECKSUMS_MODE="missing-asset" \
+    TESTLOOP_MCP_VERSION="v9.9.9" \
+    TESTLOOP_MCP_OS="windows" \
+    TESTLOOP_MCP_ARCH="amd64" \
+    TESTLOOP_MCP_INSTALL_DIR="$install_dir" \
+    sh "${repo_root}/scripts/install.sh" >/tmp/testloop-install-checksums-missing-asset.out
+
+  assert_file "${install_dir}/testloop-mcp.exe"
+  assert_file "${install_dir}/testloop-testgen.exe"
+  assert_log_contains "$curl_log" "checksums.txt"
+  assert_log_contains "$curl_log" "${asset_name}.sha256"
+  assert_log_contains /tmp/testloop-install-checksums-missing-asset.out "Installed testloop-mcp to ${install_dir}/testloop-mcp.exe"
+}
+
 test_go_install_fallback_renames_testgen() {
   install_dir="${tmp_dir}/install-fallback"
   go_log="${tmp_dir}/go-fallback.log"
@@ -242,6 +268,7 @@ test_windows_download_failure_fallback_logs_actual_go_install_paths() {
 }
 
 test_windows_zip_sha256_fallback
+test_checksums_without_asset_falls_back_to_single_sha256
 test_go_install_fallback_renames_testgen
 test_download_failure_fallback_message
 test_windows_download_failure_fallback_logs_actual_go_install_paths

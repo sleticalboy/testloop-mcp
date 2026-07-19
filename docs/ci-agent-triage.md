@@ -69,3 +69,44 @@ cat /tmp/testloop-first-run-artifacts/first-run.log
 3. `verification-report.md` 中失败 section 的 stdout / stderr
 
 更完整的分流说明见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md) 和 [首跑诊断失败样例](./first-run-failures.md)。
+
+## 6. 失败态实跑记录
+
+2026-07-19 使用外部临时项目和故意失败的 smoke 命令复验 first-run triage：
+
+```bash
+rm -rf /tmp/testloop-triage-failing-project /tmp/testloop-first-run-failure-triage
+mkdir -p /tmp/testloop-triage-failing-project
+printf 'intentional failure fixture\n' > /tmp/testloop-triage-failing-project/README.md
+
+TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run-failure-triage \
+TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-triage-failing-project \
+  scripts/run-first-run-ci.sh 'echo testloop intentional project failure; exit 7'
+```
+
+结果符合预期：
+
+```text
+first_run_status=failed
+first_run_failed_count=1
+first_run_agent_next_step=inspect-user-project
+first_run_context=/tmp/testloop-first-run-failure-triage/first-run-context.txt
+```
+
+`verification-summary.json` 中只有“用户项目 smoke”失败：
+
+```text
+overall_status=failed
+failed_count=1
+failed_section=用户项目 smoke
+exit_code=7
+```
+
+`verification-report.md` 的失败 section 保留了项目输出：
+
+```text
+testloop intentional project failure
+```
+
+这说明 `agent-decision.txt` 足够让 Agent 先选择 `inspect-user-project`，`first-run-context.txt` 足够作为第一段粘贴上下文；只有需要查看项目 stdout / stderr 时，才需要继续打开 Markdown report。

@@ -4,6 +4,7 @@
 
 ### Changed
 
+- `docs/ci-agent-triage.md` 增加 first-run 失败态实跑记录，确认故意失败的外部项目 smoke 会分流到 `inspect-user-project`，并修正安装脚本在聚合 `checksums.txt` 缺少当前资产时不继续尝试单资产 `.sha256` 的问题。
 - 新增 `docs/ci-agent-triage.md` 和文档测试，说明 CI 失败后如何下载 artifact、读取 `agent-decision.txt` / `first-run-context.txt`，并把最小上下文交给 AI Agent。
 - README 的“用户项目接入：直接复制”入口补充最小 GitHub Actions first-run workflow 片段，并新增 README YAML snippet 测试，防止首页 CI 示例漂移。
 - README 新增“用户项目接入：直接复制”入口，把 first-run bootstrap、onboarding bootstrap、Go/Vue smoke 命令和 artifact 解读放到首页，减少首次接入跳转成本。
