@@ -50,6 +50,18 @@ go run ./examples/first-run-agent-response-demo \
 
 如果暂时没有 `verification-summary.json`，也可以只传 `first-run-context.txt`。此时 demo 仍会按 `first_run_agent_next_step` 输出结论和下一步，但不会输出 `failed_section` 和 `exit_code`。
 
+## 端到端回归
+
+仓库测试 `test/first_run_agent_response_demo_test.sh` 会先运行 `scripts/run-first-run-ci.sh` 构造一个失败的用户项目 smoke，再把输出目录里的两份真实 artifact 传给 demo：
+
+```bash
+go run ./examples/first-run-agent-response-demo \
+  "$artifact_dir/first-run-context.txt" \
+  "$artifact_dir/verification-summary.json"
+```
+
+这个测试固定了从 CI 失败五件套到 Agent 四段回复的整条链路。
+
 ## 边界
 
 这个 demo 不调用 LLM，也不会修改用户项目。它只做一件事：把 first-run artifact 转成 Agent 应该先回复给用户的稳定四段结构。
