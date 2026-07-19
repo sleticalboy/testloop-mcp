@@ -70,9 +70,10 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 - [x] 使用 `scripts/verify-release-assets.sh v0.5.9` 验证 10 个 Release 资产完整。
 - [x] 更新 GitHub Release 正文为正式 v0.5.9 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.9` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.9` 并推送。
-- [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
+- [x] 仓库内 Formula 和发布记录提交 `a3f73b6` 远端 CI run `29670948462` passed。
+- [x] 更新 Homebrew tap 到 `0.5.9` 并推送，tap commit `62280bf`。
+- [x] 手动触发 Post-Release Verify run `29671001523`，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.9 tag、Release Artifacts、资产校验、GitHub Release 正文和仓库内 Formula 更新已完成。下一步更新 Homebrew tap 到 `0.5.9`，再触发 Post-Release Verify。
+v0.5.9 发布流程已完成：tag、Release Artifacts、资产校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify 均已完成。下一步回到主线产品价值，继续打磨 Agent/客户端消费发布 artifact 的真实接入示例。
