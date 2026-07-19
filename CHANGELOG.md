@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- `cmd/testgen` 生成成功时会输出 `action=ready` 或 `action=manual_review`，让 CLI 用户在运行测试前就能识别 TODO/skipped 手审草稿。
+- 验收报告新增“独立 CLI 生成动作 smoke”，会运行 `testloop-testgen` 或 `go run ./cmd/testgen` 并断言输出 `action=manual_review`。
+- 验收 summary JSON 新增可选 `sections[].signals.action`，用于给 Agent/CI 暴露 section 级动作信号。
+- `examples/verification-summary-decision-demo`、first-run Agent 回复和 onboarding Agent 回复都会展示 `section_signal=<section> action=<action>`。
+- 新增 `docs/fixtures/verification-summary.schema.json` 和 Go schema 回归测试，固定 `verification-summary.json` 的稳定字段和可选 `signals` 结构。
+
+### Changed
+
+- Agent response artifact contract、客户端契约测试说明、接入指南、客户端集成文档和 README 已补充 `verification-summary.schema.json` 与 `section_signal` 消费说明。
+- first-run/onboarding wrapper 回归测试现在固定 summary JSON、`agent-decision.txt` 和 `agent-response.txt` 中的 action signal 链路。
+
 ## v0.5.12 - 2026-07-19
 
 ### Added
