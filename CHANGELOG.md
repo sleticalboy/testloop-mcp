@@ -15,6 +15,7 @@
 - `docs/client-integration.md` 和 `docs/fixtures.md` 已链接 Agent response artifact manifest，减少客户端手写 fixture 路径和字段映射。
 - `docs/client-integration.md` 和 Agent response contract 已补 manifest demo 命令。
 - `docs/mcp-client-contract-tests.md` 已补 CI artifact manifest/schema 回归模板，覆盖 schema 校验、fallback 顺序和 first-run/onboarding action 字段差异。
+- README 的 CI 失败 artifact 段落已补 manifest/schema 入口，避免接入方只按单个 first-run fixture 目录做回归。
 
 ## v0.5.10 - 2026-07-19
 

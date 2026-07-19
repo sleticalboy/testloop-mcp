@@ -83,5 +83,18 @@ if missing:
         print(f"- missing {item}", file=sys.stderr)
     sys.exit(1)
 
+required_text = [
+    "./docs/fixtures/agent-response-artifact-manifest.json",
+    "./docs/fixtures/agent-response-artifact-manifest.schema.json",
+    "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
+]
+
+missing_text = [item for item in required_text if item not in text]
+if missing_text:
+    print("README CI artifact text test failed:", file=sys.stderr)
+    for item in missing_text:
+        print(f"- missing {item}", file=sys.stderr)
+    sys.exit(1)
+
 print("README CI snippet test passed")
 PY
