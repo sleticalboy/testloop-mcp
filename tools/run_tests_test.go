@@ -603,6 +603,45 @@ func TestHandleRunTestsVitestRepairTaskGolden(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsVitestModuleResolutionFixSuggestion(t *testing.T) {
+	dir := writeTempVitestPackage(t)
+	installFakeNpx(t, strings.Join([]string{
+		"failed to load config from vitest.config.ts",
+		"Error: Cannot find module './missing-plugin'",
+		"Require stack:",
+		"- vitest.config.ts",
+	}, "\n"))
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  filepath.Join(dir, "src", "sum.test.ts"),
+		Framework:             "vitest",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "src", "sum.ts"),
+		TestCode:              filepath.Join(dir, "src", "sum.test.ts"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Action != "apply_fix_suggestions" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected module resolution result: %+v", parsed)
+	}
+	if len(parsed.FixSuggestions) != 1 {
+		t.Fatalf("fix_suggestions len = %d, want 1: %+v", len(parsed.FixSuggestions), parsed.FixSuggestions)
+	}
+	suggestion := parsed.FixSuggestions[0]
+	if suggestion.Category != "module_resolution" ||
+		suggestion.RepairTask == nil ||
+		suggestion.RepairTask.Category != "module_resolution" ||
+		!strings.Contains(suggestion.SuggestedFix, "模块或依赖解析失败") {
+		t.Fatalf("unexpected module resolution suggestion: %+v", suggestion)
+	}
+}
+
 func TestHandleRunTestsMochaRepairTaskGolden(t *testing.T) {
 	dir := writeTempMochaPackage(t)
 	installFakeNpx(t, mochaFailureOutput())
