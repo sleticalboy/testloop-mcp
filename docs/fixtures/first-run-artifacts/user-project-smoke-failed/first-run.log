@@ -1,0 +1,6 @@
+onboarding_report=docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-report.md
+onboarding_summary_json=docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json
+onboarding_decision=docs/fixtures/first-run-artifacts/user-project-smoke-failed/agent-decision.txt
+overall_status=failed
+failed_count=1
+agent_next_step=inspect-user-project
