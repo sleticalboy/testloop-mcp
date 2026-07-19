@@ -12,6 +12,8 @@ testloop-mcp v0.5.10
 - [x] `d3dbb86` 远端 CI run `29673143525` passed，覆盖外部 onboarding 四件套校验。
 - [x] `44071a0` 远端 CI run `29673246805` passed，覆盖 onboarding 失败 artifact fixture。
 - [x] 完成本地候选验证：脚本语法、`go test ./...`、完整 shell 矩阵、文档链接、release doc index 和 `git diff --check`。
+- [x] 完成本地 release readiness 门禁：主服务/testgen 构建、help 输出、darwin arm64 打包 dry-run、sha256 校验和 tarball 内容检查。
+- [x] 候选计划提交 `13ea54b` 远端 CI run `29673325435` passed。
 - [ ] 正式版本准备：更新 implementation version、CHANGELOG 归档、文档版本引用、打 tag、Release Artifacts 和 Homebrew tap。
 
 ## 摘要

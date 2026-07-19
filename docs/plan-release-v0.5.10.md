@@ -50,20 +50,21 @@
 - [x] `101b14e` 远端 CI run `29673054100` passed。
 - [x] `d3dbb86` 远端 CI run `29673143525` passed。
 - [x] `44071a0` 远端 CI run `29673246805` passed。
+- [x] 候选计划提交 `13ea54b` 远端 CI run `29673325435` passed。
 
 ## 发布前门禁
 
-- [ ] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
-- [ ] `go test ./...`
-- [ ] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
-- [ ] `go build -o /tmp/testloop-mcp-v0.5.10-candidate .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.5.10-candidate ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.5.10-candidate --help` 输出 usage，exit code 为 `2`。
-- [ ] `/tmp/testloop-testgen-v0.5.10-candidate --help` 输出 usage，exit code 为 `2`。
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.10-candidate-dist scripts/package-release-asset.sh v0.5.10 darwin_arm64 darwin arm64`
-- [ ] 在 dist 目录内校验 `testloop-mcp_v0.5.10_darwin_arm64.tar.gz.sha256` 通过。
-- [ ] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
-- [ ] `git diff --check`
+- [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
+- [x] `go test ./...`
+- [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `go build -o /tmp/testloop-mcp-v0.5.10-candidate .`
+- [x] `go build -o /tmp/testloop-testgen-v0.5.10-candidate ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.5.10-candidate --help` 输出 usage，exit code 为 `2`。
+- [x] `/tmp/testloop-testgen-v0.5.10-candidate --help` 输出 usage，exit code 为 `2`。
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.10-candidate-dist scripts/package-release-asset.sh v0.5.10 darwin_arm64 darwin arm64`
+- [x] 在 dist 目录内校验 `testloop-mcp_v0.5.10_darwin_arm64.tar.gz.sha256` 通过。
+- [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+- [x] `git diff --check`
 
 ## 正式发布前待办
 
@@ -86,4 +87,4 @@
 
 ## 当前结论
 
-v0.5.10 候选内容已经完成本地功能验证，最新远端 CI 也已通过；下一步补 release readiness 门禁，并决定是否进入正式版本准备。
+v0.5.10 候选内容已经完成本地功能验证、release readiness 门禁和候选计划远端 CI；下一步进入正式版本准备。
