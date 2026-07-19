@@ -12,12 +12,12 @@ testloop-mcp v0.5.7
 - [x] 正式版本准备已更新 `main.go` MCP implementation version 到 `0.5.7`。
 - [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.7 - 2026-07-19`。
 - [x] 正式版本准备已同步 README、安装文档和必要的版本引用。
-- [ ] Release Artifacts workflow 通过并上传五平台资产和 `.sha256`。
-- [ ] `scripts/verify-release-assets.sh v0.5.7` 验证 10 个 Release 资产完整。
-- [ ] GitHub Release 正文更新为正式 v0.5.7 发布说明。
-- [ ] 仓库内 Formula 使用 Release 真实 digest 更新到 `0.5.7`。
-- [ ] Homebrew tap 更新到 `testloop-mcp 0.5.7`。
-- [ ] Post-Release Verify 通过。
+- [x] Release Artifacts workflow `29665920056` 通过并上传五平台资产和 `.sha256`。
+- [x] `scripts/verify-release-assets.sh v0.5.7` 验证 10 个 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.7 发布说明。
+- [x] 仓库内 Formula 已使用 Release 真实 digest 更新到 `0.5.7`。
+- [x] Homebrew tap 已更新到 `testloop-mcp 0.5.7`，提交 `5538b6b` 已推送。
+- [x] Post-Release Verify run `29666102074` 通过，覆盖资产清单和五平台安装脚本 dry run。
 
 ## 摘要
 
@@ -125,7 +125,8 @@ TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=all \
 - [x] darwin arm64 打包 dry-run。
 - [x] sha256 校验和 tarball 内容检查。
 - [x] `git diff --check`
-- [x] 远端 CI run `29651790811` passed。
+- [x] 版本准备远端 CI run `29652321592` passed。
+- [x] Release Artifacts run `29665920056` passed。
 
 ## 发布备注
 
