@@ -169,3 +169,17 @@ TESTLOOP_REPORT_PROJECT_COMMAND='pnpm install --frozen-lockfile && pnpm build:pr
 
 - 报告脚本适合同时覆盖 testloop-mcp 自身接入链路和用户项目 smoke。
 - 用户项目命令需要显式传入；不同项目的安装、构建、测试成本和环境依赖差异太大，不应由脚本默认猜测。
+
+2026-07-19 使用当前源码临时构建的 `/tmp/testloop-mcp-laoxia-smoke` 复验 laoxia server + web，版本输出为 `testloop-mcp 0.5.12`。两份报告均写入 `/tmp`：
+
+- Server：`/tmp/testloop-laoxia-server-report-v0.5.12.md` 和 `/tmp/testloop-laoxia-server-report-v0.5.12.json`
+- Web：`/tmp/testloop-laoxia-web-report-v0.5.12.md` 和 `/tmp/testloop-laoxia-web-report-v0.5.12.json`
+
+复验结果：
+
+| 项目 | 用户项目命令 | overall_status | failed_count | 用户项目 smoke |
+| --- | --- | --- | ---: | --- |
+| laoxia server | `go test ./...` | `passed` | `0` | `passed` |
+| laoxia web | `pnpm install --frozen-lockfile && pnpm build:prod` | `passed` | `0` | `passed` |
+
+两次报告都包含最新最小 Agent demo 输出：`run_tests: status=fail action=apply_fix_suggestions` 和 `rerun: status=pass action=ready`。server 输出仍包含 macOS `IOMasterPort` deprecated warning；web 输出仍包含 Browserslist 过期和 bundle size warning；两者 exit code 均为 `0`，因此只作为项目 warning 记录。复验后 `car-admin-server` 和 `car-admin-web` 工作区仍保持干净。
