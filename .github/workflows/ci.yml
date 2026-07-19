@@ -56,6 +56,7 @@ jobs:
           sh test/docs_json_examples_test.sh
           sh test/java_regression_fixture_test.sh
           sh test/js_regression_fixture_test.sh
+          sh test/js_ts_barrel_cli_smoke_test.sh
           sh test/py_regression_fixture_test.sh
           sh test/fixture_task_jsonl_script_test.sh
           sh test/regression_preflight_test.sh
