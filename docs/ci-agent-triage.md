@@ -70,6 +70,8 @@ cat /tmp/testloop-first-run-artifacts/first-run.log
 
 更完整的分流说明见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md) 和 [首跑诊断失败样例](./first-run-failures.md)。
 
+Agent 收到 `first-run-context.txt` 后的推荐回复格式见 [first-run Agent 回复格式](./first-run-agent-response.md)。
+
 ## 6. 失败态实跑记录
 
 2026-07-19 使用外部临时项目和故意失败的 smoke 命令复验 first-run triage：

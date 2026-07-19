@@ -25,6 +25,7 @@ required_entries = {
     "首跑诊断 CI 复制模板": "./docs/first-run-ci-template.md",
     "首跑诊断失败样例": "./docs/first-run-failures.md",
     "CI 失败后交给 Agent": "./docs/ci-agent-triage.md",
+    "first-run Agent 回复格式": "./docs/first-run-agent-response.md",
     "用户项目验收报告": "./docs/verification-report.md",
     "Onboarding CI 外部项目演练": "./docs/onboarding-ci-external-dry-run.md",
     "Onboarding CI 复制模板": "./docs/onboarding-ci-template.md",
@@ -59,6 +60,7 @@ required_phrases = [
     ".github/workflows/testloop-first-run.yml",
     "actions/upload-artifact@v4",
     "CI 失败后交给 Agent",
+    "first-run Agent 回复格式",
     "first-run-context.txt",
     "真实 server / web 实跑记录",
 ]
