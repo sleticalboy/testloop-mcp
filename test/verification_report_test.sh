@@ -129,5 +129,6 @@ assert_contains "$action_report" "action=manual_review"
 assert_contains "$action_report" "testgen action smoke passed"
 assert_json_field "$action_summary_json" "data['overall_status']" "passed"
 assert_json_field "$action_summary_json" "[section for section in data['sections'] if section['name'] == '独立 CLI 生成动作 smoke'][0]['status']" "passed"
+assert_json_field "$action_summary_json" "[section for section in data['sections'] if section['name'] == '独立 CLI 生成动作 smoke'][0]['signals']['action']" "manual_review"
 
 echo "verification report test passed"

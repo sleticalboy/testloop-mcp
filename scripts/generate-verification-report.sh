@@ -124,14 +124,16 @@ with open(summary_file, encoding="utf-8", newline="") as fh:
             continue
         name, status, code = row[:3]
         reason = row[3] if len(row) > 3 else ""
-        sections.append(
-            {
-                "name": name,
-                "status": status,
-                "exit_code": None if code == "-" else int(code),
-                "reason": reason or None,
-            }
-        )
+        signals_raw = row[4] if len(row) > 4 else ""
+        section = {
+            "name": name,
+            "status": status,
+            "exit_code": None if code == "-" else int(code),
+            "reason": reason or None,
+        }
+        if signals_raw:
+            section["signals"] = json.loads(signals_raw)
+        sections.append(section)
 
 failed = int(failed_count)
 payload = {
@@ -181,7 +183,9 @@ run_section() {
     status="failed"
     failed_count=$((failed_count + 1))
   fi
-  printf '%s\t%s\t%s\t%s\n' "$name" "$status" "$code" "" >>"$summary_file"
+  local signals
+  signals="$(section_signals_json "$name" "$out_file")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$status" "$code" "" "$signals" >>"$summary_file"
 
   {
     printf '### %s\n\n' "$name"
@@ -191,6 +195,25 @@ run_section() {
     write_output_block "$out_file"
     printf '```\n\n'
   } >>"$sections_file"
+}
+
+section_signals_json() {
+  local name="$1"
+  local out_file="$2"
+  local action
+  case "$name" in
+    "独立 CLI 生成动作 smoke")
+      action="$(grep -Eo 'action=[A-Za-z0-9_]+' "$out_file" | head -n 1 | cut -d= -f2 || true)"
+      if [[ -n "$action" ]]; then
+        python3 - "$action" <<'PY'
+import json
+import sys
+
+print(json.dumps({"action": sys.argv[1]}, ensure_ascii=False, sort_keys=True))
+PY
+      fi
+      ;;
+  esac
 }
 
 run_testgen_action_smoke() {
@@ -251,7 +274,7 @@ skip_section() {
   local name="$1"
   local reason="$2"
   section_index=$((section_index + 1))
-  printf '%s\t%s\t%s\t%s\n' "$name" "skipped" "-" "$reason" >>"$summary_file"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$name" "skipped" "-" "$reason" "" >>"$summary_file"
   {
     printf '### %s\n\n' "$name"
     printf '%s\n' '- 状态：`skipped`'
