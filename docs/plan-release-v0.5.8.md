@@ -82,7 +82,7 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 - [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.8`。
 - [x] 测试中的版本期望同步到 `0.5.8`。
 - [x] 重新运行完整验证。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI run `29669148638` passed。
 - [ ] 打 tag `v0.5.8` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.8` 验证 10 个 Release 资产完整。
@@ -93,4 +93,4 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 
 ## 当前结论
 
-v0.5.8 正式版本准备改动和本地完整验证已完成，适合作为接入体验和安装 fallback patch。下一步需提交版本准备改动并等待远端 CI，通过后再进入 tag、Release Artifacts、GitHub Release 和 Homebrew tap 流程。
+v0.5.8 正式版本准备改动、本地完整验证和版本准备远端 CI 均已完成，适合作为接入体验和安装 fallback patch。下一步打 `v0.5.8` tag 并进入 Release Artifacts、GitHub Release 和 Homebrew tap 流程。

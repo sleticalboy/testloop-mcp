@@ -15,6 +15,7 @@ testloop-mcp v0.5.8
 - [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.8 - 2026-07-19`。
 - [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.8`。
 - [x] 正式版本准备本地完整验证已通过：脚本语法、`go test ./...`、完整 shell 矩阵、主服务/testgen 构建、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
+- [x] 正式版本准备提交远端 CI run `29669148638` passed。
 
 ## 摘要
 
