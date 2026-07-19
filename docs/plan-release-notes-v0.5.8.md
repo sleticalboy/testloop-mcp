@@ -16,6 +16,10 @@ testloop-mcp v0.5.8
 - [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.8`。
 - [x] 正式版本准备本地完整验证已通过：脚本语法、`go test ./...`、完整 shell 矩阵、主服务/testgen 构建、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
 - [x] 正式版本准备提交远端 CI run `29669148638` passed。
+- [x] `v0.5.8` tag 已推送，Release Artifacts run `29669279828` passed。
+- [x] `scripts/verify-release-assets.sh v0.5.8` 验证 10 个 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.8 发布说明。
+- [x] 仓库内 Formula 已使用 Release 真实 digest 更新到 `0.5.8`。
 
 ## 摘要
 
@@ -128,6 +132,8 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-triage-failing-project \
 - [x] `cd /tmp/testloop-v0.5.8-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.8_darwin_arm64.tar.gz.sha256`
 - [x] tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
 - [x] 候选提交远端 CI run `29668904180` passed。
+- [x] Release Artifacts run `29669279828` passed。
+- [x] `scripts/verify-release-assets.sh v0.5.8` 输出 `Verified 10 release assets for sleticalboy/testloop-mcp@v0.5.8`。
 
 ## 发布备注
 

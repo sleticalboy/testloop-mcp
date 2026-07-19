@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.8 的候选发布和正式版本准备记录。当前已完成正式版本准备的本地验证；tag、Release Artifacts 和 Homebrew tap 仍需等版本准备提交的远端 CI 通过后再推进。
+这是 v0.5.8 的候选发布、正式版本准备和发布核验记录。当前已完成 tag、Release Artifacts、资产校验、GitHub Release 正文和仓库 Formula 更新；Homebrew tap 和发布后安装验证仍在推进中。
 
 v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.md)：本轮主要是接入方复制路径、README 最小 CI、CI 失败后 Agent triage、Agent 回复格式，以及安装 checksum fallback 修复。
 
@@ -83,14 +83,14 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 - [x] 测试中的版本期望同步到 `0.5.8`。
 - [x] 重新运行完整验证。
 - [x] 提交版本准备改动后确认远端 CI run `29669148638` passed。
-- [ ] 打 tag `v0.5.8` 并推送。
-- [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.8` 验证 10 个 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.8 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.8` 更新仓库内 Formula。
+- [x] 打 tag `v0.5.8` 并推送，tag 指向 `c2e6a1873fd14ad45b3f5a6e88333b2842503ebc`。
+- [x] Release Artifacts workflow run `29669279828` 已生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.8` 验证 10 个 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.8 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.8` 更新仓库内 Formula。
 - [ ] 更新 Homebrew tap 到 `0.5.8` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.8 正式版本准备改动、本地完整验证和版本准备远端 CI 均已完成，适合作为接入体验和安装 fallback patch。下一步打 `v0.5.8` tag 并进入 Release Artifacts、GitHub Release 和 Homebrew tap 流程。
+v0.5.8 已完成 GitHub Release 侧发布核验，适合作为接入体验和安装 fallback patch。下一步更新并验证 Homebrew tap，然后触发 Post-Release Verify。
