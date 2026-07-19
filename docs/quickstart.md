@@ -191,3 +191,12 @@ scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 ```
 
 两条路径都不依赖外部项目；需要把自己的项目 smoke 纳入报告时，再使用 [用户项目验收报告](./verification-report.md) 中的 `TESTLOOP_REPORT_PROJECT_DIR` 和 `TESTLOOP_REPORT_PROJECT_COMMAND`。
+
+如果要验证客户端或 Agent 能稳定消费 CI artifact fixture，源码 checkout 可以直接运行：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+manifest 的机器可读结构见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。更完整的接入方验收清单见 [接入方一页式验证指南](./adopter-verification-guide.md)，客户端回归模板见 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。

@@ -18,6 +18,7 @@
 - README 的 CI 失败 artifact 段落已补 manifest/schema 入口，避免接入方只按单个 first-run fixture 目录做回归。
 - README 已补 `agent-response-manifest-demo` 的最小正常输出，方便接入方快速核对 demo 是否运行正常。
 - `docs/adopter-verification-guide.md` 已补 artifact manifest/schema 验收入口，把 CI artifact 消费纳入一页式接入清单。
+- `docs/quickstart.md` 已补 artifact manifest/schema 快速验证入口，并新增 quickstart 文档测试固定关键命令和链接。
 
 ## v0.5.10 - 2026-07-19
 
