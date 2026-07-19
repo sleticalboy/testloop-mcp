@@ -18,9 +18,9 @@ top-N 覆盖率窗口。
                                     默认：/tmp/testloop-click-sample
   TESTLOOP_PY_REGRESSION_CLICK_TASKS_FILE
                                     包含 Click pytest 任务的 JSONL。
-                                    默认：/tmp/testloop-click-pytest-top5-regression.jsonl
+                                    默认：testdata/py-click/ready-hit-tasks.jsonl
   TESTLOOP_PY_REGRESSION_CLICK_READY_IDS
-                                    默认：pytest-1,pytest-3
+                                    默认：pytest-19,pytest-20,pytest-21,pytest-22,pytest-23,pytest-32,pytest-33
   TESTLOOP_PY_REGRESSION_INTERNAL_DIR
                                     仓库内 Python internal fixture 目录。
                                     默认：testdata/py-internal
@@ -59,8 +59,8 @@ validator="$script_dir/validate-py-coverage-top-tasks.sh"
 
 output_dir="${TESTLOOP_PY_REGRESSION_OUTPUT_DIR:-/tmp/testloop-py-regression-$(date +%Y%m%d%H%M%S)}"
 click_dir="${TESTLOOP_PY_REGRESSION_CLICK_DIR:-/tmp/testloop-click-sample}"
-click_tasks="${TESTLOOP_PY_REGRESSION_CLICK_TASKS_FILE:-/tmp/testloop-click-pytest-top5-regression.jsonl}"
-click_ready_ids="${TESTLOOP_PY_REGRESSION_CLICK_READY_IDS:-pytest-1,pytest-3}"
+click_tasks="${TESTLOOP_PY_REGRESSION_CLICK_TASKS_FILE:-$repo_root/testdata/py-click/ready-hit-tasks.jsonl}"
+click_ready_ids="${TESTLOOP_PY_REGRESSION_CLICK_READY_IDS:-pytest-19,pytest-20,pytest-21,pytest-22,pytest-23,pytest-32,pytest-33}"
 internal_dir="${TESTLOOP_PY_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/py-internal}"
 internal_ids="${TESTLOOP_PY_REGRESSION_INTERNAL_IDS:-pytest-internal-1}"
 apk_station_dir="${TESTLOOP_PY_REGRESSION_APK_STATION_DIR:-/Users/binlee/code/free-works/haoy-apk-station/backend}"

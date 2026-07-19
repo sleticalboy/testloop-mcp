@@ -7,6 +7,8 @@
 - Java regression smoke now includes repository-backed RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
 - Java regression smoke task inputs for Commons Lang ready/internal and Commons Codec unreachable samples are now stored under `testdata/`, reducing dependence on local `/tmp` JSONL files.
 - JS ip2region regression smoke ready task inputs are now stored under `testdata/`, reducing dependence on local `/tmp` JSONL files.
+- Python coverage top-task validation now supports `TESTLOOP_VALIDATE_PY_LIST_TASKS_ONLY`, allowing maintainers to regenerate candidate task JSONL without running generate/run validation.
+- Python Click regression smoke ready task inputs are now stored under `testdata/py-click/`, rebuilt against Click `8.2.1` utils coverage tasks instead of stale parser task line ranges.
 
 ### Fixed
 

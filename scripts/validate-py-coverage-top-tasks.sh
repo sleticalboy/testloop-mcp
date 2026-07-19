@@ -31,6 +31,9 @@ Environment:
                                       validate_coverage_task outputs. When set, skips
                                       baseline coverage generation and reads tasks from
                                       this file.
+  TESTLOOP_VALIDATE_PY_LIST_TASKS_ONLY
+                                      When truthy, writes selected coverage tasks to
+                                      output-jsonl and skips generate/run validation.
   TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS
                                       Optional timeout in seconds used as the default for
                                       baseline coverage and each task validation stage.

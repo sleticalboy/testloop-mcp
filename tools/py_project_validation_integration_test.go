@@ -68,6 +68,17 @@ func TestValidatePyCoverageTopTasks(t *testing.T) {
 		t.Fatalf("create output jsonl: %v", err)
 	}
 	defer outFile.Close()
+	if envBool("TESTLOOP_VALIDATE_PY_LIST_TASKS_ONLY") {
+		for i := 0; i < limit; i++ {
+			encoded, _ := json.Marshal(tasks[i])
+			if _, err := outFile.Write(append(encoded, '\n')); err != nil {
+				t.Fatalf("write task output jsonl: %v", err)
+			}
+		}
+		t.Logf("tasks_jsonl=%s", outputPath)
+		logPyValidationStage(t, "tasks.list_only.done count=%d output=%s", limit, outputPath)
+		return
+	}
 
 	summary := pyProjectValidationSummary{
 		Limit:        limit,
