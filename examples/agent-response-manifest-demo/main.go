@@ -81,6 +81,10 @@ func run(args []string) error {
 		if err := validateArtifact(artifact); err != nil {
 			return fmt.Errorf("%s: %w", artifact.Kind, err)
 		}
+		decisionAction, err := loadDecisionAction(artifact)
+		if err != nil {
+			return fmt.Errorf("%s: %w", artifact.Kind, err)
+		}
 		fmt.Printf("%d. kind=%s action_field=%s expected_action=%s failed_section=%s exit_code=%d\n",
 			i+1,
 			artifact.Kind,
@@ -90,6 +94,7 @@ func run(args []string) error {
 			artifact.ExpectedExitCode,
 		)
 		fmt.Printf("   directory=%s\n", artifact.Directory)
+		fmt.Printf("   decision_action=%s\n", decisionAction)
 		fmt.Printf("   expected_section_signals=%s\n", formatSectionSignals(artifact.ExpectedSectionSignals))
 		fmt.Printf("   required_response_fields=%s\n", strings.Join(artifact.RequiredResponseFields, ","))
 		fmt.Printf("   fallback_order=%s\n", strings.Join(artifact.FallbackOrder, " > "))
@@ -165,10 +170,35 @@ func validateArtifact(artifact artifact) error {
 	if !strings.Contains(responseText, artifact.ActionField+"="+artifact.ExpectedAction) {
 		return fmt.Errorf("agent response missing expected action")
 	}
+	decisionAction, err := loadDecisionAction(artifact)
+	if err != nil {
+		return err
+	}
+	if decisionAction != artifact.ExpectedAction {
+		return fmt.Errorf("decision action = %q, want %q", decisionAction, artifact.ExpectedAction)
+	}
 	if err := validateExpectedSectionSignals(artifact); err != nil {
 		return err
 	}
 	return nil
+}
+
+func loadDecisionAction(artifact artifact) (string, error) {
+	data, err := os.ReadFile(filepath.Join(artifact.Directory, artifact.Decision))
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok || key != "agent_next_step" {
+			continue
+		}
+		if value == "" {
+			return "", fmt.Errorf("decision agent_next_step is empty")
+		}
+		return value, nil
+	}
+	return "", fmt.Errorf("decision missing agent_next_step")
 }
 
 func validateExpectedSectionSignals(artifact artifact) error {

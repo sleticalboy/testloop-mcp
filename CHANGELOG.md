@@ -10,6 +10,7 @@
 - `examples/verification-summary-decision-demo`、first-run Agent 回复和 onboarding Agent 回复都会展示 `section_signal=<section> action=<action>`。
 - 新增 `docs/fixtures/verification-summary.schema.json` 和 Go schema 回归测试，固定 `verification-summary.json` 的稳定字段和可选 `signals` 结构。
 - Agent response artifact manifest 新增 `expected_section_signals`，用于让客户端 fixture 回归固定 summary 与 `agent-response.txt` 中的 section 级动作信号。
+- `examples/agent-response-manifest-demo` 会校验并输出 `decision_action=...`，固定 `agent-decision.txt` 与 manifest `expected_action` 的一致性。
 
 ### Changed
 

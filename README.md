@@ -280,8 +280,10 @@ manifest_schema_version=1
 summary_schema=./verification-summary.schema.json
 artifact_count=2
 1. kind=first-run action_field=first_run_agent_next_step expected_action=inspect-user-project
+   decision_action=inspect-user-project
    expected_section_signals=独立 CLI 生成动作 smoke:manual_review
 2. kind=onboarding action_field=agent_next_step expected_action=inspect-user-project
+   decision_action=inspect-user-project
    expected_section_signals=独立 CLI 生成动作 smoke:manual_review
 ```
 
