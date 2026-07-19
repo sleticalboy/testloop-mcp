@@ -77,7 +77,11 @@ assert_contains "$output_dir/agent-response.txt" "结论：testloop-mcp onboardi
 assert_contains "$output_dir/agent-response.txt" "- agent_next_step=ready"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
+assert_contains "$output_dir/verification-summary.json" '"signals": {'
+assert_contains "$output_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$output_dir/agent-decision.txt" "agent_next_step=ready"
+assert_contains "$output_dir/agent-decision.txt" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
+assert_contains "$output_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$step_summary" "## testloop-mcp onboarding"
 assert_contains "$step_summary" 'Status: `passed`'
 assert_contains "$step_summary" 'Failed sections: `0`'
@@ -101,10 +105,13 @@ run_expect_code 1 "$out" env \
 assert_contains "$out" "agent_next_step=inspect-user-project"
 assert_contains "$failed_output_dir/verification-report.md" "project failed"
 assert_contains "$failed_output_dir/verification-summary.json" '"overall_status": "failed"'
+assert_contains "$failed_output_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$failed_output_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
+assert_contains "$failed_output_dir/agent-decision.txt" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_output_dir/agent-response.txt" "结论：testloop-mcp onboarding 链路本身是通的，失败发生在用户项目 smoke。"
 assert_contains "$failed_output_dir/agent-response.txt" "- failed_section=用户项目 smoke"
 assert_contains "$failed_output_dir/agent-response.txt" "- exit_code=7"
+assert_contains "$failed_output_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_step_summary" 'Status: `failed`'
 assert_contains "$failed_step_summary" 'Failed sections: `1`'
 assert_contains "$failed_step_summary" 'agent_next_step: `inspect-user-project`'

@@ -76,9 +76,13 @@ assert_contains "$output_dir/agent-response.txt" "结论：testloop-mcp 接入�
 assert_contains "$output_dir/agent-response.txt" "- first_run_agent_next_step=ready"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
+assert_contains "$output_dir/verification-summary.json" '"signals": {'
+assert_contains "$output_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$output_dir/agent-decision.txt" "agent_next_step=ready"
+assert_contains "$output_dir/agent-decision.txt" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$output_dir/first-run-context.txt" "first_run_agent_next_step=ready"
 assert_contains "$output_dir/first-run.log" "onboarding_report=$output_dir/verification-report.md"
+assert_contains "$output_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$step_summary" "## testloop-mcp first-run"
 assert_contains "$step_summary" 'Status: `passed`'
 assert_contains "$step_summary" 'first_run_agent_next_step: `ready`'
@@ -101,10 +105,13 @@ run_expect_code 1 "$out" env \
 assert_contains "$out" "first_run_status=failed"
 assert_contains "$out" "first_run_agent_next_step=inspect-user-project"
 assert_contains "$failed_output_dir/verification-report.md" "project failed"
+assert_contains "$failed_output_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$failed_output_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
+assert_contains "$failed_output_dir/agent-decision.txt" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_output_dir/agent-response.txt" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
 assert_contains "$failed_output_dir/agent-response.txt" "- failed_section=用户项目 smoke"
 assert_contains "$failed_output_dir/agent-response.txt" "- exit_code=7"
+assert_contains "$failed_output_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_step_summary" 'Status: `failed`'
 assert_contains "$failed_step_summary" 'first_run_agent_next_step: `inspect-user-project`'
 assert_contains "$failed_step_summary" "Agent response: \`$failed_output_dir/agent-response.txt\`"
