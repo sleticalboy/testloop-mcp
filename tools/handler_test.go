@@ -2497,6 +2497,9 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 		{TestName: "TestDivision", File: source, Line: 4, Error: "panic: runtime error: integer divide by zero"},
 		{TestName: "TestUndefined", File: source, Line: 5, Error: "undefined: missingSymbol"},
 		{TestName: "TestType", File: source, Line: 6, Error: "cannot use value as string value"},
+		{TestName: "TestModule", File: source, Line: 7, Error: "Error: Cannot find module './user'"},
+		{TestName: "TestImport", File: source, Line: 8, Error: "ModuleNotFoundError: No module named 'app'"},
+		{TestName: "TestCompile", File: source, Line: 9, Error: "not enough arguments in call to Add"},
 	}
 	failuresJSON, err := json.Marshal(failures)
 	if err != nil {
@@ -2528,6 +2531,9 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 		{0.95, "divide_by_zero", []string{"除零检查", "除数是否为 0"}},
 		{0.7, "undefined_symbol", []string{"拼写正确", "符号: missingSymbol"}},
 		{0.7, "type_mismatch", []string{"类型转换", "函数签名"}},
+		{0.8, "module_resolution", []string{"模块或依赖解析失败", "import/require 路径"}},
+		{0.8, "python_import_error", []string{"Python import 失败", "sys.path"}},
+		{0.75, "compile_error", []string{"编译或语法错误", "参数数量"}},
 	}
 	for i, check := range checks {
 		if suggestions[i].Confidence != check.wantConfidence {

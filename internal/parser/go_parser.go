@@ -64,6 +64,7 @@ func parseGoTestJSON(output string) types.TestResult {
 	failedTests := map[string]bool{}
 	packageFailed := false
 	packageName := ""
+	var packageDetails []string
 	for _, rawLine := range strings.Split(output, "\n") {
 		line := strings.TrimSpace(rawLine)
 		if line == "" {
@@ -77,6 +78,10 @@ func parseGoTestJSON(output string) types.TestResult {
 
 		switch event.Action {
 		case "run":
+		case "build-output":
+			if detail := cleanGoPackageOutput(event.Output); detail != "" {
+				packageDetails = append(packageDetails, detail)
+			}
 		case "pass":
 			if event.Test != "" {
 				result.Passed++
@@ -100,7 +105,13 @@ func parseGoTestJSON(output string) types.TestResult {
 				result.CoveragePercent = parseGoCoverageLine(event.Output)
 				continue
 			}
-			if event.Test == "" || event.Output == "" {
+			if event.Output == "" {
+				continue
+			}
+			if event.Test == "" {
+				if detail := cleanGoPackageOutput(event.Output); detail != "" {
+					packageDetails = append(packageDetails, detail)
+				}
 				continue
 			}
 			detail := strings.TrimSpace(event.Output)
@@ -138,9 +149,12 @@ func parseGoTestJSON(output string) types.TestResult {
 		})
 	}
 	if packageFailed && len(result.Failures) == 0 {
+		file, lineNum, errorMsg := summarizeGoPackageFailure(packageDetails)
 		result.Failures = append(result.Failures, types.TestFailure{
 			TestName: packageName,
-			Error:    "package failed",
+			File:     file,
+			Line:     lineNum,
+			Error:    errorMsg,
 		})
 	}
 
@@ -149,6 +163,31 @@ func parseGoTestJSON(output string) types.TestResult {
 		result.Status = "fail"
 	}
 	return result
+}
+
+func cleanGoPackageOutput(output string) string {
+	detail := strings.TrimSpace(output)
+	if detail == "" || detail == "FAIL" || strings.HasPrefix(detail, "FAIL\t") {
+		return ""
+	}
+	return detail
+}
+
+func summarizeGoPackageFailure(details []string) (string, int, string) {
+	for _, detail := range details {
+		if strings.HasPrefix(detail, "# ") {
+			continue
+		}
+		if file, lineNum, msg, ok := parseGoFailureDetail(detail); ok {
+			return file, lineNum, strings.TrimSpace(msg)
+		}
+	}
+	for _, detail := range details {
+		if strings.TrimSpace(detail) != "" {
+			return "", 0, strings.TrimSpace(detail)
+		}
+	}
+	return "", 0, "package failed"
 }
 
 func ensureGoFailure(failures map[string]*goFailureState, testName string) *goFailureState {

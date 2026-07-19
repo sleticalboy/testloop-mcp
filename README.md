@@ -306,6 +306,8 @@ artifact_count=2
 
 `include_fix_suggestions=true` 且测试失败时，`run_tests` 会把失败结果同步转换为 `fix_suggestions[]`，其中包含 `repair_task`。未传 `source_code` / `test_code` 时仍会返回基础分类和任务信息，但源码/测试行上下文可能不完整。
 
+当前 `fix_suggestions[].category` 覆盖常见断言失败、运行时 panic、越界、除零、未定义符号、类型不匹配、模块/依赖解析失败、Python import 失败和编译/语法错误；无法精确分类时回退到 `generic_failure`。
+
 ---
 
 ### `parse_results`

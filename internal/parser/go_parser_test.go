@@ -123,7 +123,8 @@ func TestParseGoTest_JSONSkipOutputIsNotFailure(t *testing.T) {
 
 func TestParseGoTest_JSONPackageFailureWithoutTestFailure(t *testing.T) {
 	output := `
-{"Action":"output","Package":"example.com/calc","Output":"setup failed\n"}
+{"Action":"output","Package":"example.com/calc","Output":"# example.com/calc\n"}
+{"Action":"output","Package":"example.com/calc","Output":"./calc_test.go:6:5: undefined: MissingSymbol\n"}
 {"Action":"fail","Package":"example.com/calc","Elapsed":0}
 `
 
@@ -139,7 +140,10 @@ func TestParseGoTest_JSONPackageFailureWithoutTestFailure(t *testing.T) {
 		t.Fatalf("期望 1 个包级失败，实际 %d", len(result.Failures))
 	}
 	failure := result.Failures[0]
-	if failure.TestName != "example.com/calc" || failure.Error != "package failed" {
+	if failure.TestName != "example.com/calc" ||
+		failure.File != "./calc_test.go" ||
+		failure.Line != 6 ||
+		failure.Error != "5: undefined: MissingSymbol" {
 		t.Fatalf("包级失败错误: %+v", failure)
 	}
 }

@@ -396,6 +396,41 @@ func TestHandleRunTestsCanIncludeFixSuggestions(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsGoCompileFailureIncludesFixSuggestion(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	_ = MissingSymbol
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  dir,
+		Framework:             "go-test",
+		IncludeFixSuggestions: true,
+		SourceCode:            filepath.Join(dir, "calc.go"),
+		TestCode:              filepath.Join(dir, "calc_test.go"),
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Status != "fail" || parsed.Action != "apply_fix_suggestions" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected compile failure result: %+v", parsed)
+	}
+	if !strings.Contains(parsed.Failures[0].Error, "undefined: MissingSymbol") {
+		t.Fatalf("failure should preserve compile detail: %+v", parsed.Failures[0])
+	}
+	if len(parsed.FixSuggestions) != 1 || parsed.FixSuggestions[0].Category != "undefined_symbol" {
+		t.Fatalf("unexpected fix suggestions: %+v", parsed.FixSuggestions)
+	}
+	if parsed.FixSuggestions[0].RepairTask == nil ||
+		parsed.FixSuggestions[0].RepairTask.Category != "undefined_symbol" {
+		t.Fatalf("unexpected repair task: %+v", parsed.FixSuggestions[0])
+	}
+}
+
 func TestHandleRunTestsAllSkippedActionManualReview(t *testing.T) {
 	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
 	t.Skip("manual_review: add real assertions")

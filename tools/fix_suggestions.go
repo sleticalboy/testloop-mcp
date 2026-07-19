@@ -76,7 +76,19 @@ func generateFixSuggestions(failures []types.TestFailure, sourceCode, testCode, 
 		suggestion.ContextFile = context.File
 		suggestion.ContextLine = context.Line
 
-		if isExpectationMismatch(failure, lowerError) {
+		if isModuleResolutionError(lowerError) {
+			suggestion.Category = "module_resolution"
+			suggestion.SuggestedFix = analyzeModuleResolution(errorMsg)
+			suggestion.Confidence = 0.8
+		} else if isPythonImportError(lowerError) {
+			suggestion.Category = "python_import_error"
+			suggestion.SuggestedFix = analyzePythonImportError(errorMsg)
+			suggestion.Confidence = 0.8
+		} else if isCompileError(lowerError) {
+			suggestion.Category = "compile_error"
+			suggestion.SuggestedFix = analyzeCompileError(errorMsg, context.SourceLine, context.TestLine)
+			suggestion.Confidence = 0.75
+		} else if isExpectationMismatch(failure, lowerError) {
 			suggestion.Category = "expectation_mismatch"
 			suggestion.SuggestedFix = analyzeExpectationMismatch(failure, context.SourceLine, context.TestLine)
 			suggestion.Confidence = 0.8
@@ -214,6 +226,12 @@ func repairAssertionFocus(category string) string {
 		return "明确除数为 0 时的业务语义，并断言错误返回或 fallback 行为。"
 	case "runtime_panic":
 		return "定位 panic 行的 nil、slice、map、接口或类型断言访问，并补充异常输入测试。"
+	case "module_resolution":
+		return "检查 import/require 路径、package 安装状态、模块类型和测试文件相对路径。"
+	case "python_import_error":
+		return "检查 Python 模块路径、包初始化文件、虚拟环境依赖和测试工作目录。"
+	case "compile_error":
+		return "先修复编译错误，再重新运行同一测试命令。"
 	case "undefined_symbol":
 		return "确认符号拼写、作用域和 import/package 前缀。"
 	case "type_mismatch":
@@ -241,6 +259,57 @@ func isExpectationMismatch(failure types.TestFailure, lowerError string) bool {
 			strings.Contains(lowerError, " to be ") ||
 			strings.Contains(lowerError, " to equal "))) ||
 		strings.Contains(lowerError, "expect(received)")
+}
+
+func isModuleResolutionError(lowerError string) bool {
+	markers := []string{
+		"cannot find module",
+		"module not found",
+		"err_module_not_found",
+		"failed to resolve import",
+		"cannot find package",
+		"no required module provides package",
+		"is not in std",
+		"cannot use import statement outside a module",
+	}
+	return containsAny(lowerError, markers)
+}
+
+func isPythonImportError(lowerError string) bool {
+	markers := []string{
+		"modulenotfounderror:",
+		"importerror:",
+		"cannot import name",
+		"attempted relative import",
+	}
+	return containsAny(lowerError, markers)
+}
+
+func isCompileError(lowerError string) bool {
+	markers := []string{
+		"syntaxerror:",
+		"build failed",
+		"compilation failed",
+		"compile failed",
+		"declared and not used",
+		"imported and not used",
+		"not enough arguments in call",
+		"too many arguments in call",
+		"assignment mismatch",
+		"missing return",
+		"expected declaration",
+		"expected ';'",
+	}
+	return containsAny(lowerError, markers)
+}
+
+func containsAny(value string, markers []string) bool {
+	for _, marker := range markers {
+		if strings.Contains(value, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func analyzeExpectationMismatch(failure types.TestFailure, sourceLine, testLine string) string {
@@ -334,6 +403,40 @@ func analyzeRuntimePanic(errorMsg, sourceLine string) string {
 	sb.WriteString("2. 对可能为 nil 的值增加显式检查，并返回可断言的错误。\n")
 	sb.WriteString("3. 补充 nil/空集合/缺失字段测试，避免只覆盖正常路径。\n")
 	appendContextLines(&sb, sourceLine, "")
+	return sb.String()
+}
+
+func analyzeModuleResolution(errorMsg string) string {
+	var sb strings.Builder
+	sb.WriteString("模块或依赖解析失败\n")
+	sb.WriteString(fmt.Sprintf("  错误: %s\n", errorMsg))
+	sb.WriteString("建议：\n")
+	sb.WriteString("1. 检查 import/require 路径是否相对当前测试文件正确，尤其是生成测试写到临时目录或 tests 目录时。\n")
+	sb.WriteString("2. 确认 package.json、go.mod 或依赖安装状态包含目标模块；缺失依赖时先安装或补充 module requirement。\n")
+	sb.WriteString("3. 对 JS/TS 项目，确认 ESM/CommonJS 类型、文件扩展名和测试 runner 的 alias 配置一致。\n")
+	return sb.String()
+}
+
+func analyzePythonImportError(errorMsg string) string {
+	var sb strings.Builder
+	sb.WriteString("Python import 失败\n")
+	sb.WriteString(fmt.Sprintf("  错误: %s\n", errorMsg))
+	sb.WriteString("建议：\n")
+	sb.WriteString("1. 确认测试命令的工作目录能把源码包放进 sys.path，必要时从项目根运行 pytest。\n")
+	sb.WriteString("2. 检查模块名、包目录、__init__.py 和相对 import 写法是否匹配。\n")
+	sb.WriteString("3. 如果是第三方依赖缺失，先安装测试环境依赖，再重新运行同一测试。\n")
+	return sb.String()
+}
+
+func analyzeCompileError(errorMsg, sourceLine, testLine string) string {
+	var sb strings.Builder
+	sb.WriteString("编译或语法错误\n")
+	sb.WriteString(fmt.Sprintf("  错误: %s\n", errorMsg))
+	sb.WriteString("建议：\n")
+	sb.WriteString("1. 先修复编译错误，不要继续调整测试断言。\n")
+	sb.WriteString("2. 检查函数签名、参数数量、未使用变量/import、返回值数量和语法结构。\n")
+	sb.WriteString("3. 修复后先运行同一个测试文件，再运行相关包或项目测试。\n")
+	appendContextLines(&sb, sourceLine, testLine)
 	return sb.String()
 }
 
