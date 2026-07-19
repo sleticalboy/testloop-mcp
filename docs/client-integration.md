@@ -110,6 +110,13 @@ first-run 和 onboarding 的 `agent-response.txt` 统一字段、读取顺序和
 
 如果希望测试自动发现 artifact fixture，可以读取 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，其中固定了 first-run / onboarding 的目录、必备文件、期望 action 和 fallback 顺序。
 
+仓库提供了一个最小 manifest 消费 demo：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
 ## 推荐客户端伪代码
 
 ```text

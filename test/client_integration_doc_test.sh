@@ -24,6 +24,7 @@ required_snippets = [
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
     "./fixtures/agent-response-artifact-manifest.json",
+    "go run ./examples/agent-response-manifest-demo",
     "go run ./examples/first-run-agent-response-demo",
     "first_run_agent_next_step=inspect-user-project",
     "agent_next_step=inspect-user-project",
@@ -39,6 +40,7 @@ for snippet in required_snippets:
 
 command_paths = {
     "go run ./examples/agent-decision-demo": Path("examples/agent-decision-demo/main.go"),
+    "go run ./examples/agent-response-manifest-demo": Path("examples/agent-response-manifest-demo/main.go"),
     "go run ./examples/first-run-agent-response-demo": Path("examples/first-run-agent-response-demo/main.go"),
     "sh scripts/render-first-run-agent-response.sh": Path("scripts/render-first-run-agent-response.sh"),
     "sh scripts/render-onboarding-agent-response.sh": Path("scripts/render-onboarding-agent-response.sh"),

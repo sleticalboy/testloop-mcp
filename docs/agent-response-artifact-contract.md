@@ -70,6 +70,13 @@ CI 失败时按这个顺序读取：
 
 - [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
 
+最小消费 demo：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
 ## 相关文档
 
 - [CI 失败后交给 Agent](./ci-agent-triage.md)

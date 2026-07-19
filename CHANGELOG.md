@@ -6,11 +6,13 @@
 
 - 新增 `docs/agent-response-artifact-contract.md`，统一 first-run/onboarding `agent-response.txt` 的结构、字段、读取顺序和客户端断言。
 - 新增 `docs/fixtures/agent-response-artifact-manifest.json`，为客户端测试提供 first-run/onboarding artifact fixture 的机器可读索引。
+- 新增 `examples/agent-response-manifest-demo`，演示客户端如何读取 manifest 自动枚举并校验 artifact fixture。
 
 ### Changed
 
 - README、CI 失败 triage 和客户端集成说明已收敛为失败后优先读取 `agent-response.txt`，再按需下钻 decision、summary 和 report。
 - `docs/client-integration.md` 和 `docs/fixtures.md` 已链接 Agent response artifact manifest，减少客户端手写 fixture 路径和字段映射。
+- `docs/client-integration.md` 和 Agent response contract 已补 manifest demo 命令。
 
 ## v0.5.10 - 2026-07-19
 
