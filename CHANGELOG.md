@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 新增 `docs/plan-release-notes-v0.5.8.md` 和 `docs/plan-release-v0.5.8.md`，整理 v0.5.8 候选发布说明和发布检查清单。
 - 新增 `docs/first-run-agent-response.md` 和文档测试，固定 Agent 收到 `first-run-context.txt` 后的回复结构、分流动作和 `inspect-user-project` 示例。
 - `docs/ci-agent-triage.md` 增加 first-run 失败态实跑记录，确认故意失败的外部项目 smoke 会分流到 `inspect-user-project`，并修正安装脚本在聚合 `checksums.txt` 缺少当前资产时不继续尝试单资产 `.sha256` 的问题。
 - 新增 `docs/ci-agent-triage.md` 和文档测试，说明 CI 失败后如何下载 artifact、读取 `agent-decision.txt` / `first-run-context.txt`，并把最小上下文交给 AI Agent。
