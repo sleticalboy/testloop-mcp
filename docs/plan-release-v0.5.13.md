@@ -55,21 +55,23 @@
 - [x] `9400f01` 远端 CI run `29695128722` passed，覆盖 manifest 暴露 summary schema。
 - [x] `4526c85` 远端 CI run `29695505354` passed，覆盖 artifact section signal fixture。
 - [x] `515fd00` 远端 CI run `29695649219` passed，覆盖 artifact decision action 验证。
+- [x] `1395715` 远端 CI run `29695820104` passed，覆盖 v0.5.13 候选发布边界文档。
+- [x] 候选 release readiness 已通过：shell 语法、`go test ./...`、全部 `test/*_test.sh`、候选二进制构建、help/version、darwin arm64 打包 dry-run、sha256 和 tarball 内容检查。
 
 ## 发布前门禁
 
-- [ ] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
-- [ ] `go test ./...`
-- [ ] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
-- [ ] `go build -o /tmp/testloop-mcp-v0.5.13-candidate .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.5.13-candidate ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.5.13-candidate --version`
-- [ ] `/tmp/testloop-mcp-v0.5.13-candidate --help`
-- [ ] `/tmp/testloop-testgen-v0.5.13-candidate --help`
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.13-candidate-dist scripts/package-release-asset.sh v0.5.13 darwin_arm64 darwin arm64`
-- [ ] 在 dist 目录内校验 `testloop-mcp_v0.5.13_darwin_arm64.tar.gz.sha256`。
-- [ ] 检查 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
-- [ ] `git diff --check`
+- [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
+- [x] `go test ./...`
+- [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `go build -o /tmp/testloop-mcp-v0.5.13-candidate .`
+- [x] `go build -o /tmp/testloop-testgen-v0.5.13-candidate ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.5.13-candidate --version` 输出 `testloop-mcp 0.5.12`，正式版本准备前未提前切版本号。
+- [x] `/tmp/testloop-mcp-v0.5.13-candidate --help` 输出 `Usage of testloop-mcp`，exit code 为 `2`。
+- [x] `/tmp/testloop-testgen-v0.5.13-candidate --help` 输出 `Usage: testgen`，exit code 为 `2`。
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.13-candidate-dist scripts/package-release-asset.sh v0.5.13 darwin_arm64 darwin arm64`
+- [x] 在 dist 目录内校验 `testloop-mcp_v0.5.13_darwin_arm64.tar.gz.sha256` 通过。
+- [x] `tar -tzf /tmp/testloop-v0.5.13-candidate-dist/testloop-mcp_v0.5.13_darwin_arm64.tar.gz`，内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+- [x] `git diff --check`
 
 ## 正式发布前待办
 
@@ -89,4 +91,4 @@
 
 ## 当前结论
 
-v0.5.13 已具备候选发布边界：这一轮聚焦 Agent/客户端可消费契约，不扩语言、不改大方向。下一步应跑完整候选门禁；如果通过，再决定是否进入正式版本准备。
+v0.5.13 已具备候选发布边界，候选 release readiness 已通过：这一轮聚焦 Agent/客户端可消费契约，不扩语言、不改大方向。下一步如果要继续发布，应进入正式版本准备：切 `0.5.13` 版本号、收敛 changelog、同步版本引用并重新跑发布前门禁。
