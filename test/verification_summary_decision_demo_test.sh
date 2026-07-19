@@ -34,6 +34,15 @@ cat > "$passed_summary" <<'JSON'
       "status": "skipped",
       "exit_code": null,
       "reason": "未设置 TESTLOOP_REPORT_PROJECT_DIR 和 TESTLOOP_REPORT_PROJECT_COMMAND"
+    },
+    {
+      "name": "独立 CLI 生成动作 smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null,
+      "signals": {
+        "action": "manual_review"
+      }
     }
   ]
 }
@@ -82,7 +91,8 @@ JSON
 out="${tmp_dir}/decision.out"
 
 (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$passed_summary") > "$out"
-assert_contains "$out" "verification_summary: status=passed failed=0 sections=2"
+assert_contains "$out" "verification_summary: status=passed failed=0 sections=3"
+assert_contains "$out" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$out" "agent_next_step=ready"
 
 (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$project_failed_summary") > "$out"
