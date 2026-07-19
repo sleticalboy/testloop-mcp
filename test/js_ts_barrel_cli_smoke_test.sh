@@ -43,7 +43,7 @@ output="$tmp_dir/tests/api.test.ts"
   go run ./cmd/testgen "$tmp_dir/src/api.ts" "$output" >/tmp/testloop-js-ts-barrel-cli-smoke.out
 )
 
-grep -F "Generated: $output (provider=static)" /tmp/testloop-js-ts-barrel-cli-smoke.out >/dev/null
+grep -F "Generated: $output (provider=static action=ready)" /tmp/testloop-js-ts-barrel-cli-smoke.out >/dev/null
 grep -F "import { describe, it, expect } from 'vitest';" "$output" >/dev/null
 grep -F "import { loadUser } from '../src/api';" "$output" >/dev/null
 grep -F "json: async () => ({ userId: 1, email: 'user@example.com' })" "$output" >/dev/null

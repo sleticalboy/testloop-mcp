@@ -468,6 +468,8 @@ go test ./internal/parser/ -v
 go run ./cmd/testgen demo/calc.go
 go run ./cmd/testgen -provider llm -provider-check
 go run ./cmd/testgen -provider auto demo/calc.py /tmp/test_calc.py
+# 生成成功时会输出 action=ready 或 action=manual_review；
+# manual_review 通常表示生成结果包含 TODO/skipped 手审草稿，不能直接视为有效覆盖。
 
 # 启动 MCP server
 go run main.go                          # stdio 模式（默认）

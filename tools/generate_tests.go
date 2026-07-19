@@ -79,7 +79,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		Status:         "ok",
 		TestFile:       testFile,
 		GeneratedCases: countGeneratedCases(code, filepath.Ext(filePath)),
-		Action:         generatedTestsAction(code, filepath.Ext(filePath)),
+		Action:         generator.GeneratedTestsAction(code, filePath),
 		Preview:        code,
 		Context:        genCtx,
 		CoverageTask:   input.CoverageTask,
@@ -320,29 +320,6 @@ func countGeneratedCases(code, ext string) int {
 	default:
 		return 0
 	}
-}
-
-func generatedTestsAction(code, ext string) string {
-	ext = strings.ToLower(ext)
-	switch ext {
-	case ".go":
-		if strings.Contains(code, `t.Skip("TODO: fill in meaningful test inputs and expected values")`) {
-			return "manual_review"
-		}
-	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
-		if strings.Contains(code, ".skip(") || strings.Contains(code, "manual_review_") {
-			return "manual_review"
-		}
-	case ".py":
-		if strings.Contains(code, "pytest.skip(") || strings.Contains(code, "__import__('pytest').skip(") || strings.Contains(code, "manual_review_") {
-			return "manual_review"
-		}
-	case ".java":
-		if strings.Contains(code, "Assumptions.assumeTrue(false") || strings.Contains(code, "manual_review_") {
-			return "manual_review"
-		}
-	}
-	return "ready"
 }
 
 func countLinePrefixes(code string, prefixes ...string) int {

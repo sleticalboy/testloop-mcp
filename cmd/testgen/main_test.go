@@ -172,7 +172,7 @@ func TestRunTestgenWritesDefaultOutput(t *testing.T) {
 		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
 	}
 	output := filepath.Join(dir, "calc_test.go")
-	if !strings.Contains(stdout.String(), "Generated: "+output+" (provider=static)") {
+	if !strings.Contains(stdout.String(), "Generated: "+output+" (provider=static action=manual_review)") {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
 	content, err := os.ReadFile(output)
@@ -181,6 +181,34 @@ func TestRunTestgenWritesDefaultOutput(t *testing.T) {
 	}
 	if !strings.Contains(string(content), "func TestAdd") {
 		t.Fatalf("generated test missing TestAdd:\n%s", content)
+	}
+}
+
+func TestRunTestgenReportsManualReviewActionForGoTodoSkeleton(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "alias.go")
+	if err := os.WriteFile(source, []byte(`package alias
+
+func SliceMapper[T any, U any](src []T, mapper func(T) U) []U {
+	dst := make([]U, 0, len(src))
+	for _, v := range src {
+		dst = append(dst, mapper(v))
+	}
+	return dst
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	output := filepath.Join(dir, "alias_test.go")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{source, output}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Generated: "+output+" (provider=static action=manual_review)") {
+		t.Fatalf("stdout missing manual_review action: %q", stdout.String())
 	}
 }
 

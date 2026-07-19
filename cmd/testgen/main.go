@@ -72,7 +72,8 @@ func runTestgen(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	fmt.Fprintf(stdout, "Generated: %s (provider=%s)\n", outputFile, provider.Name())
+	action := generator.GeneratedTestsAction(code, srcFile)
+	fmt.Fprintf(stdout, "Generated: %s (provider=%s action=%s)\n", outputFile, provider.Name(), action)
 	return 0
 }
 

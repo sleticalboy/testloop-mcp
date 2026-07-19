@@ -56,7 +56,7 @@ output="$tmp_dir/utils/alias_testloop_test.go"
   go run ./cmd/testgen "$tmp_dir/utils/alias.go" "$output" >/tmp/testloop-go-cli-duplicate-name-smoke.out
 )
 
-grep -F "Generated: $output (provider=static)" /tmp/testloop-go-cli-duplicate-name-smoke.out >/dev/null
+grep -F "Generated: $output (provider=static action=manual_review)" /tmp/testloop-go-cli-duplicate-name-smoke.out >/dev/null
 grep -F "func TestSliceMapperTestLoop(t *testing.T)" "$output" >/dev/null
 grep -F "func TestSplitSlice(t *testing.T)" "$output" >/dev/null
 

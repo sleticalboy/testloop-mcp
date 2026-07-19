@@ -2247,28 +2247,6 @@ func TestCountGeneratedCasesByLanguage(t *testing.T) {
 	}
 }
 
-func TestGeneratedTestsAction(t *testing.T) {
-	tests := []struct {
-		name string
-		ext  string
-		code string
-		want string
-	}{
-		{name: "go ready", ext: ".go", code: "func TestAdd(t *testing.T) {}", want: "ready"},
-		{name: "go todo skip", ext: ".go", code: `func TestAdd(t *testing.T) { t.Skip("TODO: fill in meaningful test inputs and expected values") }`, want: "manual_review"},
-		{name: "js manual review", ext: ".ts", code: "it.skip('manual', () => {})", want: "manual_review"},
-		{name: "python manual review", ext: ".py", code: "__import__('pytest').skip('manual_review_internal: helper')", want: "manual_review"},
-		{name: "java manual review", ext: ".java", code: "org.junit.jupiter.api.Assumptions.assumeTrue(false, \"manual_review_unreachable: line\")", want: "manual_review"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := generatedTestsAction(tt.code, tt.ext); got != tt.want {
-				t.Fatalf("generatedTestsAction = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestHandleFixSuggestionsReturnsEmptyForNoFailures(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.go")
