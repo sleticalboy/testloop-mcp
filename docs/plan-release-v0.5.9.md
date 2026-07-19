@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.9 的候选发布准备记录。当前阶段只整理候选内容和本地/远端门禁，不打 tag、不更新 Homebrew tap。
+这是 v0.5.9 的候选发布和正式版本准备记录。当前已完成正式版本准备的版本同步；tag、Release Artifacts 和 Homebrew tap 仍需等版本准备提交的远端 CI 通过后再推进。
 
 v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.md)：本轮主要是 first-run artifact Agent 消费 demo、端到端回归、失败 artifact fixture 包、客户端集成文档和 README 入口。
 
@@ -37,7 +37,8 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 - [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
 - [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
 - [x] `git diff --check`
-- [x] 远端 CI run `29670275988` passed。
+- [x] 候选提交远端 CI run `29670477128` passed。
+- [x] 正式版本准备本地验证已通过：脚本语法、`go test ./...`、完整 shell 矩阵、主服务/testgen 构建、`--version`、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
 
 ## 发布前门禁
 
@@ -55,12 +56,13 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.9`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.9 - 2026-07-19`。
-- [ ] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.9`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.9`。
-- [ ] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.9`。
-- [ ] 测试中的版本期望同步到 `0.5.9`。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.9`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.9 - 2026-07-19`。
+- [x] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.9`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.9`。
+- [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.9`。
+- [x] 测试中的版本期望同步到 `0.5.9`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.9` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -72,4 +74,4 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 
 ## 当前结论
 
-v0.5.9 候选内容和本地发布前门禁已经完成，适合作为 Agent artifact 消费体验 patch。下一步提交候选发布资料并等待远端 CI；通过后再决定是否进入正式版本准备。
+v0.5.9 正式版本准备改动和本地完整验证已完成，适合作为 Agent artifact 消费体验 patch。下一步提交版本准备改动并等待远端 CI，通过后再进入 tag、Release Artifacts、GitHub Release 和 Homebrew tap 流程。

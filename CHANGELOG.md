@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.9 - 2026-07-19
 
 ### Added
 
@@ -15,6 +15,7 @@
 - `docs/fixtures.md` 扩展 first-run artifact fixture 索引，区分 MCP tool 结构化返回 fixture 和 CI artifact fixture。
 - `docs/client-integration.md` 增加 CI artifact fixture 消费路径，说明 `agent-decision.txt`、`first-run-context.txt`、`verification-summary.json` 和 `verification-report.md` 的读取顺序。
 - README 和 release 文档索引补充 first-run artifact Agent 消费演示、demo 命令和失败 artifact fixture 入口。
+- MCP server implementation version 更新为 `0.5.9`。
 
 ## v0.5.8 - 2026-07-19
 
