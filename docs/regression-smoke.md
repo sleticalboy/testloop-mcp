@@ -39,7 +39,7 @@ scripts/validate-regression-smoke.sh
 | Java / Commons Lang | `/tmp/testloop-commons-lang` | `testdata/java-commons-lang/ready-hit-tasks.jsonl`、`testdata/java-commons-lang/manual-internal-tasks.jsonl` |
 | Java / Commons Codec | `/tmp/testloop-commons-codec` | `testdata/java-commons-codec/unreachable-tasks.jsonl` |
 | Java / RocketMQ StatusChecker | `/Users/binlee/code/free-works/haoying/rocketmq-clients/java` | `testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl` |
-| JS / ip2region | `/Users/binlee/code/open-source/ip2region/binding/javascript` | `/tmp/testloop-ip2region-js-jest-top2-current.jsonl` |
+| JS / ip2region | `/Users/binlee/code/open-source/ip2region/binding/javascript` | `testdata/js-ip2region/ready-hit-tasks.jsonl` |
 | JS / no-runtime fixture | `./testdata/js-no-runtime` | 运行时临时生成到输出目录 |
 | JS / internal fixture | `./testdata/js-internal` | 运行时临时生成到输出目录 |
 | JS / mcp-hub | `/Users/binlee/code/open-source/mcp-hub` | 运行时临时生成到输出目录 |

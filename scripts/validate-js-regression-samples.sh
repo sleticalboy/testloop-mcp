@@ -18,7 +18,7 @@ top-N 覆盖率窗口。
                                     默认：/Users/binlee/code/open-source/ip2region/binding/javascript
   TESTLOOP_JS_REGRESSION_IP2REGION_TASKS_FILE
                                     包含 ip2region Jest 任务的 JSONL。
-                                    默认：/tmp/testloop-ip2region-js-jest-top2-current.jsonl
+                                    默认：testdata/js-ip2region/ready-hit-tasks.jsonl
   TESTLOOP_JS_REGRESSION_IP2REGION_READY_IDS
                                     默认：jest-1,jest-2
   TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR
@@ -70,7 +70,7 @@ validator="$script_dir/validate-js-coverage-top-tasks.sh"
 
 output_dir="${TESTLOOP_JS_REGRESSION_OUTPUT_DIR:-/tmp/testloop-js-regression-$(date +%Y%m%d%H%M%S)}"
 ip2region_dir="${TESTLOOP_JS_REGRESSION_IP2REGION_DIR:-/Users/binlee/code/open-source/ip2region/binding/javascript}"
-ip2region_tasks="${TESTLOOP_JS_REGRESSION_IP2REGION_TASKS_FILE:-/tmp/testloop-ip2region-js-jest-top2-current.jsonl}"
+ip2region_tasks="${TESTLOOP_JS_REGRESSION_IP2REGION_TASKS_FILE:-$repo_root/testdata/js-ip2region/ready-hit-tasks.jsonl}"
 ip2region_ready_ids="${TESTLOOP_JS_REGRESSION_IP2REGION_READY_IDS:-jest-1,jest-2}"
 no_runtime_dir="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR:-$repo_root/testdata/js-no-runtime}"
 no_runtime_ids="${TESTLOOP_JS_REGRESSION_NO_RUNTIME_IDS:-jest-no-runtime-1}"

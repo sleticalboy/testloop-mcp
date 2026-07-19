@@ -55,6 +55,7 @@ jobs:
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
           sh test/java_regression_fixture_test.sh
+          sh test/js_regression_fixture_test.sh
           sh test/release_doc_index_test.sh
           sh test/fixtures_index_test.sh
           sh test/fixture_decision_mapping_test.sh
