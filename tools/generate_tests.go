@@ -62,6 +62,12 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil && filepath.Dir(testFile) != "." {
 		return nil, nil, fmt.Errorf("创建测试目录失败: %w", err)
 	}
+	if filepath.Ext(filePath) == ".go" {
+		code, err = generator.AvoidDuplicateGoTestNames(filePath, testFile, code)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	writtenCode, err := writeGeneratedTestFile(testFile, code, filepath.Ext(filePath))
 	if err != nil {
 		return nil, nil, fmt.Errorf("写入测试文件失败: %w", err)

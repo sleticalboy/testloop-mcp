@@ -896,6 +896,42 @@ func TestHandleGenerateTestsStaticGo(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsStaticGoAvoidsDuplicateAcrossPackageFiles(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte("package calc\nfunc Add(a, b int) int { return a + b }\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	existing := `package calc
+
+import "testing"
+
+func TestAdd(t *testing.T) {}
+`
+	if err := os.WriteFile(filepath.Join(dir, "existing_test.go"), []byte(existing), 0o644); err != nil {
+		t.Fatalf("write existing test: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.TestFile != filepath.Join(dir, "calc_test.go") {
+		t.Fatalf("test file = %q, want %q", generated.TestFile, filepath.Join(dir, "calc_test.go"))
+	}
+	if !strings.Contains(generated.Preview, "func TestAddTestLoop(t *testing.T)") {
+		t.Fatalf("generated preview should avoid existing TestAdd:\n%s", generated.Preview)
+	}
+	if strings.Contains(generated.Preview, "func TestAdd(t *testing.T)") {
+		t.Fatalf("generated preview still contains duplicate TestAdd:\n%s", generated.Preview)
+	}
+}
+
 func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "calc.js")
