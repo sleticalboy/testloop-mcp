@@ -75,16 +75,16 @@
 - [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.10`。
 - [x] 测试中的版本期望同步到 `0.5.10`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.10` 并推送。
-- [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.10` 验证 10 个 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.10 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.10` 更新仓库内 Formula。
+- [x] 提交版本准备改动 `df4a2c3` 后确认远端 CI run `29673498767` passed。
+- [x] 打 tag `v0.5.10` 并推送。
+- [x] Release Artifacts workflow run `29673555807` 已生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.10` 验证 10 个 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.10 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.10` 更新仓库内 Formula。
 - [ ] 仓库内 Formula 和发布记录提交后确认远端 CI passed。
 - [ ] 更新 Homebrew tap 到 `0.5.10` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.10 正式版本准备已完成本地验证；下一步提交版本准备改动并等待远端 CI，通过后打 tag、验证 Release Artifacts，并更新 GitHub Release 与 Homebrew tap。
+v0.5.10 tag、Release Artifacts、资产校验、GitHub Release 正文和仓库内 Formula 已完成；下一步提交仓库内 Formula 和发布记录，等待远端 CI 后更新 Homebrew tap。
