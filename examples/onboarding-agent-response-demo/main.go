@@ -15,9 +15,10 @@ type verificationSummary struct {
 }
 
 type verificationSection struct {
-	Name     string `json:"name"`
-	Status   string `json:"status"`
-	ExitCode *int   `json:"exit_code"`
+	Name     string            `json:"name"`
+	Status   string            `json:"status"`
+	ExitCode *int              `json:"exit_code"`
+	Signals  map[string]string `json:"signals"`
 }
 
 type responsePlan struct {
@@ -58,6 +59,7 @@ func run(args []string) error {
 	if exitCode != "" {
 		fmt.Printf("- exit_code=%s\n", exitCode)
 	}
+	printSectionSignals(summary.Sections)
 	if summary.MarkdownReport != "" {
 		fmt.Printf("- markdown_report=%s\n", summary.MarkdownReport)
 	}
@@ -72,6 +74,16 @@ func run(args []string) error {
 		fmt.Printf("- %s\n", item)
 	}
 	return nil
+}
+
+func printSectionSignals(sections []verificationSection) {
+	for _, section := range sections {
+		action := strings.TrimSpace(section.Signals["action"])
+		if action == "" {
+			continue
+		}
+		fmt.Printf("- section_signal=%s action=%s\n", section.Name, action)
+	}
 }
 
 func loadSummary(path string) (verificationSummary, error) {

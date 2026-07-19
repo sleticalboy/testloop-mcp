@@ -51,6 +51,29 @@ assert_contains "$out" "结论：testloop-mcp onboarding 链路通过，可以�
 assert_contains "$out" "- agent_next_step=ready"
 assert_contains "$out" "- markdown_report=/tmp/testloop-onboarding-report.md"
 
+cat > "${passed_dir}/verification-summary.json" <<'JSON'
+{
+  "overall_status": "passed",
+  "failed_count": 0,
+  "markdown_report": "/tmp/testloop-onboarding-report.md",
+  "sections": [
+    {
+      "name": "独立 CLI 生成动作 smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "reason": null,
+      "signals": {
+        "action": "manual_review"
+      }
+    }
+  ]
+}
+JSON
+
+sh "${repo_root}/scripts/render-onboarding-agent-response.sh" "$passed_dir" > "$out"
+assert_contains "$out" "- agent_next_step=ready"
+assert_contains "$out" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
+
 sh "${repo_root}/scripts/render-onboarding-agent-response.sh" --help > "$out"
 assert_contains "$out" "Usage: scripts/render-onboarding-agent-response.sh <onboarding-artifact-dir>"
 
