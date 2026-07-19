@@ -58,7 +58,7 @@
 
 `coverage_task` 只会在 MCP 调用方传入单个覆盖率任务时出现。外部 LLM provider 应优先遵守其中的 `target`、`test_file`、`test_name`、`suggested_inputs` 和 `assertion_focus`，并把 `static_code` 当作可修改草稿，而不是重新生成整文件测试。
 
-JS/TS 目标中的 `return_type_expr` 会保留 TypeScript 返回注解。`payload_notes` 会解释静态 payload 的保守边界，例如跨文件类型、约束泛型、动态 indexed access 或 `keyof`；当返回注解引用 imported type 时，也会给出 import 来源和候选源码文件。provider 可以据此读取更多项目上下文或保留静态草稿的保守 mock。
+JS/TS 目标中的 `return_type_expr` 会保留 TypeScript 返回注解。`payload_notes` 会解释静态 payload 的保守边界，例如包类型、namespace import、约束泛型、动态 indexed access 或 `keyof`。当返回注解引用相对 import 且已经解析到本地类型声明时，`payload_notes` 会输出 `resolved from <file>`，此时 `static_code` 和 `context` 已经复用真实类型结构；当相对 import 无法解析时，才会给出 import 来源和候选源码文件。provider 可以据此决定直接沿用静态草稿、读取更多项目上下文，或保留保守 mock。
 
 provider 的 stdout 支持两种返回格式：
 
@@ -110,7 +110,7 @@ export TESTLOOP_LLM_PROVIDER_CMD="sh examples/llm-provider.sh"
 
 `examples/llm-provider.sh` 是一个最小示例：它会读取 stdin JSON，并直接返回 `static_code`。真实接入 OpenAI、Ollama、Claude 或内部模型时，可以在这个脚本里把 `context` 和 `static_code` 组装成 prompt，再把模型返回的测试代码写到 stdout。
 
-示例脚本还会消费 `payload_notes` 中的 `read candidate source files: ...` 提示：当候选文件存在于 `source_file` 同目录或子目录时，会读取这些文件并放入 prompt 的 `Imported Type Context` 小节。默认情况下 stdout 仍只返回 `static_code`，不会把 prompt 写入测试文件。
+示例脚本还会消费 `payload_notes` 中的 `read candidate source files: ...` 提示：当相对 import 未解析、且候选文件存在于 `source_file` 同目录或子目录时，会读取这些文件并放入 prompt 的 `Imported Type Context` 小节。若 `payload_notes` 是 `resolved from <file>`，说明静态生成器已经解析到本地类型声明，示例脚本不会重复读取该文件。默认情况下 stdout 仍只返回 `static_code`，不会把 prompt 写入测试文件。
 
 默认 prompt 模板位于 `examples/llm-provider-prompt.md`。模板支持这些占位符：
 
