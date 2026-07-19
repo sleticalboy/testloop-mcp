@@ -8,8 +8,8 @@
 
 ```bash
 go run ./examples/first-run-agent-response-demo \
-  docs/fixtures/first-run/inspect-user-project.txt \
-  docs/fixtures/verification-summary/user-project-failed.json
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/first-run-context.txt \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json
 ```
 
 输出应固定为四段：
@@ -61,6 +61,16 @@ go run ./examples/first-run-agent-response-demo \
 ```
 
 这个测试固定了从 CI 失败五件套到 Agent 四段回复的整条链路。
+
+## fixture 包
+
+仓库提供一份完整的失败 artifact 包：
+
+```text
+docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+```
+
+它包含 first-run 失败时应上传的五件套，适合客户端或 Agent 集成测试直接读取，不需要每次都重新构造失败项目。
 
 ## 边界
 

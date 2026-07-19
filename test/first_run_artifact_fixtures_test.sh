@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+fixture_dir="${repo_root}/docs/fixtures/first-run-artifacts/user-project-smoke-failed"
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT INT TERM
+
+assert_file() {
+  path="$1"
+  if [ ! -f "$path" ]; then
+    echo "missing fixture file: $path" >&2
+    exit 1
+  fi
+}
+
+assert_contains() {
+  file="$1"
+  needle="$2"
+  if ! grep -F -- "$needle" "$file" >/dev/null 2>&1; then
+    echo "expected $file to contain: $needle" >&2
+    echo "--- $file ---" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
+for name in \
+  README.md \
+  verification-report.md \
+  verification-summary.json \
+  agent-decision.txt \
+  first-run-context.txt \
+  first-run.log
+do
+  assert_file "$fixture_dir/$name"
+done
+
+ruby -rjson -e 'JSON.parse(File.read(ARGV.fetch(0)));' "$fixture_dir/verification-summary.json"
+assert_contains "$fixture_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
+assert_contains "$fixture_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
+assert_contains "$fixture_dir/verification-summary.json" '"overall_status": "failed"'
+assert_contains "$fixture_dir/verification-summary.json" '"failed_count": 1'
+assert_contains "$fixture_dir/verification-report.md" "project failed from fixture"
+assert_contains "${repo_root}/docs/fixtures.md" "./fixtures/first-run-artifacts/user-project-smoke-failed/"
+assert_contains "${repo_root}/docs/fixtures.md" "first-run artifact fixture"
+assert_contains "${repo_root}/docs/fixtures.md" "first-run-context.txt"
+
+out="${tmp_dir}/response.out"
+(cd "$repo_root" && go run ./examples/first-run-agent-response-demo \
+  "$fixture_dir/first-run-context.txt" \
+  "$fixture_dir/verification-summary.json") > "$out"
+
+assert_contains "$out" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
+assert_contains "$out" "- failed_section=用户项目 smoke"
+assert_contains "$out" "- exit_code=7"
+
+echo "first-run artifact fixtures test passed"

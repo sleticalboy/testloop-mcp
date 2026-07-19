@@ -4,7 +4,7 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
-## fixture 列表
+## validate_coverage_task fixture 列表
 
 | 文件 | status/action | 来源 | Agent 下一步 |
 | --- | --- | --- | --- |
@@ -13,9 +13,17 @@
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | `failed/apply_fix_suggestions` | 临时 Go 项目，已有失败测试触发 `failures[]`、`fix_suggestions[]` 和 `repair_task` | 优先读取 `run_result.fix_suggestions[].repair_task`，按限定文件和命令进入修复闭环。 |
 | [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | `failed/needs_better_input` | 临时 Java/JUnit 项目，测试命令通过但 JaCoCo 目标行未命中 | 不吸收该测试；读取 `metadata.coverage_miss_reason` 和未命中行，改用更强输入或更合适的公共入口。 |
 
+## first-run artifact fixture
+
+| 目录 | action | 内容 | Agent 下一步 |
+| --- | --- | --- | --- |
+| [user-project-smoke-failed](./fixtures/first-run-artifacts/user-project-smoke-failed/) | `inspect-user-project` | first-run 失败五件套：`verification-report.md`、`verification-summary.json`、`agent-decision.txt`、`first-run-context.txt`、`first-run.log` | 先打开用户项目 smoke 失败 section，再复跑同一条项目测试/构建命令。 |
+
+这类 fixture 面向 CI artifact 消费方：可以直接把 `first-run-context.txt` 和 `verification-summary.json` 喂给 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)，不用每次都重新构造失败项目。
+
 ## 稳定字段
 
-这些 fixture 有意保留 Agent 决策需要的字段：
+`validate_coverage_task` fixture 有意保留 Agent 决策需要的字段：
 
 - `status`
 - `action`
