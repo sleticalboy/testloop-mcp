@@ -26,6 +26,10 @@ required = [
     "agent-response.txt",
     "first-run.log",
     "if: always()",
+    "go run ./examples/agent-response-manifest-demo",
+    "docs/fixtures/agent-response-artifact-manifest.json",
+    "agent-response-artifact-manifest.schema.json",
+    "fallback_order",
     "agent_next_step=ready",
     "fix-installation",
     "inspect-mcp-transport",
@@ -50,6 +54,10 @@ for path in [
     Path("docs/first-run-diagnostics.md"),
     Path("docs/first-run-ci-template.md"),
     Path("docs/onboarding-ci-template.md"),
+    Path("docs/mcp-client-contract-tests.md"),
+    Path("docs/fixtures.md"),
+    Path("docs/fixtures/agent-response-artifact-manifest.json"),
+    Path("docs/fixtures/agent-response-artifact-manifest.schema.json"),
 ]:
     if not path.exists():
         print(f"missing referenced file: {path}")

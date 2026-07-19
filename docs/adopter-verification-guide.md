@@ -100,6 +100,15 @@ onboarding CI 上传四件套：
 
 GitHub Actions 里上传 artifact 时使用 `if: always()`，否则失败时最需要的上下文可能不会被保存。
 
+如果要把 artifact 消费也纳入客户端或 Agent 回归，优先读取机器可读索引：
+
+```bash
+go run ./examples/agent-response-manifest-demo \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+manifest 的结构契约见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，其中固定了 first-run/onboarding artifact 目录、必备文件、期望 action 和 `fallback_order`。
+
 ## 5. 失败时看哪个字段
 
 优先看 `agent-decision.txt`：
@@ -144,3 +153,5 @@ TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=all \
 - [首跑诊断](./first-run-diagnostics.md)
 - [首跑诊断 CI 复制模板](./first-run-ci-template.md)
 - [Onboarding CI 复制模板](./onboarding-ci-template.md)
+- [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)
+- [真实结构化 fixture](./fixtures.md)
