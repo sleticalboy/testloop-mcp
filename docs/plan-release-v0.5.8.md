@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.8 的候选发布准备记录。当前阶段只整理候选内容和本地/远端门禁，不打 tag、不更新 Homebrew tap。
+这是 v0.5.8 的候选发布和正式版本准备记录。当前已完成正式版本准备的本地验证；tag、Release Artifacts 和 Homebrew tap 仍需等版本准备提交的远端 CI 通过后再推进。
 
 v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.md)：本轮主要是接入方复制路径、README 最小 CI、CI 失败后 Agent triage、Agent 回复格式，以及安装 checksum fallback 修复。
 
@@ -42,7 +42,22 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 - [x] `go test ./...`
 - [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
 - [x] `git diff --check`
-- [x] 远端 CI run `29668735511` passed。
+- [x] 候选提交远端 CI run `29668904180` passed。
+
+## 正式版本准备验证
+
+- [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
+- [x] `go test ./...`
+- [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `go build -o /tmp/testloop-mcp-v0.5.8-prep .`
+- [x] `/tmp/testloop-mcp-v0.5.8-prep --version` 输出 `testloop-mcp 0.5.8`。
+- [x] `/tmp/testloop-mcp-v0.5.8-prep --help` 输出 usage，exit code 为 `2`。
+- [x] `go build -o /tmp/testloop-testgen-v0.5.8-prep ./cmd/testgen`
+- [x] `/tmp/testloop-testgen-v0.5.8-prep --help` 输出 usage，exit code 为 `2`。
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.8-prep-dist scripts/package-release-asset.sh v0.5.8 darwin_arm64 darwin arm64`
+- [x] 在 dist 目录内校验 `testloop-mcp_v0.5.8_darwin_arm64.tar.gz.sha256` 通过。
+- [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+- [x] `git diff --check`
 
 ## 发布前门禁
 
@@ -60,13 +75,13 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.8`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.8 - 2026-07-19`。
-- [ ] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.8`。
-- [ ] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.8`。
-- [ ] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.8`。
-- [ ] 测试中的版本期望同步到 `0.5.8`。
-- [ ] 重新运行完整验证。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.8`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.8 - 2026-07-19`。
+- [x] 同步 README 中当前 Release、手动下载示例和 Windows 下载示例到 `v0.5.8`。
+- [x] 同步 `docs/installation.md` 中 `TESTLOOP_MCP_VERSION`、资产列表、下载示例和 Homebrew 维护示例到 `v0.5.8`。
+- [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.8`。
+- [x] 测试中的版本期望同步到 `0.5.8`。
+- [x] 重新运行完整验证。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.8` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -78,4 +93,4 @@ v0.5.8 发布重点见 [v0.5.8 发布说明草案](./plan-release-notes-v0.5.8.m
 
 ## 当前结论
 
-v0.5.8 候选资料和本地发布前门禁已就绪，适合作为接入体验和安装 fallback patch。正式发布前仍需提交候选资料并等待远端 CI，通过后再进入版本号同步、tag、Release Artifacts、GitHub Release 和 Homebrew tap 流程。
+v0.5.8 正式版本准备改动和本地完整验证已完成，适合作为接入体验和安装 fallback patch。下一步需提交版本准备改动并等待远端 CI，通过后再进入 tag、Release Artifacts、GitHub Release 和 Homebrew tap 流程。

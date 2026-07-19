@@ -34,7 +34,7 @@ jobs:
       - name: Generate first-run diagnostics
         run: |
           curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-          TESTLOOP_MCP_VERSION=v0.5.7 \
+          TESTLOOP_MCP_VERSION=v0.5.8 \
           TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
           TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
             bash /tmp/testloop-first-run-ci.sh 'go test ./...'
@@ -83,7 +83,7 @@ jobs:
       - name: Generate web first-run diagnostics
         run: |
           curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-          TESTLOOP_MCP_VERSION=v0.5.7 \
+          TESTLOOP_MCP_VERSION=v0.5.8 \
           TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-web-first-run \
           TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
             bash /tmp/testloop-first-run-ci.sh 'pnpm install --frozen-lockfile && pnpm build'
@@ -122,7 +122,7 @@ Go 项目：
 ```bash
 go build -o /tmp/testloop-mcp-run-first-run-ci .
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-run-first-run-ci \
-TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_MCP_VERSION=v0.5.8 \
 TESTLOOP_MCP_REPO_DIR="$PWD" \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-run-first-run-ci-go \
 TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
@@ -140,7 +140,7 @@ Node/web 项目：
 
 ```bash
 TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-run-first-run-ci \
-TESTLOOP_MCP_VERSION=v0.5.7 \
+TESTLOOP_MCP_VERSION=v0.5.8 \
 TESTLOOP_MCP_REPO_DIR="$PWD" \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-run-first-run-ci-node \
 TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-run-first-run-ci-node-project \

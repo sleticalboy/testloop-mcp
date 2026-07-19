@@ -21,7 +21,7 @@ testloop-mcp --help
 testloop-testgen --help
 ```
 
-如果 `testloop-mcp --version` 报 `flag provided but not defined: -version`，或版本不是当前文档中的 `0.5.7`，通常说明本机已经安装过旧二进制，或者 `PATH` 指到了旧位置。先刷新 tap 并升级：
+如果 `testloop-mcp --version` 报 `flag provided but not defined: -version`，或版本不是当前文档中的 `0.5.8`，通常说明本机已经安装过旧二进制，或者 `PATH` 指到了旧位置。先刷新 tap 并升级：
 
 ```bash
 brew update
@@ -54,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 可选环境变量：
 
 ```bash
-TESTLOOP_MCP_VERSION=v0.5.7 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.5.8 sh scripts/install.sh
 TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```
 
@@ -63,7 +63,7 @@ TESTLOOP_MCP_INSTALL_DIR=/usr/local/bin sh scripts/install.sh
 ```bash
 mkdir -p "$HOME/.local/bin"
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-TESTLOOP_MCP_VERSION=v0.5.7 sh scripts/install.sh
+TESTLOOP_MCP_VERSION=v0.5.8 sh scripts/install.sh
 testloop-mcp.exe --help
 testloop-testgen.exe --help
 ```
@@ -71,14 +71,14 @@ testloop-testgen.exe --help
 也可以显式安装到已有的 Windows 用户 bin 目录：
 
 ```bash
-TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.5.7 sh scripts/install.sh
+TESTLOOP_MCP_INSTALL_DIR="$USERPROFILE/bin" TESTLOOP_MCP_VERSION=v0.5.8 sh scripts/install.sh
 ```
 
 维护者调试平台选择时也可以显式覆盖检测结果：
 
 ```bash
-TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.5.7 sh scripts/install.sh
-TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=arm64 TESTLOOP_MCP_VERSION=v0.5.7 sh scripts/install.sh
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=amd64 TESTLOOP_MCP_VERSION=v0.5.8 sh scripts/install.sh
+TESTLOOP_MCP_OS=windows TESTLOOP_MCP_ARCH=arm64 TESTLOOP_MCP_VERSION=v0.5.8 sh scripts/install.sh
 ```
 
 脚本会安装两个命令：
@@ -90,24 +90,24 @@ Windows shell 下对应文件名为 `testloop-mcp.exe` 和 `testloop-testgen.exe
 
 ## 手动下载 Release 二进制
 
-当前 `v0.5.7` Release 已提供以下产物：
+当前 `v0.5.8` Release 已提供以下产物：
 
-- `testloop-mcp_v0.5.7_linux_amd64.tar.gz`
-- `testloop-mcp_v0.5.7_linux_amd64.tar.gz.sha256`
-- `testloop-mcp_v0.5.7_linux_arm64.tar.gz`
-- `testloop-mcp_v0.5.7_linux_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.5.7_darwin_arm64.tar.gz`
-- `testloop-mcp_v0.5.7_darwin_arm64.tar.gz.sha256`
-- `testloop-mcp_v0.5.7_windows_amd64.zip`
-- `testloop-mcp_v0.5.7_windows_amd64.zip.sha256`
-- `testloop-mcp_v0.5.7_windows_arm64.zip`
-- `testloop-mcp_v0.5.7_windows_arm64.zip.sha256`
+- `testloop-mcp_v0.5.8_linux_amd64.tar.gz`
+- `testloop-mcp_v0.5.8_linux_amd64.tar.gz.sha256`
+- `testloop-mcp_v0.5.8_linux_arm64.tar.gz`
+- `testloop-mcp_v0.5.8_linux_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.5.8_darwin_arm64.tar.gz`
+- `testloop-mcp_v0.5.8_darwin_arm64.tar.gz.sha256`
+- `testloop-mcp_v0.5.8_windows_amd64.zip`
+- `testloop-mcp_v0.5.8_windows_amd64.zip.sha256`
+- `testloop-mcp_v0.5.8_windows_arm64.zip`
+- `testloop-mcp_v0.5.8_windows_arm64.zip.sha256`
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.7/testloop-mcp_v0.5.7_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.7/testloop-mcp_v0.5.7_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.5.7_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.5.7_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.8/testloop-mcp_v0.5.8_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.8/testloop-mcp_v0.5.8_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.5.8_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.5.8_linux_amd64.tar.gz
 chmod +x testloop-mcp testloop-testgen
 ./testloop-mcp --help
 ./testloop-testgen --help
@@ -119,14 +119,14 @@ Windows amd64/arm64 可直接下载 zip；将 `$arch` 设为 `amd64` 或 `arm64`
 
 ```powershell
 $arch = "amd64"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.7/testloop-mcp_v0.5.7_windows_$arch.zip"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.7/testloop-mcp_v0.5.7_windows_$arch.zip.sha256"
-$expected = (Get-Content ".\testloop-mcp_v0.5.7_windows_$arch.zip.sha256").Split()[0]
-$actual = (Get-FileHash ".\testloop-mcp_v0.5.7_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.8/testloop-mcp_v0.5.8_windows_$arch.zip"
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.8/testloop-mcp_v0.5.8_windows_$arch.zip.sha256"
+$expected = (Get-Content ".\testloop-mcp_v0.5.8_windows_$arch.zip.sha256").Split()[0]
+$actual = (Get-FileHash ".\testloop-mcp_v0.5.8_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive ".\testloop-mcp_v0.5.7_windows_$arch.zip"
-& ".\testloop-mcp_v0.5.7_windows_$arch\testloop-mcp.exe" --help
-& ".\testloop-mcp_v0.5.7_windows_$arch\testloop-testgen.exe" --help
+Expand-Archive ".\testloop-mcp_v0.5.8_windows_$arch.zip"
+& ".\testloop-mcp_v0.5.8_windows_$arch\testloop-mcp.exe" --help
+& ".\testloop-mcp_v0.5.8_windows_$arch\testloop-testgen.exe" --help
 ```
 
 当前 release 未覆盖的平台可以使用安装脚本的 `go install` 回退，或按下文从源码构建。
@@ -166,20 +166,20 @@ Formula/testloop-mcp.rb
 只更新当前仓库内的公式：
 
 ```bash
-scripts/generate-homebrew-formula.sh v0.5.7
+scripts/generate-homebrew-formula.sh v0.5.8
 ruby -c Formula/testloop-mcp.rb
 ```
 
 同步到 `sleticalboy/homebrew-tap` 工作区：
 
 ```bash
-scripts/update-homebrew-tap.sh v0.5.7 ../homebrew-tap
+scripts/update-homebrew-tap.sh v0.5.8 ../homebrew-tap
 ```
 
 不传 `tap-dir` 时，脚本会把 `sleticalboy/homebrew-tap` 克隆到临时目录并更新公式。默认不会自动提交；确认无误后可用以下环境变量提交和推送 tap 仓库：
 
 ```bash
-TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.5.7 ../homebrew-tap
+TESTLOOP_MCP_TAP_COMMIT=1 TESTLOOP_MCP_TAP_PUSH=1 scripts/update-homebrew-tap.sh v0.5.8 ../homebrew-tap
 ```
 
 也可以在 GitHub Actions 里手动触发 `Homebrew Tap` workflow，输入 release tag 后创建或更新 `sleticalboy/homebrew-tap` 的 formula PR。
@@ -262,7 +262,7 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 如果需要确认安装产物没有指向旧版本，可以加版本门禁：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.7 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.8 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
 当版本门禁失败、或旧二进制没有 `--version` 时，脚本会输出 Homebrew 升级和重装建议。Homebrew 用户优先执行：

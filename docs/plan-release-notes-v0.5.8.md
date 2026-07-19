@@ -10,10 +10,11 @@ testloop-mcp v0.5.8
 - [x] 梳理 v0.5.7 之后的接入方一页式验证、真实 server/web 复验、README 复制入口、CI 最小 workflow、失败 triage、Agent 回复格式和安装 checksum fallback 修复。
 - [x] 完成本地候选验证：`go test ./...`、完整 shell 矩阵、安装脚本离线回归、文档链接、发布文档索引和 `git diff --check`。
 - [x] 完成本地发布前门禁：主服务/testgen 构建、help 输出、darwin arm64 打包 dry-run、sha256 校验和 tarball 内容检查。
-- [x] 候选提交远端 CI 已通过到 `daf55c3`，最新成功 run 为 `29668735511`。
-- [ ] 正式版本准备时更新 `main.go` MCP implementation version 到 `0.5.8`。
-- [ ] 正式版本准备时将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.8 - 2026-07-19`。
-- [ ] 正式版本准备时同步 README、安装文档和必要版本引用到 `v0.5.8`。
+- [x] 候选提交远端 CI 已通过到 `fba75d2`，最新成功 run 为 `29668904180`。
+- [x] 正式版本准备已更新 `main.go` MCP implementation version 到 `0.5.8`。
+- [x] 正式版本准备已将 `CHANGELOG.md` 的 `Unreleased` 内容收敛为 `v0.5.8 - 2026-07-19`。
+- [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.8`。
+- [x] 正式版本准备本地完整验证已通过：脚本语法、`go test ./...`、完整 shell 矩阵、主服务/testgen 构建、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
 
 ## 摘要
 
@@ -125,7 +126,7 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-triage-failing-project \
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.8-candidate-dist scripts/package-release-asset.sh v0.5.8 darwin_arm64 darwin arm64`
 - [x] `cd /tmp/testloop-v0.5.8-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.8_darwin_arm64.tar.gz.sha256`
 - [x] tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
-- [x] 远端 CI run `29668735511` passed。
+- [x] 候选提交远端 CI run `29668904180` passed。
 
 ## 发布备注
 
