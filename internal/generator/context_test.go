@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sleticalboy/testloop-mcp/types"
@@ -140,6 +141,45 @@ export async function loadConstrained(response: Response): Promise<Constrained<U
 		t.Fatalf("loadConstrained target not found: %+v", ctx.Targets)
 	}
 	assertContains(t, loadConstrained.PayloadNotes, "generic return annotation Constrained<User> uses constrained or defaulted type parameters; static payload falls back to { ok: true }")
+}
+
+func TestBuildGenerationContext_JSResolvedImportedTypePayloadNotes(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `import type { ExternalUser } from './types';
+
+export async function loadExternal(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "types.ts"), []byte(`export interface ExternalUser {
+  userId: number;
+  email: string;
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := BuildGenerationContext(srcPath)
+	if ctx == nil {
+		t.Fatal("expected generation context")
+	}
+	target := findTarget(ctx.Targets, "loadExternal")
+	if target == nil {
+		t.Fatalf("loadExternal target not found: %+v", ctx.Targets)
+	}
+	if target.ReturnTypeExpr != "Promise<ExternalUser>" {
+		t.Fatalf("unexpected return type expr: %+v", target)
+	}
+	assertContains(t, target.PayloadNotes, "return annotation references imported type ExternalUser from './types'; read candidate source files: types.ts, types.tsx, types.d.ts, types.js, types.jsx, types.mjs, types.cjs, types/index.ts, types/index.tsx, types/index.d.ts, types/index.js, types/index.jsx, types/index.mjs, types/index.cjs")
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "falls back to { ok: true }") {
+			t.Fatalf("resolved imported type should not emit fallback note: %+v", target.PayloadNotes)
+		}
+	}
 }
 
 func TestBuildGenerationContextCoverageTaskForStaticLanguages(t *testing.T) {

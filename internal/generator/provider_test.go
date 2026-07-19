@@ -392,6 +392,68 @@ EOF
 	}
 }
 
+func TestGenerateTestsWithProviderIncludesResolvedImportedTypePayload(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script fake provider is unix-only")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "api.ts")
+	src := `import type { ExternalUser } from './types';
+
+export async function loadUser(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "types.ts"), []byte(`export interface ExternalUser {
+  userId: number;
+  email: string;
+}
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	requestPath := filepath.Join(t.TempDir(), "request.json")
+	command := writeFakeProviderCommand(t, `#!/bin/sh
+cat > "`+requestPath+`"
+cat <<'EOF'
+{"code":"import { loadUser } from './api';\n\nit('uses llm output', async () => {\n  await loadUser({ json: async () => ({ userId: 1, email: 'user@example.com' }) });\n});\n"}
+EOF
+`)
+
+	_, err := GenerateTestsWithProviderOptions(context.Background(), srcPath, ExternalLLMProvider{Command: command}, GenerateTestsOptions{
+		Framework: "vitest",
+	})
+	if err != nil {
+		t.Fatalf("GenerateTestsWithProviderOptions() error = %v", err)
+	}
+
+	raw, err := os.ReadFile(requestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var req TestGenerationRequest
+	if err := json.Unmarshal(raw, &req); err != nil {
+		t.Fatalf("parse provider request: %v\n%s", err, raw)
+	}
+	target := findProviderTarget(req.Context.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", req.Context.Targets)
+	}
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "falls back to { ok: true }") {
+			t.Fatalf("resolved imported type should not emit fallback note: %+v", target.PayloadNotes)
+		}
+	}
+	if !strings.Contains(req.StaticCode, "json: async () => ({ userId: 1, email: 'user@example.com' })") ||
+		!strings.Contains(req.StaticCode, "expect(result).toEqual({ userId: 1, email: 'user@example.com' });") {
+		t.Fatalf("provider static_code missing imported type payload:\n%s", req.StaticCode)
+	}
+}
+
 func TestGenerateTestsWithProviderOptionsRejectsProviderEmptyOutput(t *testing.T) {
 	srcPath := writeProviderSource(t)
 

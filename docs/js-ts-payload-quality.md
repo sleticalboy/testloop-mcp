@@ -7,7 +7,7 @@
 JS/TS payload 生成遵循三个原则：
 
 - 稳定优先：同一份源码应生成确定性测试数据，方便 golden、CI 和 Agent 复跑。
-- 可解释优先：只展开当前文件中能静态解释的类型结构，不跨文件猜测。
+- 可解释优先：只展开当前文件或相对 import 可解析到的本地类型结构，不跨文件猜测包类型或完整工程类型图。
 - 可运行优先：无法解释时回退到保守值，避免生成语法正确但语义任意的断言。
 
 ## 已覆盖场景
@@ -21,12 +21,12 @@ JS/TS payload 生成遵循三个原则：
 
 ## 支持的 TypeScript 类型形态
 
-支持范围集中在同文件可见、能直接转成测试数据的 DTO 类型：
+支持范围集中在同文件可见，或通过相对 import 能解析到本地源码文件，且能直接转成测试数据的 DTO 类型：
 
 - 基础类型和字段名启发式值：`number`、`string`、`boolean`、`email`、`url`、`status`、`createdAt` 等。
 - literal union：优先使用第一个稳定字面量，例如 `'active' | 'disabled'`。
 - nullable union：`User | null`、`null | User` 优先选择非空分支。
-- 同文件对象类型：`interface User { ... }`、`type User = { ... }`。
+- 对象类型：同文件或相对 import 可解析的 `interface User { ... }`、`type User = { ... }`。
 - 数组：`T[]`、`Array<T>`、`ReadonlyArray<T>`、`readonly T[]`。
 - tuple：`[A, B]`、`readonly [A, B]`、labeled tuple、optional tuple element、rest tuple。
 - utility wrapper：`Readonly<T>`、`Required<T>`、`Partial<T>`。
@@ -34,14 +34,14 @@ JS/TS payload 生成遵循三个原则：
 - 字典类型：`Record<string, T>`、`Record<'a' | 'b', T>`。
 - 对象交叉：`A & B`，仅当所有分支都能解析为对象时合并。
 - indexed access：`T['field']`，仅支持单个字符串字面量 key。
-- 同文件简单泛型 alias/interface 直接实例化：`ApiEnvelope<User>`、`Pair<User, Meta>`，仅支持简单类型参数替换。
+- 同文件或已解析本地 import 的简单泛型 alias/interface 直接实例化：`ApiEnvelope<User>`、`Pair<User, Meta>`，仅支持简单类型参数替换。
 - 对象字段内嵌组合：数组、tuple、Record、Pick/Omit、indexed access 和组合 alias 可以作为 DTO 字段继续展开。
 
 ## 保守回退策略
 
 以下回退是有意设计，不应轻易改成猜测：
 
-- 未知命名类型或跨文件类型：回退 `{}` 或更外层的保守 payload。
+- 未知命名类型、包类型、namespace import 或无法解析的跨文件类型：回退 `{}` 或更外层的保守 payload。
 - 自引用类型：展开第一层后在递归位置回退 `{}`，避免无限嵌套。
 - 无法解释的数组元素：回退 `[]`。
 - 无法解释的 Record key：字段值回退 `{}`；顶层 `Record<number, T>` 不生成 payload。
@@ -51,13 +51,13 @@ JS/TS payload 生成遵循三个原则：
 
 这些回退的核心目的是避免测试草稿看起来很具体，但其实来自不可解释的静态猜测。
 
-当顶层 TypeScript 返回注解无法展开时，`generate_tests.context.targets[].payload_notes` 会记录回退原因，例如跨文件类型未在同文件声明、泛型声明带约束或默认参数、动态 indexed access / `keyof` 等。返回注解引用 imported type 时，`payload_notes` 还会追加 import 来源和相对当前源码目录的候选文件，例如 `types.ts`、`types.d.ts` 或 `types/index.ts`，方便 Agent 或 LLM provider 决定下一步读取哪些上下文。静态测试文本仍优先保持可运行，不会因为发现候选文件就自动跨文件展开类型。
+当顶层 TypeScript 返回注解无法展开时，`generate_tests.context.targets[].payload_notes` 会记录回退原因，例如包类型或 namespace import 无法静态检查、泛型声明带约束或默认参数、动态 indexed access / `keyof` 等。返回注解引用 imported type 但当前相对路径无法解析时，`payload_notes` 还会追加 import 来源和相对当前源码目录的候选文件，例如 `types.ts`、`types.d.ts` 或 `types/index.ts`，方便 Agent 或 LLM provider 决定下一步读取哪些上下文。相对 import 能解析到本地类型声明时，静态测试文本、`static_code` 和 generation context 会复用同一份类型结构，不再把该目标标记为 `{ ok: true }` fallback。
 
 ## 明确不支持
 
 当前阶段不承诺支持完整 TypeScript 语义，包括：
 
-- 跨文件 import/export 类型解析。
+- package import、namespace import、复杂 barrel export 或需要完整 TypeScript project graph 的类型解析。
 - 泛型约束/defaults/条件推导，例如 `T extends User`、`T = User`。
 - 条件类型、mapped type、template literal type。
 - `keyof`、动态 indexed access、复杂 union/discriminated union 完整分支枚举。

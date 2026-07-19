@@ -242,6 +242,8 @@ func buildJSGenerationContext(srcPath, ext string) *types.TestGenerationContext 
 	}
 
 	funcs, classes, _ := parseJSWithTreeSitter(source, ext)
+	typeMocks := jsImportedTypeMocks(srcPath, string(source))
+	jsAttachImportedTypeMocks(funcs, classes, typeMocks)
 	ctx := &types.TestGenerationContext{
 		Language:   jsLanguageName(ext),
 		Framework:  "jest",
