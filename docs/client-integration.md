@@ -47,6 +47,41 @@ go run ./examples/agent-decision-demo
 - `failed/needs_better_input` 能定位 `metadata.coverage_miss_reason` 和 `metadata.coverage_missed_lines`。
 - 遇到未知字段不会报错。
 
+## CI artifact fixture
+
+除了 `validate_coverage_task` 的 MCP 结构化返回，接入方还需要测试“CI 失败后把 artifact 交给 Agent”的路径。这类输入不是 MCP tool 返回值，而是 `run-first-run-ci.sh` 产出的文件包。
+
+仓库提供一份完整 fixture：
+
+```text
+docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+```
+
+它包含：
+
+- `verification-report.md`
+- `verification-summary.json`
+- `agent-decision.txt`
+- `first-run-context.txt`
+- `first-run.log`
+
+推荐客户端或 Agent 测试断言：
+
+- 先读取 `agent-decision.txt`，识别 `agent_next_step=inspect-user-project`。
+- 再读取 `first-run-context.txt`，识别 `first_run_agent_next_step=inspect-user-project`。
+- 需要失败细节时读取 `verification-summary.json`，定位 `failed_section=用户项目 smoke` 和 `exit_code=7`。
+- 最后打开 `verification-report.md` 的失败 section，而不是只消费 CI 最后一行错误。
+
+可用内置 demo 验证 Agent 回复：
+
+```bash
+go run ./examples/first-run-agent-response-demo \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/first-run-context.txt \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-summary.json
+```
+
+这条路径输出固定四段：结论、证据、下一步、暂不做。完整说明见 [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)。
+
 ## 推荐客户端伪代码
 
 ```text
@@ -77,4 +112,5 @@ switch payload.status + "/" + payload.action:
 - [Agent Action 决策表](./agent-action-guide.md)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
 - [真实结构化 fixture](./fixtures.md)
+- [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)
 - [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)

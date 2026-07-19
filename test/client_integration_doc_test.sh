@@ -19,6 +19,10 @@ required_snippets = [
     "./fixtures/validate-coverage-task-manual-review-internal.json",
     "./fixtures/validate-coverage-task-apply-fix-suggestions.json",
     "./fixtures/validate-coverage-task-needs-better-input.json",
+    "docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
+    "go run ./examples/first-run-agent-response-demo",
+    "first_run_agent_next_step=inspect-user-project",
+    "failed_section=用户项目 smoke",
     "structuredContent",
     "content[0].text",
 ]
@@ -30,6 +34,7 @@ for snippet in required_snippets:
 
 command_paths = {
     "go run ./examples/agent-decision-demo": Path("examples/agent-decision-demo/main.go"),
+    "go run ./examples/first-run-agent-response-demo": Path("examples/first-run-agent-response-demo/main.go"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():
@@ -40,6 +45,12 @@ for raw_link in fixture_links:
     path = doc.parent / raw_link
     if not path.exists():
         failures.append(f"{doc}: fixture link points to missing {raw_link}")
+
+artifact_links = re.findall(r"\]\((\./first-run-agent-artifact-demo\.md)\)", text)
+for raw_link in artifact_links:
+    path = doc.parent / raw_link
+    if not path.exists():
+        failures.append(f"{doc}: artifact demo link points to missing {raw_link}")
 
 if failures:
     print("client integration doc test failed:", file=sys.stderr)
