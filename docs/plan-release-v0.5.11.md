@@ -63,6 +63,12 @@
 - [x] 发布说明草案提交 `e7ca8a1` 远端 CI run `29675124697` passed。
 - [x] 候选发布检查清单提交 `da18b00` 远端 CI run `29675229519` passed。
 - [x] readiness 预检记录提交 `c879ccc` 远端 CI run `29675363018` passed。
+- [x] 正式版本准备提交 `473e764` 远端 CI run `29675557908` passed。
+- [x] tag `v0.5.11` 已推送。
+- [x] Release Artifacts tag-push run `29675619230` 因 runner 长时间 queued 已取消；手动 dispatch run `29676083347` passed，五个平台资产和 `.sha256` 已生成。
+- [x] `scripts/verify-release-assets.sh v0.5.11` 验证 10 个 Release 资产完整。
+- [x] GitHub Release `v0.5.11` 已更新为正式发布说明，并标记为 latest。
+- [x] `scripts/generate-homebrew-formula.sh v0.5.11` 已更新仓库内 Formula，`ruby -c Formula/testloop-mcp.rb` 通过。
 
 ## 发布前门禁
 
@@ -89,15 +95,15 @@
 - [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.11`。
 - [x] 测试中的版本期望同步到 `0.5.11`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.11` 并推送。
-- [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.11` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.11 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.11` 更新仓库内 Formula。
+- [x] 提交版本准备改动后确认远端 CI passed。
+- [x] 打 tag `v0.5.11` 并推送。
+- [x] Release Artifacts workflow 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.11` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.11 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.11` 更新仓库内 Formula。
 - [ ] 更新 Homebrew tap 到 `0.5.11` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.11 正式版本准备和本地 release readiness 已通过，下一步提交版本准备改动并等待远端 CI；远端 CI 通过后再打 tag。
+v0.5.11 已完成版本准备、tag、Release Artifacts、资产完整性校验、GitHub Release 正文更新和仓库内 Formula 生成。下一步提交 Formula/发布记录并等待远端 CI；CI 通过后更新 Homebrew tap，再触发 Post-Release Verify。
