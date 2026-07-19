@@ -106,7 +106,7 @@ TESTLOOP_REPORT_PUBLIC_SHOWCASES=all \
 
 对 Agent 或维护者来说，最重要的是先看汇总表。如果只有用户项目 smoke 失败，通常说明接入项目自身测试环境或命令需要调整；如果基础安装验收或真实 MCP 协议 smoke 失败，应先修 testloop-mcp 安装、PATH、客户端配置或传输链路。
 
-summary JSON 包含同一批元数据和 section 汇总，推荐给自动化消费。`sections[].signals` 是可选字段，只有对应 section 暴露了机器可读信号时才存在；例如独立 CLI 生成动作 smoke 会输出 `signals.action=manual_review`，但这表示 smoke 正确识别手审草稿，不代表整份报告失败。
+summary JSON 包含同一批元数据和 section 汇总，推荐给自动化消费。结构契约见 [verification-summary.schema.json](./fixtures/verification-summary.schema.json)。`sections[].signals` 是可选字段，只有对应 section 暴露了机器可读信号时才存在；例如独立 CLI 生成动作 smoke 会输出 `signals.action=manual_review`，但这表示 smoke 正确识别手审草稿，不代表整份报告失败。
 
 ```json
 {
