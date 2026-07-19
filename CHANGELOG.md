@@ -10,6 +10,7 @@
 - Python coverage top-task validation now supports `TESTLOOP_VALIDATE_PY_LIST_TASKS_ONLY`, allowing maintainers to regenerate candidate task JSONL without running generate/run validation.
 - Python Click regression smoke ready task inputs are now stored under `testdata/py-click/`, rebuilt against Click `8.2.1` utils coverage tasks instead of stale parser task line ranges.
 - JS no-runtime/internal and Python internal regression smoke task inputs are now stored under `testdata/`, reducing runtime JSONL generation for repository-backed manual-review fixtures.
+- JS mcp-hub regression smoke task inputs are now stored under `testdata/js-mcp-hub/`, covering repair, env, DevWatcher, SSE, and workspace samples with relative paths.
 
 ### Fixed
 

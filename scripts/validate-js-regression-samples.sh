@@ -38,14 +38,24 @@ top-N 覆盖率窗口。
   TESTLOOP_JS_REGRESSION_MCP_HUB_DIR
                                     mcp-hub 真实项目目录。
                                     默认：/Users/binlee/code/open-source/mcp-hub
+  TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_TASKS_FILE
+                                    默认：testdata/js-mcp-hub/repair-tasks.jsonl
   TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS
                                     默认：vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3
+  TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_TASKS_FILE
+                                    默认：testdata/js-mcp-hub/env-tasks.jsonl
   TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS
                                     默认：vitest-mcp-hub-env-1,vitest-mcp-hub-env-2
+  TESTLOOP_JS_REGRESSION_MCP_HUB_DEVWATCHER_TASKS_FILE
+                                    默认：testdata/js-mcp-hub/devwatcher-tasks.jsonl
   TESTLOOP_JS_REGRESSION_MCP_HUB_DEVWATCHER_IDS
                                     默认：vitest-mcp-hub-devwatcher-1,vitest-mcp-hub-devwatcher-2
+  TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_TASKS_FILE
+                                    默认：testdata/js-mcp-hub/sse-tasks.jsonl
   TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_IDS
                                     默认：vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3,vitest-mcp-hub-sse-4
+  TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_TASKS_FILE
+                                    默认：testdata/js-mcp-hub/workspace-tasks.jsonl
   TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_READY_IDS
                                     默认：vitest-mcp-hub-workspace-1,vitest-mcp-hub-workspace-2
   TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_MANUAL_IDS
@@ -83,10 +93,15 @@ internal_dir="${TESTLOOP_JS_REGRESSION_INTERNAL_DIR:-$repo_root/testdata/js-inte
 internal_tasks="${TESTLOOP_JS_REGRESSION_INTERNAL_TASKS_FILE:-$repo_root/testdata/js-internal/internal-tasks.jsonl}"
 internal_ids="${TESTLOOP_JS_REGRESSION_INTERNAL_IDS:-jest-internal-1}"
 mcp_hub_dir="${TESTLOOP_JS_REGRESSION_MCP_HUB_DIR:-/Users/binlee/code/open-source/mcp-hub}"
+mcp_hub_repair_tasks="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_TASKS_FILE:-$repo_root/testdata/js-mcp-hub/repair-tasks.jsonl}"
 mcp_hub_repair_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_REPAIR_IDS:-vitest-mcp-hub-repair-1,vitest-mcp-hub-repair-2,vitest-mcp-hub-repair-3}"
+mcp_hub_env_tasks="${TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_TASKS_FILE:-$repo_root/testdata/js-mcp-hub/env-tasks.jsonl}"
 mcp_hub_env_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_ENV_IDS:-vitest-mcp-hub-env-1,vitest-mcp-hub-env-2}"
+mcp_hub_devwatcher_tasks="${TESTLOOP_JS_REGRESSION_MCP_HUB_DEVWATCHER_TASKS_FILE:-$repo_root/testdata/js-mcp-hub/devwatcher-tasks.jsonl}"
 mcp_hub_devwatcher_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_DEVWATCHER_IDS:-vitest-mcp-hub-devwatcher-1,vitest-mcp-hub-devwatcher-2}"
+mcp_hub_sse_tasks="${TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_TASKS_FILE:-$repo_root/testdata/js-mcp-hub/sse-tasks.jsonl}"
 mcp_hub_sse_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_SSE_IDS:-vitest-mcp-hub-sse-1,vitest-mcp-hub-sse-2,vitest-mcp-hub-sse-3,vitest-mcp-hub-sse-4}"
+mcp_hub_workspace_tasks="${TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_TASKS_FILE:-$repo_root/testdata/js-mcp-hub/workspace-tasks.jsonl}"
 mcp_hub_workspace_ready_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_READY_IDS:-vitest-mcp-hub-workspace-1,vitest-mcp-hub-workspace-2}"
 mcp_hub_workspace_manual_ids="${TESTLOOP_JS_REGRESSION_MCP_HUB_WORKSPACE_MANUAL_IDS:-vitest-mcp-hub-workspace-3}"
 js_test_command="${TESTLOOP_JS_TEST_COMMAND:-}"
@@ -189,25 +204,20 @@ require_path dir "$internal_dir"
 require_path file "$internal_tasks"
 run_sample "fixture-internal" "$internal_dir" "$internal_tasks" "$internal_ids" "manual_review_internal" "$manual_review_command"
 
-mcp_hub_repair_tasks="$output_dir/mcp-hub-repair-tasks.jsonl"
 require_path dir "$mcp_hub_dir"
-"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-repair "$mcp_hub_dir" "$mcp_hub_repair_tasks"
+require_path file "$mcp_hub_repair_tasks"
 run_sample "mcp-hub-repair" "$mcp_hub_dir" "$mcp_hub_repair_tasks" "$mcp_hub_repair_ids" "ready" "$vitest_test_command" "vitest"
 
-mcp_hub_env_tasks="$output_dir/mcp-hub-env-tasks.jsonl"
-"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-env "$mcp_hub_dir" "$mcp_hub_env_tasks"
+require_path file "$mcp_hub_env_tasks"
 run_sample "mcp-hub-env" "$mcp_hub_dir" "$mcp_hub_env_tasks" "$mcp_hub_env_ids" "ready" "$vitest_test_command" "vitest"
 
-mcp_hub_devwatcher_tasks="$output_dir/mcp-hub-devwatcher-tasks.jsonl"
-"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-devwatcher "$mcp_hub_dir" "$mcp_hub_devwatcher_tasks"
+require_path file "$mcp_hub_devwatcher_tasks"
 run_sample "mcp-hub-devwatcher" "$mcp_hub_dir" "$mcp_hub_devwatcher_tasks" "$mcp_hub_devwatcher_ids" "ready" "$vitest_test_command" "vitest"
 
-mcp_hub_sse_tasks="$output_dir/mcp-hub-sse-tasks.jsonl"
-"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-sse "$mcp_hub_dir" "$mcp_hub_sse_tasks"
+require_path file "$mcp_hub_sse_tasks"
 run_sample "mcp-hub-sse" "$mcp_hub_dir" "$mcp_hub_sse_tasks" "$mcp_hub_sse_ids" "ready" "$vitest_test_command" "vitest"
 
-mcp_hub_workspace_tasks="$output_dir/mcp-hub-workspace-tasks.jsonl"
-"$repo_root/scripts/fixture-task-jsonl.py" js-mcp-hub-workspace "$mcp_hub_dir" "$mcp_hub_workspace_tasks"
+require_path file "$mcp_hub_workspace_tasks"
 run_sample "mcp-hub-workspace-ready" "$mcp_hub_dir" "$mcp_hub_workspace_tasks" "$mcp_hub_workspace_ready_ids" "ready" "$vitest_test_command" "vitest"
 run_sample "mcp-hub-workspace-manual" "$mcp_hub_dir" "$mcp_hub_workspace_tasks" "$mcp_hub_workspace_manual_ids" "manual_review_environment" "$vitest_test_command" "vitest"
 
