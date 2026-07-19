@@ -2,11 +2,11 @@
 
 ## 当前目标
 
-这是 v0.5.12 的候选发布检查清单。当前目标是把 v0.5.11 之后围绕 regression smoke 可复跑性、静态 fixture 和 preflight 诊断层的改动归档为一个 patch 版本。
+这是 v0.5.12 的候选发布检查清单和正式发布记录。当前目标是把 v0.5.11 之后围绕 regression smoke 可复跑性、静态 fixture 和 preflight 诊断层的改动归档为一个 patch 版本。
 
 发布重点见 [v0.5.12 发布说明草案](./plan-release-notes-v0.5.12.md)。
 
-当前阶段只整理候选内容和本地门禁，不切版本号、不打 tag、不更新 Homebrew tap。
+当前已完成版本准备、tag、GitHub Release、Release Artifacts 和 Release 资产清单校验。后续收尾集中在 Homebrew tap、Post-Release Verify 和发布记录回填。
 
 ## 当前差异核对
 
@@ -74,6 +74,11 @@
 - [x] `f9295b4` 远端 CI run `29684888366` passed，覆盖 preflight report 渲染。
 - [x] `59124ba` 远端 CI run `29685059506` passed，覆盖 release readiness 记录。
 - [x] `4815012` 远端 CI run `29685640306` passed，覆盖 v0.5.12 正式版本准备。
+- [x] `87b6ae3` 远端 CI run `29685773848` passed，覆盖 v0.5.12 发布准备证据归档。
+- [x] Release Artifacts run `29688663889` passed，覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 五个平台资产构建与上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.12` 验证 10 个 Release 资产完整。
+- [x] `scripts/generate-homebrew-formula.sh v0.5.12`
+- [x] `ruby -c Formula/testloop-mcp.rb`
 
 ## 发布前门禁
 
@@ -98,14 +103,14 @@
 - [x] 测试中的版本期望同步到 `0.5.12`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [x] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.12` 并推送。
-- [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.12` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.12 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.12` 更新仓库内 Formula。
+- [x] 打 tag `v0.5.12` 并推送。
+- [x] Release Artifacts workflow 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.12` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.12 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.12` 更新仓库内 Formula。
 - [ ] 更新 Homebrew tap 到 `0.5.12` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.12 正式版本准备的文件同步、本地验证和 main CI 都已完成。下一步是决定是否打 `v0.5.12` tag 并进入 Release Artifacts 流程。
+v0.5.12 已完成 tag、GitHub Release、Release Artifacts、资产清单校验和仓库内 Formula 更新。下一步是提交 Formula 与发布记录，然后更新 Homebrew tap 并触发 Post-Release Verify。

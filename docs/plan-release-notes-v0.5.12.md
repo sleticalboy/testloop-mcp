@@ -1,4 +1,4 @@
-# v0.5.12 发布说明草案
+# v0.5.12 发布说明
 
 ## 标题
 
@@ -15,7 +15,14 @@ testloop-mcp v0.5.12
 - [x] 正式版本准备已同步 README、安装文档和必要版本引用到 `v0.5.12`。
 - [x] 正式版本准备本地完整验证已通过。
 - [x] 正式版本准备提交 `4815012` 远端 CI run `29685640306` passed。
-- [ ] 尚未打 tag、生成 Release 资产或更新 Homebrew tap。
+- [x] 发布准备证据提交 `87b6ae3` 远端 CI run `29685773848` passed。
+- [x] 已打 `v0.5.12` tag 并推送。
+- [x] Release Artifacts run `29688663889` passed，五个平台资产均已上传。
+- [x] `scripts/verify-release-assets.sh v0.5.12` 已验证 10 个 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式发布说明。
+- [x] 仓库内 Formula 已更新到 `0.5.12`。
+- [ ] Homebrew tap 尚未完成更新。
+- [ ] Post-Release Verify 尚未完成。
 
 ## 摘要
 
@@ -89,8 +96,9 @@ v0.5.12 候选重点是把真实项目 regression smoke 从“依赖临时 JSONL
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.12` / `v0.5.12`。
 - [x] 跑完整正式发布前门禁和 release readiness。
 - [x] 提交版本准备后等待远端 CI。
-- [ ] 打 `v0.5.12` tag，生成 Release 资产，更新 GitHub Release。
-- [ ] 生成并更新 Homebrew Formula / tap。
+- [x] 打 `v0.5.12` tag，生成 Release 资产，更新 GitHub Release。
+- [x] 生成仓库内 Homebrew Formula。
+- [ ] 更新 Homebrew tap。
 - [ ] 触发 Post-Release Verify，确认五平台安装脚本 dry run 通过。
 
 ## 发布备注
