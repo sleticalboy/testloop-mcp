@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- 新增 `examples/first-run-agent-response-demo`，可读取 `first-run-context.txt` 和可选 `verification-summary.json`，输出 Agent 应回复的“结论 / 证据 / 下一步 / 暂不做”四段结构。
+- 新增 `docs/first-run-agent-artifact-demo.md` 和 `test/first_run_agent_response_demo_test.sh`，固定 first-run artifact 到 Agent 回复的可运行演示和端到端回归。
+- 新增 `docs/fixtures/first-run-artifacts/user-project-smoke-failed/`，沉淀 first-run 失败五件套 fixture：report、summary、decision、context 和 log。
+- 新增 `test/first_run_artifact_fixtures_test.sh`，验证 first-run artifact fixture 文件完整、summary JSON 可解析，并能被 Agent 回复 demo 消费。
+- 新增 `docs/plan-release-notes-v0.5.9.md` 和 `docs/plan-release-v0.5.9.md`，整理 v0.5.9 候选发布说明和发布检查清单。
+
+### Changed
+
+- `docs/fixtures.md` 扩展 first-run artifact fixture 索引，区分 MCP tool 结构化返回 fixture 和 CI artifact fixture。
+- `docs/client-integration.md` 增加 CI artifact fixture 消费路径，说明 `agent-decision.txt`、`first-run-context.txt`、`verification-summary.json` 和 `verification-report.md` 的读取顺序。
+- README 和 release 文档索引补充 first-run artifact Agent 消费演示、demo 命令和失败 artifact fixture 入口。
+
 ## v0.5.8 - 2026-07-19
 
 ### Changed
