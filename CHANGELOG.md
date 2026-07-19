@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Java regression smoke now includes RocketMQ `StatusChecker.java` top4 ready-hit samples, covering line-specific protobuf status codes, checked exception branches, and JaCoCo target-hit assertions.
+
 ### Fixed
 
 - Java coverage task generation now maps RocketMQ `StatusChecker.check` line ranges to concrete protobuf `Code` values and expected exception branches, including the default switch path, so JaCoCo target-hit validation no longer reports weak ready tests for these error paths.

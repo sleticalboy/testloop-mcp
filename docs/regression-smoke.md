@@ -18,7 +18,7 @@ scripts/validate-regression-smoke.sh
 
 | 语言 | 脚本 | 默认样本 | 期望结果 |
 | :--- | :--- | :--- | :--- |
-| Java | `scripts/validate-java-regression-samples.sh` | Commons Lang `junit-44/junit-50`，Commons Codec `junit-130`，Commons Lang `junit-52` | `ready`、`manual_review_unreachable`、`manual_review_internal` |
+| Java | `scripts/validate-java-regression-samples.sh` | Commons Lang `junit-44/junit-50`，Commons Codec `junit-130`，Commons Lang `junit-52`，RocketMQ `StatusChecker.java` `junit-272/junit-273/junit-418/junit-826` | `ready`、`manual_review_unreachable`、`manual_review_internal` |
 | JS | `scripts/validate-js-regression-samples.sh` | ip2region JavaScript binding `jest-1/jest-2`，仓库内 `testdata/js-no-runtime` 的 `jest-no-runtime-1`，仓库内 `testdata/js-internal` 的 `jest-internal-1`，mcp-hub `vitest-mcp-hub-repair-1/2/3`、`vitest-mcp-hub-env-1/2`、`vitest-mcp-hub-devwatcher-1/2`、`vitest-mcp-hub-sse-1/2/3/4`、`vitest-mcp-hub-workspace-1/2/3` | `ready`、`manual_review_no_runtime`、`manual_review_internal`、`manual_review_environment` |
 | Python | `scripts/validate-py-regression-samples.sh` | Click `pytest-1/pytest-3`，仓库内 `testdata/py-internal` 的 `pytest-internal-1`，haoy-apk-station backend 的 `pytest-apk-frontend-env-1/pytest-apk-download-external-1/pytest-apk-delete-db-1` | `ready`、`manual_review_internal`、`manual_review_environment`、`manual_review_external_service`、`manual_review_database` |
 
@@ -38,6 +38,7 @@ scripts/validate-regression-smoke.sh
 | :--- | :--- | :--- |
 | Java / Commons Lang | `/tmp/testloop-commons-lang` | `/tmp/testloop-commons-lang-taskids-junit44-50-results.jsonl`、`/tmp/testloop-commons-lang-typeutils-top5-results.jsonl` |
 | Java / Commons Codec | `/tmp/testloop-commons-codec` | `/tmp/testloop-commons-codec-taskids-junit130-results.jsonl` |
+| Java / RocketMQ StatusChecker | `/Users/binlee/code/free-works/haoying/rocketmq-clients/java` | `/tmp/testloop-rocketmq-java-statuschecker-tasks.jsonl` |
 | JS / ip2region | `/Users/binlee/code/open-source/ip2region/binding/javascript` | `/tmp/testloop-ip2region-js-jest-top2-current.jsonl` |
 | JS / no-runtime fixture | `./testdata/js-no-runtime` | 运行时临时生成到输出目录 |
 | JS / internal fixture | `./testdata/js-internal` | 运行时临时生成到输出目录 |
@@ -51,6 +52,7 @@ scripts/validate-regression-smoke.sh
 ```bash
 TESTLOOP_JAVA_REGRESSION_LANG_DIR=/path/to/commons-lang \
 TESTLOOP_JAVA_REGRESSION_CODEC_DIR=/path/to/commons-codec \
+TESTLOOP_JAVA_REGRESSION_ROCKETMQ_DIR=/path/to/rocketmq-clients/java \
 TESTLOOP_JS_REGRESSION_IP2REGION_DIR=/path/to/ip2region/binding/javascript \
 TESTLOOP_JS_REGRESSION_NO_RUNTIME_DIR=/path/to/js-no-runtime-fixture \
 TESTLOOP_JS_REGRESSION_INTERNAL_DIR=/path/to/js-internal-fixture \
@@ -59,6 +61,16 @@ TESTLOOP_PY_REGRESSION_CLICK_DIR=/path/to/click \
 TESTLOOP_PY_REGRESSION_INTERNAL_DIR=/path/to/py-internal-fixture \
 TESTLOOP_PY_REGRESSION_APK_STATION_DIR=/path/to/haoy-apk-station/backend \
 scripts/validate-regression-smoke.sh
+```
+
+Java/RocketMQ `StatusChecker.java` 默认只运行 client 模块的 `StatusCheckerTest` 并生成 `client/target/site/jacoco/jacoco.xml`，用于固定 `StatusChecker.check` 按行号选择 protobuf `Code`、request 类型和 checked exception 的 ready-hit 行为。路径或命令不一致时可以覆盖：
+
+```bash
+TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE=/path/to/statuschecker-tasks.jsonl \
+TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_IDS=junit-272,junit-273,junit-418,junit-826 \
+TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_COMMAND='mvn -pl client -am -Dtest=StatusCheckerTest -DfailIfNoTests=false test jacoco:report -Dcheckstyle.skip -Dspotbugs.skip -DskipITs' \
+TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_FILE=client/target/site/jacoco/jacoco.xml \
+scripts/validate-java-regression-samples.sh
 ```
 
 ## 跳过单个语言

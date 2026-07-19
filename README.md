@@ -551,7 +551,7 @@ scripts/validate-java-coverage-top-tasks.sh /path/to/java/project /tmp/testloop-
 scripts/validate-java-regression-samples.sh
 ```
 
-该脚本默认复用 `/tmp/testloop-commons-lang`、`/tmp/testloop-commons-codec` 以及已有 JSONL 任务文件，覆盖三类样本：真实 ready 且命中目标行、历史假 ready 降级为 `manual_review_unreachable`、内部路径 `manual_review_internal`。项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_JAVA_REGRESSION_*` 环境变量覆盖。
+该脚本默认复用 `/tmp/testloop-commons-lang`、`/tmp/testloop-commons-codec`、本机 RocketMQ Java client checkout 以及已有 JSONL 任务文件，覆盖四类样本：真实 ready 且命中目标行、历史假 ready 降级为 `manual_review_unreachable`、内部路径 `manual_review_internal`、RocketMQ `StatusChecker.java` top4 行号驱动异常分支。项目目录或 JSONL 路径不一致时，可通过 `TESTLOOP_JAVA_REGRESSION_*` 环境变量覆盖。
 
 如果要运行当前维护的固定 smoke 矩阵，可以使用：
 
