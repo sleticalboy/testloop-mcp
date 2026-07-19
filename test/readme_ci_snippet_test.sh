@@ -86,6 +86,7 @@ if missing:
 required_text = [
     "./docs/fixtures/agent-response-artifact-manifest.json",
     "./docs/fixtures/agent-response-artifact-manifest.schema.json",
+    "./docs/fixtures/verification-summary.schema.json",
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
 ]
 

@@ -20,7 +20,9 @@ assert_contains "test/e2e"
 assert_contains "CI artifact manifest 回归"
 assert_contains "agent-response-artifact-manifest.json"
 assert_contains "agent-response-artifact-manifest.schema.json"
+assert_contains "verification-summary.schema.json"
 assert_contains "npx --yes ajv-cli validate"
+assert_contains "sections[].signals.action"
 assert_contains "go run ./examples/agent-response-manifest-demo"
 assert_contains "fallback_order[0]"
 assert_contains "first_run_agent_next_step"
@@ -30,6 +32,7 @@ assert_contains "inspect-user-project"
 for path in \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.schema.json" \
+  "${repo_root}/docs/fixtures/verification-summary.schema.json" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
   "${repo_root}/test/e2e"
 do

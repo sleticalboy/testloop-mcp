@@ -29,6 +29,8 @@ required = [
     "go run ./examples/agent-response-manifest-demo",
     "docs/fixtures/agent-response-artifact-manifest.json",
     "agent-response-artifact-manifest.schema.json",
+    "verification-summary.schema.json",
+    "sections[].signals.action",
     "fallback_order",
     "agent_next_step=ready",
     "fix-installation",
@@ -58,6 +60,7 @@ for path in [
     Path("docs/fixtures.md"),
     Path("docs/fixtures/agent-response-artifact-manifest.json"),
     Path("docs/fixtures/agent-response-artifact-manifest.schema.json"),
+    Path("docs/fixtures/verification-summary.schema.json"),
 ]:
     if not path.exists():
         print(f"missing referenced file: {path}")

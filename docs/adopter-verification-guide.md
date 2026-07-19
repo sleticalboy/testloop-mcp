@@ -107,7 +107,7 @@ go run ./examples/agent-response-manifest-demo \
   docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-manifest 的结构契约见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，其中固定了 first-run/onboarding artifact 目录、必备文件、期望 action 和 `fallback_order`。
+manifest 的结构契约见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，其中固定了 first-run/onboarding artifact 目录、必备文件、期望 action 和 `fallback_order`。`verification-summary.json` 的结构契约见 [verification-summary.schema.json](./fixtures/verification-summary.schema.json)，客户端可用它校验 `sections[].signals.action` 这类可选动作信号。
 
 ## 5. 失败时看哪个字段
 

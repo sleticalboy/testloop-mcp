@@ -110,7 +110,7 @@ go run ./examples/first-run-agent-response-demo \
 
 first-run 和 onboarding 的 `agent-response.txt` 统一字段、读取顺序和客户端断言见 [Agent response artifact contract](./agent-response-artifact-contract.md)。
 
-如果希望测试自动发现 artifact fixture，可以读取 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，其中固定了 first-run / onboarding 的目录、必备文件、期望 action 和 fallback 顺序。manifest 的 JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，适合客户端生成类型或做契约校验。
+如果希望测试自动发现 artifact fixture，可以读取 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，其中固定了 first-run / onboarding 的目录、必备文件、期望 action 和 fallback 顺序。manifest 的 JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，适合客户端生成类型或做契约校验。summary JSON 的结构契约见 [verification-summary.schema.json](./fixtures/verification-summary.schema.json)，其中 `sections[].signals.action` 可用于读取 section 级动作信号。
 
 仓库提供了一个最小 manifest 消费 demo：
 

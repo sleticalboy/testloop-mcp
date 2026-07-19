@@ -95,9 +95,13 @@ assert content[0].text can be parsed as equivalent JSON fallback
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.json
 curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.schema.json
+curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/verification-summary.schema.json
 npx --yes ajv-cli validate \
   -s agent-response-artifact-manifest.schema.json \
   -d agent-response-artifact-manifest.json
+npx --yes ajv-cli validate \
+  -s verification-summary.schema.json \
+  -d docs/fixtures/verification-summary/user-project-failed.json
 ```
 
 如果客户端 CI 不想引入 JSON Schema 校验器，至少应运行仓库内 demo，确认 manifest 指向的 artifact fixture、必备字段和 fallback 顺序仍然可消费：
@@ -114,6 +118,7 @@ go run ./examples/agent-response-manifest-demo \
 - `fallback_order[0]` 固定为 `agent-response.txt`。
 - `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
 - `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。
+- `verification-summary.json` 允许可选 `sections[].signals.action`，例如 `manual_review`，但该信号不等于整体失败。
 
 ## 相关入口
 
@@ -123,4 +128,5 @@ go run ./examples/agent-response-manifest-demo \
 - [真实结构化 fixture](./fixtures.md)
 - [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
 - [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
+- [verification-summary.schema.json](./fixtures/verification-summary.schema.json)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
