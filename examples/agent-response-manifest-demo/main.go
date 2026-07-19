@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 type manifest struct {
@@ -46,6 +48,11 @@ type summarySection struct {
 	Signals map[string]string `json:"signals"`
 }
 
+type summaryContract struct {
+	path     string
+	resolved *jsonschema.Resolved
+}
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "agent response manifest demo failed: %v\n", err)
@@ -70,7 +77,8 @@ func run(args []string) error {
 		return fmt.Errorf("unsupported schema_version: %d", m.SchemaVersion)
 	}
 
-	if err := validateSummarySchema(args[0], m.SummarySchema); err != nil {
+	summarySchema, err := loadSummarySchema(args[0], m.SummarySchema)
+	if err != nil {
 		return err
 	}
 
@@ -78,7 +86,7 @@ func run(args []string) error {
 	fmt.Printf("summary_schema=%s\n", m.SummarySchema)
 	fmt.Printf("artifact_count=%d\n", len(m.Artifacts))
 	for i, artifact := range m.Artifacts {
-		if err := validateArtifact(artifact); err != nil {
+		if err := validateArtifact(artifact, summarySchema); err != nil {
 			return fmt.Errorf("%s: %w", artifact.Kind, err)
 		}
 		decisionAction, err := loadDecisionAction(artifact)
@@ -95,6 +103,7 @@ func run(args []string) error {
 		)
 		fmt.Printf("   directory=%s\n", artifact.Directory)
 		fmt.Printf("   decision_action=%s\n", decisionAction)
+		fmt.Printf("   summary_validated=%s\n", artifact.Summary)
 		fmt.Printf("   expected_section_signals=%s\n", formatSectionSignals(artifact.ExpectedSectionSignals))
 		fmt.Printf("   required_response_fields=%s\n", strings.Join(artifact.RequiredResponseFields, ","))
 		fmt.Printf("   fallback_order=%s\n", strings.Join(artifact.FallbackOrder, " > "))
@@ -102,21 +111,30 @@ func run(args []string) error {
 	return nil
 }
 
-func validateSummarySchema(manifestPath, rel string) error {
+func loadSummarySchema(manifestPath, rel string) (summaryContract, error) {
 	if rel == "" {
-		return fmt.Errorf("missing summary_schema")
+		return summaryContract{}, fmt.Errorf("missing summary_schema")
 	}
 	if filepath.IsAbs(rel) {
-		return fmt.Errorf("summary_schema must be relative")
+		return summaryContract{}, fmt.Errorf("summary_schema must be relative")
 	}
 	path := filepath.Join(filepath.Dir(manifestPath), rel)
-	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("summary_schema is not readable: %w", err)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return summaryContract{}, fmt.Errorf("summary_schema is not readable: %w", err)
 	}
-	return nil
+	var schema jsonschema.Schema
+	if err := json.Unmarshal(data, &schema); err != nil {
+		return summaryContract{}, fmt.Errorf("summary_schema invalid JSON: %w", err)
+	}
+	resolved, err := schema.Resolve(nil)
+	if err != nil {
+		return summaryContract{}, fmt.Errorf("summary_schema cannot be resolved: %w", err)
+	}
+	return summaryContract{path: path, resolved: resolved}, nil
 }
 
-func validateArtifact(artifact artifact) error {
+func validateArtifact(artifact artifact, summarySchema summaryContract) error {
 	if artifact.Kind == "" {
 		return fmt.Errorf("missing kind")
 	}
@@ -177,7 +195,7 @@ func validateArtifact(artifact artifact) error {
 	if decisionAction != artifact.ExpectedAction {
 		return fmt.Errorf("decision action = %q, want %q", decisionAction, artifact.ExpectedAction)
 	}
-	if err := validateExpectedSectionSignals(artifact); err != nil {
+	if err := validateExpectedSectionSignals(artifact, summarySchema); err != nil {
 		return err
 	}
 	return nil
@@ -201,10 +219,17 @@ func loadDecisionAction(artifact artifact) (string, error) {
 	return "", fmt.Errorf("decision missing agent_next_step")
 }
 
-func validateExpectedSectionSignals(artifact artifact) error {
+func validateExpectedSectionSignals(artifact artifact, summarySchema summaryContract) error {
 	data, err := os.ReadFile(filepath.Join(artifact.Directory, artifact.Summary))
 	if err != nil {
 		return err
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("summary invalid JSON: %w", err)
+	}
+	if err := summarySchema.resolved.Validate(raw); err != nil {
+		return fmt.Errorf("summary does not validate against %s: %w", summarySchema.path, err)
 	}
 	var parsed summary
 	if err := json.Unmarshal(data, &parsed); err != nil {

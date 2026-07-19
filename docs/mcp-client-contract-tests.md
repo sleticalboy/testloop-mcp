@@ -111,7 +111,7 @@ go run ./examples/agent-response-manifest-demo \
   docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-正常输出应包含 `decision_action=inspect-user-project`，用于确认 `agent-decision.txt` 的机器分流结果和 manifest 中的 `expected_action` 一致。
+正常输出应包含 `decision_action=inspect-user-project` 和 `summary_validated=verification-summary.json`，用于确认 `agent-decision.txt` 的机器分流结果、summary schema 校验和 manifest 中的 `expected_action` 一致。
 
 客户端自己的测试建议额外断言：
 
@@ -119,6 +119,7 @@ go run ./examples/agent-response-manifest-demo \
 - 每个 artifact 都先读取 `agent-response.txt`。
 - `fallback_order[0]` 固定为 `agent-response.txt`。
 - `agent-decision.txt` 中的 `agent_next_step` 等于 manifest 的 `expected_action`。
+- `verification-summary.json` 通过 manifest `summary_schema` 指向的 schema 校验。
 - `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
 - `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。
 - 按 manifest 的 `expected_section_signals` 校验 `verification-summary.json` 和 `agent-response.txt` 都保留 `独立 CLI 生成动作 smoke:manual_review`。

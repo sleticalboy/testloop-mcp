@@ -119,7 +119,7 @@ go run ./examples/agent-response-manifest-demo \
   docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-该 demo 会同时验证 `agent-response.txt`、`agent-decision.txt`、`verification-summary.json` 和 manifest 中的 `expected_section_signals`，并输出 `decision_action=...`，方便客户端确认机器分流和回复草稿一致。
+该 demo 会同时验证 `agent-response.txt`、`agent-decision.txt`、`verification-summary.json`、summary schema 和 manifest 中的 `expected_section_signals`，并输出 `decision_action=...` 与 `summary_validated=verification-summary.json`，方便客户端确认机器分流、回复草稿和 summary 契约一致。
 
 ## 推荐客户端伪代码
 
