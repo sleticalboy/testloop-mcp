@@ -16,6 +16,7 @@
 - `docs/client-integration.md` 和 Agent response contract 已补 manifest demo 命令。
 - `docs/mcp-client-contract-tests.md` 已补 CI artifact manifest/schema 回归模板，覆盖 schema 校验、fallback 顺序和 first-run/onboarding action 字段差异。
 - README 的 CI 失败 artifact 段落已补 manifest/schema 入口，避免接入方只按单个 first-run fixture 目录做回归。
+- README 已补 `agent-response-manifest-demo` 的最小正常输出，方便接入方快速核对 demo 是否运行正常。
 
 ## v0.5.10 - 2026-07-19
 

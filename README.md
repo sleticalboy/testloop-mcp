@@ -273,6 +273,15 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 完整 action 执行建议见 [Agent Action 决策表](./docs/agent-action-guide.md)，结构化返回样例见 [validate_coverage_task 结构化返回样例](./docs/validate-coverage-task-samples.md)，真实 handler fixture、CI artifact fixture 和 [agent-response artifact manifest](./docs/fixtures/agent-response-artifact-manifest.json) 见 [真实结构化 fixture](./docs/fixtures.md)，manifest schema 见 [agent-response-artifact-manifest.schema.json](./docs/fixtures/agent-response-artifact-manifest.schema.json)，客户端接入建议见 [客户端集成说明](./docs/client-integration.md)，客户端 CI 模板见 [MCP 客户端契约测试说明](./docs/mcp-client-contract-tests.md)。可运行 `go run ./examples/agent-decision-demo` 查看最小客户端决策映射，也可以运行 `go run ./examples/agent-response-manifest-demo docs/fixtures/agent-response-artifact-manifest.json` 验证 CI artifact manifest 消费路径。
 
+`agent-response-manifest-demo` 的正常输出会包含：
+
+```text
+manifest_schema_version=1
+artifact_count=2
+1. kind=first-run action_field=first_run_agent_next_step expected_action=inspect-user-project
+2. kind=onboarding action_field=agent_next_step expected_action=inspect-user-project
+```
+
 ---
 
 ### `run_tests`
