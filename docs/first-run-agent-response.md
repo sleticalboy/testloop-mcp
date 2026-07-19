@@ -108,6 +108,7 @@ Agent 应回复：
 
 相关文档：
 
+- [first-run artifact Agent 消费演示](./first-run-agent-artifact-demo.md)
 - [CI 失败后交给 Agent](./ci-agent-triage.md)
 - [首跑诊断失败样例](./first-run-failures.md)
 - [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)
