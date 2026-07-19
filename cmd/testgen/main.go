@@ -61,6 +61,11 @@ func runTestgen(args []string, stdout, stderr io.Writer) int {
 		}
 		return 1
 	}
+	code, err = generator.AvoidDuplicateGoTestNames(srcFile, outputFile, code)
+	if err != nil {
+		fmt.Fprintf(stderr, "Error: %v\n", err)
+		return 1
+	}
 
 	if err := os.WriteFile(outputFile, []byte(code), 0644); err != nil {
 		fmt.Fprintf(stderr, "Write error: %v\n", err)

@@ -234,6 +234,44 @@ func TestRunTestgenJavaScriptExplicitOutputUsesRelativeSourceImport(t *testing.T
 	}
 }
 
+func TestRunTestgenGoExplicitOutputAvoidsDuplicatePackageTestNames(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.go")
+	if err := os.WriteFile(source, []byte(`package calc
+
+func Add(a, b int) int { return a + b }
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "calc_test.go"), []byte(`package calc
+
+import "testing"
+
+func TestAdd(t *testing.T) {}
+`), 0o644); err != nil {
+		t.Fatalf("write existing test: %v", err)
+	}
+	output := filepath.Join(dir, "calc_testloop_test.go")
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{source, output}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	content, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "func TestAddTestLoop(t *testing.T)") {
+		t.Fatalf("generated Go test should avoid existing TestAdd:\n%s", text)
+	}
+	if strings.Contains(text, "func TestAdd(t *testing.T)") {
+		t.Fatalf("generated Go test still contains duplicate TestAdd:\n%s", text)
+	}
+}
+
 func TestRunTestgenReportsWriteError(t *testing.T) {
 	dir := t.TempDir()
 	source := writeSource(t, dir)
