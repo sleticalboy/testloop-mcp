@@ -20,6 +20,8 @@ testloop-mcp v0.5.8
 - [x] `scripts/verify-release-assets.sh v0.5.8` 验证 10 个 Release 资产完整。
 - [x] GitHub Release 正文已更新为正式 v0.5.8 发布说明。
 - [x] 仓库内 Formula 已使用 Release 真实 digest 更新到 `0.5.8`。
+- [x] Homebrew tap 已更新到 `testloop-mcp 0.5.8`，提交 `11b06d0` 已推送。
+- [x] 本机 Homebrew tap 验证和 Post-Release Verify run `29669664060` 已通过。
 
 ## 摘要
 
@@ -134,6 +136,8 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR=/tmp/testloop-triage-failing-project \
 - [x] 候选提交远端 CI run `29668904180` passed。
 - [x] Release Artifacts run `29669279828` passed。
 - [x] `scripts/verify-release-assets.sh v0.5.8` 输出 `Verified 10 release assets for sleticalboy/testloop-mcp@v0.5.8`。
+- [x] 本机 Homebrew tap 验证返回 `version=0.5.8`、`tap_git_head=11b06d0dedfa9a7d31537136e62a0fd774638d3c`。
+- [x] Post-Release Verify run `29669664060` passed。
 
 ## 发布备注
 
