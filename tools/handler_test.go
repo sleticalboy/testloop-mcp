@@ -972,6 +972,77 @@ export async function loadUser(response: Response): Promise<ExternalUser> {
 	}
 }
 
+func TestHandleGenerateTestsReturnsResolvedBarrelPayloadInStructuredContent(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+  "scripts": { "test": "vitest run" },
+  "devDependencies": { "vitest": "^3.0.0" }
+}`), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	modelDir := filepath.Join(dir, "src", "models")
+	if err := os.MkdirAll(modelDir, 0o755); err != nil {
+		t.Fatalf("mkdir models: %v", err)
+	}
+	source := filepath.Join(dir, "src", "api.ts")
+	src := `import type { ExternalUser } from './models';
+
+export async function loadUser(response: Response): Promise<ExternalUser> {
+  return await response.json();
+}
+`
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "index.ts"), []byte("export type * from './user';\n"), 0o644); err != nil {
+		t.Fatalf("write barrel: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "user.ts"), []byte(`export interface ExternalUser {
+  userId: number;
+  email: string;
+}
+`), 0o644); err != nil {
+		t.Fatalf("write user type: %v", err)
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{FilePath: source})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	structured := structuredContentAs[types.GenerateTestsOutput](t, result)
+	if structured.Status != generated.Status || structured.TestFile != generated.TestFile || structured.Provider != generated.Provider {
+		t.Fatalf("structured content mismatch: %+v vs %+v", structured, generated)
+	}
+	for _, want := range []string{
+		"import { describe, it, expect } from 'vitest';",
+		"import { loadUser } from './api';",
+		"json: async () => ({ userId: 1, email: 'user@example.com' })",
+		"expect(result).toEqual({ userId: 1, email: 'user@example.com' });",
+	} {
+		if !strings.Contains(generated.Preview, want) {
+			t.Fatalf("generated preview missing %q:\n%s", want, generated.Preview)
+		}
+	}
+	if generated.Context == nil {
+		t.Fatal("expected generation context")
+	}
+	target := findGeneratedTarget(generated.Context.Targets, "loadUser")
+	if target == nil {
+		t.Fatalf("loadUser target not found: %+v", generated.Context.Targets)
+	}
+	assertStringSliceContains(t, target.PayloadNotes, "return annotation imported type ExternalUser from './models' resolved from models/user.ts")
+	for _, note := range target.PayloadNotes {
+		if strings.Contains(note, "read candidate source files") || strings.Contains(note, "falls back to { ok: true }") {
+			t.Fatalf("resolved barrel imported type should not emit fallback or candidate note: %+v", target.PayloadNotes)
+		}
+	}
+}
+
 func TestHandleGenerateTestsAutoDetectsJavaScriptFramework(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{

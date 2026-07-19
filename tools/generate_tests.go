@@ -50,7 +50,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 		return nil, nil, formatGenerateTestsError(err)
 	}
 
-	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask, Framework: input.Framework}
+	opts := generator.GenerateTestsOptions{CoverageTask: input.CoverageTask, Framework: input.Framework, TestFile: testFile}
 	code, err := generator.GenerateTestsWithProviderOptions(ctx, filePath, provider, opts)
 	if err != nil {
 		if result, out, ok := generateTestsProviderErrorResult(filePath, provider, input, err); ok {
