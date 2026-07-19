@@ -590,6 +590,46 @@ Vue / Node 项目把最后的 smoke 命令换成：
 pnpm install --frozen-lockfile && pnpm build
 ```
 
+GitHub Actions 最小片段可以先用 first-run。保存为 `.github/workflows/testloop-first-run.yml`：
+
+```yaml
+name: testloop first-run smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  first-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+
+      - name: Run testloop first-run
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
+          TESTLOOP_MCP_VERSION=v0.5.7 \
+          TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
+          TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
+            bash /tmp/testloop-first-run-ci.sh 'go test ./...'
+
+      - name: Upload testloop artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testloop-first-run
+          path: |
+            /tmp/testloop-first-run/verification-report.md
+            /tmp/testloop-first-run/verification-summary.json
+            /tmp/testloop-first-run/agent-decision.txt
+            /tmp/testloop-first-run/first-run-context.txt
+            /tmp/testloop-first-run/first-run.log
+```
+
 first-run 会输出 report、summary、decision、context 和 log 五件套；onboarding 会输出 report、summary 和 decision 三件套。失败时先看 `agent-decision.txt`，first-run 失败时直接把 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
 
 如果要演示完整首次接入路径，可以运行：

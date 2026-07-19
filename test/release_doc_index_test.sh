@@ -54,6 +54,9 @@ required_phrases = [
     "用户项目接入：直接复制",
     "复制 first-run bootstrap",
     "复制 onboarding bootstrap",
+    "GitHub Actions 最小片段",
+    ".github/workflows/testloop-first-run.yml",
+    "actions/upload-artifact@v4",
     "first-run-context.txt",
     "真实 server / web 实跑记录",
 ]

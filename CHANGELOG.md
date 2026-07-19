@@ -4,6 +4,7 @@
 
 ### Changed
 
+- README 的“用户项目接入：直接复制”入口补充最小 GitHub Actions first-run workflow 片段，并新增 README YAML snippet 测试，防止首页 CI 示例漂移。
 - README 新增“用户项目接入：直接复制”入口，把 first-run bootstrap、onboarding bootstrap、Go/Vue smoke 命令和 artifact 解读放到首页，减少首次接入跳转成本。
 - `docs/real-integration-cases.md` 更新为 v0.5.7 真实 first-run / onboarding CI bootstrap 实跑记录，覆盖 laoxia Go server 和 Vue web 项目，并保留 v0.5.4 onboarding 样例作为历史记录。
 - `docs/adopter-verification-guide.md` 补充 `PATH` 版本漂移与 `TESTLOOP_MCP_VERSION` bootstrap 版本门禁的区别，避免手动 MCP 客户端配置误用旧二进制。
