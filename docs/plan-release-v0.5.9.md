@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-这是 v0.5.9 的候选发布和正式版本准备记录。当前已完成正式版本准备的版本同步；tag、Release Artifacts 和 Homebrew tap 仍需等版本准备提交的远端 CI 通过后再推进。
+这是 v0.5.9 的候选发布和正式版本准备记录。当前已完成正式版本准备的版本同步、本地验证和远端 CI；下一步进入 tag、Release Artifacts 和 Homebrew tap 流程。
 
 v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.md)：本轮主要是 first-run artifact Agent 消费 demo、端到端回归、失败 artifact fixture 包、客户端集成文档和 README 入口。
 
@@ -39,6 +39,7 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 - [x] `git diff --check`
 - [x] 候选提交远端 CI run `29670477128` passed。
 - [x] 正式版本准备本地验证已通过：脚本语法、`go test ./...`、完整 shell 矩阵、主服务/testgen 构建、`--version`、help 输出、darwin arm64 打包 dry-run、sha256 校验、tarball 内容检查和 `git diff --check`。
+- [x] 正式版本准备提交 `c8a56cb` 远端 CI run `29670649066` passed。
 
 ## 发布前门禁
 
@@ -63,7 +64,7 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 - [x] 同步 quickstart、first-run、verification CI、onboarding CI 和接入指南中的版本门禁到 `0.5.9`。
 - [x] 测试中的版本期望同步到 `0.5.9`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI run `29670649066` passed。
 - [ ] 打 tag `v0.5.9` 并推送。
 - [ ] 等待 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.9` 验证 10 个 Release 资产完整。
@@ -74,4 +75,4 @@ v0.5.9 发布重点见 [v0.5.9 发布说明草案](./plan-release-notes-v0.5.9.m
 
 ## 当前结论
 
-v0.5.9 正式版本准备改动和本地完整验证已完成，适合作为 Agent artifact 消费体验 patch。下一步提交版本准备改动并等待远端 CI，通过后再进入 tag、Release Artifacts、GitHub Release 和 Homebrew tap 流程。
+v0.5.9 正式版本准备改动、本地完整验证和远端 CI 已完成，适合作为 Agent artifact 消费体验 patch。下一步打 `v0.5.9` tag，并进入 Release Artifacts、GitHub Release 和 Homebrew tap 流程。
