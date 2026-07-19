@@ -15,6 +15,7 @@
 - `scripts/fixture-task-jsonl.py` help text and docs now clearly position it as a maintainer-only helper for rebuilding static regression fixture JSONL inputs.
 - `scripts/validate-regression-smoke.sh` now runs a preflight check by default to report missing project directories, static JSONL fixtures, and common local commands before starting the longer regression smoke.
 - Regression preflight now supports `TESTLOOP_REGRESSION_PREFLIGHT_FORMAT=json`, producing machine-readable `ok`, `missing_count`, `missing`, and `checks` fields for Agent workflows.
+- Added `scripts/render-regression-preflight-report.py` to convert preflight JSON summaries into a Chinese Markdown preparation checklist.
 
 ### Fixed
 
