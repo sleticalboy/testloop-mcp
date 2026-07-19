@@ -69,6 +69,10 @@
 - [x] `scripts/verify-release-assets.sh v0.5.11` 验证 10 个 Release 资产完整。
 - [x] GitHub Release `v0.5.11` 已更新为正式发布说明，并标记为 latest。
 - [x] `scripts/generate-homebrew-formula.sh v0.5.11` 已更新仓库内 Formula，`ruby -c Formula/testloop-mcp.rb` 通过。
+- [x] Formula/发布记录提交 `aea0330` 远端 CI run `29677030693` passed。
+- [x] Homebrew tap 已升级到 `0.5.11`，tap commit `e810f60` 已推送。
+- [x] 本机 tap 已快进到 `e810f60`，`brew audit --formula --strict sleticalboy/tap/testloop-mcp` 通过。
+- [x] Post-Release Verify run `29679705790` passed，资产清单和五平台安装脚本 dry run 全部通过。
 
 ## 发布前门禁
 
@@ -101,9 +105,9 @@
 - [x] 使用 `scripts/verify-release-assets.sh v0.5.11` 验证 Release 资产完整。
 - [x] 更新 GitHub Release 正文为正式 v0.5.11 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.11` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.11` 并推送。
-- [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
+- [x] 更新 Homebrew tap 到 `0.5.11` 并推送。
+- [x] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.11 已完成版本准备、tag、Release Artifacts、资产完整性校验、GitHub Release 正文更新和仓库内 Formula 生成。下一步提交 Formula/发布记录并等待远端 CI；CI 通过后更新 Homebrew tap，再触发 Post-Release Verify。
+v0.5.11 已完成正式 GitHub Release、Homebrew tap 更新和 Post-Release Verify 五平台安装脚本 dry run。发布记录最后一步是提交当前文档收口并等待 main CI。
