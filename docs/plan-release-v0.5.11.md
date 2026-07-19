@@ -64,18 +64,18 @@
 
 ## 发布前门禁
 
-- [ ] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
-- [ ] `go test ./...`
-- [ ] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
-- [ ] `go build -o /tmp/testloop-mcp-v0.5.11-candidate .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.5.11-candidate ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.5.11-candidate --version` 输出 `testloop-mcp 0.5.10`，正式版本准备前不提前切版本号。
-- [ ] `/tmp/testloop-mcp-v0.5.11-candidate --help` 输出 usage，exit code 为 `2`。
-- [ ] `/tmp/testloop-testgen-v0.5.11-candidate --help` 输出 usage，exit code 为 `2`。
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.11-candidate-dist scripts/package-release-asset.sh v0.5.11 darwin_arm64 darwin arm64`
-- [ ] 在 dist 目录内校验 `testloop-mcp_v0.5.11_darwin_arm64.tar.gz.sha256` 通过。
-- [ ] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
-- [ ] `git diff --check`
+- [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
+- [x] `go test ./...`
+- [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `go build -o /tmp/testloop-mcp-v0.5.11-candidate .`
+- [x] `go build -o /tmp/testloop-testgen-v0.5.11-candidate ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.5.11-candidate --version` 输出 `testloop-mcp 0.5.10`，正式版本准备前不提前切版本号。
+- [x] `/tmp/testloop-mcp-v0.5.11-candidate --help` 输出 `Usage of`，exit code 为 `2`。
+- [x] `/tmp/testloop-testgen-v0.5.11-candidate --help` 输出 `Usage: testgen`，exit code 为 `2`。
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.11-candidate-dist scripts/package-release-asset.sh v0.5.11 darwin_arm64 darwin arm64`
+- [x] 在 dist 目录内校验 `testloop-mcp_v0.5.11_darwin_arm64.tar.gz.sha256` 通过。
+- [x] 本地 tarball 内容包含 `testloop-mcp`、`testloop-testgen`、`README.md` 和 `LICENSE`。
+- [x] `git diff --check`
 
 ## 正式发布前待办
 
@@ -97,4 +97,4 @@
 
 ## 当前结论
 
-v0.5.11 候选边界已清晰：这是一次 Agent/客户端 artifact 消费契约 patch。下一步应先跑 release readiness 门禁；通过后再进入正式版本准备，不要在 readiness 通过前切版本号或打 tag。
+v0.5.11 候选边界和 release readiness 预检已通过：这是一次 Agent/客户端 artifact 消费契约 patch。下一步可以进入正式版本准备，更新版本号与文档引用后重新跑完整发布前验证；在正式版本准备提交通过远端 CI 前不要打 tag。
