@@ -29,6 +29,7 @@ for name in \
   README.md \
   verification-report.md \
   verification-summary.json \
+  verification-summary.schema.json \
   agent-decision.txt \
   first-run-context.txt \
   agent-response.txt \
@@ -37,6 +38,7 @@ do
   assert_file "$fixture_dir/$name"
 done
 
+cmp "${repo_root}/docs/fixtures/verification-summary.schema.json" "$fixture_dir/verification-summary.schema.json"
 ruby -rjson -e 'JSON.parse(File.read(ARGV.fetch(0)));' "$fixture_dir/verification-summary.json"
 assert_contains "$fixture_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
 assert_contains "$fixture_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
@@ -44,6 +46,7 @@ assert_contains "$fixture_dir/agent-response.txt" "结论：testloop-mcp 接入�
 assert_contains "$fixture_dir/agent-response.txt" "- failed_section=用户项目 smoke"
 assert_contains "$fixture_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$fixture_dir/verification-summary.json" '"overall_status": "failed"'
+assert_contains "$fixture_dir/verification-summary.schema.json" '"title": "testloop-mcp verification summary"'
 assert_contains "$fixture_dir/verification-summary.json" '"failed_count": 1'
 assert_contains "$fixture_dir/verification-summary.json" '"name": "独立 CLI 生成动作 smoke"'
 assert_contains "$fixture_dir/verification-summary.json" '"signals": {'
@@ -54,6 +57,7 @@ assert_contains "${repo_root}/docs/fixtures.md" "./fixtures/first-run-artifacts/
 assert_contains "${repo_root}/docs/fixtures.md" "first-run artifact fixture"
 assert_contains "${repo_root}/docs/fixtures.md" "first-run-context.txt"
 assert_contains "${repo_root}/docs/fixtures.md" "agent-response.txt"
+assert_contains "${repo_root}/docs/fixtures.md" "verification-summary.schema.json"
 
 out="${tmp_dir}/response.out"
 (cd "$repo_root" && go run ./examples/first-run-agent-response-demo \

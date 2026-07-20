@@ -20,6 +20,7 @@ external_onboarding_status=passed
 
 - `/tmp/testloop-external-onboarding/artifacts/verification-report.md`
 - `/tmp/testloop-external-onboarding/artifacts/verification-summary.json`
+- `/tmp/testloop-external-onboarding/artifacts/verification-summary.schema.json`
 - `/tmp/testloop-external-onboarding/artifacts/agent-decision.txt`
 - `/tmp/testloop-external-onboarding/artifacts/agent-response.txt`
 
@@ -77,8 +78,10 @@ TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=node \
 最终也复验了 `TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=all`，连续生成：
 
 - `/tmp/testloop-external-onboarding/artifacts/go/verification-summary.json`
+- `/tmp/testloop-external-onboarding/artifacts/go/verification-summary.schema.json`
 - `/tmp/testloop-external-onboarding/artifacts/go/agent-response.txt`
 - `/tmp/testloop-external-onboarding/artifacts/node/verification-summary.json`
+- `/tmp/testloop-external-onboarding/artifacts/node/verification-summary.schema.json`
 - `/tmp/testloop-external-onboarding/artifacts/node/agent-response.txt`
 
 两条路径均输出 `agent_next_step=ready`，最终输出 `external_onboarding_mode=all`、`external_onboarding_status=passed`。

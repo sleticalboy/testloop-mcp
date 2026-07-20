@@ -34,6 +34,15 @@ func TestAgentResponseArtifactManifestSchema(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects missing artifact summary schema pointer", func(t *testing.T) {
+		candidate := cloneJSONMap(t, manifest)
+		artifact := firstManifestArtifact(t, candidate)
+		delete(artifact, "summary_schema")
+		if err := resolved.Validate(candidate); err == nil {
+			t.Fatalf("expected schema validation to reject missing artifact summary_schema")
+		}
+	})
+
 	t.Run("rejects missing summary schema pointer", func(t *testing.T) {
 		candidate := cloneJSONMap(t, manifest)
 		delete(candidate, "summary_schema")

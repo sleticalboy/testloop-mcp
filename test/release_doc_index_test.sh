@@ -81,7 +81,9 @@ required_phrases = [
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
     "first-run-context.txt",
     "onboarding artifact",
-    "Agent 回复草稿四件套",
+    "summary schema",
+    "七件套",
+    "五件套",
     "真实 server / web 实跑记录",
 ]
 

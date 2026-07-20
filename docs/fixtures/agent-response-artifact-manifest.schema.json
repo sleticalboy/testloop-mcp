@@ -47,6 +47,7 @@
         "agent_response",
         "decision",
         "summary",
+        "summary_schema",
         "report",
         "action_field",
         "expected_action",
@@ -79,6 +80,10 @@
         "summary": {
           "type": "string",
           "const": "verification-summary.json"
+        },
+        "summary_schema": {
+          "type": "string",
+          "const": "verification-summary.schema.json"
         },
         "report": {
           "type": "string",

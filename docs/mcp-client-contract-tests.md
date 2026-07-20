@@ -123,7 +123,8 @@ go run ./examples/agent-response-manifest-demo \
 - 每个 artifact 都先读取 `agent-response.txt`。
 - `fallback_order[0]` 固定为 `agent-response.txt`。
 - `agent-decision.txt` 中的 `agent_next_step` 等于 manifest 的 `expected_action`。
-- `verification-summary.json` 通过 manifest `summary_schema` 指向的 schema 校验。
+- `verification-summary.json` 通过 manifest 顶层 `summary_schema` 指向的 canonical schema 校验。
+- 每个 artifact 的本地 `summary_schema=verification-summary.schema.json` 指向同目录 schema，下载 artifact 后不依赖仓库路径也能离线校验。
 - `showcase-dual-project-report.sh` 的 combined summary 通过 `dual-project-summary.schema.json` 校验，不能当成 `verification-summary.json` 直接喂给 decision demo。
 - `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
 - `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。

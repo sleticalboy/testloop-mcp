@@ -1,6 +1,6 @@
 # 首跑诊断 CI 外部项目演练
 
-这个演练用于验证 `scripts/run-first-run-ci.sh` 的复制路径不依赖 testloop-mcp 仓库作为当前工作目录，并且能在外部用户项目里生成首跑诊断六件套。
+这个演练用于验证 `scripts/run-first-run-ci.sh` 的复制路径不依赖 testloop-mcp 仓库作为当前工作目录，并且能在外部用户项目里生成首跑诊断七件套。
 
 脚本默认会在 `/tmp` 创建一个最小 Go 项目，把 bootstrap 脚本复制到临时路径，然后从这个外部项目目录执行：
 
@@ -20,6 +20,7 @@ external_first_run_status=passed
 
 - `/tmp/testloop-external-first-run/artifacts/verification-report.md`
 - `/tmp/testloop-external-first-run/artifacts/verification-summary.json`
+- `/tmp/testloop-external-first-run/artifacts/verification-summary.schema.json`
 - `/tmp/testloop-external-first-run/artifacts/agent-decision.txt`
 - `/tmp/testloop-external-first-run/artifacts/first-run-context.txt`
 - `/tmp/testloop-external-first-run/artifacts/agent-response.txt`
@@ -80,9 +81,11 @@ TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=node \
 同日复验了 `TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=all`，连续生成：
 
 - `/tmp/testloop-external-first-run/artifacts/go/verification-summary.json`
+- `/tmp/testloop-external-first-run/artifacts/go/verification-summary.schema.json`
 - `/tmp/testloop-external-first-run/artifacts/go/first-run-context.txt`
 - `/tmp/testloop-external-first-run/artifacts/go/agent-response.txt`
 - `/tmp/testloop-external-first-run/artifacts/node/verification-summary.json`
+- `/tmp/testloop-external-first-run/artifacts/node/verification-summary.schema.json`
 - `/tmp/testloop-external-first-run/artifacts/node/first-run-context.txt`
 - `/tmp/testloop-external-first-run/artifacts/node/agent-response.txt`
 

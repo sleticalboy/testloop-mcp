@@ -28,6 +28,7 @@ required_snippets = [
     "./fixtures/verification-summary.schema.json",
     "./fixtures/dual-project-summary.schema.json",
     "./fixtures/dual-project-summary/laoxia-passed.json",
+    "local_summary_schema=verification-summary.schema.json",
     "sections[].signals.action",
     "verification-summary-decision-demo",
     "go run ./examples/agent-response-manifest-demo",

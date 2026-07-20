@@ -11,6 +11,7 @@
 
 - `verification-report.md`
 - `verification-summary.json`
+- `verification-summary.schema.json`
 - `agent-decision.txt`
 - `agent-response.txt`
 

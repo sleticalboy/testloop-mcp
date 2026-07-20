@@ -6,8 +6,8 @@
 
 | CI 入口 | artifact 套件 | 生成脚本 | 主要用途 |
 | --- | --- | --- | --- |
-| `scripts/run-first-run-ci.sh` | first-run 六件套 | `scripts/render-first-run-agent-response.sh` | 首次安装、版本漂移、MCP transport、Agent demo 和用户项目 smoke 诊断。 |
-| `scripts/run-onboarding-ci.sh` | onboarding 四件套 | `scripts/render-onboarding-agent-response.sh` | 稳定接入后的 PR / 发布后 smoke。 |
+| `scripts/run-first-run-ci.sh` | first-run 七件套 | `scripts/render-first-run-agent-response.sh` | 首次安装、版本漂移、MCP transport、Agent demo 和用户项目 smoke 诊断。 |
+| `scripts/run-onboarding-ci.sh` | onboarding 五件套 | `scripts/render-onboarding-agent-response.sh` | 稳定接入后的 PR / 发布后 smoke。 |
 
 ## 固定结构
 

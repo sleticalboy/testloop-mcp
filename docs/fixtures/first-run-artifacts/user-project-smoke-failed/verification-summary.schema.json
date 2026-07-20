@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/verification-summary.schema.json",
+  "title": "testloop-mcp verification summary",
+  "description": "Machine-readable contract for verification-summary.json artifacts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "overall_status",
+    "failed_count",
+    "sections"
+  ],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "git_ref": {
+      "type": "string"
+    },
+    "binary": {
+      "type": "string"
+    },
+    "version_output": {
+      "type": "string"
+    },
+    "markdown_report": {
+      "type": "string"
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "failed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    }
+  },
+  "$defs": {
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "exit_code",
+        "reason"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "skipped"
+          ]
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signals": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

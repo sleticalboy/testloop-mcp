@@ -53,7 +53,7 @@ for artifact in artifacts or []:
         failures.append(f"{kind}: missing directory {directory}")
         continue
 
-    for key in ("agent_response", "decision", "summary", "report"):
+    for key in ("agent_response", "decision", "summary", "summary_schema", "report"):
         rel = artifact.get(key)
         if not rel:
             failures.append(f"{kind}: missing manifest key {key}")

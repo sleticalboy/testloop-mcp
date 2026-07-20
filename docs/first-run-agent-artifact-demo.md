@@ -82,7 +82,7 @@ go run ./examples/first-run-agent-response-demo \
 docs/fixtures/first-run-artifacts/user-project-smoke-failed/
 ```
 
-它包含 first-run 失败时应上传的六件套，适合客户端或 Agent 集成测试直接读取，不需要每次都重新构造失败项目。
+它包含 first-run 失败时应上传的七件套，适合客户端或 Agent 集成测试直接读取，不需要每次都重新构造失败项目。
 
 ## 边界
 

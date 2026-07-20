@@ -22,6 +22,7 @@ type artifact struct {
 	AgentResponse          string          `json:"agent_response"`
 	Decision               string          `json:"decision"`
 	Summary                string          `json:"summary"`
+	SummarySchema          string          `json:"summary_schema"`
 	Report                 string          `json:"report"`
 	OptionalContext        string          `json:"optional_context"`
 	OptionalLog            string          `json:"optional_log"`
@@ -104,6 +105,7 @@ func run(args []string) error {
 		fmt.Printf("   directory=%s\n", artifact.Directory)
 		fmt.Printf("   decision_action=%s\n", decisionAction)
 		fmt.Printf("   summary_validated=%s\n", artifact.Summary)
+		fmt.Printf("   local_summary_schema=%s\n", artifact.SummarySchema)
 		fmt.Printf("   expected_section_signals=%s\n", formatSectionSignals(artifact.ExpectedSectionSignals))
 		fmt.Printf("   required_response_fields=%s\n", strings.Join(artifact.RequiredResponseFields, ","))
 		fmt.Printf("   fallback_order=%s\n", strings.Join(artifact.FallbackOrder, " > "))
@@ -142,6 +144,7 @@ func validateArtifact(artifact artifact, summarySchema summaryContract) error {
 		"agent_response": artifact.AgentResponse,
 		"decision":       artifact.Decision,
 		"summary":        artifact.Summary,
+		"summary_schema": artifact.SummarySchema,
 		"report":         artifact.Report,
 	} {
 		if rel == "" {
