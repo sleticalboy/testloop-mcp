@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "action": "ready",
+  "task": {
+    "id": "go-test-1",
+    "framework": "go-test",
+    "target": "SliceMapper0",
+    "file": "utils/alias.go",
+    "line_range": "23-26",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: filter[ret]"
+    ],
+    "test_name": "TestSliceMapper0",
+    "priority": 121,
+    "confidence": 0.95
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 4,
+    "action": "manual_review"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "ready",
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0
+  },
+  "metadata": {
+    "framework": "go-test",
+    "test_file": "utils/alias_test.go"
+  },
+  "redaction_note": "该 fixture 只保留真实 laoxia server 验证摘要；原始 run_result.raw_output 包含外部项目测试日志和本机环境变量，不能入仓。"
+}

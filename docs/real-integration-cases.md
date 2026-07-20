@@ -417,6 +417,60 @@ agent_next_step=ready
 
 这次实跑说明：first-run CI 更适合首次接入和失败上下文收集，onboarding CI 更适合稳定接入后的 PR / 发布后 smoke；二者可以覆盖同一类 server / web 项目，差异只在 artifact 数量和失败上下文详细程度。
 
+## laoxia server 覆盖率任务闭环样例
+
+这个样例用于验证“覆盖率任务 -> 生成增量测试 -> 运行测试 -> Agent 下一步动作”的真实项目闭环。它使用 laoxia `car-admin-server` 的 `utils` 包，脚本会复制项目到临时目录后执行，不会修改原项目工作区。
+
+运行命令：
+
+```bash
+TESTLOOP_VALIDATE_GO_FILE_FILTER=utils \
+  scripts/validate-go-coverage-top-tasks.sh \
+  /Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server \
+  1 \
+  /tmp/testloop-laoxia-agent-loop.jsonl
+```
+
+本次输出摘要：
+
+```text
+result_jsonl=/tmp/testloop-laoxia-agent-loop.jsonl
+summary={"limit":1,"status_counts":{"passed":1},"action_counts":{"ready":1},"zero_skip":1,"skipped_total":0}
+```
+
+脱敏后的稳定 fixture 见 [laoxia-server-go-utils.json](./fixtures/real-project-agent-loop/laoxia-server-go-utils.json)。关键字段：
+
+```json
+{
+  "status": "passed",
+  "action": "ready",
+  "task": {
+    "target": "SliceMapper0",
+    "file": "utils/alias.go",
+    "line_range": "23-26",
+    "gap_type": "branch",
+    "test_name": "TestSliceMapper0"
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 4,
+    "action": "manual_review"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "ready",
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0
+  }
+}
+```
+
+这条证据的价值不在于证明所有 coverage task 都能自动通过，而是证明真实项目中至少可以把低依赖 `utils` 缺口稳定转成 `ready` 任务：Agent 可以读取 `coverage_task`、生成的测试摘要、`run_result.action=ready` 和 skipped 数量，决定吸收本次增量测试并进入下一个 coverage task。
+
+原始 JSONL 不入仓。原因是 `run_result.raw_output` 会包含外部项目测试日志和本机环境变量；文档和 fixture 只保留可公开复查的结构化摘要。
+
 ## laoxia v0.5.4 历史 onboarding 样例
 
 下面保留 v0.5.4 时期使用 `scripts/showcase-agent-onboarding-report.sh` 的历史样例，用来说明项目接入模板的演进。新接入项目应优先复制上面的 v0.5.7 CI bootstrap 示例。
