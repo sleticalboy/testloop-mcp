@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-暂无。
+### Added
+
+- 新增主 MCP 工具 handler 层结构化返回契约测试，固定 `generate_tests`、`run_tests`、`parse_results`、`parse_coverage` 和 `fix_suggestions` 的 `structuredContent`、handler 返回值与 `content[0].text` JSON 语义一致。
 
 ## v0.5.13 - 2026-07-20
 

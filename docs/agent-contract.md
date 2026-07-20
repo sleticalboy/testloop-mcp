@@ -89,6 +89,8 @@ Agent 决策应以 `status/action` 为准：
 
 `types/agent_contract_test.go` 固定了上述关键 JSON 字段名。新增字段可以直接追加；如果确实需要改名或改变语义，应先新增兼容字段、更新文档和客户端迁移说明，再在后续主版本中移除旧字段。
 
+`tools/tool_result_contract_test.go` 固定主 MCP 工具 handler 层的返回一致性：`generate_tests`、`run_tests`、`parse_results`、`parse_coverage` 和 `fix_suggestions` 的 `structuredContent`、handler 返回值与 `content[0].text` JSON 必须语义一致。这样客户端优先读 `structuredContent`，旧客户端 fallback 到 text JSON 时，不会拿到不同决策字段。
+
 `test/e2e` 还包含真实 stdio 进程级 smoke：测试会先构建当前 `testloop-mcp` 二进制，再通过 MCP SDK `CommandTransport` 启动 `--transport=stdio` 进程，执行 `tools/list` 和一次 `parse_results` 调用，并复用 e2e helper 校验 `structuredContent` 与 text JSON 语义一致。这个测试覆盖的是客户端实际接入路径，不只是 in-memory server。
 
 `test/e2e` 同时覆盖真实 Streamable HTTP 进程级 smoke：测试会启动 `testloop-mcp --transport=http`，等待 `/healthz` 返回 200，再通过 MCP SDK `StreamableClientTransport` 调用 `tools/list` 和 `parse_results`。这保证 HTTP 接入路径也能返回同一套结构化契约。
