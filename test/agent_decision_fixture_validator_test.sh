@@ -90,4 +90,32 @@ assert payload["failures"]
 assert any("decision=accept, expected=manual-review" in item for item in payload["failures"])
 PY
 
+bad_metadata_manifest="${tmp_dir}/agent-decision-fixtures-bad-metadata.json"
+python3 - "$bad_metadata_manifest" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+manifest = json.loads(Path("docs/fixtures/agent-decision-fixtures.json").read_text(encoding="utf-8"))
+manifest["fixtures"][0]["source"] = "unknown"
+manifest["fixtures"][0]["client_expectation"] = ""
+Path(sys.argv[1]).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
+
+if node scripts/validate-agent-decision-fixtures.mjs --json "$bad_metadata_manifest" "$repo_root" > "${tmp_dir}/bad-metadata.json"; then
+  echo "expected JSON validator to fail for invalid manifest metadata" >&2
+  exit 1
+fi
+python3 - "${tmp_dir}/bad-metadata.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "failed"
+assert payload["failures"]
+assert any("fixtures[0]: source: expected one of synthetic, real_project" in item for item in payload["failures"])
+assert any("fixtures[0]: client_expectation: expected non-empty string" in item for item in payload["failures"])
+PY
+
 echo "agent decision fixture validator test passed"

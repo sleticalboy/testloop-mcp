@@ -46,6 +46,8 @@ required_snippets = [
     "decisions[]",
     "fixtures[]",
     "failures[]",
+    "client_expectation",
+    "JSON Schema 工具链",
     "agent_artifact_manifest_status=passed",
     "agent_artifact_status=passed",
     "./fixtures/agent-response-artifact-manifest.json",

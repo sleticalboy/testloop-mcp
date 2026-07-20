@@ -41,6 +41,23 @@ const repoRoot = path.resolve(positionalArgs[1] || process.cwd());
 const failures = [];
 const fixtureResults = [];
 const decisions = [];
+const validFixtureKinds = new Set(['validate_coverage_task', 'real_project_agent_loop']);
+const validFixtureSources = new Set(['synthetic', 'real_project']);
+const validStatuses = new Set(['passed', 'failed']);
+const validActions = new Set([
+  'ready',
+  'manual_review_internal',
+  'manual_review_environment',
+  'manual_review_external_service',
+  'apply_fix_suggestions',
+  'needs_better_input',
+]);
+const validExpectedDecisions = new Set([
+  'accept',
+  'manual-review',
+  'apply-repair',
+  'needs-better-input',
+]);
 
 function emitJSON(status, manifest) {
   const fixtures = Array.isArray(manifest?.fixtures) ? manifest.fixtures : [];
@@ -116,6 +133,18 @@ function requireObject(value, label) {
   return value;
 }
 
+function requireOneOf(value, allowed, label) {
+  if (typeof value !== 'string' || !allowed.has(value)) {
+    failures.push(`${label}: expected one of ${Array.from(allowed).join(', ')}`);
+  }
+}
+
+function requireNonEmptyString(value, label) {
+  if (typeof value !== 'string' || value.length === 0) {
+    failures.push(`${label}: expected non-empty string`);
+  }
+}
+
 function validateRepairPayload(payload, fixturePath) {
   const runResult = requireObject(payload.run_result, `${fixturePath}: run_result`);
   const suggestions = runResult.fix_suggestions;
@@ -166,6 +195,12 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
     manifest_action: entry.action,
     expected_decision: entry.expected_decision,
   };
+  requireOneOf(entry.kind, validFixtureKinds, `${label}: kind`);
+  requireOneOf(entry.source, validFixtureSources, `${label}: source`);
+  requireOneOf(entry.status, validStatuses, `${label}: status`);
+  requireOneOf(entry.action, validActions, `${label}: action`);
+  requireOneOf(entry.expected_decision, validExpectedDecisions, `${label}: expected_decision`);
+  requireNonEmptyString(entry.client_expectation, `${label}: client_expectation`);
   if (typeof fixtureRelPath !== 'string' || fixtureRelPath.length === 0) {
     failures.push(`${label}: path must be a non-empty string`);
     result.error = 'path must be a non-empty string';

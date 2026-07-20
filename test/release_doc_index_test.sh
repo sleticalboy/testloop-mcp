@@ -100,6 +100,7 @@ required_phrases = [
     "failures[]",
     "最小决策 fixture 包",
     "package.json",
+    "client_expectation",
 ]
 
 failures = []

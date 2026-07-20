@@ -90,6 +90,7 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
 ```
 
 JSON 输出会固定 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`。验证失败时脚本仍输出可解析 JSON，并用 `status=failed` 与非 0 退出码同时表达失败。
+validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`，适合作为轻量客户端 CI 合同测试。
 
 如果不想复制整个仓库，可以先导出最小决策 fixture 包：
 

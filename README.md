@@ -619,6 +619,7 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
 ```
 
 JSON 输出会包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；验证失败时仍输出 JSON，同时返回非 0 退出码。
+validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`。
 
 如果要给外部 MCP 客户端项目复制一份最小决策 fixture 包：
 
