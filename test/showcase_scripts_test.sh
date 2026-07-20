@@ -242,6 +242,21 @@ SH
   assert_contains "$output_dir/laoxia-summary.json" '"failed_count": 0'
   assert_contains "$output_dir/laoxia-summary.json" '"server": {'
   assert_contains "$output_dir/laoxia-summary.json" '"web": {'
+  python3 - "$output_dir/laoxia-summary.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if data["server"]["summary"]["overall_status"] != "passed":
+    raise SystemExit("expected server summary overall_status=passed")
+if data["web"]["summary"]["overall_status"] != "passed":
+    raise SystemExit("expected web summary overall_status=passed")
+if data["server"]["summary"]["failed_count"] != 0:
+    raise SystemExit("expected server summary failed_count=0")
+if data["web"]["summary"]["failed_count"] != 0:
+    raise SystemExit("expected web summary failed_count=0")
+PY
   assert_contains "$output_dir/server/verification-report.md" "server smoke ok"
   assert_contains "$output_dir/web/verification-report.md" "web smoke ok"
   assert_contains "$output_dir/server/verification-summary.json" '"overall_status": "passed"'

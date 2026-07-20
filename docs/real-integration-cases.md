@@ -189,7 +189,7 @@ scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
 - `server/verification-summary.json`
 - `web/verification-report.md`
 - `web/verification-summary.json`
-- `laoxia-summary.json`
+- `laoxia-summary.json`，其中会嵌套 server/web 子 summary，方便 CI 直接读取总状态和子状态。
 
 这个入口适合做项目级回归和发布前复验。它不替代 `generate-verification-report.sh`，只是把 laoxia 这类已经确认过的真实项目路径收成一个更省心的命令。
 

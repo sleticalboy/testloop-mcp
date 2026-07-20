@@ -157,6 +157,9 @@ from pathlib import Path
     summary_status,
 ) = sys.argv[1:]
 
+server_summary_payload = json.loads(Path(server_summary).read_text(encoding="utf-8"))
+web_summary_payload = json.loads(Path(web_summary).read_text(encoding="utf-8"))
+
 payload = {
     "output_dir": output_dir,
     "overall_status": summary_status,
@@ -166,12 +169,14 @@ payload = {
         "command": server_command,
         "report": server_report,
         "summary_json": server_summary,
+        "summary": server_summary_payload,
     },
     "web": {
         "status": web_status,
         "command": web_command,
         "report": web_report,
         "summary_json": web_summary,
+        "summary": web_summary_payload,
     },
 }
 
