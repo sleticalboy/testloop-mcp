@@ -230,6 +230,7 @@ SH
     bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" "$fake_binary"
 
   assert_contains "$success_out" "laoxia_output_dir=$output_dir"
+  assert_contains "$success_out" "laoxia_summary_json=$output_dir/laoxia-summary.json"
   assert_contains "$success_out" "laoxia_server_report=$output_dir/server/verification-report.md"
   assert_contains "$success_out" "laoxia_server_summary=$output_dir/server/verification-summary.json"
   assert_contains "$success_out" "laoxia_server_status=passed"
@@ -237,6 +238,10 @@ SH
   assert_contains "$success_out" "laoxia_web_summary=$output_dir/web/verification-summary.json"
   assert_contains "$success_out" "laoxia_web_status=passed"
   assert_contains "$success_out" "laoxia_status=passed"
+  assert_contains "$output_dir/laoxia-summary.json" '"overall_status": "passed"'
+  assert_contains "$output_dir/laoxia-summary.json" '"failed_count": 0'
+  assert_contains "$output_dir/laoxia-summary.json" '"server": {'
+  assert_contains "$output_dir/laoxia-summary.json" '"web": {'
   assert_contains "$output_dir/server/verification-report.md" "server smoke ok"
   assert_contains "$output_dir/web/verification-report.md" "web smoke ok"
   assert_contains "$output_dir/server/verification-summary.json" '"overall_status": "passed"'
@@ -259,6 +264,8 @@ SH
   assert_contains "$failure_out" "laoxia_server_status=passed"
   assert_contains "$failure_out" "laoxia_web_status=failed"
   assert_contains "$failure_out" "laoxia_status=failed"
+  assert_contains "$failed_output_dir/laoxia-summary.json" '"overall_status": "failed"'
+  assert_contains "$failed_output_dir/laoxia-summary.json" '"failed_count": 1'
   assert_contains "$failed_output_dir/web/verification-report.md" "web failed"
   assert_contains "$failed_output_dir/web/verification-summary.json" '"overall_status": "failed"'
 }

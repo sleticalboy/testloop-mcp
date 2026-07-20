@@ -22,6 +22,7 @@ Environment:
   TESTLOOP_LAOXIA_WEB_DIR              Vue web project dir.
   TESTLOOP_LAOXIA_SERVER_COMMAND       Server smoke command. Default: go test ./...
   TESTLOOP_LAOXIA_WEB_COMMAND          Web smoke command. Default: pnpm install --frozen-lockfile && pnpm build:prod
+  TESTLOOP_LAOXIA_SUMMARY_JSON         Optional combined summary JSON path.
   TESTLOOP_LAOXIA_SERVER_TITLE         Optional report title override for the server report.
   TESTLOOP_LAOXIA_WEB_TITLE            Optional report title override for the web report.
 
@@ -72,6 +73,7 @@ resolve_binary() {
 
 binary="$(resolve_binary "$command_path")"
 output_dir="${TESTLOOP_LAOXIA_OUTPUT_DIR:-/tmp/testloop-laoxia-scaffold}"
+summary_json="${TESTLOOP_LAOXIA_SUMMARY_JSON:-${output_dir}/laoxia-summary.json}"
 server_dir="${TESTLOOP_LAOXIA_SERVER_DIR:-/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server}"
 web_dir="${TESTLOOP_LAOXIA_WEB_DIR:-/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-web}"
 server_command="${TESTLOOP_LAOXIA_SERVER_COMMAND:-go test ./...}"
@@ -135,7 +137,49 @@ if [[ "$server_code" -ne 0 || "$web_code" -ne 0 ]]; then
   summary_status="failed"
 fi
 
+mkdir -p "$(dirname "$summary_json")"
+python3 - "$summary_json" "$output_dir" "$server_report_md" "$server_summary_json" "$server_status" "$server_command" "$web_report_md" "$web_summary_json" "$web_status" "$web_command" "$summary_status" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+(
+    summary_path,
+    output_dir,
+    server_report,
+    server_summary,
+    server_status,
+    server_command,
+    web_report,
+    web_summary,
+    web_status,
+    web_command,
+    summary_status,
+) = sys.argv[1:]
+
+payload = {
+    "output_dir": output_dir,
+    "overall_status": summary_status,
+    "failed_count": 0 if summary_status == "passed" else 1,
+    "server": {
+        "status": server_status,
+        "command": server_command,
+        "report": server_report,
+        "summary_json": server_summary,
+    },
+    "web": {
+        "status": web_status,
+        "command": web_command,
+        "report": web_report,
+        "summary_json": web_summary,
+    },
+}
+
+Path(summary_path).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
 printf 'laoxia_output_dir=%s\n' "$output_dir"
+printf 'laoxia_summary_json=%s\n' "$summary_json"
 printf 'laoxia_server_report=%s\n' "$server_report_md"
 printf 'laoxia_server_summary=%s\n' "$server_summary_json"
 printf 'laoxia_server_status=%s\n' "$server_status"
