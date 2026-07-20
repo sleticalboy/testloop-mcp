@@ -171,6 +171,12 @@ TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-report-summary.json \
 go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summary.json
 ```
 
+如果你的项目本身就是像 laoxia 这种 Go server + Vue web 双栈样本，可以直接用：
+
+```bash
+scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
+```
+
 详细用法见 [用户项目验收报告](./docs/verification-report.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md) 和 [验收报告 CI 集成](./docs/verification-ci.md)。
 
 ### Codex

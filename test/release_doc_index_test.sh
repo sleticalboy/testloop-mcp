@@ -51,6 +51,7 @@ required_commands = [
     "scripts/run-first-run-ci.sh",
     "scripts/generate-verification-report.sh",
     "scripts/run-onboarding-ci.sh",
+    "scripts/showcase-laoxia-scaffold-report.sh",
     "scripts/showcase-onboarding-ci-external-project.sh",
     "scripts/showcase-agent-onboarding-report.sh",
     "scripts/showcase-onboarding.sh",
