@@ -70,6 +70,7 @@ expect_version="${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
 project_dir="${TESTLOOP_FIRST_RUN_PROJECT_DIR:-}"
 project_command="${TESTLOOP_FIRST_RUN_PROJECT_COMMAND:-}"
 
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 mkdir -p "$output_dir" "$(dirname "$report_md")" "$(dirname "$summary_json")" "$(dirname "$decision_out")" "$(dirname "$context_out")" "$(dirname "$log_out")"
 
 env_args=(

@@ -47,6 +47,13 @@ SH
 chmod +x "$fake_binary"
 
 out="${tmp_dir}/onboarding.out"
+output_file="${tmp_dir}/output-file"
+printf 'not a directory\n' > "$output_file"
+run_expect_code 1 "$out" env \
+  TESTLOOP_ONBOARDING_OUTPUT_DIR="$output_file" \
+  bash "${repo_root}/scripts/showcase-agent-onboarding-report.sh" "$fake_binary"
+assert_contains "$out" "output path must be a directory"
+
 output_dir="${tmp_dir}/artifacts"
 run_expect_code 0 "$out" env \
   TESTLOOP_ONBOARDING_OUTPUT_DIR="$output_dir" \

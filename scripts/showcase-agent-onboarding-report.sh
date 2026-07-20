@@ -58,6 +58,7 @@ report_md="${TESTLOOP_ONBOARDING_REPORT_MD:-${output_dir}/verification-report.md
 summary_json="${TESTLOOP_ONBOARDING_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
 decision_out="${TESTLOOP_ONBOARDING_DECISION_OUT:-${output_dir}/agent-decision.txt}"
 
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 mkdir -p "$output_dir" "$(dirname "$report_md")" "$(dirname "$summary_json")" "$(dirname "$decision_out")"
 
 report_env=(

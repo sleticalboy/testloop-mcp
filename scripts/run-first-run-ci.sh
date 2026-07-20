@@ -73,6 +73,7 @@ command_path="${TESTLOOP_MCP_COMMAND:-}"
 expect_version="${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
 
 [[ -d "$project_dir" ]] || fail "project path must be a directory: $project_dir"
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 if [[ -z "$repo_ref" ]]; then
   repo_ref="main"

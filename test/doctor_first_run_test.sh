@@ -78,6 +78,13 @@ run_expect_code 1 "$dir_binary_out" env \
   bash "${repo_root}/scripts/doctor-first-run.sh" "$repo_root"
 assert_contains "${tmp_dir}/dir-binary/first-run.log" "binary must be an executable file"
 
+output_file="${tmp_dir}/output-file"
+printf 'not a directory\n' > "$output_file"
+run_expect_code 1 "$out" env \
+  TESTLOOP_FIRST_RUN_OUTPUT_DIR="$output_file" \
+  bash "${repo_root}/scripts/doctor-first-run.sh" "$fake_binary"
+assert_contains "$out" "output path must be a directory"
+
 project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 failed_dir="${tmp_dir}/failed-first-run"

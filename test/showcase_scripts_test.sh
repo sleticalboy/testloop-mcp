@@ -317,6 +317,18 @@ SH
     bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
   assert_contains "$project_file_out" "first project path must be a directory"
 
+  output_file="${tmp_dir}/pair-output-file"
+  printf 'not a directory\n' > "$output_file"
+  output_file_out="${tmp_dir}/pair-output-file.out"
+  run_expect_code 1 "$output_file_out" env \
+    TESTLOOP_PAIR_OUTPUT_DIR="$output_file" \
+    TESTLOOP_PAIR_FIRST_DIR="$api_dir" \
+    TESTLOOP_PAIR_FIRST_COMMAND='echo api' \
+    TESTLOOP_PAIR_SECOND_DIR="$web_dir" \
+    TESTLOOP_PAIR_SECOND_COMMAND='echo web' \
+    bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
+  assert_contains "$output_file_out" "output path must be a directory"
+
   success_out="${tmp_dir}/pair-success.out"
   output_dir="${tmp_dir}/pair-artifacts"
   run_expect_code 0 "$success_out" env \

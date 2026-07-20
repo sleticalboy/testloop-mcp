@@ -59,6 +59,14 @@ run_expect_code 1 "$out" env \
   bash "${repo_root}/scripts/run-first-run-ci.sh" 'echo smoke'
 assert_contains "$out" "project path must be a directory"
 
+output_file="${tmp_dir}/output-file"
+printf 'not a directory\n' > "$output_file"
+run_expect_code 1 "$out" env \
+  TESTLOOP_FIRST_RUN_PROJECT_DIR="$project_dir" \
+  TESTLOOP_FIRST_RUN_OUTPUT_DIR="$output_file" \
+  bash "${repo_root}/scripts/run-first-run-ci.sh" 'echo smoke'
+assert_contains "$out" "output path must be a directory"
+
 run_expect_code 0 "$out" env \
   TESTLOOP_MCP_REPO_DIR="$repo_root" \
   TESTLOOP_MCP_COMMAND="$fake_binary" \
