@@ -73,7 +73,7 @@ command_path="${TESTLOOP_MCP_COMMAND:-}"
 expect_version="${TESTLOOP_MCP_VERIFY_EXPECT_VERSION:-}"
 
 [[ -n "$project_command" ]] || fail "project smoke command is required; pass it as the first argument or set TESTLOOP_ONBOARDING_PROJECT_COMMAND"
-[[ -d "$project_dir" ]] || fail "project directory does not exist: $project_dir"
+[[ -d "$project_dir" ]] || fail "project path must be a directory: $project_dir"
 
 if [[ -z "$repo_ref" ]]; then
   if [[ -n "$version" && "$version" != "latest" ]]; then

@@ -336,7 +336,7 @@ esac
 if [[ -n "$project_dir" || -n "$project_command" ]]; then
   [[ -n "$project_dir" ]] || fail "TESTLOOP_REPORT_PROJECT_DIR is required when TESTLOOP_REPORT_PROJECT_COMMAND is set"
   [[ -n "$project_command" ]] || fail "TESTLOOP_REPORT_PROJECT_COMMAND is required when TESTLOOP_REPORT_PROJECT_DIR is set"
-  [[ -d "$project_dir" ]] || fail "project directory does not exist: $project_dir"
+  [[ -d "$project_dir" ]] || fail "project path must be a directory: $project_dir"
   run_section "用户项目 smoke" bash -lc "cd '$project_dir' && $project_command"
 else
   skip_section "用户项目 smoke" "未设置 TESTLOOP_REPORT_PROJECT_DIR 和 TESTLOOP_REPORT_PROJECT_COMMAND"

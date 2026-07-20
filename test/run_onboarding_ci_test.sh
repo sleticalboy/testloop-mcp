@@ -52,6 +52,13 @@ out="${tmp_dir}/onboarding-ci.out"
 output_dir="${tmp_dir}/artifacts"
 step_summary="${tmp_dir}/step-summary.md"
 
+project_file="${tmp_dir}/project-file"
+printf 'not a directory\n' > "$project_file"
+run_expect_code 1 "$out" env \
+  TESTLOOP_ONBOARDING_PROJECT_DIR="$project_file" \
+  bash "${repo_root}/scripts/run-onboarding-ci.sh" 'echo smoke'
+assert_contains "$out" "project path must be a directory"
+
 run_expect_code 0 "$out" env \
   TESTLOOP_MCP_REPO_DIR="$repo_root" \
   TESTLOOP_MCP_COMMAND="$fake_binary" \

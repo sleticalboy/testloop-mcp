@@ -306,6 +306,17 @@ SH
   web_dir="${pair_root}/web"
   mkdir -p "$api_dir" "$web_dir"
 
+  project_file="${tmp_dir}/pair-project-file"
+  printf 'not a directory\n' > "$project_file"
+  project_file_out="${tmp_dir}/pair-project-file.out"
+  run_expect_code 1 "$project_file_out" env \
+    TESTLOOP_PAIR_FIRST_DIR="$project_file" \
+    TESTLOOP_PAIR_FIRST_COMMAND='echo api' \
+    TESTLOOP_PAIR_SECOND_DIR="$web_dir" \
+    TESTLOOP_PAIR_SECOND_COMMAND='echo web' \
+    bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
+  assert_contains "$project_file_out" "first project path must be a directory"
+
   success_out="${tmp_dir}/pair-success.out"
   output_dir="${tmp_dir}/pair-artifacts"
   run_expect_code 0 "$success_out" env \

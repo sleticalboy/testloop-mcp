@@ -71,6 +71,19 @@ assert_contains "$dir_binary_out" "binary must be an executable file"
 project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 
+project_file="${tmp_dir}/project-file"
+printf 'not a directory\n' > "$project_file"
+project_file_out="${tmp_dir}/project-file.out"
+run_expect_code 1 "$project_file_out" env \
+  TESTLOOP_REPORT_SKIP_BASIC=true \
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+  TESTLOOP_REPORT_PROJECT_DIR="$project_file" \
+  TESTLOOP_REPORT_PROJECT_COMMAND='echo smoke' \
+  bash "${repo_root}/scripts/generate-verification-report.sh" "$fake_binary" "${tmp_dir}/project-file-report.md"
+assert_contains "$project_file_out" "project path must be a directory"
+
 out="${tmp_dir}/report.out"
 report="${tmp_dir}/report.md"
 summary_json="${tmp_dir}/summary.json"

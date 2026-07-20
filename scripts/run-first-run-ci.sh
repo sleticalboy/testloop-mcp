@@ -72,7 +72,7 @@ repo_dir="${TESTLOOP_MCP_REPO_DIR:-}"
 command_path="${TESTLOOP_MCP_COMMAND:-}"
 expect_version="${TESTLOOP_FIRST_RUN_EXPECT_VERSION:-}"
 
-[[ -d "$project_dir" ]] || fail "project directory does not exist: $project_dir"
+[[ -d "$project_dir" ]] || fail "project path must be a directory: $project_dir"
 
 if [[ -z "$repo_ref" ]]; then
   repo_ref="main"
