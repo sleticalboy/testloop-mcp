@@ -133,6 +133,8 @@ go test ./tools -run TestDualProjectSummarySchema -count=1
 - `docs/fixtures/agent-decision-fixtures.schema.json`
 - `examples/agent-decision-demo`
 - `test/agent_decision_fixtures_manifest_test.sh`
+- `test/agent_decision_fixture_validator_test.sh`
+- `scripts/validate-agent-decision-fixtures.mjs`
 - `test/agent_decision_demo_test.sh`
 - `test/fixture_decision_mapping_test.sh`
 - `docs/client-integration.md`
@@ -142,6 +144,7 @@ go test ./tools -run TestDualProjectSummarySchema -count=1
 
 ```bash
 sh test/agent_decision_fixtures_manifest_test.sh
+sh test/agent_decision_fixture_validator_test.sh
 sh test/agent_decision_demo_test.sh
 sh test/fixture_decision_mapping_test.sh
 ```

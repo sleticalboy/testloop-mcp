@@ -90,6 +90,7 @@ jobs:
           sh test/release_candidate_script_test.sh
           sh test/release_doc_index_test.sh
           sh test/agent_decision_fixtures_manifest_test.sh
+          sh test/agent_decision_fixture_validator_test.sh
           sh test/fixtures_index_test.sh
           sh test/fixture_decision_mapping_test.sh
           sh test/run_tests_fixture_index_test.sh

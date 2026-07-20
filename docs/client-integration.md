@@ -35,6 +35,14 @@ go run ./examples/agent-decision-demo
 
 接入方测试应优先读取 manifest 的 `fixtures[].expected_decision` 做断言；这样新增 `failed/manual_review_*` 这类真实项目分流时，客户端只需要同步 manifest 和 fixture，而不是维护另一份文件名白名单。
 
+如果客户端项目使用 Node，可以先复制仓库内的无依赖参考实现，再按本项目的 fixture 目录调整路径：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
+```
+
 ## 使用真实 fixture
 
 [真实结构化 fixture](./fixtures.md) 提供了来自 handler 的稳定 JSON 投影，适合直接放进客户端测试用例：

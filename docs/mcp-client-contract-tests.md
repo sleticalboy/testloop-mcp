@@ -49,6 +49,7 @@ testloop-mcp 自身用这些脚本保护客户端契约：
 ```bash
 sh test/fixtures_index_test.sh
 sh test/agent_decision_fixtures_manifest_test.sh
+sh test/agent_decision_fixture_validator_test.sh
 sh test/fixture_decision_mapping_test.sh
 sh test/client_integration_doc_test.sh
 sh test/agent_decision_demo_test.sh
@@ -58,6 +59,7 @@ sh test/agent_decision_demo_test.sh
 
 - `fixtures_index_test.sh`：确认每个 `docs/fixtures/*.json` 都登记到 fixture 索引，且 `status/action` 集合没有静默扩张。
 - `agent_decision_fixtures_manifest_test.sh`：确认 `agent-decision-fixtures.json` 登记了全部最小决策 fixture，且 manifest 中的 `status/action/expected_decision` 与真实 JSON 一致。
+- `agent_decision_fixture_validator_test.sh`：运行可复制 Node validator，确认外部客户端模板能按 manifest 校验全部 fixture。
 - `fixture_decision_mapping_test.sh`：直接扫描真实 fixture，校验每个 `status/action` 映射到预期客户端动作。
 - `client_integration_doc_test.sh`：确认客户端集成说明引用的 fixture 和 demo 入口仍然存在。
 - `agent_decision_demo_test.sh`：确认 `go run ./examples/agent-decision-demo` 对真实 fixture 输出稳定决策。
@@ -69,6 +71,14 @@ sh test/agent_decision_demo_test.sh
 
 ```bash
 node test/validate-testloop-fixtures.mjs
+```
+
+仓库内提供了一个无第三方依赖的可复制参考实现：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
 ```
 
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
