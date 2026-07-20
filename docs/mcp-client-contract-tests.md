@@ -96,12 +96,16 @@ assert content[0].text can be parsed as equivalent JSON fallback
 curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.json
 curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-response-artifact-manifest.schema.json
 curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/verification-summary.schema.json
+curl -fsSLO https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/dual-project-summary.schema.json
 npx --yes ajv-cli validate \
   -s agent-response-artifact-manifest.schema.json \
   -d agent-response-artifact-manifest.json
 npx --yes ajv-cli validate \
   -s verification-summary.schema.json \
   -d docs/fixtures/verification-summary/user-project-failed.json
+npx --yes ajv-cli validate \
+  -s dual-project-summary.schema.json \
+  -d docs/fixtures/dual-project-summary/laoxia-passed.json
 ```
 
 如果客户端 CI 不想引入 JSON Schema 校验器，至少应运行仓库内 demo，确认 manifest 指向的 artifact fixture、必备字段和 fallback 顺序仍然可消费：
@@ -120,6 +124,7 @@ go run ./examples/agent-response-manifest-demo \
 - `fallback_order[0]` 固定为 `agent-response.txt`。
 - `agent-decision.txt` 中的 `agent_next_step` 等于 manifest 的 `expected_action`。
 - `verification-summary.json` 通过 manifest `summary_schema` 指向的 schema 校验。
+- `showcase-dual-project-report.sh` 的 combined summary 通过 `dual-project-summary.schema.json` 校验，不能当成 `verification-summary.json` 直接喂给 decision demo。
 - `first-run` 使用 `first_run_agent_next_step`，`onboarding` 使用 `agent_next_step`。
 - `expected_action=inspect-user-project` 时，客户端先进入用户项目失败排查，不先重装 testloop-mcp。
 - 按 manifest 的 `expected_section_signals` 校验 `verification-summary.json` 和 `agent-response.txt` 都保留 `独立 CLI 生成动作 smoke:manual_review`。
@@ -134,4 +139,5 @@ go run ./examples/agent-response-manifest-demo \
 - [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)
 - [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
 - [verification-summary.schema.json](./fixtures/verification-summary.schema.json)
+- [dual-project-summary.schema.json](./fixtures/dual-project-summary.schema.json)
 - [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)
