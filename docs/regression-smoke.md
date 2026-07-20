@@ -48,6 +48,8 @@ TESTLOOP_REGRESSION_PREFLIGHT_FORMAT=json scripts/validate-regression-preflight.
 
 可以用 `TESTLOOP_REGRESSION_OUTPUT_DIR` 覆盖。
 
+这些回归入口会先校验输出目录是否为目录，避免把坏路径推迟到后续写文件阶段。
+
 ## 依赖路径
 
 这些脚本默认复用本机已经准备好的真实项目目录和 JSONL：

@@ -10,11 +10,11 @@ testloop-mcp 的展示路径分三层：默认 CI 保护基础契约，公开 sh
 | 安装后首跑诊断 | `scripts/doctor-first-run.sh "$(command -v testloop-mcp)"` | 否，脚本入口和文档回归 | 聚合安装验收、真实 MCP transport、最小 Agent demo、可选用户项目 smoke，并输出稳定 artifact 路径、可粘贴上下文和 `first_run_agent_next_step`。 |
 | 首跑诊断 CI 模板 | `scripts/run-first-run-ci.sh 'go test ./...'` | 否，脚本入口和文档回归 | 面向外部用户项目 CI，自动准备 helper checkout 并上传 report、summary、decision、context、log。 |
 | 渲染 first-run Agent 回复 | `sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run` | 是，脚本回归 | 从 first-run artifact 目录自动读取 context 和 summary，输出 Agent 可直接回复用户的四段结构。 |
-| 演练外部项目首跑诊断 CI | `scripts/showcase-first-run-ci-external-project.sh` | 否，脚本入口回归 | 在 `/tmp` 创建非 testloop Go 或 Node 项目，从该项目目录运行 first-run bootstrap，验证复制路径能产出六件套 artifact。 |
+| 演练外部项目首跑诊断 CI | `scripts/showcase-first-run-ci-external-project.sh` | 否，脚本入口回归 | 在 `/tmp` 创建非 testloop Go 或 Node 项目，从该项目目录运行 first-run bootstrap，验证复制路径能产出六件套 artifact，并先拦截坏的输出目录输入。 |
 | 演示首次接入全路径 | `scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 串联基础安装验收、真实 MCP 进程协议验收和最小 Agent 闭环 demo，只看终端输出。 |
 | 生成 Agent onboarding 演示制品 | `scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 在完整首次接入路径基础上输出 Markdown、summary JSON 和 `agent_next_step` 决策文本。 |
 | 渲染 onboarding Agent 回复 | `sh scripts/render-onboarding-agent-response.sh /tmp/testloop-onboarding` | 是，脚本回归 | 从 onboarding artifact 目录自动读取 summary，输出 Agent 可直接回复用户的四段结构。 |
-| 演练外部项目 Onboarding CI | `scripts/showcase-onboarding-ci-external-project.sh` | 否，脚本入口回归 | 在 `/tmp` 创建非 testloop Go 或 Node 项目，从该项目目录运行 bootstrap，验证复制路径能产出四件套 artifact。 |
+| 演练外部项目 Onboarding CI | `scripts/showcase-onboarding-ci-external-project.sh` | 否，脚本入口回归 | 在 `/tmp` 创建非 testloop Go 或 Node 项目，从该项目目录运行 bootstrap，验证复制路径能产出四件套 artifact，并先拦截坏的输出目录输入。 |
 | 生成用户项目验收报告 | `scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md` | 否，脚本入口回归 | 聚合基础安装验收、真实 MCP 协议 smoke、最小 Agent demo，可 opt-in 公开 showcase 和用户项目 smoke。 |
 | 生成通用双项目报告 | `scripts/showcase-dual-project-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 提供任意两条 user-project smoke 的通用底座，输出两份报告和嵌套子 summary 的总状态文件。 |
 | 生成 laoxia 双栈验收报告 | `scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 一次生成 `car-admin-server` 和 `car-admin-web` 两份验收报告，以及一份嵌套子 summary 的总 `laoxia-summary.json`，适合作为真实项目双栈 smoke 的固定入口。 |
@@ -23,7 +23,7 @@ testloop-mcp 的展示路径分三层：默认 CI 保护基础契约，公开 sh
 | 验证 Agent 最小闭环 | `go run ./examples/mcp-client-demo` | 是，脚本回归 | 不依赖外部项目，验证 `run_tests -> repair_task -> rerun -> parse_coverage` 和 `structuredContent` 消费路径。 |
 | 演示公开 Go 项目 | `scripts/showcase-go-public-project.sh` | 否 | 克隆固定 commit 的 `google/uuid`，验证 `go-test-1`，并断言 `passed/ready` 决策信号。 |
 | 演示公开 JS/TS 项目 | `scripts/showcase-js-public-project.sh` | 否 | 克隆固定 commit 的 `unjs/ufo`，验证 `vitest-1,vitest-2`，并断言 `ready` 与 `manual_review_internal` 分流。 |
-| 维护跨语言质量边界 | `scripts/validate-regression-smoke.sh` | 否 | 复用本机真实项目和仓库内静态 JSONL 样本，覆盖 Java + JS + Python 的 ready / manual-review / external-service / database 等分类。 |
+| 维护跨语言质量边界 | `scripts/validate-regression-smoke.sh` | 否 | 复用本机真实项目和仓库内静态 JSONL 样本，覆盖 Java + JS + Python 的 ready / manual-review / external-service / database 等分类，并先校验输出目录输入。 |
 
 ## 默认 CI 保护什么
 
