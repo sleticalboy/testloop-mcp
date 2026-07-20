@@ -65,22 +65,28 @@ sh test/agent_decision_demo_test.sh
 
 ## 接入方 CI 模板
 
-如果客户端项目使用 JavaScript/TypeScript，可以把 `validate_coverage_task` fixture 放到 `test/fixtures/`，并在 CI 中加入类似检查：
+如果客户端项目使用 JavaScript/TypeScript，可以把 `agent-decision-fixtures.json` 和其中列出的 fixture 放到 `test/fixtures/`，并在 CI 中加入类似检查：
 
 ```bash
 node test/validate-testloop-fixtures.mjs
 ```
 
-脚本最小逻辑：
+脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
 ```text
-for each validate-coverage-task-*.json:
-  payload = parse_json(file)
+manifest = parse_json("agent-decision-fixtures.json")
+for each item in manifest.fixtures:
+  payload = parse_json(item.path)
+  assert payload.status == item.status
+  assert payload.action == item.action
   decision = map(payload.status, payload.action)
-  assert decision equals expected action
+  assert decision == item.expected_decision
   assert unknown fields do not fail parsing
   if action == apply_fix_suggestions:
     assert payload.run_result.fix_suggestions[0].repair_task exists
+  if action starts with manual_review_:
+    assert decision == manual-review
+    assert client does not run automatic repair for the same generated test
   if action == needs_better_input:
     assert payload.metadata.coverage_miss_reason exists
 ```
