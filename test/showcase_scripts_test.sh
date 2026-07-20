@@ -150,6 +150,12 @@ test_go_showcase_help_and_args() {
   out="${tmp_dir}/go-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-go-public-project.sh" one two
   assert_contains "$out" "Usage: scripts/showcase-go-public-project.sh [output-jsonl]"
+
+  out_dir="${tmp_dir}/go-output-dir"
+  mkdir -p "$out_dir"
+  out="${tmp_dir}/go-output-dir.out"
+  run_expect_code 1 "$out" bash "${repo_root}/scripts/showcase-go-public-project.sh" "$out_dir"
+  assert_contains "$out" "output path must not be a directory"
 }
 
 test_go_showcase_git_timeout() {
@@ -179,6 +185,12 @@ test_js_showcase_help_args_and_missing_pnpm() {
   out="${tmp_dir}/js-args.out"
   run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-js-public-project.sh" one two
   assert_contains "$out" "Usage: scripts/showcase-js-public-project.sh [output-jsonl]"
+
+  out_dir="${tmp_dir}/js-output-dir"
+  mkdir -p "$out_dir"
+  out="${tmp_dir}/js-output-dir.out"
+  run_expect_code 1 "$out" bash "${repo_root}/scripts/showcase-js-public-project.sh" "$out_dir"
+  assert_contains "$out" "output path must not be a directory"
 
   mkdir -p "${tmp_dir}/empty-path"
   out="${tmp_dir}/js-missing-pnpm.out"

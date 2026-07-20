@@ -68,6 +68,17 @@ dir_binary_out="${tmp_dir}/dir-binary.out"
 run_expect_code 1 "$dir_binary_out" bash "${repo_root}/scripts/generate-verification-report.sh" "$repo_root" "${tmp_dir}/dir-binary-report.md"
 assert_contains "$dir_binary_out" "binary must be an executable file"
 
+output_dir="${tmp_dir}/report-dir"
+mkdir -p "$output_dir"
+output_dir_out="${tmp_dir}/report-dir.out"
+run_expect_code 1 "$output_dir_out" env \
+  TESTLOOP_REPORT_SKIP_BASIC=true \
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+  bash "${repo_root}/scripts/generate-verification-report.sh" "$fake_binary" "$output_dir"
+assert_contains "$output_dir_out" "output path must not be a directory"
+
 project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 
@@ -105,6 +116,21 @@ assert_contains "$report" '| 独立 CLI 生成动作 smoke | `skipped` | `-` |'
 assert_contains "$report" '| 用户项目 smoke | `passed` | `0` |'
 assert_contains "$report" "project smoke ok"
 assert_contains "$report" '版本输出：`testloop-mcp 0.5.13`'
+
+summary_dir="${tmp_dir}/summary-dir"
+mkdir -p "$summary_dir"
+summary_dir_out="${tmp_dir}/summary-dir.out"
+run_expect_code 1 "$summary_dir_out" env \
+  TESTLOOP_REPORT_SKIP_BASIC=true \
+  TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+  TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+  TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+  TESTLOOP_REPORT_SUMMARY_JSON="$summary_dir" \
+  TESTLOOP_REPORT_PROJECT_DIR="$project_dir" \
+  TESTLOOP_REPORT_PROJECT_COMMAND='printf "project smoke ok\n"' \
+  bash "${repo_root}/scripts/generate-verification-report.sh" "$fake_binary" "$report"
+assert_contains "$summary_dir_out" "summary JSON path must not be a directory"
+
 assert_json_field "$summary_json" "data['overall_status']" "passed"
 assert_json_field "$summary_json" "data['failed_count']" "0"
 assert_json_field "$summary_json" "data['sections'][0]['status']" "skipped"

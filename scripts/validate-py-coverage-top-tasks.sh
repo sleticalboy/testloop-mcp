@@ -58,6 +58,10 @@ fi
 project_dir="$1"
 tasks_file="${TESTLOOP_VALIDATE_PY_TASKS_FILE:-}"
 output="${3:-${TESTLOOP_VALIDATE_PY_OUTPUT:-}}"
+if [[ -n "$output" && -e "$output" && -d "$output" ]]; then
+  echo "output path must not be a directory: $output" >&2
+  exit 1
+fi
 if [[ -n "$tasks_file" && ! -f "$tasks_file" ]]; then
   echo "tasks file does not exist: $tasks_file" >&2
   exit 1

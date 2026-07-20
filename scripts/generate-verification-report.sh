@@ -73,6 +73,11 @@ public_showcases="${TESTLOOP_REPORT_PUBLIC_SHOWCASES:-none}"
 project_dir="${TESTLOOP_REPORT_PROJECT_DIR:-}"
 project_command="${TESTLOOP_REPORT_PROJECT_COMMAND:-}"
 
+[[ ! -e "$output" || ! -d "$output" ]] || fail "output path must not be a directory: $output"
+if [[ -n "$summary_json" ]]; then
+  [[ ! -e "$summary_json" || ! -d "$summary_json" ]] || fail "summary JSON path must not be a directory: $summary_json"
+fi
+
 resolve_binary() {
   if [[ -n "$command_path" ]]; then
     case "$command_path" in

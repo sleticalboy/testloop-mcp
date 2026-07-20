@@ -68,6 +68,10 @@ project_dir="$1"
 framework="${2:-${TESTLOOP_VALIDATE_JS_FRAMEWORK:-vitest}}"
 tasks_file="${TESTLOOP_VALIDATE_JS_TASKS_FILE:-}"
 output="${4:-${TESTLOOP_VALIDATE_JS_OUTPUT:-}}"
+if [[ -n "$output" && -e "$output" && -d "$output" ]]; then
+  echo "output path must not be a directory: $output" >&2
+  exit 1
+fi
 if [[ -n "$tasks_file" && ! -f "$tasks_file" ]]; then
   echo "tasks file does not exist: $tasks_file" >&2
   exit 1
