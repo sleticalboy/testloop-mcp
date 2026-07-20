@@ -59,6 +59,7 @@ cat /tmp/testloop-first-run-artifacts/first-run-context.txt
 
 ```bash
 cat /tmp/testloop-first-run-artifacts/verification-summary.json
+cat /tmp/testloop-first-run-artifacts/verification-summary.schema.json
 cat /tmp/testloop-first-run-artifacts/verification-report.md
 cat /tmp/testloop-first-run-artifacts/first-run.log
 ```
@@ -83,7 +84,8 @@ sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run-artifacts
 1. `agent-response.txt`
 2. `agent-decision.txt`
 3. `verification-summary.json` 中的 `overall_status`、`failed_count` 和失败 section
-4. `verification-report.md` 中失败 section 的 stdout / stderr
+4. `verification-summary.schema.json`，需要离线校验合同时优先看它
+5. `verification-report.md` 中失败 section 的 stdout / stderr
 
 first-run 和 onboarding 的 `agent-response.txt` 统一读取规则见 [Agent response artifact contract](./agent-response-artifact-contract.md)。更完整的分流说明见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md) 和 [首跑诊断失败样例](./first-run-failures.md)。
 

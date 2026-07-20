@@ -22,6 +22,7 @@
 
 - `verification-report.md`
 - `verification-summary.json`
+- `verification-summary.schema.json`
 - `agent-decision.txt`
 - `agent-response.txt`
 
@@ -29,7 +30,7 @@
 
 1. 先读 `agent-response.txt`，查看脚本已经渲染出的 Agent 四段回复草稿。
 2. 再读 `agent-decision.txt`，确认 `agent_next_step`。
-3. 再读 `verification-summary.json`，确认 `overall_status`、`failed_count` 和失败 section。
+3. 再读 `verification-summary.json`，确认 `overall_status`、`failed_count` 和失败 section；如果要做离线合同校验，再顺手看同目录的 `verification-summary.schema.json`。
 4. 最后读 `verification-report.md`，查看失败 section 的 stdout / stderr。
 
 ## 分流表

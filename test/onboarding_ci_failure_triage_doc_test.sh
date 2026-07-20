@@ -20,6 +20,7 @@ required_snippets = [
     "Agent response",
     "verification-report.md",
     "verification-summary.json",
+    "verification-summary.schema.json",
     "agent-decision.txt",
     "agent-response.txt",
     "Agent 四段回复草稿",

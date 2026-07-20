@@ -26,6 +26,8 @@ required = [
     "agent-response.txt",
     "first-run.log",
     "if: always()",
+    "/tmp/testloop-first-run/verification-summary.schema.json",
+    "/tmp/testloop-onboarding/verification-summary.schema.json",
     "go run ./examples/agent-response-manifest-demo",
     "docs/fixtures/agent-response-artifact-manifest.json",
     "agent-response-artifact-manifest.schema.json",

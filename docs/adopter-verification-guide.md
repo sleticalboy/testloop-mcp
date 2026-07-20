@@ -45,6 +45,7 @@ first_run_agent_next_step=ready
 
 - `verification-report.md`
 - `verification-summary.json`
+- `verification-summary.schema.json`
 - `agent-decision.txt`
 - `first-run-context.txt`
 - `agent-response.txt`
@@ -86,6 +87,7 @@ first-run CI 上传六件套：
 
 - `/tmp/testloop-first-run/verification-report.md`
 - `/tmp/testloop-first-run/verification-summary.json`
+- `/tmp/testloop-first-run/verification-summary.schema.json`
 - `/tmp/testloop-first-run/agent-decision.txt`
 - `/tmp/testloop-first-run/first-run-context.txt`
 - `/tmp/testloop-first-run/agent-response.txt`
@@ -95,6 +97,7 @@ onboarding CI 上传四件套：
 
 - `/tmp/testloop-onboarding/verification-report.md`
 - `/tmp/testloop-onboarding/verification-summary.json`
+- `/tmp/testloop-onboarding/verification-summary.schema.json`
 - `/tmp/testloop-onboarding/agent-decision.txt`
 - `/tmp/testloop-onboarding/agent-response.txt`
 
