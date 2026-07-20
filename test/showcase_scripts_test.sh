@@ -403,6 +403,12 @@ PY
   assert_contains "$both_failed_output_dir/web/verification-report.md" "web failed"
 }
 
+test_dual_project_showcase_rejects_directory_binary_path() {
+  out="${tmp_dir}/pair-binary-dir.out"
+  run_expect_code 1 "$out" bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$repo_root"
+  assert_contains "$out" "binary must be an executable file"
+}
+
 test_showcase_scripts_are_valid_bash
 test_onboarding_showcase_help_and_args
 test_doctor_first_run_help_and_args

@@ -56,7 +56,7 @@ resolve_binary() {
   local candidate="$1"
   case "$candidate" in
     */*)
-      [[ -x "$candidate" ]] || fail "binary is not executable: $candidate"
+      [[ -f "$candidate" && -x "$candidate" ]] || fail "binary must be an executable file: $candidate"
       printf '%s' "$candidate"
       ;;
     *)
