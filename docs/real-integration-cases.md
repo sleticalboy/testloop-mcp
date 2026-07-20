@@ -217,6 +217,7 @@ laoxia_status=passed
 ```
 
 `/tmp/testloop-laoxia-scaffold-live-20260720154617/laoxia-summary.json` 的顶层、server 子 summary 和 web 子 summary 均为 `overall_status=passed`、`failed_count=0`。
+这个 `laoxia-summary.json` 是双项目 combined summary，不是 `verification-summary.json`；直接喂给 `examples/verification-summary-decision-demo` 会因为缺少 `sections` 被拒绝。
 
 ## QuickSmoke Go/Java 双项目报告入口
 
