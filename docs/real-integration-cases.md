@@ -190,6 +190,7 @@ scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
 - `web/verification-report.md`
 - `web/verification-summary.json`
 - `laoxia-summary.json`，其中会嵌套 server/web 子 summary，方便 CI 直接读取总状态和子状态。
+- `dual-project-summary.schema.json`，用于离线校验双项目 combined summary。
 
 这个入口适合做项目级回归和发布前复验。它不替代 `generate-verification-report.sh`，只是把 laoxia 这类已经确认过的真实项目路径收成一个更省心的命令。
 
@@ -250,6 +251,7 @@ quicksmoke_status=passed
 - `/tmp/testloop-quicksmoke-pair/java/verification-report.md`
 - `/tmp/testloop-quicksmoke-pair/java/verification-summary.json`
 - `/tmp/testloop-quicksmoke-pair/quicksmoke-summary.json`
+- `/tmp/testloop-quicksmoke-pair/dual-project-summary.schema.json`
 
 `quicksmoke-summary.json` 会嵌套 go/java 子 summary，顶层 `overall_status` 和 `failed_count` 都可以直接给 Agent 或 CI 读取。
 
@@ -284,6 +286,7 @@ rustjava_status=passed
 - `/tmp/testloop-rustjava-pair/java/verification-report.md`
 - `/tmp/testloop-rustjava-pair/java/verification-summary.json`
 - `/tmp/testloop-rustjava-pair/rustjava-summary.json`
+- `/tmp/testloop-rustjava-pair/dual-project-summary.schema.json`
 
 这里的 Rust 侧特意收窄到 `cargo test -q -p apk-info-zip`，因为整个 workspace 里还有 Python 绑定包，直接跑 workspace 容易被本机动态库环境卡住。
 

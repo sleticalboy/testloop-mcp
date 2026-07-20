@@ -262,6 +262,7 @@ SH
 
   assert_contains "$success_out" "laoxia_output_dir=$output_dir"
   assert_contains "$success_out" "laoxia_summary_json=$output_dir/laoxia-summary.json"
+  assert_contains "$success_out" "laoxia_summary_schema=$output_dir/dual-project-summary.schema.json"
   assert_contains "$success_out" "laoxia_server_report=$output_dir/server/verification-report.md"
   assert_contains "$success_out" "laoxia_server_summary=$output_dir/server/verification-summary.json"
   assert_contains "$success_out" "laoxia_server_status=passed"
@@ -273,6 +274,7 @@ SH
   assert_contains "$output_dir/laoxia-summary.json" '"failed_count": 0'
   assert_contains "$output_dir/laoxia-summary.json" '"server": {'
   assert_contains "$output_dir/laoxia-summary.json" '"web": {'
+  assert_contains "$output_dir/dual-project-summary.schema.json" '"title": "testloop-mcp dual project summary"'
   python3 - "$output_dir/laoxia-summary.json" <<'PY'
 import json
 import sys
@@ -390,6 +392,7 @@ SH
 
   assert_contains "$success_out" "pair_output_dir=$output_dir"
   assert_contains "$success_out" "pair_summary_json=$output_dir/pair-summary.json"
+  assert_contains "$success_out" "pair_summary_schema=$output_dir/dual-project-summary.schema.json"
   assert_contains "$success_out" "pair_api_report=$output_dir/api/verification-report.md"
   assert_contains "$success_out" "pair_api_status=passed"
   assert_contains "$success_out" "pair_web_report=$output_dir/web/verification-report.md"
@@ -399,6 +402,7 @@ SH
   assert_contains "$output_dir/pair-summary.json" '"failed_count": 0'
   assert_contains "$output_dir/pair-summary.json" '"api": {'
   assert_contains "$output_dir/pair-summary.json" '"web": {'
+  assert_contains "$output_dir/dual-project-summary.schema.json" '"title": "testloop-mcp dual project summary"'
 
   python3 - "$output_dir/pair-summary.json" <<'PY'
 import json
@@ -440,6 +444,7 @@ PY
   assert_contains "$failure_out" "pair_status=failed"
   assert_contains "$failed_output_dir/pair-summary.json" '"overall_status": "failed"'
   assert_contains "$failed_output_dir/pair-summary.json" '"failed_count": 1'
+  assert_contains "$failed_output_dir/dual-project-summary.schema.json" '"title": "testloop-mcp dual project summary"'
   assert_contains "$failed_output_dir/web/verification-report.md" "web failed"
 
   both_failed_out="${tmp_dir}/pair-both-failed.out"
@@ -464,6 +469,7 @@ PY
   assert_contains "$both_failed_out" "pair_status=failed"
   assert_contains "$both_failed_output_dir/pair-summary.json" '"overall_status": "failed"'
   assert_contains "$both_failed_output_dir/pair-summary.json" '"failed_count": 2'
+  assert_contains "$both_failed_output_dir/dual-project-summary.schema.json" '"title": "testloop-mcp dual project summary"'
   assert_contains "$both_failed_output_dir/api/verification-report.md" "api failed"
   assert_contains "$both_failed_output_dir/web/verification-report.md" "web failed"
 }

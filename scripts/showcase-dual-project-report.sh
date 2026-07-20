@@ -6,7 +6,7 @@ usage() {
 Usage: scripts/showcase-dual-project-report.sh [testloop-mcp-binary]
 
 Run a dual-project verification report for two user projects. The script writes
-two verification reports and one combined summary JSON.
+two verification reports, one combined summary JSON, and its JSON Schema.
 
 Arguments:
   testloop-mcp-binary  Optional binary path. Defaults to TESTLOOP_MCP_COMMAND,
@@ -93,6 +93,7 @@ first_report_md="${first_output_dir}/verification-report.md"
 first_summary_json="${first_output_dir}/verification-summary.json"
 second_report_md="${second_output_dir}/verification-report.md"
 second_summary_json="${second_output_dir}/verification-summary.json"
+summary_schema_json="$(dirname "$summary_json")/dual-project-summary.schema.json"
 
 mkdir -p "$first_output_dir" "$second_output_dir"
 
@@ -141,6 +142,7 @@ if [[ "$first_code" -ne 0 || "$second_code" -ne 0 ]]; then
 fi
 
 mkdir -p "$(dirname "$summary_json")"
+cp "$repo_root/docs/fixtures/dual-project-summary.schema.json" "$summary_schema_json"
 python3 - "$summary_json" "$output_dir" "$first_report_md" "$first_summary_json" "$first_status" "$first_command" "$second_report_md" "$second_summary_json" "$second_status" "$second_command" "$summary_status" "$first_name" "$second_name" <<'PY'
 import json
 import sys
@@ -191,6 +193,7 @@ PY
 
 printf '%s_output_dir=%s\n' "$prefix" "$output_dir"
 printf '%s_summary_json=%s\n' "$prefix" "$summary_json"
+printf '%s_summary_schema=%s\n' "$prefix" "$summary_schema_json"
 printf '%s_%s_report=%s\n' "$prefix" "$first_name" "$first_report_md"
 printf '%s_%s_summary=%s\n' "$prefix" "$first_name" "$first_summary_json"
 printf '%s_%s_status=%s\n' "$prefix" "$first_name" "$first_status"
