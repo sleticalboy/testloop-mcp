@@ -70,6 +70,7 @@ required = [
     "if: always()",
     "verification-report.md",
     "verification-summary.json",
+    "verification-summary.schema.json",
     "agent-decision.txt",
     "first-run-context.txt",
     "agent-response.txt",
@@ -87,6 +88,7 @@ required_text = [
     "./docs/fixtures/agent-response-artifact-manifest.json",
     "./docs/fixtures/agent-response-artifact-manifest.schema.json",
     "./docs/fixtures/verification-summary.schema.json",
+    "./docs/fixtures/dual-project-summary.schema.json",
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
 ]
 

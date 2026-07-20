@@ -177,7 +177,7 @@ go run ./examples/verification-summary-decision-demo /tmp/testloop-report-summar
 scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
 ```
 
-它会同时落下 server/web 两份 `verification-report.md`、两份 `verification-summary.json`，以及一份顶层 `laoxia-summary.json`，后者会嵌套两边的子 summary，方便机器直接读取总状态。
+它会同时落下 server/web 两份 `verification-report.md`、两份 `verification-summary.json`，以及一份顶层 `laoxia-summary.json`，后者会嵌套两边的子 summary，方便机器直接读取总状态；`dual-project-summary.schema.json` 会随 artifact 落盘，结构契约见 [dual-project-summary.schema.json](./docs/fixtures/dual-project-summary.schema.json)。
 
 更通用的双项目场景可以直接用：
 
@@ -661,13 +661,14 @@ jobs:
           path: |
             /tmp/testloop-first-run/verification-report.md
             /tmp/testloop-first-run/verification-summary.json
+            /tmp/testloop-first-run/verification-summary.schema.json
             /tmp/testloop-first-run/agent-decision.txt
             /tmp/testloop-first-run/first-run-context.txt
             /tmp/testloop-first-run/agent-response.txt
             /tmp/testloop-first-run/first-run.log
 ```
 
-first-run 会输出 report、summary、decision、context、Agent 回复草稿和 log 六件套；onboarding 会输出 report、summary、decision 和 Agent 回复草稿四件套。失败时先看 `agent-response.txt`，需要机器分流时再看 `agent-decision.txt`；first-run 旧版 artifact 没有回复草稿时可以把 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
+first-run 会输出 report、summary、summary schema、decision、context、Agent 回复草稿和 log 七件套；onboarding 会输出 report、summary、summary schema、decision 和 Agent 回复草稿五件套。失败时先看 `agent-response.txt`，需要机器分流时再看 `agent-decision.txt`；first-run 旧版 artifact 没有回复草稿时可以把 `first-run-context.txt` 交给 AI Agent。完整清单见 [接入方一页式验证指南](./docs/adopter-verification-guide.md)，真实 server / web 实跑记录见 [真实接入案例模板](./docs/real-integration-cases.md)。
 
 CI 已经失败时，不要先贴完整红色日志。先下载 artifact，读取 `agent-response.txt`；需要机器分流时再读 `agent-decision.txt`，需要下钻时再看 summary/report。统一 contract 见 [Agent response artifact contract](./docs/agent-response-artifact-contract.md)，最短排查格式见 [CI 失败后交给 Agent](./docs/ci-agent-triage.md)，Agent 应如何回复见 [first-run Agent 回复格式](./docs/first-run-agent-response.md)。如果要本地模拟 Agent 如何消费 artifact，可以运行 `sh scripts/render-first-run-agent-response.sh /tmp/testloop-first-run` 或 `go run ./examples/first-run-agent-response-demo`，完整用法见 [first-run artifact Agent 消费演示](./docs/first-run-agent-artifact-demo.md)。如果要一次性覆盖 first-run 和 onboarding artifact fixture，读取 [agent-response artifact manifest](./docs/fixtures/agent-response-artifact-manifest.json) 并按 [agent-response-artifact-manifest.schema.json](./docs/fixtures/agent-response-artifact-manifest.schema.json) 校验；summary JSON 的 schema 见 [verification-summary.schema.json](./docs/fixtures/verification-summary.schema.json)。也可以直接打开 [first-run 失败 artifact fixture](./docs/fixtures/first-run-artifacts/user-project-smoke-failed/)。
 
