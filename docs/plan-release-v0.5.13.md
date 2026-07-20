@@ -2,11 +2,11 @@
 
 ## 当前目标
 
-这是 v0.5.13 的候选发布检查清单。当前目标是把 v0.5.12 之后围绕 Agent action 信号、verification summary schema、Agent response artifact manifest 和客户端契约回归的改动整理成一个 patch 版本。
+这是 v0.5.13 的发布检查清单。目标是把 v0.5.12 之后围绕 Agent action 信号、verification summary schema、Agent response artifact manifest 和客户端契约回归的改动整理成一个 patch 版本，并完成 GitHub Release、Homebrew tap 和 post-release 验证闭环。
 
 发布重点见 [v0.5.13 发布说明草案](./plan-release-notes-v0.5.13.md)。
 
-当前不做正式发布动作：不改版本号、不打 tag、不更新 Homebrew tap。完成候选门禁和远端 CI 后，再进入正式发布准备。
+当前发布状态：v0.5.13 已完成正式版本准备、tag、GitHub Release assets、GitHub Release 正文、仓库内 Formula、Homebrew tap 更新和 Post-Release Verify。
 
 ## 当前差异核对
 
@@ -82,15 +82,24 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.13` / `v0.5.13`。
 - [x] 测试中的版本期望同步到 `0.5.13`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI passed：`23df574` 的 run `29709971165` passed。
 - [x] 打 tag `v0.5.13` 并推送。
 - [x] Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [x] 使用 `scripts/verify-release-assets.sh v0.5.13` 验证 Release 资产完整。
 - [x] 更新 GitHub Release 正文为正式 v0.5.13 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.13` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.13` 并推送。
-- [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
+- [x] 更新 Homebrew tap 到 `0.5.13` 并推送：tap commit `0cb590e`。
+- [x] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过：run `29711047138` passed。
+
+## 发布后验证
+
+- [x] GitHub Release `v0.5.13` 非 draft、非 prerelease，资产数量为 10。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.13` 输出 `Verified 10 release assets for sleticalboy/testloop-mcp@v0.5.13`。
+- [x] Homebrew tap 远端 main 为 `0cb590eda5dc7d75353c2005e4c6927ed34c81dd testloop-mcp 0.5.13`。
+- [x] 本机 `sleticalboy/tap` fast-forward 后，`brew info --json=v2 sleticalboy/tap/testloop-mcp` 显示 stable `0.5.13`，`tap_git_head=0cb590eda5dc7d75353c2005e4c6927ed34c81dd`。
+- [x] `brew audit --formula --strict sleticalboy/tap/testloop-mcp` 通过。
+- [x] Post-Release Verify run `29711047138` passed，覆盖 release asset manifest、linux amd64、linux arm64、darwin arm64、windows amd64 和 windows arm64 安装校验。
 
 ## 当前结论
 
-v0.5.13 已完成正式版本准备、tag、Release Artifacts、资产完整性校验、GitHub Release 正文和仓库内 Formula 更新。Release Artifacts 初始失败都发生在 GitHub Release API/Upload API 503；workflow 加重试后，workflow_dispatch run `29710581315` 已成功。下一步应提交仓库内 Formula 与 workflow 加固，然后更新 Homebrew tap 并触发 Post-Release Verify。
+v0.5.13 已完成正式版本准备、tag、Release Artifacts、资产完整性校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify。Release Artifacts 初始失败都发生在 GitHub Release API/Upload API 503；workflow 加重试后，workflow_dispatch run `29710581315` 已成功，发布后验证 run `29711047138` 已成功。
