@@ -24,6 +24,7 @@ required_snippets = [
     "./fixtures/real-project-agent-loop/laoxia-server-go-utils.json",
     "./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json",
     "./fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json",
+    "./fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json",
     "real-project-agent-loop/*.json",
     "regression_note",
     "redaction_note",

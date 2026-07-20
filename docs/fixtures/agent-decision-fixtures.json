@@ -49,6 +49,15 @@
       "client_expectation": "Record the environment dependency and switch to an integration fixture or manual review."
     },
     {
+      "path": "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "status": "failed",
+      "action": "manual_review_external_service",
+      "expected_decision": "manual-review",
+      "client_expectation": "Record the external service dependency and avoid automatic test repair."
+    },
+    {
       "path": "docs/fixtures/validate-coverage-task-apply-fix-suggestions.json",
       "kind": "validate_coverage_task",
       "source": "synthetic",

@@ -18,6 +18,7 @@ expected_decisions = {
     "passed/ready": "accept",
     "passed/manual_review_internal": "manual-review",
     "passed/manual_review_environment": "manual-review",
+    "failed/manual_review_external_service": "manual-review",
     "failed/apply_fix_suggestions": "apply-repair",
     "failed/needs_better_input": "needs-better-input",
 }
@@ -25,6 +26,7 @@ expected_order = [
     "passed/ready",
     "passed/manual_review_internal",
     "passed/manual_review_environment",
+    "failed/manual_review_external_service",
     "failed/apply_fix_suggestions",
     "failed/needs_better_input",
 ]
@@ -33,6 +35,7 @@ required_client_snippets = {
     "passed/ready": "`passed/ready` 映射为 `accept`",
     "passed/manual_review_internal": "`passed/manual_review_internal` 映射为 `manual-review`",
     "passed/manual_review_environment": "`passed/manual_review_environment` 映射为 `manual-review`",
+    "failed/manual_review_external_service": "`failed/manual_review_external_service` 映射为 `manual-review`",
     "failed/apply_fix_suggestions": "`failed/apply_fix_suggestions` 映射为 `apply-repair`",
     "failed/needs_better_input": "`failed/needs_better_input` 映射为 `needs-better-input`",
 }

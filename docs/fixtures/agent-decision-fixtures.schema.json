@@ -78,6 +78,7 @@
             "ready",
             "manual_review_internal",
             "manual_review_environment",
+            "manual_review_external_service",
             "apply_fix_suggestions",
             "needs_better_input"
           ]

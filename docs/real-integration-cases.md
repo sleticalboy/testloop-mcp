@@ -578,6 +578,57 @@ summary={"limit":1,"framework":"pytest","status_counts":{"passed":1},"action_cou
 
 这条证据补齐真实项目 `manual_review_*` 分流：Agent 应记录环境依赖，改用导入前准备 `frontend/dist/index.html` 的集成 fixture 或人工复核，而不是继续对同一个 coverage task 反复生成测试。
 
+## haoy-apk-station 外部服务手审样例
+
+这个样例用于验证真实 Python/FastAPI 项目中的外部服务失败分支。`download_apk` 的代理下载路径依赖外部对象存储 endpoint 和 `urllib.request.urlopen(..., timeout=60)`；这类失败不应该被当成普通断言失败进入自动修复，而应给 Agent 一个稳定的 `manual_review_external_service` 分流。
+
+运行命令：
+
+```bash
+TESTLOOP_VALIDATE_PY_TASKS_FILE=/Users/binlee/code/open-source/testloop-mcp/testdata/py-haoy-apk-station/external-service-tasks.jsonl \
+TESTLOOP_VALIDATE_PY_TASK_IDS=pytest-apk-download-external-1 \
+TESTLOOP_PYTEST_COMMAND='python3 /Users/binlee/code/open-source/testloop-mcp/scripts/py-external-service-runner.py {path}' \
+  scripts/validate-py-coverage-top-tasks.sh \
+  /Users/binlee/code/free-works/haoy-apk-station/backend \
+  /tmp/testloop-haoy-apk-external-service-agent-loop.jsonl
+```
+
+本次输出摘要：
+
+```text
+task.validate.done index=1 id=pytest-apk-download-external-1 target=download_apk status=failed action=manual_review_external_service
+summary={"limit":1,"framework":"pytest","status_counts":{"failed":1},"action_counts":{"manual_review_external_service":1},"zero_skip":1,"skipped_total":0}
+```
+
+脱敏后的稳定 fixture 见 [haoy-apk-station-py-external-service.json](./fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json)。关键字段：
+
+```json
+{
+  "status": "failed",
+  "action": "manual_review_external_service",
+  "task": {
+    "id": "pytest-apk-download-external-1",
+    "target": "download_apk",
+    "file": "app/api/apps.py",
+    "line_range": "550-570",
+    "gap_type": "error_path"
+  },
+  "run_result": {
+    "status": "fail",
+    "action": "inspect_failures",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0
+  },
+  "metadata": {
+    "external_service_dependent": true
+  }
+}
+```
+
+这条证据补齐“失败但不应自动修复”的真实项目分流：Agent 应记录外部服务依赖，改用 fake storage client、route data 或集成环境验证，而不是继续对同一个生成测试应用 `fix_suggestions`。
+
 ## laoxia v0.5.4 历史 onboarding 样例
 
 下面保留 v0.5.4 时期使用 `scripts/showcase-agent-onboarding-report.sh` 的历史样例，用来说明项目接入模板的演进。新接入项目应优先复制上面的 v0.5.7 CI bootstrap 示例。

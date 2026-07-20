@@ -26,6 +26,7 @@ docs/fixtures/validate-coverage-task-needs-better-input.json
 docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json
 docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json
 docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json
+docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json
 docs/fixtures/agent-decision-fixtures.json
 docs/fixtures/agent-decision-fixtures.schema.json
 ```
@@ -37,6 +38,7 @@ docs/fixtures/agent-decision-fixtures.schema.json
 | `passed/ready` | `accept` |
 | `passed/manual_review_internal` | `manual-review` |
 | `passed/manual_review_environment` | `manual-review` |
+| `failed/manual_review_external_service` | `manual-review` |
 | `failed/apply_fix_suggestions` | `apply-repair` |
 | `failed/needs_better_input` | `needs-better-input` |
 

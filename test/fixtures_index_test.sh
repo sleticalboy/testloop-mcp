@@ -76,10 +76,13 @@ for fixture in real_project_fixtures:
     rel = fixture.relative_to(fixture_dir).as_posix()
     if rel not in text:
         failures.append(f"{index}: missing real project fixture link/name for {rel}")
-    if data.get("status") != "passed":
-        failures.append(f"{fixture}: expected passed real project fixture")
+    status = data.get("status")
     action = data.get("action")
-    if action != "ready" and not str(action).startswith("manual_review_"):
+    if action == "ready" and status != "passed":
+        failures.append(f"{fixture}: expected passed/ready real project fixture")
+    elif str(action).startswith("manual_review_") and status not in {"passed", "failed"}:
+        failures.append(f"{fixture}: expected passed or failed manual_review_* real project fixture")
+    elif action != "ready" and not str(action).startswith("manual_review_"):
         failures.append(f"{fixture}: expected ready or manual_review_* real project fixture")
     if has_key(data, "raw_output"):
         failures.append(f"{fixture}: raw_output must not be stored in real project fixture")

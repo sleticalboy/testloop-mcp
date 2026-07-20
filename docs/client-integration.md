@@ -25,6 +25,7 @@ go run ./examples/agent-decision-demo
 - `passed/ready` 映射为 `accept`
 - `passed/manual_review_internal` 映射为 `manual-review`
 - `passed/manual_review_environment` 映射为 `manual-review`
+- `failed/manual_review_external_service` 映射为 `manual-review`
 - `failed/apply_fix_suggestions` 映射为 `apply-repair`
 - `failed/needs_better_input` 映射为 `needs-better-input`
 
@@ -46,6 +47,7 @@ go run ./examples/agent-decision-demo
 | [real-project-agent-loop/laoxia-server-go-utils.json](./fixtures/real-project-agent-loop/laoxia-server-go-utils.json) | 对真实 Go server coverage task 的 `passed/ready` 摘要执行同样的 `accept` 分流。 |
 | [real-project-agent-loop/mcp-hub-vitest-repair.json](./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json) | 对真实 Vitest 历史 repair 回归样本的 `passed/ready` 摘要执行同样的 `accept` 分流。 |
 | [real-project-agent-loop/haoy-apk-station-py-environment.json](./fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json) | 对真实 FastAPI 环境依赖样本的 `passed/manual_review_environment` 摘要执行同样的 `manual-review` 分流。 |
+| [real-project-agent-loop/haoy-apk-station-py-external-service.json](./fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json) | 对真实 FastAPI 外部服务 timeout 样本的 `failed/manual_review_external_service` 摘要执行同样的 `manual-review` 分流。 |
 
 建议客户端测试至少断言：
 
