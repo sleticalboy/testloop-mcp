@@ -4,6 +4,8 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
+Agent decision fixture 的机器可读索引见 [agent-decision-fixtures.json](./fixtures/agent-decision-fixtures.json)，JSON Schema 见 [agent-decision-fixtures.schema.json](./fixtures/agent-decision-fixtures.schema.json)。客户端可以从这个 manifest 读取最小 `validate_coverage_task` 决策样本、fixture 路径、`status/action`、期望 decision 和客户端动作说明；`examples/agent-decision-demo` 也读取同一个 manifest，避免接入方复制隐含的 glob 顺序。
+
 Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段、fallback 顺序和 `expected_section_signals`，并通过顶层 `summary_schema` 找到 canonical 结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)，也可以通过每个 artifact 的 `summary_schema` 读取同目录自包含的 `verification-summary.schema.json`。其中 `sections[].signals.action` 是可选的 section 级动作信号。双项目报告的 combined summary 使用独立结构契约：[dual-project-summary.schema.json](./fixtures/dual-project-summary.schema.json)，样例见 [laoxia-passed.json](./fixtures/dual-project-summary/laoxia-passed.json)。
 
 ## run_tests fixture 列表
@@ -123,4 +125,22 @@ sh scripts/verify-agent-artifact.sh --json manifest docs/fixtures/agent-response
 sh test/verification_summary_decision_demo_test.sh
 go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
 go test ./tools -run TestDualProjectSummarySchema -count=1
+```
+
+修改 `agent-decision-fixtures.json` 或新增 `validate_coverage_task` / 真实项目 Agent 闭环 fixture 时，还必须同步：
+
+- `docs/fixtures/agent-decision-fixtures.schema.json`
+- `examples/agent-decision-demo`
+- `test/agent_decision_fixtures_manifest_test.sh`
+- `test/agent_decision_demo_test.sh`
+- `test/fixture_decision_mapping_test.sh`
+- `docs/client-integration.md`
+- `docs/mcp-client-contract-tests.md`
+
+推荐至少运行：
+
+```bash
+sh test/agent_decision_fixtures_manifest_test.sh
+sh test/agent_decision_demo_test.sh
+sh test/fixture_decision_mapping_test.sh
 ```

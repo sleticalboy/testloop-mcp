@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-fixtures.schema.json",
+  "title": "testloop-mcp agent decision fixtures manifest",
+  "description": "Machine-readable contract for minimal validate_coverage_task status/action decision fixtures.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "description",
+    "fixtures"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./agent-decision-fixtures.schema.json"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/fixture"
+      }
+    }
+  },
+  "$defs": {
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "kind",
+        "source",
+        "status",
+        "action",
+        "expected_decision",
+        "client_expectation"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^docs/fixtures/(validate-coverage-task-[^/]+|real-project-agent-loop/[^/]+)\\.json$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "validate_coverage_task",
+            "real_project_agent_loop"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "synthetic",
+            "real_project"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "manual_review_internal",
+            "manual_review_environment",
+            "apply_fix_suggestions",
+            "needs_better_input"
+          ]
+        },
+        "expected_decision": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "manual-review",
+            "apply-repair",
+            "needs-better-input"
+          ]
+        },
+        "client_expectation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

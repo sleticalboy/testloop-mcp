@@ -1,0 +1,70 @@
+{
+  "$schema": "./agent-decision-fixtures.schema.json",
+  "schema_version": 1,
+  "description": "Machine-readable manifest for the minimal validate_coverage_task status/action decision fixtures consumed by agent-decision-demo.",
+  "fixtures": [
+    {
+      "path": "docs/fixtures/validate-coverage-task-ready.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "status": "passed",
+      "action": "ready",
+      "expected_decision": "accept",
+      "client_expectation": "Accept the generated test and move to the next coverage task."
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "status": "passed",
+      "action": "ready",
+      "expected_decision": "accept",
+      "client_expectation": "Accept the real Go project evidence and keep processing coverage tasks."
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "status": "passed",
+      "action": "ready",
+      "expected_decision": "accept",
+      "client_expectation": "Accept the real Vitest repair regression as a converged ready task."
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-manual-review-internal.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "status": "passed",
+      "action": "manual_review_internal",
+      "expected_decision": "manual-review",
+      "client_expectation": "Record the internal API review reason and do not repair the same generated test."
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "status": "passed",
+      "action": "manual_review_environment",
+      "expected_decision": "manual-review",
+      "client_expectation": "Record the environment dependency and switch to an integration fixture or manual review."
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-apply-fix-suggestions.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "status": "failed",
+      "action": "apply_fix_suggestions",
+      "expected_decision": "apply-repair",
+      "client_expectation": "Read run_result.fix_suggestions[].repair_task and execute the bounded repair loop."
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-needs-better-input.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "status": "failed",
+      "action": "needs_better_input",
+      "expected_decision": "needs-better-input",
+      "client_expectation": "Read the coverage miss metadata and choose better inputs or a better public entry."
+    }
+  ]
+}

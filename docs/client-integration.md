@@ -18,6 +18,8 @@
 go run ./examples/agent-decision-demo
 ```
 
+该示例读取 [agent-decision-fixtures.json](./fixtures/agent-decision-fixtures.json)，并用 [agent-decision-fixtures.schema.json](./fixtures/agent-decision-fixtures.schema.json) 固定最小决策样本清单。客户端可以直接复制这个 manifest，而不是自己维护 fixture glob 顺序。
+
 该示例读取 [真实结构化 fixture](./fixtures.md) 中的 JSON，演示如何把：
 
 - `passed/ready` 映射为 `accept`
@@ -26,7 +28,7 @@ go run ./examples/agent-decision-demo
 - `failed/apply_fix_suggestions` 映射为 `apply-repair`
 - `failed/needs_better_input` 映射为 `needs-better-input`
 
-这个 demo 会同时读取 `docs/fixtures/validate-coverage-task-*.json` 和 `docs/fixtures/real-project-agent-loop/*.json`。后者来自 laoxia server、mcp-hub 这类真实项目的脱敏验证摘要，用来确认真实项目证据也走同一套 `status/action` 分流，而不是另写一套客户端逻辑。
+这个 demo 会通过 manifest 同时读取 `docs/fixtures/validate-coverage-task-*.json` 和 `docs/fixtures/real-project-agent-loop/*.json`。后者来自 laoxia server、mcp-hub 这类真实项目的脱敏验证摘要，用来确认真实项目证据也走同一套 `status/action` 分流，而不是另写一套客户端逻辑。
 
 如果你在做自己的客户端，建议把同样的映射逻辑做成单元测试，而不是只在真实项目里手动观察。
 

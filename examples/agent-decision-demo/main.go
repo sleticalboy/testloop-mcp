@@ -5,9 +5,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
+
+type decisionManifest struct {
+	Schema        string                 `json:"$schema"`
+	SchemaVersion int                    `json:"schema_version"`
+	Fixtures      []decisionFixtureEntry `json:"fixtures"`
+}
+
+type decisionFixtureEntry struct {
+	Path             string `json:"path"`
+	Status           string `json:"status"`
+	Action           string `json:"action"`
+	ExpectedDecision string `json:"expected_decision"`
+}
 
 type validationSample struct {
 	Name      string          `json:"-"`
@@ -44,18 +56,32 @@ func run() error {
 }
 
 func loadFixtureSamples(dir string) ([]validationSample, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "validate-coverage-task-*.json"))
+	manifestPath := filepath.Join(dir, "agent-decision-fixtures.json")
+	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
 	}
-	realProjectPaths, err := filepath.Glob(filepath.Join(dir, "real-project-agent-loop", "*.json"))
-	if err != nil {
-		return nil, err
+
+	var manifest decisionManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("%s invalid JSON: %w", manifestPath, err)
 	}
-	paths = append(paths, realProjectPaths...)
-	sort.Strings(paths)
-	samples := make([]validationSample, 0, len(paths))
-	for _, path := range paths {
+	if manifest.Schema != "./agent-decision-fixtures.schema.json" {
+		return nil, fmt.Errorf("%s $schema must be ./agent-decision-fixtures.schema.json", manifestPath)
+	}
+	if manifest.SchemaVersion != 1 {
+		return nil, fmt.Errorf("%s schema_version must be 1", manifestPath)
+	}
+	if len(manifest.Fixtures) == 0 {
+		return nil, fmt.Errorf("%s fixtures must not be empty", manifestPath)
+	}
+
+	samples := make([]validationSample, 0, len(manifest.Fixtures))
+	for _, entry := range manifest.Fixtures {
+		if entry.Path == "" {
+			return nil, fmt.Errorf("%s contains fixture without path", manifestPath)
+		}
+		path := filepath.FromSlash(entry.Path)
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -64,6 +90,13 @@ func loadFixtureSamples(dir string) ([]validationSample, error) {
 		if err := json.Unmarshal(data, &sample); err != nil {
 			return nil, fmt.Errorf("%s invalid JSON: %w", path, err)
 		}
+		if sample.Status != entry.Status || sample.Action != entry.Action {
+			return nil, fmt.Errorf("%s status/action = %s/%s, manifest wants %s/%s", path, sample.Status, sample.Action, entry.Status, entry.Action)
+		}
+		decision := agentDecision(sample)
+		if decision != entry.ExpectedDecision {
+			return nil, fmt.Errorf("%s decision = %s, manifest wants %s", path, decision, entry.ExpectedDecision)
+		}
 		name, err := filepath.Rel(dir, path)
 		if err != nil {
 			return nil, err
@@ -71,42 +104,7 @@ func loadFixtureSamples(dir string) ([]validationSample, error) {
 		sample.Name = filepath.ToSlash(name)
 		samples = append(samples, sample)
 	}
-	sort.SliceStable(samples, func(i, j int) bool {
-		leftOrder := sampleOrder(samples[i])
-		rightOrder := sampleOrder(samples[j])
-		if leftOrder != rightOrder {
-			return leftOrder < rightOrder
-		}
-		leftSource := sampleSourceOrder(samples[i])
-		rightSource := sampleSourceOrder(samples[j])
-		if leftSource != rightSource {
-			return leftSource < rightSource
-		}
-		return samples[i].Name < samples[j].Name
-	})
 	return samples, nil
-}
-
-func sampleSourceOrder(sample validationSample) int {
-	if strings.HasPrefix(sample.Name, "real-project-agent-loop/") {
-		return 20
-	}
-	return 10
-}
-
-func sampleOrder(sample validationSample) int {
-	switch {
-	case sample.Status == "passed" && sample.Action == "ready":
-		return 10
-	case strings.HasPrefix(sample.Action, "manual_review_"):
-		return 20
-	case sample.Action == "apply_fix_suggestions":
-		return 30
-	case sample.Action == "needs_better_input":
-		return 40
-	default:
-		return 100
-	}
 }
 
 func agentDecision(sample validationSample) string {

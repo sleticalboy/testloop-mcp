@@ -14,6 +14,8 @@ assert_contains() {
 
 assert_contains "structuredContent"
 assert_contains "content[0].text"
+assert_contains "docs/fixtures/agent-decision-fixtures.json"
+assert_contains "docs/fixtures/agent-decision-fixtures.schema.json"
 assert_contains "docs/fixtures/validate-coverage-task-ready.json"
 assert_contains "docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json"
 assert_contains "docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json"
@@ -21,6 +23,7 @@ assert_contains "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-envir
 assert_contains "regression_note"
 assert_contains "redaction_note"
 assert_contains "sh test/fixtures_index_test.sh"
+assert_contains "sh test/agent_decision_fixtures_manifest_test.sh"
 assert_contains "test/e2e"
 assert_contains "CI artifact manifest 回归"
 assert_contains "agent-response-artifact-manifest.json"
@@ -46,6 +49,8 @@ assert_contains "inspect-user-project"
 for path in \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.schema.json" \
+  "${repo_root}/docs/fixtures/agent-decision-fixtures.json" \
+  "${repo_root}/docs/fixtures/agent-decision-fixtures.schema.json" \
   "${repo_root}/docs/fixtures/verification-summary.schema.json" \
   "${repo_root}/docs/fixtures/dual-project-summary.schema.json" \
   "${repo_root}/docs/fixtures/dual-project-summary/laoxia-passed.json" \

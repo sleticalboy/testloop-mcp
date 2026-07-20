@@ -26,6 +26,8 @@ docs/fixtures/validate-coverage-task-needs-better-input.json
 docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json
 docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json
 docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json
+docs/fixtures/agent-decision-fixtures.json
+docs/fixtures/agent-decision-fixtures.schema.json
 ```
 
 这些 fixture 来自 handler 真实输出或真实项目验证摘要，不是手写示意样例。推荐客户端单元测试直接断言：
@@ -34,6 +36,7 @@ docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json
 | --- | --- |
 | `passed/ready` | `accept` |
 | `passed/manual_review_internal` | `manual-review` |
+| `passed/manual_review_environment` | `manual-review` |
 | `failed/apply_fix_suggestions` | `apply-repair` |
 | `failed/needs_better_input` | `needs-better-input` |
 
@@ -43,6 +46,7 @@ testloop-mcp 自身用这些脚本保护客户端契约：
 
 ```bash
 sh test/fixtures_index_test.sh
+sh test/agent_decision_fixtures_manifest_test.sh
 sh test/fixture_decision_mapping_test.sh
 sh test/client_integration_doc_test.sh
 sh test/agent_decision_demo_test.sh
@@ -51,6 +55,7 @@ sh test/agent_decision_demo_test.sh
 各脚本职责：
 
 - `fixtures_index_test.sh`：确认每个 `docs/fixtures/*.json` 都登记到 fixture 索引，且 `status/action` 集合没有静默扩张。
+- `agent_decision_fixtures_manifest_test.sh`：确认 `agent-decision-fixtures.json` 登记了全部最小决策 fixture，且 manifest 中的 `status/action/expected_decision` 与真实 JSON 一致。
 - `fixture_decision_mapping_test.sh`：直接扫描真实 fixture，校验每个 `status/action` 映射到预期客户端动作。
 - `client_integration_doc_test.sh`：确认客户端集成说明引用的 fixture 和 demo 入口仍然存在。
 - `agent_decision_demo_test.sh`：确认 `go run ./examples/agent-decision-demo` 对真实 fixture 输出稳定决策。

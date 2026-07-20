@@ -15,6 +15,8 @@ text = doc.read_text(encoding="utf-8")
 
 required_snippets = [
     "go run ./examples/agent-decision-demo",
+    "./fixtures/agent-decision-fixtures.json",
+    "./fixtures/agent-decision-fixtures.schema.json",
     "./fixtures/validate-coverage-task-ready.json",
     "./fixtures/validate-coverage-task-manual-review-internal.json",
     "./fixtures/validate-coverage-task-apply-fix-suggestions.json",
