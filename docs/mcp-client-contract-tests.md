@@ -81,6 +81,16 @@ node scripts/validate-agent-decision-fixtures.mjs \
   .
 ```
 
+CI 里建议使用 JSON 输出，避免解析展示用文本：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs --json \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
+```
+
+JSON 输出会固定 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`。验证失败时脚本仍输出可解析 JSON，并用 `status=failed` 与非 0 退出码同时表达失败。
+
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
 ```text

@@ -9,6 +9,8 @@ cd "$repo_root"
 
 out="${tmp_dir}/validator.out"
 node scripts/validate-agent-decision-fixtures.mjs > "$out"
+json_out="${tmp_dir}/validator.json"
+node scripts/validate-agent-decision-fixtures.mjs --json > "$json_out"
 
 assert_contains() {
   file="$1"
@@ -23,6 +25,37 @@ assert_contains() {
 
 assert_contains "$out" "agent_decision_fixture_status=passed fixture_count=8"
 assert_contains "$out" "agent_decision_fixture_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input"
+
+python3 - "$json_out" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "passed"
+assert payload["fixture_count"] == 8
+assert payload["decisions"] == [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input",
+]
+assert any(
+    item["action"] == "manual_review_external_service"
+    and item["decision"] == "manual-review"
+    for item in payload["fixtures"]
+)
+assert any(
+    item["action"] == "apply_fix_suggestions"
+    and item["expected_decision"] == "apply-repair"
+    for item in payload["fixtures"]
+)
+assert payload["failures"] == []
+PY
 
 bad_manifest="${tmp_dir}/agent-decision-fixtures.json"
 python3 - "$bad_manifest" <<'PY'
@@ -40,5 +73,21 @@ if node scripts/validate-agent-decision-fixtures.mjs "$bad_manifest" "$repo_root
   exit 1
 fi
 assert_contains "${tmp_dir}/bad.out" "decision=accept, expected=manual-review"
+
+if node scripts/validate-agent-decision-fixtures.mjs --json "$bad_manifest" "$repo_root" > "${tmp_dir}/bad.json"; then
+  echo "expected JSON validator to fail for wrong expected_decision" >&2
+  exit 1
+fi
+python3 - "${tmp_dir}/bad.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "failed"
+assert payload["fixture_count"] == 8
+assert payload["failures"]
+assert any("decision=accept, expected=manual-review" in item for item in payload["failures"])
+PY
 
 echo "agent decision fixture validator test passed"

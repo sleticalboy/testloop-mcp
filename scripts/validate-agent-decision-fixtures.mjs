@@ -5,7 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 function usage() {
-  console.error('Usage: node scripts/validate-agent-decision-fixtures.mjs [manifest-json] [repo-root]');
+  console.error('Usage: node scripts/validate-agent-decision-fixtures.mjs [--json] [manifest-json] [repo-root]');
   console.error('');
   console.error('Defaults:');
   console.error('  manifest-json: docs/fixtures/agent-decision-fixtures.json');
@@ -17,14 +17,52 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
   process.exit(0);
 }
 
-if (process.argv.length > 4) {
+const positionalArgs = [];
+let jsonMode = false;
+for (const arg of process.argv.slice(2)) {
+  if (arg === '--json') {
+    jsonMode = true;
+    continue;
+  }
+  if (arg.startsWith('-')) {
+    usage();
+    process.exit(2);
+  }
+  positionalArgs.push(arg);
+}
+
+if (positionalArgs.length > 2) {
   usage();
   process.exit(2);
 }
 
-const manifestPath = path.resolve(process.argv[2] || 'docs/fixtures/agent-decision-fixtures.json');
-const repoRoot = path.resolve(process.argv[3] || process.cwd());
+const manifestPath = path.resolve(positionalArgs[0] || 'docs/fixtures/agent-decision-fixtures.json');
+const repoRoot = path.resolve(positionalArgs[1] || process.cwd());
 const failures = [];
+const fixtureResults = [];
+const decisions = [];
+
+function emitJSON(status, manifest) {
+  const fixtures = Array.isArray(manifest?.fixtures) ? manifest.fixtures : [];
+  console.log(JSON.stringify({
+    status,
+    fixture_count: fixtures.length,
+    decisions,
+    fixtures: fixtureResults,
+    failures,
+  }, null, 2));
+}
+
+function emitFailures() {
+  if (jsonMode) {
+    emitJSON('failed', manifest);
+    return;
+  }
+  console.error('agent decision fixture validation failed:');
+  for (const failure of failures) {
+    console.error(`- ${failure}`);
+  }
+}
 
 function readJSON(filePath) {
   try {
@@ -101,8 +139,8 @@ let manifest;
 try {
   manifest = readJSON(manifestPath);
 } catch (error) {
-  console.error('agent decision fixture validation failed:');
-  console.error(`- ${error.message}`);
+  failures.push(error.message);
+  emitFailures();
   process.exit(1);
 }
 if (manifest.$schema !== './agent-decision-fixtures.schema.json') {
@@ -116,13 +154,22 @@ if (!Array.isArray(manifest.fixtures) || manifest.fixtures.length === 0) {
 }
 
 const seenPaths = new Set();
-const decisions = [];
 for (const [index, item] of (manifest.fixtures || []).entries()) {
   const label = `${manifestPath}: fixtures[${index}]`;
   const entry = requireObject(item, label);
   const fixtureRelPath = entry.path;
+  const result = {
+    path: fixtureRelPath,
+    kind: entry.kind,
+    source: entry.source,
+    manifest_status: entry.status,
+    manifest_action: entry.action,
+    expected_decision: entry.expected_decision,
+  };
   if (typeof fixtureRelPath !== 'string' || fixtureRelPath.length === 0) {
     failures.push(`${label}: path must be a non-empty string`);
+    result.error = 'path must be a non-empty string';
+    fixtureResults.push(result);
     continue;
   }
   if (seenPaths.has(fixtureRelPath)) {
@@ -133,6 +180,8 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
   const fixturePath = path.resolve(repoRoot, fixtureRelPath);
   if (!fs.existsSync(fixturePath)) {
     failures.push(`${fixturePath}: fixture file does not exist`);
+    result.error = 'fixture file does not exist';
+    fixtureResults.push(result);
     continue;
   }
 
@@ -141,19 +190,25 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
     payload = readJSON(fixturePath);
   } catch (error) {
     failures.push(error.message);
+    result.error = error.message;
+    fixtureResults.push(result);
     continue;
   }
   const status = payload.status;
   const action = payload.action;
+  result.status = status;
+  result.action = action;
   if (status !== entry.status || action !== entry.action) {
     failures.push(`${fixtureRelPath}: status/action=${status}/${action}, manifest=${entry.status}/${entry.action}`);
   }
 
   const decision = decisionFor(status, action);
+  result.decision = decision;
   decisions.push(decision);
   if (decision !== entry.expected_decision) {
     failures.push(`${fixtureRelPath}: decision=${decision}, expected=${entry.expected_decision}`);
   }
+  fixtureResults.push(result);
 
   if (entry.kind === 'real_project_agent_loop' && hasKey(payload, 'raw_output')) {
     failures.push(`${fixtureRelPath}: real project fixture must not contain raw_output`);
@@ -170,12 +225,13 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
 }
 
 if (failures.length > 0) {
-  console.error('agent decision fixture validation failed:');
-  for (const failure of failures) {
-    console.error(`- ${failure}`);
-  }
+  emitFailures();
   process.exit(1);
 }
 
-console.log(`agent_decision_fixture_status=passed fixture_count=${manifest.fixtures.length}`);
-console.log(`agent_decision_fixture_decisions=${decisions.join(',')}`);
+if (jsonMode) {
+  emitJSON('passed', manifest);
+} else {
+  console.log(`agent_decision_fixture_status=passed fixture_count=${manifest.fixtures.length}`);
+  console.log(`agent_decision_fixture_decisions=${decisions.join(',')}`);
+}

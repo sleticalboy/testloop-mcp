@@ -43,6 +43,16 @@ node scripts/validate-agent-decision-fixtures.mjs \
   .
 ```
 
+CI 中需要机器断言时使用 JSON 输出：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs --json \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
+```
+
+该 JSON 固定包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
+
 ## 使用真实 fixture
 
 [真实结构化 fixture](./fixtures.md) 提供了来自 handler 的稳定 JSON 投影，适合直接放进客户端测试用例：

@@ -610,6 +610,16 @@ node scripts/validate-agent-decision-fixtures.mjs \
 
 预期输出会包含 `agent_decision_fixture_status=passed`、`fixture_count=8` 和 `agent_decision_fixture_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input`。
 
+CI 中需要机器断言时使用 JSON 输出：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs --json \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
+```
+
+JSON 输出会包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；验证失败时仍输出 JSON，同时返回非 0 退出码。
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：

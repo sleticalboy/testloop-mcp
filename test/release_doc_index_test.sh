@@ -46,6 +46,7 @@ required_commands = [
     "go run ./examples/mcp-client-demo",
     "go run ./examples/verification-summary-decision-demo",
     "node scripts/validate-agent-decision-fixtures.mjs",
+    "node scripts/validate-agent-decision-fixtures.mjs --json",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
@@ -92,6 +93,9 @@ required_phrases = [
     "七件套",
     "五件套",
     "真实 server / web 实跑记录",
+    "JSON 输出会包含",
+    "decisions[]",
+    "failures[]",
 ]
 
 failures = []
