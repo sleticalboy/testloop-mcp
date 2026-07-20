@@ -55,7 +55,9 @@
 - [x] `e9530c1` 远端 CI run `29736423222` passed，覆盖 manifest 批量校验。
 - [x] `4764823` 远端 CI run `29736802986` passed，覆盖 verifier JSON 输出。
 - [x] `c36758b` 远端 CI run `29737179225` passed，覆盖 laoxia artifact 自检复验证据。
-- [ ] 最新 main CI 尚待最终确认；本地门禁补齐时，`ab81926` 远端 CI run `29737938722` 仍在 GitHub Actions 队列中。
+- [x] `ab81926` 远端 CI run `29737938722` passed，覆盖 v0.5.14 候选发布边界文档。
+- [x] `27a0410` 远端 CI run `29738560911` passed，覆盖 CLI help 退出码修复。
+- [ ] 最新 main CI 尚待最终确认；`7173228` 远端 CI run `29739075425` 仍在 GitHub Actions 队列中。
 
 ## 发布前门禁
 

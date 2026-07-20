@@ -9,8 +9,8 @@ testloop-mcp v0.5.14
 - [x] 创建 v0.5.14 发布说明草案。
 - [x] 梳理 v0.5.13 之后围绕 CI artifact 自检、summary schema 自包含、双项目 summary、默认 CI 覆盖、仓库卫生和真实项目证据的改动边界。
 - [x] 最近本地验证已通过：shell 语法检查、全部 `test/*_test.sh`、`go test ./...`、候选二进制 build、`--version`、`--help`、darwin arm64 release asset dry-run、tarball `.sha256` 校验和 `git diff --check`。
-- [x] 最近远端 CI 已通过：`c36758b` run `29737179225` passed，覆盖 laoxia artifact 自检复验证据。
-- [ ] 最新 main CI 尚待最终确认；本地门禁补齐时，候选边界文档提交 `ab81926` 的 CI run `29737938722` 仍在 GitHub Actions 队列中。
+- [x] 最近远端 CI 已通过：`27a0410` run `29738560911` passed，覆盖 CLI help 退出码修复。
+- [ ] 最新 main CI 尚待最终确认；候选发布门禁脚本提交 `7173228` 的 CI run `29739075425` 仍在 GitHub Actions 队列中。
 - [ ] 尚未更新 implementation version、CHANGELOG 正式版本段、tag、Release assets 或 Homebrew tap。
 
 ## 摘要
