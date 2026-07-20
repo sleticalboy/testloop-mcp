@@ -193,6 +193,31 @@ scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
 
 这个入口适合做项目级回归和发布前复验。它不替代 `generate-verification-report.sh`，只是把 laoxia 这类已经确认过的真实项目路径收成一个更省心的命令。
 
+最新源码复验记录：
+
+```bash
+go build -o /tmp/testloop-mcp-latest .
+
+TESTLOOP_LAOXIA_OUTPUT_DIR=/tmp/testloop-laoxia-scaffold-live-20260720154617 \
+TESTLOOP_REPORT_SKIP_BASIC=true \
+TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+  scripts/showcase-laoxia-scaffold-report.sh /tmp/testloop-mcp-latest
+```
+
+验收结果：
+
+```text
+laoxia_server_status=passed
+laoxia_server_command=go test ./...
+laoxia_web_status=passed
+laoxia_web_command=pnpm install --frozen-lockfile && pnpm build:prod
+laoxia_status=passed
+```
+
+`/tmp/testloop-laoxia-scaffold-live-20260720154617/laoxia-summary.json` 的顶层、server 子 summary 和 web 子 summary 均为 `overall_status=passed`、`failed_count=0`。
+
 ## QuickSmoke Go/Java 双项目报告入口
 
 前面的 shared helper 也可以直接复用到跨语言的真实项目 pair。下面这组样本用一个干净的 Go 项目和一个干净的 Java 项目验证了 helper 的通用性：
