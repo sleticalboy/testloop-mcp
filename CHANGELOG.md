@@ -5,6 +5,31 @@
 ### Added
 
 - 新增主 MCP 工具 handler 层结构化返回契约测试，固定 `generate_tests`、`run_tests`、`parse_results`、`parse_coverage` 和 `fix_suggestions` 的 `structuredContent`、handler 返回值与 `content[0].text` JSON 语义一致。
+- 新增 laoxia 双栈验收报告入口和通用双项目报告 helper，支持把 server/web 或任意两条项目 smoke 汇总成嵌套子 summary 的 combined summary。
+- 新增 `docs/fixtures/dual-project-summary.schema.json` 和 `docs/fixtures/dual-project-summary/laoxia-passed.json`，固定双项目 combined summary 的结构契约，并在脚本回归中校验实际输出。
+- 新增真实项目双项目 showcase 记录，覆盖 laoxia server/web、QuickSmoke Go/Java、APK Info Rust/Words Java 等跨项目或跨语言 pair。
+- 新增 verification summary artifact 自包含 schema：标准验收报告、first-run/onboarding CI artifact 和静态 Agent artifact fixture 都会随 `verification-summary.json` 提供 `verification-summary.schema.json`。
+- 新增 dual-project summary artifact 自包含 schema：通用双项目报告和 laoxia wrapper 会把 `dual-project-summary.schema.json` 写到 combined summary 同目录。
+- 新增 `test/ci_workflow_test.sh`，要求默认 CI 显式运行每个 `test/*_test.sh`。
+- 新增 `test/repository_hygiene_test.sh`，拒绝被 `.gitignore` 忽略但仍被 Git 跟踪的文件，并防止重新提交 `__pycache__/` 或 `.pyc`。
+
+### Changed
+
+- Agent response artifact manifest 的每个 artifact 现在带有本地 `summary_schema=verification-summary.schema.json` 指针，客户端下载单个 artifact 目录后可以离线校验 summary。
+- README、showcase、CI 集成、接入指南、fixture 索引和 artifact contract 已从 first-run 六件套 / onboarding 四件套更新为 first-run 七件套 / onboarding 五件套。
+- 默认 GitHub Actions CI 已补跑 first-run/onboarding Agent response、artifact manifest、artifact fixture、外部 dry-run 文档、接入指南、README snippet 和 MCP 客户端契约等所有现有 shell 契约测试。
+- `.gitignore` 为有意保留的 demo 输出和 first-run fixture log 增加精确例外，避免 fixture 被通用忽略规则误伤。
+
+### Fixed
+
+- 多个对外脚本现在会提前拒绝目录型二进制路径、项目路径、输出目录和文件输出路径，避免把错误推迟到底层 OS 写入失败。
+- 双项目 combined summary 现在会正确汇总两个子项目的失败数量，并区分 verification summary 与 pair combined summary。
+- `verification-summary-decision-demo` 会先校验 `overall_status`、`failed_count` 和 `sections` 必填字段，避免把非 verification summary JSON 误判成 `ready`。
+- 公开 showcase、外部 onboarding/first-run bootstrap、regression smoke 和 regression sample 输出路径都增加了更早的目录/文件输入校验。
+
+### Removed
+
+- 从仓库移除已跟踪的 `demo-python/__pycache__/*.pyc` Python bytecode 缓存文件。
 
 ## v0.5.13 - 2026-07-20
 
