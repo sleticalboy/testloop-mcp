@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+暂无。
+
+## v0.5.13 - 2026-07-20
+
 ### Added
 
 - `cmd/testgen` 生成成功时会输出 `action=ready` 或 `action=manual_review`，让 CLI 用户在运行测试前就能识别 TODO/skipped 手审草稿。
@@ -17,6 +21,7 @@
 - Agent response artifact contract、客户端契约测试说明、接入指南、客户端集成文档和 README 已补充 `verification-summary.schema.json` 与 `section_signal` 消费说明。
 - first-run/onboarding wrapper 回归测试现在固定 summary JSON、`agent-decision.txt` 和 `agent-response.txt` 中的 action signal 链路。
 - first-run/onboarding 失败 artifact fixture 已刷新为包含“独立 CLI 生成动作 smoke”的 `signals.action=manual_review` 与 `section_signal` 输出。
+- MCP server implementation version 更新为 `0.5.13`。
 
 ## v0.5.12 - 2026-07-19
 

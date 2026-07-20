@@ -55,7 +55,7 @@ cat > "$fake_binary" <<'SH'
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.12"
+    echo "testloop-mcp 0.5.13"
     ;;
   *)
     echo "fake testloop-mcp"
@@ -87,7 +87,7 @@ assert_contains "$report" '| 基础安装验收 | `skipped` | `-` |'
 assert_contains "$report" '| 独立 CLI 生成动作 smoke | `skipped` | `-` |'
 assert_contains "$report" '| 用户项目 smoke | `passed` | `0` |'
 assert_contains "$report" "project smoke ok"
-assert_contains "$report" '版本输出：`testloop-mcp 0.5.12`'
+assert_contains "$report" '版本输出：`testloop-mcp 0.5.13`'
 assert_json_field "$summary_json" "data['overall_status']" "passed"
 assert_json_field "$summary_json" "data['failed_count']" "0"
 assert_json_field "$summary_json" "data['sections'][0]['status']" "skipped"

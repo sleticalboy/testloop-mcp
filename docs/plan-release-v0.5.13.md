@@ -57,6 +57,8 @@
 - [x] `515fd00` 远端 CI run `29695649219` passed，覆盖 artifact decision action 验证。
 - [x] `1395715` 远端 CI run `29695820104` passed，覆盖 v0.5.13 候选发布边界文档。
 - [x] 候选 release readiness 已通过：shell 语法、`go test ./...`、全部 `test/*_test.sh`、候选二进制构建、help/version、darwin arm64 打包 dry-run、sha256 和 tarball 内容检查。
+- [x] 正式版本准备已通过：`main.go` 版本号、CHANGELOG、README/installation/quickstart/CI 模板版本引用和测试期望已同步到 `0.5.13`。
+- [x] 正式版本准备 release readiness 已通过：shell 语法、`go test ./...`、全部 shell 回归、候选二进制构建、help/version、darwin arm64 打包 dry-run、sha256 和 tarball 内容检查。
 
 ## 发布前门禁
 
@@ -75,11 +77,11 @@
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.13`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.13 - 2026-07-20`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.13` / `v0.5.13`。
-- [ ] 测试中的版本期望同步到 `0.5.13`。
-- [ ] 重新运行完整本地验证，确认版本准备改动可发布。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.13`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.13 - 2026-07-20`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.13` / `v0.5.13`。
+- [x] 测试中的版本期望同步到 `0.5.13`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.13` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -91,4 +93,4 @@
 
 ## 当前结论
 
-v0.5.13 已具备候选发布边界，候选 release readiness 已通过：这一轮聚焦 Agent/客户端可消费契约，不扩语言、不改大方向。下一步如果要继续发布，应进入正式版本准备：切 `0.5.13` 版本号、收敛 changelog、同步版本引用并重新跑发布前门禁。
+v0.5.13 已完成正式版本准备，本地 release readiness 已通过：这一轮聚焦 Agent/客户端可消费契约，不扩语言、不改大方向。下一步应提交版本准备改动并等待远端 CI；通过后打 tag `v0.5.13`，生成 Release 资产并继续 Homebrew tap 和 Post-Release Verify。

@@ -22,7 +22,7 @@ import (
 	"github.com/sleticalboy/testloop-mcp/tools"
 )
 
-const appVersion = "0.5.12"
+const appVersion = "0.5.13"
 
 type serverConfig struct {
 	transport     string
