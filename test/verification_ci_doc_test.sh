@@ -14,6 +14,8 @@ text = doc.read_text(encoding="utf-8")
 
 required_snippets = [
     "scripts/run-onboarding-ci.sh",
+    "sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding",
+    "Artifact verification",
     "bash /tmp/testloop-onboarding-ci.sh 'go test ./...'",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
     "./first-run-ci-template.md",
@@ -46,6 +48,7 @@ command_paths = {
     "scripts/showcase-agent-onboarding-report.sh": Path("scripts/showcase-agent-onboarding-report.sh"),
     "scripts/generate-verification-report.sh": Path("scripts/generate-verification-report.sh"),
     "scripts/run-first-run-ci.sh": Path("scripts/run-first-run-ci.sh"),
+    "sh scripts/verify-agent-artifact.sh": Path("scripts/verify-agent-artifact.sh"),
     "go run ./examples/verification-summary-decision-demo": Path("examples/verification-summary-decision-demo/main.go"),
 }
 for command, path in command_paths.items():

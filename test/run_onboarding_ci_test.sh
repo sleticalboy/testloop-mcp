@@ -88,6 +88,9 @@ assert_contains "$out" "onboarding_report=$output_dir/verification-report.md"
 assert_contains "$out" "onboarding_summary_json=$output_dir/verification-summary.json"
 assert_contains "$out" "onboarding_decision=$output_dir/agent-decision.txt"
 assert_contains "$out" "agent_next_step=ready"
+assert_contains "$out" "agent_artifact_status=passed"
+assert_contains "$out" "artifact_kind=onboarding"
+assert_contains "$out" "response_action=ready"
 assert_contains "$output_dir/agent-response.txt" "结论：testloop-mcp onboarding 链路通过"
 assert_contains "$output_dir/agent-response.txt" "- agent_next_step=ready"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
@@ -104,6 +107,7 @@ assert_contains "$step_summary" 'Failed sections: `0`'
 assert_contains "$step_summary" 'agent_next_step: `ready`'
 assert_contains "$step_summary" "Markdown report: \`$output_dir/verification-report.md\`"
 assert_contains "$step_summary" "Agent response: \`$output_dir/agent-response.txt\`"
+assert_contains "$step_summary" 'Artifact verification: `passed`'
 
 dir_binary_out="${tmp_dir}/dir-binary.out"
 run_expect_code 1 "$dir_binary_out" env \
@@ -127,6 +131,9 @@ run_expect_code 1 "$out" env \
   bash "${repo_root}/scripts/run-onboarding-ci.sh" 'echo project failed; exit 7'
 
 assert_contains "$out" "agent_next_step=inspect-user-project"
+assert_contains "$out" "agent_artifact_status=passed"
+assert_contains "$out" "artifact_kind=onboarding"
+assert_contains "$out" "response_action=inspect-user-project"
 assert_contains "$failed_output_dir/verification-report.md" "project failed"
 assert_contains "$failed_output_dir/verification-summary.json" '"overall_status": "failed"'
 assert_contains "$failed_output_dir/verification-summary.json" '"action": "manual_review"'
@@ -142,6 +149,7 @@ assert_contains "$failed_step_summary" 'Failed sections: `1`'
 assert_contains "$failed_step_summary" 'agent_next_step: `inspect-user-project`'
 assert_contains "$failed_step_summary" 'Next: inspect the user project smoke section in the Markdown report.'
 assert_contains "$failed_step_summary" "Agent response: \`$failed_output_dir/agent-response.txt\`"
+assert_contains "$failed_step_summary" 'Artifact verification: `passed`'
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/run-onboarding-ci.sh" --help
 assert_contains "$out" "Usage: scripts/run-onboarding-ci.sh [project-smoke-command]"

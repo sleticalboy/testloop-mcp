@@ -112,6 +112,15 @@ go run ./examples/agent-response-manifest-demo \
 
 manifest 的结构契约见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)，其中固定了 first-run/onboarding artifact 目录、必备文件、期望 action 和 `fallback_order`。`verification-summary.json` 的结构契约见 [verification-summary.schema.json](./fixtures/verification-summary.schema.json)，客户端可用它校验 `sections[].signals.action` 这类可选动作信号。
 
+下载 artifact 后也可以直接跑目录自检：
+
+```bash
+sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run
+sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding
+```
+
+正常输出包含 `agent_artifact_status=passed`。复制型 bootstrap 在 helper checkout 支持时会自动执行同类校验，并在 GitHub step summary 写入 `Artifact verification`。
+
 ## 5. 失败时看哪个字段
 
 优先看 `agent-decision.txt`：

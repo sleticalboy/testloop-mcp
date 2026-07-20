@@ -18,6 +18,7 @@
 
 - Agent response artifact manifest 的每个 artifact 现在带有本地 `summary_schema=verification-summary.schema.json` 指针，客户端下载单个 artifact 目录后可以离线校验 summary。
 - first-run Agent 回复现在会输出 `first_run_status` 和 `first_run_failed_count`，与 artifact contract 和 `first-run-context.txt` 保持一致。
+- `run-first-run-ci.sh` 和 `run-onboarding-ci.sh` 会在 helper 支持时自动运行 artifact verifier，并在 GitHub step summary 写入 `Artifact verification`。
 - README、showcase、CI 集成、接入指南、fixture 索引和 artifact contract 已从 first-run 六件套 / onboarding 四件套更新为 first-run 七件套 / onboarding 五件套。
 - 默认 GitHub Actions CI 已补跑 first-run/onboarding Agent response、artifact manifest、artifact fixture、外部 dry-run 文档、接入指南、README snippet 和 MCP 客户端契约等所有现有 shell 契约测试。
 - `.gitignore` 为有意保留的 demo 输出和 first-run fixture log 增加精确例外，避免 fixture 被通用忽略规则误伤。

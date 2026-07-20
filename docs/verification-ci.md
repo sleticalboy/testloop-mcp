@@ -25,7 +25,7 @@ scripts/showcase-first-run-ci-external-project.sh
 
 ## 推荐 workflow
 
-如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON、summary schema、decision 和 Agent 回复草稿，减少手写路径和决策命令。
+如果只是在用户项目 CI 中接入，优先使用 `scripts/run-onboarding-ci.sh` bootstrap。它会安装或解析 `testloop-mcp`，准备报告脚本，再同时生成 Markdown、summary JSON、summary schema、decision 和 Agent 回复草稿，减少手写路径和决策命令。helper checkout 支持时，bootstrap 还会自动运行 `sh scripts/verify-agent-artifact.sh onboarding <output-dir>`，在 step summary 写入 `Artifact verification`。
 
 下面示例适合直接复制到用户项目。更短的 Go / Vue 模板见 [Onboarding CI 复制模板](./onboarding-ci-template.md)。
 
@@ -136,7 +136,7 @@ CI 日志里优先看 `agent_next_step`：
 | `inspect-showcase` | 优先排查外部网络、本地 checkout 或 action 期望。 |
 | `inspect-user-project` | 优先查看用户项目 smoke 输出，通常是依赖、环境变量、测试命令或项目自身失败。 |
 
-失败时不要只看 CI 最后一行。应下载 `testloop-verification-report` artifact，先读 `agent-response.txt`；需要机器分流时再读 decision，需要下钻时再看 summary JSON 的 failed section 和 Markdown 对应明细。
+失败时不要只看 CI 最后一行。应先看 step summary 里的 `Artifact verification`，再下载 `testloop-verification-report` artifact，先读 `agent-response.txt`；需要机器分流时再读 decision，需要下钻时再看 summary JSON 的 failed section 和 Markdown 对应明细。下载后也可以手动运行 `sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding` 复核目录合同。
 
 更具体的失败排查顺序见 [Onboarding CI 失败排查](./onboarding-ci-failure-triage.md)。
 

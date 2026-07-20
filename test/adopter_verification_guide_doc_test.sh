@@ -29,6 +29,10 @@ required = [
     "/tmp/testloop-first-run/verification-summary.schema.json",
     "/tmp/testloop-onboarding/verification-summary.schema.json",
     "go run ./examples/agent-response-manifest-demo",
+    "sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run",
+    "sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding",
+    "agent_artifact_status=passed",
+    "Artifact verification",
     "docs/fixtures/agent-response-artifact-manifest.json",
     "agent-response-artifact-manifest.schema.json",
     "verification-summary.schema.json",
@@ -63,6 +67,7 @@ for path in [
     Path("docs/fixtures/agent-response-artifact-manifest.json"),
     Path("docs/fixtures/agent-response-artifact-manifest.schema.json"),
     Path("docs/fixtures/verification-summary.schema.json"),
+    Path("scripts/verify-agent-artifact.sh"),
 ]:
     if not path.exists():
         print(f"missing referenced file: {path}")

@@ -17,6 +17,8 @@ required_snippets = [
     "name: testloop web onboarding",
     "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh",
     "TESTLOOP_MCP_VERSION=v0.5.13",
+    "sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding",
+    "Artifact verification",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding",
     "TESTLOOP_ONBOARDING_PROJECT_DIR=\"$PWD\"",
@@ -36,6 +38,7 @@ required_snippets = [
     "/tmp/testloop-web-onboarding/agent-response.txt",
     "Agent 四段回复草稿",
     "agent_next_step=ready",
+    "agent_artifact_status=passed",
     "./verification-ci.md",
     "./real-integration-cases.md",
 ]
@@ -48,6 +51,7 @@ for snippet in required_snippets:
 linked_paths = [
     Path("scripts/install.sh"),
     Path("scripts/run-onboarding-ci.sh"),
+    Path("scripts/verify-agent-artifact.sh"),
     Path("scripts/showcase-agent-onboarding-report.sh"),
     Path("docs/verification-ci.md"),
     Path("docs/real-integration-cases.md"),

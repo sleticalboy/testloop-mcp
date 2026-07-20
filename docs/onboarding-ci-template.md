@@ -8,6 +8,8 @@
 - `agent-decision.txt`：最小下一步动作，核心字段是 `agent_next_step`。
 - `agent-response.txt`：按 summary 渲染出的 Agent 四段回复草稿。
 
+bootstrap 在 helper checkout 支持时会自动运行 `sh scripts/verify-agent-artifact.sh onboarding <output-dir>`，并在 GitHub step summary 写入 `Artifact verification`。如果 helper 固定到旧 tag 且没有 verifier，脚本只会给 warning，不影响已发布模板继续使用。
+
 ## Go server 模板
 
 适合 Go API、CLI、server 项目。接入方通常只需要改 `TESTLOOP_REPORT_PROJECT_COMMAND`。
@@ -107,10 +109,19 @@ jobs:
 
 CI 失败时不要只看最后一行日志。先下载 artifact，再按这个顺序看：
 
-1. `agent-response.txt`：先看脚本已经渲染出的 Agent 四段回复草稿。
-2. `agent-decision.txt`：如果 `agent_next_step=ready`，说明 testloop-mcp 自检和用户项目 smoke 都通过。
-3. `verification-summary.json`：看 `failed_count` 和失败 section 的 `name/status/exit_code`。
-4. `verification-report.md`：看失败 section 的 stdout / stderr 明细。
+1. `Artifact verification`：如果是 `passed`，说明目录必备文件、summary schema、decision 和 Agent response 已自检通过。
+2. `agent-response.txt`：先看脚本已经渲染出的 Agent 四段回复草稿。
+3. `agent-decision.txt`：如果 `agent_next_step=ready`，说明 testloop-mcp 自检和用户项目 smoke 都通过。
+4. `verification-summary.json`：看 `failed_count` 和失败 section 的 `name/status/exit_code`。
+5. `verification-report.md`：看失败 section 的 stdout / stderr 明细。
+
+下载 artifact 后也可以手动复跑：
+
+```bash
+sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding
+```
+
+正常输出包含 `agent_artifact_status=passed`。
 
 常见 `agent_next_step`：
 

@@ -10,6 +10,7 @@ The script installs or resolves testloop-mcp, prepares a testloop-mcp source
 checkout for report helpers, then writes:
   - verification-report.md
   - verification-summary.json
+  - verification-summary.schema.json
   - agent-decision.txt
   - agent-response.txt
 
@@ -24,6 +25,9 @@ Environment:
   TESTLOOP_ONBOARDING_AGENT_RESPONSE_OUT
                                        Agent response output path. Defaults to
                                        $TESTLOOP_ONBOARDING_OUTPUT_DIR/agent-response.txt
+  TESTLOOP_ONBOARDING_VERIFY_ARTIFACT  Verify the generated artifact directory
+                                       when helper support is available.
+                                       Default: true.
   TESTLOOP_ONBOARDING_TITLE            Report title.
 
   TESTLOOP_MCP_COMMAND                 Existing testloop-mcp binary path/command.
@@ -154,6 +158,7 @@ report_md="${TESTLOOP_ONBOARDING_REPORT_MD:-${output_dir}/verification-report.md
 summary_json="${TESTLOOP_ONBOARDING_SUMMARY_JSON:-${output_dir}/verification-summary.json}"
 decision_out="${TESTLOOP_ONBOARDING_DECISION_OUT:-${output_dir}/agent-decision.txt}"
 agent_response_out="${TESTLOOP_ONBOARDING_AGENT_RESPONSE_OUT:-${output_dir}/agent-response.txt}"
+artifact_verify_status="skipped"
 
 printf 'testloop_mcp_repo=%s\n' "$repo_dir"
 printf 'testloop_mcp_binary=%s\n' "$binary"
@@ -207,6 +212,7 @@ PY
     if [[ -s "$agent_response_out" ]]; then
       printf '%s%s%s\n' '- Agent response: `' "$agent_response_out" '`'
     fi
+    printf '%s%s%s\n' '- Artifact verification: `' "$artifact_verify_status" '`'
     printf '\n'
     case "$agent_next_step" in
       ready)
@@ -252,11 +258,45 @@ render_agent_response() {
   mv "$tmp_response" "$agent_response_out"
 }
 
+verify_agent_artifact() {
+  if [[ "${TESTLOOP_ONBOARDING_VERIFY_ARTIFACT:-true}" != "true" ]]; then
+    artifact_verify_status="skipped-disabled"
+    return 0
+  fi
+  if [[ ! -x "$repo_dir/scripts/verify-agent-artifact.sh" ]]; then
+    artifact_verify_status="skipped-unavailable"
+    printf 'warning: skipped onboarding artifact verification; helper checkout lacks scripts/verify-agent-artifact.sh\n' >&2
+    return 0
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    artifact_verify_status="skipped-no-go"
+    printf 'warning: go is not available; skipped onboarding artifact verification\n' >&2
+    return 0
+  fi
+
+  local verify_out="$tmp_dir/onboarding-artifact-verify.txt"
+  if TESTLOOP_MCP_REPO_DIR="$repo_dir" \
+    "$repo_dir/scripts/verify-agent-artifact.sh" onboarding "$output_dir" > "$verify_out" 2>&1; then
+    artifact_verify_status="passed"
+    cat "$verify_out"
+    return 0
+  fi
+
+  artifact_verify_status="failed"
+  cat "$verify_out" >&2
+  return 1
+}
+
 set +e
 env "${env_args[@]}" "$repo_dir/scripts/showcase-agent-onboarding-report.sh" "$binary"
 onboarding_code=$?
 set -e
 
 render_agent_response
+artifact_verify_code=0
+verify_agent_artifact || artifact_verify_code=$?
 write_github_step_summary
+if [[ "$artifact_verify_code" -ne 0 ]]; then
+  exit "$artifact_verify_code"
+fi
 exit "$onboarding_code"

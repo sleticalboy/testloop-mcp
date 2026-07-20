@@ -71,6 +71,7 @@ required_phrases = [
     "CI 失败后交给 Agent",
     "Agent response artifact contract",
     "agent-response artifact manifest",
+    "Artifact verification",
     "离线校验必备文件",
     "docs/fixtures/agent-response-artifact-manifest.json",
     "agent-response-artifact-manifest.schema.json",

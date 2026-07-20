@@ -18,6 +18,9 @@ required = [
     "TESTLOOP_MCP_VERSION=v0.5.13",
     "TESTLOOP_MCP_REPO_REF",
     "helper checkout 默认使用 `main`",
+    "sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run",
+    "Artifact verification",
+    "agent_artifact_status=passed",
     "TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run",
     "TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-web-first-run",
     "TESTLOOP_FIRST_RUN_PROJECT_DIR=\"$PWD\"",
@@ -48,6 +51,7 @@ failures = [f"{doc}: missing required snippet {item!r}" for item in required if 
 for path in [
     Path("scripts/run-first-run-ci.sh"),
     Path("scripts/doctor-first-run.sh"),
+    Path("scripts/verify-agent-artifact.sh"),
     Path("docs/first-run-failures.md"),
     Path("docs/onboarding-ci-template.md"),
 ]:

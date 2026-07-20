@@ -87,8 +87,13 @@ assert_contains "$out" "testloop_project_command=printf \"project smoke ok\\n\""
 assert_contains "$out" "first_run_status=passed"
 assert_contains "$out" "first_run_agent_next_step=ready"
 assert_contains "$out" "first_run_context=$output_dir/first-run-context.txt"
+assert_contains "$out" "agent_artifact_status=passed"
+assert_contains "$out" "artifact_kind=first-run"
+assert_contains "$out" "response_action=ready"
 assert_contains "$output_dir/agent-response.txt" "结论：testloop-mcp 接入链路通过"
 assert_contains "$output_dir/agent-response.txt" "- first_run_agent_next_step=ready"
+assert_contains "$output_dir/agent-response.txt" "- first_run_status=passed"
+assert_contains "$output_dir/agent-response.txt" "- first_run_failed_count=0"
 assert_contains "$output_dir/verification-report.md" "project smoke ok"
 assert_contains "$output_dir/verification-summary.json" '"overall_status": "passed"'
 assert_contains "$output_dir/verification-summary.json" '"signals": {'
@@ -104,6 +109,7 @@ assert_contains "$step_summary" 'Status: `passed`'
 assert_contains "$step_summary" 'first_run_agent_next_step: `ready`'
 assert_contains "$step_summary" "Agent context: \`$output_dir/first-run-context.txt\`"
 assert_contains "$step_summary" "Agent response: \`$output_dir/agent-response.txt\`"
+assert_contains "$step_summary" 'Artifact verification: `passed`'
 
 failed_output_dir="${tmp_dir}/failed-artifacts"
 failed_step_summary="${tmp_dir}/failed-step-summary.md"
@@ -120,18 +126,24 @@ run_expect_code 1 "$out" env \
 
 assert_contains "$out" "first_run_status=failed"
 assert_contains "$out" "first_run_agent_next_step=inspect-user-project"
+assert_contains "$out" "agent_artifact_status=passed"
+assert_contains "$out" "artifact_kind=first-run"
+assert_contains "$out" "response_action=inspect-user-project"
 assert_contains "$failed_output_dir/verification-report.md" "project failed"
 assert_contains "$failed_output_dir/verification-summary.json" '"action": "manual_review"'
 assert_contains "$failed_output_dir/verification-summary.schema.json" '"title": "testloop-mcp verification summary"'
 assert_contains "$failed_output_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
 assert_contains "$failed_output_dir/agent-decision.txt" "section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_output_dir/agent-response.txt" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
+assert_contains "$failed_output_dir/agent-response.txt" "- first_run_status=failed"
+assert_contains "$failed_output_dir/agent-response.txt" "- first_run_failed_count=1"
 assert_contains "$failed_output_dir/agent-response.txt" "- failed_section=用户项目 smoke"
 assert_contains "$failed_output_dir/agent-response.txt" "- exit_code=7"
 assert_contains "$failed_output_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$failed_step_summary" 'Status: `failed`'
 assert_contains "$failed_step_summary" 'first_run_agent_next_step: `inspect-user-project`'
 assert_contains "$failed_step_summary" "Agent response: \`$failed_output_dir/agent-response.txt\`"
+assert_contains "$failed_step_summary" 'Artifact verification: `passed`'
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/run-first-run-ci.sh" --help
 assert_contains "$out" "Usage: scripts/run-first-run-ci.sh [project-smoke-command]"

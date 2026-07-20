@@ -10,6 +10,7 @@ The script installs or resolves testloop-mcp, prepares a testloop-mcp source
 checkout for helper scripts, then writes:
   - verification-report.md
   - verification-summary.json
+  - verification-summary.schema.json
   - agent-decision.txt
   - first-run-context.txt
   - agent-response.txt
@@ -29,6 +30,9 @@ Environment:
   TESTLOOP_FIRST_RUN_EXPECT_VERSION   Expected binary version. Defaults to
                                       TESTLOOP_MCP_VERSION without a leading v
                                       when TESTLOOP_MCP_VERSION is not latest.
+  TESTLOOP_FIRST_RUN_VERIFY_ARTIFACT  Verify the generated artifact directory
+                                      when helper support is available.
+                                      Default: true.
 
   TESTLOOP_MCP_COMMAND                Existing testloop-mcp binary path/command.
   TESTLOOP_MCP_VERSION                Binary version to install. Default: latest.
@@ -151,6 +155,7 @@ decision_out="${TESTLOOP_FIRST_RUN_DECISION_OUT:-${output_dir}/agent-decision.tx
 context_out="${TESTLOOP_FIRST_RUN_CONTEXT_OUT:-${output_dir}/first-run-context.txt}"
 agent_response_out="${TESTLOOP_FIRST_RUN_AGENT_RESPONSE_OUT:-${output_dir}/agent-response.txt}"
 log_out="${TESTLOOP_FIRST_RUN_LOG:-${output_dir}/first-run.log}"
+artifact_verify_status="skipped"
 
 printf 'testloop_mcp_repo=%s\n' "$repo_dir"
 printf 'testloop_mcp_binary=%s\n' "$binary"
@@ -211,6 +216,7 @@ PY
     if [[ -s "$agent_response_out" ]]; then
       printf '%s%s%s\n' '- Agent response: `' "$agent_response_out" '`'
     fi
+    printf '%s%s%s\n' '- Artifact verification: `' "$artifact_verify_status" '`'
     printf '%s%s%s\n\n' '- Full log: `' "$log_out" '`'
   } >>"$GITHUB_STEP_SUMMARY"
 }
@@ -232,11 +238,45 @@ render_agent_response() {
   mv "$tmp_response" "$agent_response_out"
 }
 
+verify_agent_artifact() {
+  if [[ "${TESTLOOP_FIRST_RUN_VERIFY_ARTIFACT:-true}" != "true" ]]; then
+    artifact_verify_status="skipped-disabled"
+    return 0
+  fi
+  if [[ ! -x "$repo_dir/scripts/verify-agent-artifact.sh" ]]; then
+    artifact_verify_status="skipped-unavailable"
+    printf 'warning: skipped first-run artifact verification; helper checkout lacks scripts/verify-agent-artifact.sh\n' >&2
+    return 0
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    artifact_verify_status="skipped-no-go"
+    printf 'warning: go is not available; skipped first-run artifact verification\n' >&2
+    return 0
+  fi
+
+  local verify_out="$tmp_dir/first-run-artifact-verify.txt"
+  if TESTLOOP_MCP_REPO_DIR="$repo_dir" \
+    "$repo_dir/scripts/verify-agent-artifact.sh" first-run "$output_dir" > "$verify_out" 2>&1; then
+    artifact_verify_status="passed"
+    cat "$verify_out"
+    return 0
+  fi
+
+  artifact_verify_status="failed"
+  cat "$verify_out" >&2
+  return 1
+}
+
 set +e
 env "${env_args[@]}" "$repo_dir/scripts/doctor-first-run.sh" "$binary"
 first_run_code=$?
 set -e
 
 render_agent_response
+artifact_verify_code=0
+verify_agent_artifact || artifact_verify_code=$?
 write_github_step_summary
+if [[ "$artifact_verify_code" -ne 0 ]]; then
+  exit "$artifact_verify_code"
+fi
 exit "$first_run_code"
