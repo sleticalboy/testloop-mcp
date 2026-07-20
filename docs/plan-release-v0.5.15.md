@@ -48,6 +48,8 @@
 - [x] `d79b720` 远端 CI run `29749432210` passed，覆盖导出包 `package.json` / `npm test --silent`。
 - [x] `85ce335` 远端 CI run `29749842485` passed，覆盖 manifest 元数据校验。
 - [x] `153574f` 远端 CI run `29750125793` passed，覆盖 release readiness 显式校验 Agent 决策 fixture 导出包。
+- [x] `34f0954` 远端 CI run `29750391251` passed，覆盖 v0.5.15 候选边界文档。
+- [x] `f37b382` 远端 CI run `29751381326` passed，覆盖 v0.5.15 正式版本准备。
 
 ## 发布前门禁
 
@@ -63,7 +65,7 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.15` / `v0.5.15`。
 - [x] 测试中的版本期望同步到 `0.5.15`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI passed：`f37b382` run `29751381326` passed。
 - [ ] 打 tag `v0.5.15` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.15` 验证 Release 资产完整。
@@ -74,4 +76,4 @@
 
 ## 当前结论
 
-v0.5.15 正式版本准备文件和本地门禁都已完成，但尚未提交版本准备、打 tag、生成 Release assets 或更新 Homebrew tap。下一步应提交版本准备并等待 main CI；CI 通过后，再决定是否打 `v0.5.15` tag 并进入 Release Artifacts。
+v0.5.15 正式版本准备文件、本地门禁和版本准备后的 main CI 都已完成，但尚未打 tag、生成 Release assets 或更新 Homebrew tap。下一步需要确认是否执行正式发布动作：打 `v0.5.15` tag 并进入 Release Artifacts。

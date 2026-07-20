@@ -13,7 +13,7 @@ testloop-mcp v0.5.15
 - [x] 最新已完成的远端 CI：`153574f` run `29750125793` passed，覆盖 release readiness 显式校验 Agent 决策 fixture 导出包。
 - [x] 候选边界整理提交 `34f0954` 的远端 CI run `29750391251` passed。
 - [x] 版本准备后的完整本地门禁已通过：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
-- [ ] 版本准备后的远端 CI 尚待重新运行。
+- [x] 版本准备提交 `f37b382` 的远端 CI run `29751381326` passed。
 - [ ] 尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
 
 ## 摘要
