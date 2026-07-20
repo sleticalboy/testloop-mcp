@@ -85,6 +85,7 @@ jobs:
           sh test/regression_smoke_test.sh
           sh test/regression_samples_test.sh
           sh test/validate_coverage_top_tasks_output_test.sh
+          sh test/repository_hygiene_test.sh
           sh test/release_doc_index_test.sh
           sh test/fixtures_index_test.sh
           sh test/fixture_decision_mapping_test.sh

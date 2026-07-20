@@ -40,9 +40,12 @@ demo/*.test.jsx
 demo/*.test.tsx
 demo/test_*.py
 demo-node/jest_output.txt
+!demo-node/jest_output.txt
 demo-python/pytest_output.txt
+!demo-python/pytest_output.txt
 demo-python/venv/
 
 # Temporary files
 *.tmp
 *.log
+!docs/fixtures/first-run-artifacts/**/first-run.log
