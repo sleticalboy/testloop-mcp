@@ -4,9 +4,9 @@
 
 这是 v0.5.14 的候选发布检查清单。目标是把 v0.5.13 之后围绕 CI artifact 自检、manifest 批量校验、JSON 输出、summary schema 自包含、默认 CI 覆盖和真实项目证据的改动整理成一个可发布边界。
 
-发布重点见 [v0.5.14 发布说明草案](./plan-release-notes-v0.5.14.md)。
+发布重点见 [v0.5.14 发布说明](./plan-release-notes-v0.5.14.md)。
 
-当前发布状态：正式版本准备中。已更新版本号、切 CHANGELOG 正式段并同步当前安装/接入文档版本引用；尚未打 tag、生成正式 Release assets 或更新 Homebrew tap。
+当前发布状态：正式发布完成。版本号、CHANGELOG、安装/接入文档、tag、GitHub Release、五平台 Release assets、资产校验、仓库内 Formula、Homebrew tap 和 Post-Release Verify 均已完成。
 
 ## 当前差异核对
 
@@ -61,11 +61,16 @@
 - [x] `ab81926` 远端 CI run `29737938722` passed，覆盖 v0.5.14 候选发布边界文档。
 - [x] `27a0410` 远端 CI run `29738560911` passed，覆盖 CLI help 退出码修复。
 - [x] `7173228` 远端 CI run `29739075425` passed，覆盖候选发布门禁脚本。
-- [ ] 最新 main CI 尚待最终确认；`b6ef1a8` 远端 CI run `29739151454` 仍在 GitHub Actions 队列中。
+- [x] `b6ef1a8` 远端 CI run `29739151454` 后续不再作为最终发布门禁，已由版本准备后的最新 main CI 覆盖。
+- [x] `0db7a13` 最新 main CI run `29739928452` passed，覆盖发布验证帮助退出码同步。
+- [x] Release Artifacts tag run `29740300312` passed，覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 五个平台资产构建与上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.14` 已验证正式 Release 的 10 个资产完整。
+- [x] `ruby -c Formula/testloop-mcp.rb` 和 `sh test/release_assets_test.sh` 已验证仓库内 Homebrew Formula。
+- [x] Post-Release Verify run `29740930414` passed，覆盖资产清单和五个平台安装脚本 dry run。
 
 ## 发布前门禁
 
-- [ ] 等版本准备提交后的最新 main CI 通过。
+- [x] 等版本准备提交后的最新 main CI 通过：run `29739928452` passed。
 - [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
 - [x] `go test ./...`
 - [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
@@ -87,15 +92,15 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.14` / `v0.5.14`。
 - [x] 测试中的版本期望同步到 `0.5.14`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布：`scripts/verify-release-candidate.sh v0.5.14` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.14`。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.14` 并推送。
-- [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.14` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.14 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.14` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.14` 并推送。
-- [ ] 手动触发 Post-Release Verify。
+- [x] 提交版本准备改动后确认远端 CI passed。
+- [x] 打 tag `v0.5.14` 并推送。
+- [x] Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29740300312` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.14` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.14 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.14` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.14` 并推送：tap commit `187f5a8`。
+- [x] 手动触发 Post-Release Verify：run `29740930414` passed。
 
 ## 当前结论
 
-v0.5.14 已完成正式版本准备的本地验证，但还不是正式发布状态。下一步提交版本准备；提交后的 main CI 通过后，才进入 tag、Release assets、GitHub Release、Homebrew tap 和 Post-Release Verify。
+v0.5.14 已完成正式发布、Release Artifacts、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify 五平台安装 dry run。发布收尾只剩提交并推送本仓库的 Formula 与发布记录更新，然后回到主线产品价值，继续打磨真实项目 Agent 闭环。

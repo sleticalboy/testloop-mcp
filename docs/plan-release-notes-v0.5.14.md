@@ -1,4 +1,4 @@
-# v0.5.14 发布说明草案
+# v0.5.14 发布说明
 
 ## 标题
 
@@ -9,12 +9,16 @@ testloop-mcp v0.5.14
 - [x] 创建 v0.5.14 发布说明草案。
 - [x] 梳理 v0.5.13 之后围绕 CI artifact 自检、summary schema 自包含、双项目 summary、默认 CI 覆盖、仓库卫生和真实项目证据的改动边界。
 - [x] 最近本地验证已通过：shell 语法检查、全部 `test/*_test.sh`、`go test ./...`、候选二进制 build、`--version`、`--help`、darwin arm64 release asset dry-run、tarball `.sha256` 校验和 `git diff --check`。
-- [x] 最近远端 CI 已通过：`27a0410` run `29738560911` passed，覆盖 CLI help 退出码修复。
+- [x] 最近远端 CI 已通过：`0db7a13` run `29739928452` passed，覆盖 Release Artifacts、Post-Release Verify、Windows ARM64 Probe 和 Homebrew Formula 生成器的 help 退出码同步。
 - [x] 候选发布门禁脚本提交 `7173228` 的 CI run `29739075425` passed。
 - [x] 正式版本准备已更新 implementation version、CHANGELOG 正式版本段和当前安装/接入文档版本引用。
 - [x] 正式版本准备本地门禁已通过：`scripts/verify-release-candidate.sh v0.5.14` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.14`。
-- [ ] 最新 main CI 尚待最终确认；远端 CI 状态归档提交 `b6ef1a8` 的 run `29739151454` 仍在 GitHub Actions 队列中。
-- [ ] 尚未打 tag、生成正式 Release assets 或更新 Homebrew tap。
+- [x] `v0.5.14` tag 已推送，Release Artifacts run `29740300312` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.14` 已验证正式 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.14 发布说明。
+- [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.14`。
+- [x] Homebrew tap 已更新到 `0.5.14` 并推送，tap commit `187f5a8`。
+- [x] Post-Release Verify run `29740930414` passed，覆盖资产清单和五个平台安装脚本 dry run。
 
 ## 摘要
 
@@ -64,7 +68,7 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 
 ## 质量边界
 
-- 这个候选版本提升的是 artifact 消费确定性和客户端回归能力，不承诺生成算法显著提升。
+- 这个版本提升的是 artifact 消费确定性和客户端回归能力，不承诺生成算法显著提升。
 - `section_signal=... action=manual_review` 仍是 section 级动作信号，不等于整体验收失败。
 - verifier JSON 输出是面向客户端断言的稳定摘要，不替代 `verification-report.md` 中的详细 stdout / stderr。
 - 双项目 combined summary 和单项目 verification summary 是两类不同 schema，不能混用。
@@ -92,10 +96,14 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - `cd /tmp/testloop-v0.5.14-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.14_darwin_arm64.tar.gz.sha256`
 - `tar -tzf /tmp/testloop-v0.5.14-candidate-dist/testloop-mcp_v0.5.14_darwin_arm64.tar.gz`
 - `scripts/verify-release-candidate.sh v0.5.14`
+- `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.14`
+- `ruby -c Formula/testloop-mcp.rb`
+- `sh test/release_assets_test.sh`
 - `git diff --check`
 
 ## 发布备注
 
 - 对外文案应强调“CI artifact 可机器自检、可批量校验、可 JSON 消费”。
 - 推荐演示路径：先跑 `scripts/run-onboarding-ci.sh` 生成五件套，再跑 `scripts/verify-agent-artifact.sh --json onboarding <artifact-dir>` 展示结构化消费。
-- 正式发布前需要先等最新 main CI 通过，再执行版本号、CHANGELOG 正式段、tag、Release assets、Homebrew tap 和 post-release verify。
+- v0.5.14 已完成正式 GitHub Release、Release assets、资产校验、仓库内 Formula 和 Homebrew tap 更新。
+- 发布后验证证据：Release Artifacts run `29740300312`、资产清单校验、tap commit `187f5a8`、Post-Release Verify run `29740930414` 均已通过。
