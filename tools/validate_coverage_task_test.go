@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -147,15 +146,7 @@ func Add(a, b int) int {
 		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
 	}
 
-	textPayload := normalizedJSONValue(t, []byte(resultText(t, result)))
-	structuredPayload := normalizedStructuredJSONValue(t, result.StructuredContent)
-	if !reflect.DeepEqual(structuredPayload, textPayload) {
-		t.Fatalf("StructuredContent mismatch\nstructured: %#v\ntext: %#v", structuredPayload, textPayload)
-	}
-	returnedPayload := normalizedStructuredJSONValue(t, structured)
-	if !reflect.DeepEqual(returnedPayload, textPayload) {
-		t.Fatalf("handler structured return mismatch\nstructured: %#v\ntext: %#v", returnedPayload, textPayload)
-	}
+	assertStructuredContentMatchesTextJSON(t, result, structured)
 
 	var out types.CoverageTaskValidationOutput
 	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
