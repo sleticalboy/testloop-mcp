@@ -1,25 +1,25 @@
 class TestloopMcp < Formula
   desc "MCP server for AI coding test feedback loops"
   homepage "https://github.com/sleticalboy/testloop-mcp"
-  version "0.5.14"
+  version "0.5.15"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_darwin_arm64.tar.gz"
-      sha256 "112c26ff0bc02943fa66a9270478d0713d324debc6fdb272502e11a860d4eaed"
+      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.15/testloop-mcp_v0.5.15_darwin_arm64.tar.gz"
+      sha256 "afbb7a13ba54be927109592413ed30f5c290341b4168e21d1ace33aa1312f228"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_linux_amd64.tar.gz"
-      sha256 "2298e05eda8184a7bdd52973d0b4168ae0d4a1db90361c9cd48067483cdb6738"
+      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.15/testloop-mcp_v0.5.15_linux_amd64.tar.gz"
+      sha256 "0ce3d0ac41ac7f21088d11d255842ac058463293014e046ed0b6efe630b200c2"
     end
 
     on_arm do
-      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_linux_arm64.tar.gz"
-      sha256 "0aace22cb765319ed7e245519f3ca55c5fbe07a61872a89430d4badd792f9ddb"
+      url "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.15/testloop-mcp_v0.5.15_linux_arm64.tar.gz"
+      sha256 "d3ef345627e1c6a8b2709fcdb2eb7e147938b471abd79b85a7e0adbef3132fe3"
     end
   end
 

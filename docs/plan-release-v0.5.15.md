@@ -4,9 +4,9 @@
 
 这是 v0.5.15 的候选发布检查清单。目标是把 v0.5.14 之后围绕 Agent 决策 fixture、manifest 驱动客户端契约、JSON validator、最小导出包和 release readiness 门禁的改动整理成一个可发布边界。
 
-发布重点见 [v0.5.15 候选发布说明](./plan-release-notes-v0.5.15.md)。
+发布重点见 [v0.5.15 发布说明](./plan-release-notes-v0.5.15.md)。
 
-当前发布状态：正式版本准备文件已更新。implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.15` / `v0.5.15`；尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
+当前发布状态：正式发布完成。版本号、CHANGELOG、安装/接入文档、tag、GitHub Release、五平台 Release assets、资产校验、仓库内 Formula 和 Homebrew tap 均已完成。
 
 ## 当前差异核对
 
@@ -50,6 +50,10 @@
 - [x] `153574f` 远端 CI run `29750125793` passed，覆盖 release readiness 显式校验 Agent 决策 fixture 导出包。
 - [x] `34f0954` 远端 CI run `29750391251` passed，覆盖 v0.5.15 候选边界文档。
 - [x] `f37b382` 远端 CI run `29751381326` passed，覆盖 v0.5.15 正式版本准备。
+- [x] Release Artifacts tag run `29756859746` passed，覆盖 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 五个平台资产构建与上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.15` 已验证正式 Release 的 10 个资产完整。
+- [x] `ruby -c Formula/testloop-mcp.rb` 和 `sh test/release_assets_test.sh` 已验证仓库内 Homebrew Formula。
+- [x] Homebrew tap 已更新到 `0.5.15` 并推送：tap commit `d72ab7d`。
 
 ## 发布前门禁
 
@@ -66,14 +70,14 @@
 - [x] 测试中的版本期望同步到 `0.5.15`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
 - [x] 提交版本准备改动后确认远端 CI passed：`f37b382` run `29751381326` passed。
-- [ ] 打 tag `v0.5.15` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.15` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.15 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.15` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.15` 并推送。
+- [x] 打 tag `v0.5.15` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29756859746` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.15` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.15 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.15` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.15` 并推送：tap commit `d72ab7d`。
 - [ ] 手动触发 Post-Release Verify。
 
 ## 当前结论
 
-v0.5.15 正式版本准备文件、本地门禁和版本准备后的 main CI 都已完成，但尚未打 tag、生成 Release assets 或更新 Homebrew tap。下一步需要确认是否执行正式发布动作：打 `v0.5.15` tag 并进入 Release Artifacts。
+v0.5.15 已完成正式发布、Release Artifacts、资产清单校验、GitHub Release 正文、仓库内 Formula 和 Homebrew tap 更新。发布收尾只剩提交并推送本仓库的 Formula 与发布记录更新，再触发 Post-Release Verify。

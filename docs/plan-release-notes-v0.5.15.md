@@ -1,4 +1,4 @@
-# v0.5.15 候选发布说明
+# v0.5.15 发布说明
 
 ## 标题
 
@@ -14,11 +14,15 @@ testloop-mcp v0.5.15
 - [x] 候选边界整理提交 `34f0954` 的远端 CI run `29750391251` passed。
 - [x] 版本准备后的完整本地门禁已通过：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
 - [x] 版本准备提交 `f37b382` 的远端 CI run `29751381326` passed。
-- [ ] 尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
+- [x] `v0.5.15` tag 已推送，Release Artifacts run `29756859746` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.15` 已验证正式 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.15 发布说明。
+- [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.15`。
+- [x] Homebrew tap 已更新到 `0.5.15` 并推送，tap commit `d72ab7d`。
 
 ## 摘要
 
-v0.5.15 候选继续围绕“面向 AI 编程代理的测试反馈闭环 MCP 服务”收敛，不把重点放在扩语言或包装成泛化测试生成器。
+v0.5.15 继续围绕“面向 AI 编程代理的测试反馈闭环 MCP 服务”收敛，不把重点放在扩语言或包装成泛化测试生成器。
 
 这轮改动把 `validate_coverage_task` 的 Agent 决策样本从文档示例推进到外部客户端可复制、可机器断言、可进入发布门禁的 fixture 包。接入方可以直接用 manifest 和 validator 校验 `status/action -> decision` 合同，避免自己维护隐含文件顺序、硬编码单个样例，或把 `failed/manual_review_*` 误当成自动修复任务。
 
@@ -83,4 +87,5 @@ v0.5.15 候选继续围绕“面向 AI 编程代理的测试反馈闭环 MCP 服
 
 - 对外文案应强调“Agent 决策 fixture 可复制、可 JSON 校验、可进入客户端 CI”，而不是“多语言测试生成能力增强”。
 - 推荐演示路径：`go run ./examples/mcp-client-demo` 展示最小失败修复闭环，再运行 `node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures` 和导出包内的 `npm test --silent` 展示客户端契约回归。
-- 正式发布前仍需要跑版本准备后的 release readiness、提交并等待 main CI 通过后再打 tag。
+- v0.5.15 已完成正式 GitHub Release、Release assets、资产校验、仓库内 Formula 和 Homebrew tap 更新。
+- 发布后验证证据：Release Artifacts run `29756859746`、资产清单校验、tap commit `d72ab7d` 均已通过。
