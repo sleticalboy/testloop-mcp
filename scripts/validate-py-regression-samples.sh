@@ -61,6 +61,11 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 validator="$script_dir/validate-py-coverage-top-tasks.sh"
@@ -85,6 +90,8 @@ if [[ -z "$pytest_command" ]]; then
 fi
 manual_review_command="python3 $repo_root/scripts/py-manual-review-runner.py {path}"
 external_service_command="python3 $repo_root/scripts/py-external-service-runner.py {path}"
+
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 require_path() {
   local kind="$1"

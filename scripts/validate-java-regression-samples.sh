@@ -65,6 +65,11 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 validator="$script_dir/validate-java-coverage-top-tasks.sh"
@@ -79,6 +84,8 @@ codec_unreachable_tasks="${TESTLOOP_JAVA_REGRESSION_CODEC_UNREACHABLE_TASKS_FILE
 rocketmq_statuschecker_tasks="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_STATUSCHECKER_TASKS_FILE:-$repo_root/testdata/java-rocketmq-statuschecker/statuschecker-tasks.jsonl}"
 rocketmq_coverage_command="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_COMMAND:-mvn -pl client -am -Dtest=StatusCheckerTest -DfailIfNoTests=false test jacoco:report -Dcheckstyle.skip -Dspotbugs.skip -DskipITs}"
 rocketmq_coverage_file="${TESTLOOP_JAVA_REGRESSION_ROCKETMQ_COVERAGE_FILE:-client/target/site/jacoco/jacoco.xml}"
+
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 ready_ids="${TESTLOOP_JAVA_REGRESSION_READY_IDS:-junit-44,junit-50}"
 manual_ids="${TESTLOOP_JAVA_REGRESSION_MANUAL_IDS:-junit-52}"

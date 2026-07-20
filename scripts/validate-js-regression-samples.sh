@@ -78,6 +78,11 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 validator="$script_dir/validate-js-coverage-top-tasks.sh"
@@ -110,6 +115,8 @@ if [[ -z "$js_test_command" ]]; then
 fi
 vitest_test_command="npx vitest run {path}"
 manual_review_command="node $repo_root/scripts/js-manual-review-runner.js {path}"
+
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 require_path() {
   local kind="$1"
