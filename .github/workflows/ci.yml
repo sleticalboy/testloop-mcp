@@ -40,18 +40,38 @@ jobs:
           sh test/verify_client_setup_test.sh
           sh test/mcp_process_smoke_test.sh
           sh test/mcp_client_demo_test.sh
+          sh test/doctor_first_run_test.sh
           sh test/agent_decision_demo_test.sh
           sh test/verification_summary_decision_demo_test.sh
           sh test/verification_summary_failure_fixtures_test.sh
+          sh test/run_first_run_ci_test.sh
           sh test/run_onboarding_ci_test.sh
+          sh test/first_run_agent_response_demo_test.sh
+          sh test/onboarding_agent_response_demo_test.sh
+          sh test/render_first_run_agent_response_test.sh
+          sh test/first_run_artifact_fixtures_test.sh
+          sh test/onboarding_artifact_fixtures_test.sh
+          sh test/first_run_failure_fixtures_test.sh
+          sh test/agent_response_artifact_manifest_test.sh
+          sh test/agent_response_manifest_demo_test.sh
           sh test/onboarding_ci_failure_triage_doc_test.sh
+          sh test/ci_agent_triage_doc_test.sh
           sh test/showcase_agent_onboarding_report_test.sh
           sh test/showcase_scripts_test.sh
           sh test/showcase_summary_test.sh
           sh test/verification_report_test.sh
+          sh test/quickstart_doc_test.sh
+          sh test/installation_doc_test.sh
+          sh test/adopter_verification_guide_doc_test.sh
+          sh test/first_run_agent_response_doc_test.sh
+          sh test/first_run_ci_template_doc_test.sh
+          sh test/first_run_ci_template_yaml_test.sh
+          sh test/first_run_ci_external_dry_run_doc_test.sh
           sh test/real_integration_cases_doc_test.sh
+          sh test/readme_ci_snippet_test.sh
           sh test/onboarding_ci_template_doc_test.sh
           sh test/onboarding_ci_template_yaml_test.sh
+          sh test/onboarding_ci_external_dry_run_doc_test.sh
           sh test/docs_links_test.sh
           sh test/docs_json_examples_test.sh
           sh test/go_cli_duplicate_name_smoke_test.sh
@@ -70,7 +90,10 @@ jobs:
           sh test/fixture_decision_mapping_test.sh
           sh test/run_tests_fixture_index_test.sh
           sh test/client_integration_doc_test.sh
+          sh test/mcp_client_contract_doc_test.sh
+          sh test/agent_response_artifact_contract_doc_test.sh
           sh test/verification_ci_doc_test.sh
+          sh test/ci_workflow_test.sh
 
       - name: Build server
         run: go build -o /tmp/testloop-mcp .
