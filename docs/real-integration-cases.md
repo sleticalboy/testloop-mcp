@@ -208,7 +208,7 @@ TESTLOOP_PAIR_SECOND_NAME=java \
 TESTLOOP_PAIR_SECOND_TITLE='Words Java' \
 TESTLOOP_PAIR_SECOND_DIR=/Users/binlee/code/free-works/words_java \
 TESTLOOP_PAIR_SECOND_COMMAND='mvn -q test' \
-  scripts/showcase-dual-project-report.sh "$(command -v testloop-mcp)"
+  scripts/showcase-dual-project-report.sh /tmp/testloop-mcp
 ```
 
 验收结果：
@@ -226,6 +226,40 @@ quicksmoke_status=passed
 - `/tmp/testloop-quicksmoke-pair/quicksmoke-summary.json`
 
 `quicksmoke-summary.json` 会嵌套 go/java 子 summary，顶层 `overall_status` 和 `failed_count` 都可以直接给 Agent 或 CI 读取。
+
+## APK Info Rust / Words Java 双项目报告入口
+
+再补一组跨语言样本，确认 helper 在 Rust workspace 和 Java Maven 项目上也能稳定工作：
+
+```bash
+TESTLOOP_PAIR_PREFIX=rustjava \
+TESTLOOP_PAIR_OUTPUT_DIR=/tmp/testloop-rustjava-pair \
+TESTLOOP_PAIR_FIRST_NAME=rust \
+TESTLOOP_PAIR_FIRST_TITLE='APK Info Rust Zip' \
+TESTLOOP_PAIR_FIRST_DIR=/Users/binlee/code/free-works/apk-info \
+TESTLOOP_PAIR_FIRST_COMMAND='cargo test -q -p apk-info-zip' \
+TESTLOOP_PAIR_SECOND_NAME=java \
+TESTLOOP_PAIR_SECOND_TITLE='Words Java' \
+TESTLOOP_PAIR_SECOND_DIR=/Users/binlee/code/free-works/words_java \
+TESTLOOP_PAIR_SECOND_COMMAND='mvn -q test' \
+  scripts/showcase-dual-project-report.sh /tmp/testloop-mcp
+```
+
+验收结果：
+
+```text
+rustjava_status=passed
+```
+
+本地制品路径：
+
+- `/tmp/testloop-rustjava-pair/rust/verification-report.md`
+- `/tmp/testloop-rustjava-pair/rust/verification-summary.json`
+- `/tmp/testloop-rustjava-pair/java/verification-report.md`
+- `/tmp/testloop-rustjava-pair/java/verification-summary.json`
+- `/tmp/testloop-rustjava-pair/rustjava-summary.json`
+
+这里的 Rust 侧特意收窄到 `cargo test -q -p apk-info-zip`，因为整个 workspace 里还有 Python 绑定包，直接跑 workspace 容易被本机动态库环境卡住。
 
 ### Server onboarding
 
