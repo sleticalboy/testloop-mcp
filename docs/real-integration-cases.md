@@ -525,6 +525,59 @@ summary={"limit":1,"framework":"vitest","status_counts":{"passed":1},"action_cou
 
 这条证据补齐了 ready 分支之外的历史 repair 回归场景：Agent 不需要盲修生成测试，而是可以把该 coverage task 视为已收敛，继续处理下一个任务。
 
+## haoy-apk-station 环境手审样例
+
+这个样例用于验证真实 Python/FastAPI 项目中的环境依赖分支。`app.main` 里的 `serve_frontend` 只有在 `frontend/dist` 存在时才会在模块导入阶段动态定义；这类任务不应该被当成可直接吸收的 ready 测试，而应给 Agent 一个稳定的 `manual_review_environment` 分流。
+
+运行命令：
+
+```bash
+TESTLOOP_VALIDATE_PY_TASKS_FILE=/Users/binlee/code/open-source/testloop-mcp/testdata/py-haoy-apk-station/environment-tasks.jsonl \
+TESTLOOP_VALIDATE_PY_TASK_IDS=pytest-apk-frontend-env-1 \
+TESTLOOP_PYTEST_COMMAND='python3 /Users/binlee/code/open-source/testloop-mcp/scripts/py-manual-review-runner.py {path}' \
+  scripts/validate-py-coverage-top-tasks.sh \
+  /Users/binlee/code/free-works/haoy-apk-station/backend \
+  /tmp/testloop-haoy-apk-manual-review-agent-loop.jsonl
+```
+
+本次输出摘要：
+
+```text
+task.validate.done index=1 id=pytest-apk-frontend-env-1 target=serve_frontend status=passed action=manual_review_environment
+summary={"limit":1,"framework":"pytest","status_counts":{"passed":1},"action_counts":{"manual_review_environment":1},"zero_skip":0,"skipped_total":1}
+```
+
+脱敏后的稳定 fixture 见 [haoy-apk-station-py-environment.json](./fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json)。关键字段：
+
+```json
+{
+  "status": "passed",
+  "action": "manual_review_environment",
+  "task": {
+    "id": "pytest-apk-frontend-env-1",
+    "target": "serve_frontend",
+    "file": "app/main.py",
+    "line_range": "84-89",
+    "gap_type": "branch"
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 1,
+    "action": "manual_review"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "manual_review",
+    "total": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 1
+  }
+}
+```
+
+这条证据补齐真实项目 `manual_review_*` 分流：Agent 应记录环境依赖，改用导入前准备 `frontend/dist/index.html` 的集成 fixture 或人工复核，而不是继续对同一个 coverage task 反复生成测试。
+
 ## laoxia v0.5.4 历史 onboarding 样例
 
 下面保留 v0.5.4 时期使用 `scripts/showcase-agent-onboarding-report.sh` 的历史样例，用来说明项目接入模板的演进。新接入项目应优先复制上面的 v0.5.7 CI bootstrap 示例。

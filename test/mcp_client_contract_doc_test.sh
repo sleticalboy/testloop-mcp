@@ -17,6 +17,7 @@ assert_contains "content[0].text"
 assert_contains "docs/fixtures/validate-coverage-task-ready.json"
 assert_contains "docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json"
 assert_contains "docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json"
+assert_contains "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json"
 assert_contains "regression_note"
 assert_contains "redaction_note"
 assert_contains "sh test/fixtures_index_test.sh"
@@ -50,6 +51,7 @@ for path in \
   "${repo_root}/docs/fixtures/dual-project-summary/laoxia-passed.json" \
   "${repo_root}/docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json" \
   "${repo_root}/docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json" \
+  "${repo_root}/docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
   "${repo_root}/scripts/verify-agent-artifact.sh" \
   "${repo_root}/test/e2e"

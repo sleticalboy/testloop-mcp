@@ -17,21 +17,24 @@ client_doc = Path("docs/client-integration.md")
 expected_decisions = {
     "passed/ready": "accept",
     "passed/manual_review_internal": "manual-review",
+    "passed/manual_review_environment": "manual-review",
     "failed/apply_fix_suggestions": "apply-repair",
     "failed/needs_better_input": "needs-better-input",
 }
 expected_order = [
     "passed/ready",
     "passed/manual_review_internal",
+    "passed/manual_review_environment",
     "failed/apply_fix_suggestions",
     "failed/needs_better_input",
 ]
 
 required_client_snippets = {
-    "accept": "`passed/ready` 映射为 `accept`",
-    "manual-review": "`passed/manual_review_internal` 映射为 `manual-review`",
-    "apply-repair": "`failed/apply_fix_suggestions` 映射为 `apply-repair`",
-    "needs-better-input": "`failed/needs_better_input` 映射为 `needs-better-input`",
+    "passed/ready": "`passed/ready` 映射为 `accept`",
+    "passed/manual_review_internal": "`passed/manual_review_internal` 映射为 `manual-review`",
+    "passed/manual_review_environment": "`passed/manual_review_environment` 映射为 `manual-review`",
+    "failed/apply_fix_suggestions": "`failed/apply_fix_suggestions` 映射为 `apply-repair`",
+    "failed/needs_better_input": "`failed/needs_better_input` 映射为 `needs-better-input`",
 }
 
 def decision_for(status, action):
@@ -89,7 +92,7 @@ client_text = client_doc.read_text(encoding="utf-8")
 for key, decision in expected_decisions.items():
     if f"`{key}`" not in fixtures_text:
         failures.append(f"{fixtures_doc}: missing `{key}` entry")
-    snippet = required_client_snippets[decision]
+    snippet = required_client_snippets[key]
     if snippet not in client_text:
         failures.append(f"{client_doc}: missing decision snippet {snippet!r}")
 

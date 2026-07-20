@@ -25,6 +25,7 @@ docs/fixtures/validate-coverage-task-apply-fix-suggestions.json
 docs/fixtures/validate-coverage-task-needs-better-input.json
 docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json
 docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json
+docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json
 ```
 
 这些 fixture 来自 handler 真实输出或真实项目验证摘要，不是手写示意样例。推荐客户端单元测试直接断言：

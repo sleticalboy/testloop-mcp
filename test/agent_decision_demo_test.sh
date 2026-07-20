@@ -24,8 +24,9 @@ assert_contains "$out" "1. fixture=validate-coverage-task-ready.json status=pass
 assert_contains "$out" "2. fixture=real-project-agent-loop/laoxia-server-go-utils.json status=passed action=ready decision=accept"
 assert_contains "$out" "3. fixture=real-project-agent-loop/mcp-hub-vitest-repair.json status=passed action=ready decision=accept"
 assert_contains "$out" "4. fixture=validate-coverage-task-manual-review-internal.json status=passed action=manual_review_internal decision=manual-review"
-assert_contains "$out" "5. fixture=validate-coverage-task-apply-fix-suggestions.json status=failed action=apply_fix_suggestions decision=apply-repair"
-assert_contains "$out" "6. fixture=validate-coverage-task-needs-better-input.json status=failed action=needs_better_input decision=needs-better-input"
-assert_contains "$out" "agent_decisions=accept,accept,accept,manual-review,apply-repair,needs-better-input"
+assert_contains "$out" "5. fixture=real-project-agent-loop/haoy-apk-station-py-environment.json status=passed action=manual_review_environment decision=manual-review"
+assert_contains "$out" "6. fixture=validate-coverage-task-apply-fix-suggestions.json status=failed action=apply_fix_suggestions decision=apply-repair"
+assert_contains "$out" "7. fixture=validate-coverage-task-needs-better-input.json status=failed action=needs_better_input decision=needs-better-input"
+assert_contains "$out" "agent_decisions=accept,accept,accept,manual-review,manual-review,apply-repair,needs-better-input"
 
 echo "agent decision demo test passed"

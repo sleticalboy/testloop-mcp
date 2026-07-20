@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "action": "manual_review_environment",
+  "task": {
+    "id": "pytest-apk-frontend-env-1",
+    "framework": "pytest",
+    "target": "serve_frontend",
+    "file": "app/main.py",
+    "line_range": "84-89",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 frontend/dist 存在时动态定义的 SPA fallback 分支"
+    ],
+    "test_name": "test_serve_frontend_requires_frontend_dist_import_environment",
+    "priority": 125,
+    "confidence": 0.9
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 1,
+    "action": "manual_review"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "manual_review",
+    "total": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 1
+  },
+  "metadata": {
+    "framework": "pytest",
+    "test_file": "tests/test_main_frontend_testloop.py"
+  },
+  "regression_note": "该真实 haoy-apk-station 样本用于确认动态前端入口依赖导入环境时会进入 manual_review_environment，而不是被误当成可直接吸收的 ready 测试。",
+  "redaction_note": "该 fixture 只保留真实 haoy-apk-station 验证摘要；原始 run_result.raw_output 包含外部项目测试日志和本机临时路径，不能入仓。"
+}

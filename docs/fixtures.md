@@ -27,6 +27,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 | --- | --- | --- | --- |
 | [real-project-agent-loop/laoxia-server-go-utils.json](./fixtures/real-project-agent-loop/laoxia-server-go-utils.json) | `passed/ready` | laoxia `car-admin-server` 的 `utils` 包，`scripts/validate-go-coverage-top-tasks.sh` 验证 1 个真实 Go coverage task | 接受本次低依赖 utils 增量测试证据，继续处理下一个 coverage task；不要提交原始 `raw_output`。 |
 | [real-project-agent-loop/mcp-hub-vitest-repair.json](./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json) | `passed/ready` | mcp-hub `ConfigManager.loadConfig` 历史 repair 回归样本，`scripts/validate-js-coverage-top-tasks.sh` 验证 1 个真实 Vitest coverage task | 接受 async throwing branch 已生成正确 reject 断言的证据；防止回退到 `repair_generated_test`。 |
+| [real-project-agent-loop/haoy-apk-station-py-environment.json](./fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json) | `passed/manual_review_environment` | haoy-apk-station FastAPI `serve_frontend` 动态前端入口，`scripts/validate-py-coverage-top-tasks.sh` 验证 1 个真实 pytest coverage task | 不要吸收为有效覆盖率补丁；记录环境依赖，改用导入前准备 `frontend/dist` 的集成 fixture。 |
 
 `go run ./examples/agent-decision-demo` 会同时读取这些真实项目 fixture 和根目录 `validate-coverage-task-*.json`，用于验证接入方客户端可以复用同一套 `status/action` 决策逻辑。
 
