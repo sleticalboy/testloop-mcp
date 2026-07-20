@@ -159,6 +159,14 @@ assert_contains "$out" "testloop-mcp 9.9.9"
 assert_contains "$out" "helper_expect_version=9.9.9"
 assert_contains "$out" "helper_project_command=echo smoke"
 
+dir_binary_out="${tmp_dir}/dir-binary.out"
+run_expect_code 1 "$dir_binary_out" env \
+  TESTLOOP_MCP_REPO_DIR="$repo_root" \
+  TESTLOOP_MCP_COMMAND="$repo_root" \
+  TESTLOOP_FIRST_RUN_PROJECT_DIR="$project_dir" \
+  bash "${repo_root}/scripts/run-first-run-ci.sh" 'echo smoke'
+assert_contains "$dir_binary_out" "binary must be an executable file"
+
 fake_git_bin="${tmp_dir}/fake-git-bin"
 mkdir -p "$fake_git_bin"
 cat >"$fake_git_bin/git" <<'SH'

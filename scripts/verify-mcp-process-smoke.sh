@@ -45,7 +45,7 @@ fi
 
 case "$command_path" in
   */*)
-    [ -x "$command_path" ] || fail "binary is not executable: $command_path"
+    [ -f "$command_path" ] && [ -x "$command_path" ] || fail "binary must be an executable file: $command_path"
     ;;
   *)
     command -v "$command_path" >/dev/null 2>&1 || fail "binary not found on PATH: $command_path"

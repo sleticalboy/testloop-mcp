@@ -64,6 +64,10 @@ esac
 SH
 chmod +x "$fake_binary"
 
+dir_binary_out="${tmp_dir}/dir-binary.out"
+run_expect_code 1 "$dir_binary_out" bash "${repo_root}/scripts/generate-verification-report.sh" "$repo_root" "${tmp_dir}/dir-binary-report.md"
+assert_contains "$dir_binary_out" "binary must be an executable file"
+
 project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 

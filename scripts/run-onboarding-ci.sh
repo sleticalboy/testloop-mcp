@@ -113,7 +113,7 @@ resolve_binary() {
   if [[ -n "$candidate" ]]; then
     case "$candidate" in
       */*)
-        [[ -x "$candidate" ]] || fail "binary is not executable: $candidate"
+        [[ -f "$candidate" && -x "$candidate" ]] || fail "binary must be an executable file: $candidate"
         printf '%s' "$candidate"
         ;;
       *)

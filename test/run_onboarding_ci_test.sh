@@ -89,6 +89,14 @@ assert_contains "$step_summary" 'agent_next_step: `ready`'
 assert_contains "$step_summary" "Markdown report: \`$output_dir/verification-report.md\`"
 assert_contains "$step_summary" "Agent response: \`$output_dir/agent-response.txt\`"
 
+dir_binary_out="${tmp_dir}/dir-binary.out"
+run_expect_code 1 "$dir_binary_out" env \
+  TESTLOOP_MCP_REPO_DIR="$repo_root" \
+  TESTLOOP_MCP_COMMAND="$repo_root" \
+  TESTLOOP_ONBOARDING_PROJECT_DIR="$project_dir" \
+  bash "${repo_root}/scripts/run-onboarding-ci.sh" 'echo smoke'
+assert_contains "$dir_binary_out" "binary must be an executable file"
+
 failed_output_dir="${tmp_dir}/failed-artifacts"
 failed_step_summary="${tmp_dir}/failed-step-summary.md"
 run_expect_code 1 "$out" env \

@@ -72,6 +72,12 @@ assert_contains "$output_dir/first-run-context.txt" "first_run_agent_next_step=r
 assert_contains "$output_dir/first-run-context.txt" "Suggested prompt:"
 assert_contains "$output_dir/first-run.log" "onboarding_report=$output_dir/verification-report.md"
 
+dir_binary_out="${tmp_dir}/dir-binary.out"
+run_expect_code 1 "$dir_binary_out" env \
+  TESTLOOP_FIRST_RUN_OUTPUT_DIR="${tmp_dir}/dir-binary" \
+  bash "${repo_root}/scripts/doctor-first-run.sh" "$repo_root"
+assert_contains "${tmp_dir}/dir-binary/first-run.log" "binary must be an executable file"
+
 project_dir="${tmp_dir}/project"
 mkdir -p "$project_dir"
 failed_dir="${tmp_dir}/failed-first-run"

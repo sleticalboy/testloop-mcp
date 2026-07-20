@@ -111,7 +111,7 @@ test_verify_client_setup_rejects_missing_binary() {
     echo "expected missing binary verification to fail" >&2
     exit 1
   fi
-  assert_contains "$out" "error: binary is not executable:"
+  assert_contains "$out" "error: binary must be an executable file:"
 }
 
 test_verify_client_setup_passes_with_skip_http

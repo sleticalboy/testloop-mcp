@@ -76,7 +76,7 @@ resolve_binary() {
   if [ -n "$command_path" ]; then
     case "$command_path" in
       */*)
-        [ -x "$command_path" ] || fail "binary is not executable: $command_path"
+        [ -f "$command_path" ] && [ -x "$command_path" ] || fail "binary must be an executable file: $command_path"
         dir="$(cd "$(dirname "$command_path")" && pwd)"
         printf '%s/%s' "$dir" "$(basename "$command_path")"
         ;;
