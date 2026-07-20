@@ -62,6 +62,36 @@ type manifestSectionSignal struct {
 	Action  string `json:"action"`
 }
 
+type outputFormat string
+
+const (
+	outputText outputFormat = "text"
+	outputJSON outputFormat = "json"
+)
+
+type artifactOutput struct {
+	Status         string                  `json:"status"`
+	ArtifactKind   string                  `json:"artifact_kind"`
+	ArtifactDir    string                  `json:"artifact_dir"`
+	SummarySchema  string                  `json:"summary_schema"`
+	OverallStatus  string                  `json:"overall_status"`
+	FailedCount    int                     `json:"failed_count"`
+	DecisionAction string                  `json:"decision_action"`
+	ResponseAction string                  `json:"response_action"`
+	FailedSection  string                  `json:"failed_section,omitempty"`
+	ExitCode       string                  `json:"exit_code,omitempty"`
+	SectionSignals []manifestSectionSignal `json:"section_signals,omitempty"`
+	RequiredFiles  int                     `json:"required_files"`
+}
+
+type manifestOutput struct {
+	Status                string           `json:"status"`
+	ManifestSchemaVersion int              `json:"manifest_schema_version"`
+	ManifestPath          string           `json:"manifest_path"`
+	ArtifactCount         int              `json:"artifact_count"`
+	Artifacts             []artifactOutput `json:"artifacts"`
+}
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "agent artifact verification failed: %v\n", err)
@@ -70,17 +100,25 @@ func main() {
 }
 
 func run(args []string) error {
+	format := outputText
+	if len(args) > 0 && args[0] == "--json" {
+		format = outputJSON
+		args = args[1:]
+	}
 	if len(args) != 2 {
-		return fmt.Errorf("usage: go run ./examples/agent-artifact-verify <first-run|onboarding|manifest> <artifact-dir|manifest-json>")
+		return fmt.Errorf("usage: go run ./examples/agent-artifact-verify [--json] <first-run|onboarding|manifest> <artifact-dir|manifest-json>")
 	}
 
 	if args[0] == "manifest" {
-		return runManifest(args[1])
+		return runManifest(args[1], format)
 	}
 
 	result, err := verifyArtifact(args[0], args[1])
 	if err != nil {
 		return err
+	}
+	if format == outputJSON {
+		return writeJSON(artifactOutputFrom(result))
 	}
 	printArtifactVerification(result)
 	return nil
@@ -176,7 +214,7 @@ func printArtifactVerification(result artifactVerification) {
 	fmt.Printf("required_files=%d\n", len(result.Kind.RequiredFiles))
 }
 
-func runManifest(path string) error {
+func runManifest(path string, format outputFormat) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -212,6 +250,20 @@ func runManifest(path string) error {
 	if err != nil {
 		return err
 	}
+	output := manifestOutput{
+		Status:                "passed",
+		ManifestSchemaVersion: manifest.SchemaVersion,
+		ManifestPath:          manifestPath,
+		ArtifactCount:         len(results),
+		Artifacts:             make([]artifactOutput, 0, len(results)),
+	}
+	for _, result := range results {
+		output.Artifacts = append(output.Artifacts, artifactOutputFrom(result))
+	}
+	if format == outputJSON {
+		return writeJSON(output)
+	}
+
 	fmt.Println("agent_artifact_manifest_status=passed")
 	fmt.Printf("manifest_schema_version=%d\n", manifest.SchemaVersion)
 	fmt.Printf("manifest_path=%s\n", manifestPath)
@@ -234,6 +286,44 @@ func runManifest(path string) error {
 		fmt.Printf("   required_files=%d\n", len(result.Kind.RequiredFiles))
 	}
 	return nil
+}
+
+func artifactOutputFrom(result artifactVerification) artifactOutput {
+	return artifactOutput{
+		Status:         "passed",
+		ArtifactKind:   result.Kind.Name,
+		ArtifactDir:    result.ArtifactDir,
+		SummarySchema:  "verification-summary.schema.json",
+		OverallStatus:  result.Summary.OverallStatus,
+		FailedCount:    result.Summary.FailedCount,
+		DecisionAction: result.DecisionAction,
+		ResponseAction: result.ExpectedAction,
+		FailedSection:  result.FailedSection,
+		ExitCode:       result.ExitCode,
+		SectionSignals: sectionSignalsFrom(result.Summary.Sections),
+		RequiredFiles:  len(result.Kind.RequiredFiles),
+	}
+}
+
+func sectionSignalsFrom(sections []verificationSection) []manifestSectionSignal {
+	signals := make([]manifestSectionSignal, 0)
+	for _, section := range sections {
+		action := strings.TrimSpace(section.Signals["action"])
+		if action == "" {
+			continue
+		}
+		signals = append(signals, manifestSectionSignal{
+			Section: section.Name,
+			Action:  action,
+		})
+	}
+	return signals
+}
+
+func writeJSON(v any) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(v)
 }
 
 func resolveManifestArtifactDir(directory string) (string, error) {

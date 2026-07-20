@@ -137,9 +137,14 @@ sh scripts/verify-agent-artifact.sh \
 sh scripts/verify-agent-artifact.sh \
   manifest \
   docs/fixtures/agent-response-artifact-manifest.json
+
+sh scripts/verify-agent-artifact.sh \
+  --json \
+  manifest \
+  docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-正常输出应包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。
+正常文本输出应包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。客户端 CI 更推荐断言 JSON 输出里的 `status`、`artifact_count`、`artifacts[].artifact_kind`、`artifacts[].response_action` 和 `artifacts[].section_signals`。
 
 客户端自己的测试建议额外断言：
 

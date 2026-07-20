@@ -87,9 +87,10 @@ CI 失败时按这个顺序读取：
 sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run
 sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding
 sh scripts/verify-agent-artifact.sh manifest docs/fixtures/agent-response-artifact-manifest.json
+sh scripts/verify-agent-artifact.sh --json manifest docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-这个入口会检查必备文件、用同目录的 `verification-summary.schema.json` 校验 `verification-summary.json`，并确认 `agent-decision.txt`、`agent-response.txt`、失败 section、`exit_code` 和 `section_signal` 一致。正常输出会包含 `agent_artifact_status=passed`、`decision_action=...` 和 `response_action=...`；manifest 模式会输出 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。
+这个入口会检查必备文件、用同目录的 `verification-summary.schema.json` 校验 `verification-summary.json`，并确认 `agent-decision.txt`、`agent-response.txt`、失败 section、`exit_code` 和 `section_signal` 一致。正常输出会包含 `agent_artifact_status=passed`、`decision_action=...` 和 `response_action=...`；manifest 模式会输出 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。客户端不想解析文本行时可以使用 `--json`，核心字段是 `status`、`artifact_kind`、`decision_action`、`response_action`、`section_signals` 和 `artifacts[]`。
 
 最小消费 demo：
 

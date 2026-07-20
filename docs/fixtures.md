@@ -108,6 +108,7 @@ sh test/agent_response_artifact_manifest_test.sh
 sh test/agent_response_manifest_demo_test.sh
 sh test/agent_artifact_verify_test.sh
 sh scripts/verify-agent-artifact.sh manifest docs/fixtures/agent-response-artifact-manifest.json
+sh scripts/verify-agent-artifact.sh --json manifest docs/fixtures/agent-response-artifact-manifest.json
 sh test/verification_summary_decision_demo_test.sh
 go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
 go test ./tools -run TestDualProjectSummarySchema -count=1

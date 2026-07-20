@@ -3,8 +3,8 @@ set -eu
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>
-       scripts/verify-agent-artifact.sh manifest <agent-response-artifact-manifest.json>
+Usage: scripts/verify-agent-artifact.sh [--json] <first-run|onboarding> <artifact-dir>
+       scripts/verify-agent-artifact.sh [--json] manifest <agent-response-artifact-manifest.json>
 
 Verify a downloaded testloop-mcp Agent artifact directory.
 
@@ -24,6 +24,12 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
   exit 0
 fi
 
+format_args=""
+if [ "${1:-}" = "--json" ]; then
+  format_args="--json"
+  shift
+fi
+
 if [ "$#" -ne 2 ]; then
   usage >&2
   exit 2
@@ -38,4 +44,4 @@ esac
 
 repo_root="${TESTLOOP_MCP_REPO_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
 
-(cd "$repo_root" && go run ./examples/agent-artifact-verify "$kind" "$artifact_dir")
+(cd "$repo_root" && go run ./examples/agent-artifact-verify $format_args "$kind" "$artifact_dir")

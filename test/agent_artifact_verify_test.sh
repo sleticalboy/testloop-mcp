@@ -73,12 +73,34 @@ assert_contains "$out" "2. artifact_kind=onboarding expected_action=inspect-user
 assert_contains "$out" "required_files=7"
 assert_contains "$out" "required_files=5"
 
+sh "${repo_root}/scripts/verify-agent-artifact.sh" \
+  --json \
+  first-run \
+  "${repo_root}/docs/fixtures/first-run-artifacts/user-project-smoke-failed" > "$out"
+
+assert_contains "$out" '"status": "passed"'
+assert_contains "$out" '"artifact_kind": "first-run"'
+assert_contains "$out" '"response_action": "inspect-user-project"'
+assert_contains "$out" '"failed_section": "用户项目 smoke"'
+assert_contains "$out" '"required_files": 7'
+
+sh "${repo_root}/scripts/verify-agent-artifact.sh" \
+  --json \
+  manifest \
+  "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" > "$out"
+
+assert_contains "$out" '"status": "passed"'
+assert_contains "$out" '"manifest_schema_version": 1'
+assert_contains "$out" '"artifact_count": 2'
+assert_contains "$out" '"artifact_kind": "first-run"'
+assert_contains "$out" '"artifact_kind": "onboarding"'
+
 run_expect_code 0 "$out" sh "${repo_root}/scripts/verify-agent-artifact.sh" --help
-assert_contains "$out" "Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>"
-assert_contains "$out" "scripts/verify-agent-artifact.sh manifest <agent-response-artifact-manifest.json>"
+assert_contains "$out" "Usage: scripts/verify-agent-artifact.sh [--json] <first-run|onboarding> <artifact-dir>"
+assert_contains "$out" "scripts/verify-agent-artifact.sh [--json] manifest <agent-response-artifact-manifest.json>"
 
 run_expect_code 2 "$err" sh "${repo_root}/scripts/verify-agent-artifact.sh" first-run
-assert_contains "$err" "Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>"
+assert_contains "$err" "Usage: scripts/verify-agent-artifact.sh [--json] <first-run|onboarding> <artifact-dir>"
 
 bad_missing_schema="${tmp_dir}/missing-schema"
 cp -R "${repo_root}/docs/fixtures/onboarding-artifacts/user-project-smoke-failed" "$bad_missing_schema"

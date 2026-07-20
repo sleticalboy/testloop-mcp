@@ -120,9 +120,14 @@ sh scripts/verify-agent-artifact.sh \
 sh scripts/verify-agent-artifact.sh \
   manifest \
   docs/fixtures/agent-response-artifact-manifest.json
+
+sh scripts/verify-agent-artifact.sh \
+  --json \
+  manifest \
+  docs/fixtures/agent-response-artifact-manifest.json
 ```
 
-正常输出会包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。
+正常文本输出会包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。JSON 输出会包含 `status=passed`、`artifact_count=2`、`artifacts[].artifact_kind`、`artifacts[].decision_action`、`artifacts[].response_action` 和 `artifacts[].section_signals`。
 
 也可以手动指定文件：
 
