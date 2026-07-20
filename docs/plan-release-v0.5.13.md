@@ -83,7 +83,7 @@
 - [x] 测试中的版本期望同步到 `0.5.13`。
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.13` 并推送。
+- [x] 打 tag `v0.5.13` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.13` 验证 Release 资产完整。
 - [ ] 更新 GitHub Release 正文为正式 v0.5.13 发布说明。
@@ -93,4 +93,4 @@
 
 ## 当前结论
 
-v0.5.13 已完成正式版本准备，本地 release readiness 已通过：这一轮聚焦 Agent/客户端可消费契约，不扩语言、不改大方向。下一步应提交版本准备改动并等待远端 CI；通过后打 tag `v0.5.13`，生成 Release 资产并继续 Homebrew tap 和 Post-Release Verify。
+v0.5.13 已完成正式版本准备，本地 release readiness 已通过，tag `v0.5.13` 已推送。Release Artifacts 前两次失败都发生在 GitHub Release API 503：第一次卡在 `gh release view`，第二次卡在 `gh release upload`。构建和本地资产校验本身已通过。当前已给 release workflow 的 release view/create/upload 加重试，下一步应提交 workflow 加固后用 workflow_dispatch 对 `v0.5.13` 重跑资产构建。

@@ -191,8 +191,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release create "$TAG_NAME" --title "testloop-mcp ${TAG_NAME}" --generate-notes || gh release view "$TAG_NAME" >/dev/null
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+              sleep $((attempt * 5))
+            done
+            "$@"
+          }
+          if ! retry gh release view "$TAG_NAME" >/dev/null; then
+            retry gh release create "$TAG_NAME" --title "testloop-mcp ${TAG_NAME}" --generate-notes
           fi
 
       - name: Upload release assets
@@ -201,10 +211,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+              sleep $((attempt * 5))
+            done
+            "$@"
+          }
           shopt -s nullglob
           files=(dist/*.tar.gz dist/*.zip dist/*.sha256)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "no release assets found" >&2
             exit 1
           fi
-          gh release upload "$TAG_NAME" "${files[@]}" --clobber
+          for file in "${files[@]}"; do
+            retry gh release upload "$TAG_NAME" "$file" --clobber
+          done
