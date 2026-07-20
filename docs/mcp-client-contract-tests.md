@@ -23,9 +23,11 @@ docs/fixtures/validate-coverage-task-ready.json
 docs/fixtures/validate-coverage-task-manual-review-internal.json
 docs/fixtures/validate-coverage-task-apply-fix-suggestions.json
 docs/fixtures/validate-coverage-task-needs-better-input.json
+docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json
+docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json
 ```
 
-这些 fixture 来自 handler 真实输出，不是手写示意样例。推荐客户端单元测试直接断言：
+这些 fixture 来自 handler 真实输出或真实项目验证摘要，不是手写示意样例。推荐客户端单元测试直接断言：
 
 | status/action | 期望客户端动作 |
 | --- | --- |
@@ -51,6 +53,7 @@ sh test/agent_decision_demo_test.sh
 - `fixture_decision_mapping_test.sh`：直接扫描真实 fixture，校验每个 `status/action` 映射到预期客户端动作。
 - `client_integration_doc_test.sh`：确认客户端集成说明引用的 fixture 和 demo 入口仍然存在。
 - `agent_decision_demo_test.sh`：确认 `go run ./examples/agent-decision-demo` 对真实 fixture 输出稳定决策。
+- 真实项目 fixture 也应通过同一套 `status/action` 映射，不应因为包含 `task`、`regression_note` 或 `redaction_note` 等额外字段而失败。
 
 ## 接入方 CI 模板
 

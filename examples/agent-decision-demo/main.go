@@ -48,6 +48,11 @@ func loadFixtureSamples(dir string) ([]validationSample, error) {
 	if err != nil {
 		return nil, err
 	}
+	realProjectPaths, err := filepath.Glob(filepath.Join(dir, "real-project-agent-loop", "*.json"))
+	if err != nil {
+		return nil, err
+	}
+	paths = append(paths, realProjectPaths...)
 	sort.Strings(paths)
 	samples := make([]validationSample, 0, len(paths))
 	for _, path := range paths {
@@ -59,13 +64,34 @@ func loadFixtureSamples(dir string) ([]validationSample, error) {
 		if err := json.Unmarshal(data, &sample); err != nil {
 			return nil, fmt.Errorf("%s invalid JSON: %w", path, err)
 		}
-		sample.Name = filepath.Base(path)
+		name, err := filepath.Rel(dir, path)
+		if err != nil {
+			return nil, err
+		}
+		sample.Name = filepath.ToSlash(name)
 		samples = append(samples, sample)
 	}
 	sort.SliceStable(samples, func(i, j int) bool {
-		return sampleOrder(samples[i]) < sampleOrder(samples[j])
+		leftOrder := sampleOrder(samples[i])
+		rightOrder := sampleOrder(samples[j])
+		if leftOrder != rightOrder {
+			return leftOrder < rightOrder
+		}
+		leftSource := sampleSourceOrder(samples[i])
+		rightSource := sampleSourceOrder(samples[j])
+		if leftSource != rightSource {
+			return leftSource < rightSource
+		}
+		return samples[i].Name < samples[j].Name
 	})
 	return samples, nil
+}
+
+func sampleSourceOrder(sample validationSample) int {
+	if strings.HasPrefix(sample.Name, "real-project-agent-loop/") {
+		return 20
+	}
+	return 10
 }
 
 func sampleOrder(sample validationSample) int {

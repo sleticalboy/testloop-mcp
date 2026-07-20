@@ -53,6 +53,7 @@ def decision_for(status, action):
 
 failures = []
 fixtures = sorted(fixture_dir.glob("validate-coverage-task-*.json"))
+fixtures += sorted((fixture_dir / "real-project-agent-loop").glob("*.json"))
 if not fixtures:
     failures.append(f"{fixture_dir}: no validate coverage task fixtures found")
 

@@ -25,6 +25,8 @@ go run ./examples/agent-decision-demo
 - `failed/apply_fix_suggestions` 映射为 `apply-repair`
 - `failed/needs_better_input` 映射为 `needs-better-input`
 
+这个 demo 会同时读取 `docs/fixtures/validate-coverage-task-*.json` 和 `docs/fixtures/real-project-agent-loop/*.json`。后者来自 laoxia server、mcp-hub 这类真实项目的脱敏验证摘要，用来确认真实项目证据也走同一套 `status/action` 分流，而不是另写一套客户端逻辑。
+
 如果你在做自己的客户端，建议把同样的映射逻辑做成单元测试，而不是只在真实项目里手动观察。
 
 ## 使用真实 fixture
@@ -38,10 +40,13 @@ go run ./examples/agent-decision-demo
 | [validate-coverage-task-manual-review-internal.json](./fixtures/validate-coverage-task-manual-review-internal.json) | 记录手审原因，不继续自动修同一个生成测试。 |
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | 读取 `repair_task`，按限定文件和命令执行修复闭环。 |
 | [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | 读取覆盖率未命中原因，重新选择输入或公共入口。 |
+| [real-project-agent-loop/laoxia-server-go-utils.json](./fixtures/real-project-agent-loop/laoxia-server-go-utils.json) | 对真实 Go server coverage task 的 `passed/ready` 摘要执行同样的 `accept` 分流。 |
+| [real-project-agent-loop/mcp-hub-vitest-repair.json](./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json) | 对真实 Vitest 历史 repair 回归样本的 `passed/ready` 摘要执行同样的 `accept` 分流。 |
 
 建议客户端测试至少断言：
 
 - 能从 fixture 解析 `status` 和 `action`。
+- 能把 `real-project-agent-loop/*.json` 当成普通结构化结果消费，同时忽略额外的 `task`、`regression_note` 和 `redaction_note` 字段。
 - `run_tests` 的 `fail/apply_fix_suggestions` 能定位 `fix_suggestions[0].category` 和 `fix_suggestions[0].repair_task`。
 - `passed/ready` 不读取 `run_result.fix_suggestions`。
 - `manual_review_*` 不触发自动修复循环。
