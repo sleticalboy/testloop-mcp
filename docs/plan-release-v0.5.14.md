@@ -20,6 +20,7 @@
 - [x] first-run/onboarding bootstrap 会在 helper 支持时自动运行 artifact verifier。
 - [x] GitHub step summary 会记录 `Artifact verification`。
 - [x] `testloop-mcp --help` 和 `testgen --help` 会以退出码 0 返回。
+- [x] 新增 `scripts/verify-release-candidate.sh`，把本地 release readiness 门禁固化为维护者一键入口。
 - [x] 默认 CI 显式运行全部 `test/*_test.sh`。
 - [x] 仓库卫生测试已防止重新提交 ignored tracked 文件和 Python bytecode。
 - [x] laoxia server/web 最新真实 bootstrap 已证明 `agent_artifact_status=passed`。
@@ -62,6 +63,7 @@
 - [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
 - [x] `go test ./...`
 - [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `sh test/release_candidate_script_test.sh`
 - [x] `go build -o /tmp/testloop-mcp-v0.5.14-candidate .`
 - [x] `go build -o /tmp/testloop-testgen-v0.5.14-candidate ./cmd/testgen`
 - [x] `/tmp/testloop-mcp-v0.5.14-candidate --version` 当前仍输出 `testloop-mcp 0.5.13`，正式版本准备前不提前切版本号。
@@ -69,6 +71,7 @@
 - [x] `/tmp/testloop-testgen-v0.5.14-candidate --help`
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
 - [x] 校验 darwin arm64 `.sha256` 和 tarball 内容，tarball 包含 `LICENSE`、`README.md`、`testloop-mcp` 和 `testloop-testgen`。
+- [x] `scripts/verify-release-candidate.sh v0.5.14`
 - [x] `git diff --check`
 
 ## 正式发布前待办

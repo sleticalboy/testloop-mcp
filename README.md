@@ -741,6 +741,14 @@ scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testlo
 
 更多展示路径见 [展示与验收路径](./docs/showcase.md)：其中包含[接入方一页式验证指南](./docs/adopter-verification-guide.md)、[首跑诊断](./docs/first-run-diagnostics.md)、[首跑诊断 CI 复制模板](./docs/first-run-ci-template.md)、[首跑诊断 CI 外部项目演练](./docs/first-run-ci-external-dry-run.md)、[首跑诊断失败样例](./docs/first-run-failures.md)、[first-run artifact Agent 消费演示](./docs/first-run-agent-artifact-demo.md)、安装到 Agent 闭环 showcase、最小 Agent demo、公开 Go showcase、公开 JS/TS showcase、用户项目验收报告、[Onboarding CI 外部项目演练](./docs/onboarding-ci-external-dry-run.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md)、[真实接入案例模板](./docs/real-integration-cases.md)、[验收 summary 失败分流样例](./docs/verification-summary-failures.md)，以及维护者使用的真实项目 regression smoke。
 
+维护者准备候选发布时，可以用一条命令跑本地 release readiness 门禁：
+
+```bash
+scripts/verify-release-candidate.sh v0.5.14
+```
+
+这个入口只做本地验证、候选二进制构建、help/version 检查、darwin arm64 打包 dry-run、sha256 与 tarball 内容校验，不会改版本号、打 tag、创建 Release 或更新 Homebrew tap。
+
 ## Roadmap
 
 当前版本已经覆盖 stdio / Streamable HTTP MCP 服务、多语言测试生成、测试执行、失败解析、修复建议、覆盖率解析、Docker 部署和 GitHub Release / Homebrew 分发。

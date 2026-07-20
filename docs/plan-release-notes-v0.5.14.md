@@ -48,6 +48,7 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - 默认 GitHub Actions CI 现在显式运行每个 `test/*_test.sh`。
 - 新增 `test/ci_workflow_test.sh` 防止后续新增 shell 契约测试但忘记放进 CI。
 - 新增 `test/repository_hygiene_test.sh` 防止提交被 `.gitignore` 忽略的跟踪文件、`__pycache__/` 或 `.pyc`。
+- 新增 `scripts/verify-release-candidate.sh`，把本地 release readiness 的 shell 语法、Go 测试、shell 契约测试、候选二进制构建、help/version、打包 dry-run、sha256 和 tarball 内容检查收敛成一个维护者入口。
 - 已移除仓库里曾被跟踪的 Python bytecode 缓存。
 - `testloop-mcp --help` 和 `testgen --help` 会以退出码 0 返回，发布门禁、安装自检和脚本 wrapper 不再需要为帮助输出特殊处理非 0 状态。
 
@@ -86,6 +87,7 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
 - `cd /tmp/testloop-v0.5.14-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.14_darwin_arm64.tar.gz.sha256`
 - `tar -tzf /tmp/testloop-v0.5.14-candidate-dist/testloop-mcp_v0.5.14_darwin_arm64.tar.gz`
+- `scripts/verify-release-candidate.sh v0.5.14`
 - `git diff --check`
 
 ## 发布备注

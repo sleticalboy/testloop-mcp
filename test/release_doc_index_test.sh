@@ -61,6 +61,7 @@ required_commands = [
     "scripts/showcase-onboarding.sh",
     "scripts/verify-client-setup.sh",
     "scripts/verify-mcp-process-smoke.sh",
+    "scripts/verify-release-candidate.sh",
 ]
 
 required_phrases = [
