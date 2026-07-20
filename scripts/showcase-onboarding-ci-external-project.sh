@@ -35,6 +35,11 @@ if [[ "$#" -ne 0 ]]; then
   exit 2
 fi
 
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
 repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 workdir="${TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR:-/tmp/testloop-external-onboarding}"
 output_dir="${TESTLOOP_EXTERNAL_ONBOARDING_OUTPUT_DIR:-$workdir/artifacts}"
@@ -51,6 +56,8 @@ case "$project_type" in
     exit 1
     ;;
 esac
+
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 rm -rf "$workdir"
 mkdir -p "$output_dir" "$(dirname -- "$bootstrap")"

@@ -38,12 +38,19 @@ fi
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 output_dir="${TESTLOOP_REGRESSION_OUTPUT_DIR:-/tmp/testloop-regression-smoke-$(date +%Y%m%d%H%M%S)}"
 
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
 env_bool() {
   case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
     1|true|yes|y|on) return 0 ;;
     *) return 1 ;;
   esac
 }
+
+[[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
 
 mkdir -p "$output_dir"
 

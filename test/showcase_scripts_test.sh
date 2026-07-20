@@ -77,6 +77,15 @@ test_external_onboarding_help_and_args() {
   out="${tmp_dir}/external-onboarding-type.out"
   run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
   assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE"
+
+  output_file="${tmp_dir}/external-onboarding-output-file"
+  printf 'not a directory\n' > "$output_file"
+  out="${tmp_dir}/external-onboarding-output-file.out"
+  run_expect_code 1 "$out" env \
+    TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR="${tmp_dir}/external-onboarding-workdir" \
+    TESTLOOP_EXTERNAL_ONBOARDING_OUTPUT_DIR="$output_file" \
+    bash "${repo_root}/scripts/showcase-onboarding-ci-external-project.sh"
+  assert_contains "$out" "output path must be a directory"
 }
 
 test_external_first_run_help_and_args() {
@@ -94,6 +103,15 @@ test_external_first_run_help_and_args() {
   out="${tmp_dir}/external-first-run-type.out"
   run_expect_code 1 "$out" env TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE=bad bash "${repo_root}/scripts/showcase-first-run-ci-external-project.sh"
   assert_contains "$out" "unsupported TESTLOOP_EXTERNAL_FIRST_RUN_PROJECT_TYPE"
+
+  output_file="${tmp_dir}/external-first-run-output-file"
+  printf 'not a directory\n' > "$output_file"
+  out="${tmp_dir}/external-first-run-output-file.out"
+  run_expect_code 1 "$out" env \
+    TESTLOOP_EXTERNAL_FIRST_RUN_WORKDIR="${tmp_dir}/external-first-run-workdir" \
+    TESTLOOP_EXTERNAL_FIRST_RUN_OUTPUT_DIR="$output_file" \
+    bash "${repo_root}/scripts/showcase-first-run-ci-external-project.sh"
+  assert_contains "$out" "output path must be a directory"
 }
 
 test_doctor_first_run_help_and_args() {
