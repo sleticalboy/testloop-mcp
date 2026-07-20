@@ -117,6 +117,20 @@ go run ./examples/agent-response-manifest-demo \
 
 正常输出应包含 `decision_action=inspect-user-project` 和 `summary_validated=verification-summary.json`，用于确认 `agent-decision.txt` 的机器分流结果、summary schema 校验和 manifest 中的 `expected_action` 一致。
 
+如果客户端已经拿到了单个 artifact 目录，推荐再跑目录级 verifier：
+
+```bash
+sh scripts/verify-agent-artifact.sh \
+  first-run \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+
+sh scripts/verify-agent-artifact.sh \
+  onboarding \
+  docs/fixtures/onboarding-artifacts/user-project-smoke-failed/
+```
+
+正常输出应包含 `agent_artifact_status=passed`、`decision_action=inspect-user-project` 和 `response_action=inspect-user-project`，用于确认必备文件、同目录 summary schema、decision、Agent 回复草稿和 section signal 没有漂移。
+
 客户端自己的测试建议额外断言：
 
 - `schema_version=1`。

@@ -90,9 +90,12 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 - `docs/fixtures/agent-response-artifact-manifest.schema.json`
 - `docs/fixtures/verification-summary.schema.json`
 - `docs/fixtures/dual-project-summary.schema.json`
+- `examples/agent-artifact-verify`
+- `scripts/verify-agent-artifact.sh`
 - `tools/agent_response_artifact_manifest_schema_test.go`
 - `tools/verification_summary_schema_test.go`
 - `tools/dual_project_summary_schema_test.go`
+- `test/agent_artifact_verify_test.sh`
 - `test/verification_summary_decision_demo_test.sh`
 - `examples/agent-response-manifest-demo` 的输出断言
 - `expected_section_signals` 与 fixture summary / `agent-response.txt` 中的 `section_signal`
@@ -103,6 +106,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 ```bash
 sh test/agent_response_artifact_manifest_test.sh
 sh test/agent_response_manifest_demo_test.sh
+sh test/agent_artifact_verify_test.sh
 sh test/verification_summary_decision_demo_test.sh
 go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
 go test ./tools -run TestDualProjectSummarySchema -count=1

@@ -51,6 +51,7 @@ jobs:
           sh test/render_first_run_agent_response_test.sh
           sh test/first_run_artifact_fixtures_test.sh
           sh test/onboarding_artifact_fixtures_test.sh
+          sh test/agent_artifact_verify_test.sh
           sh test/first_run_failure_fixtures_test.sh
           sh test/agent_response_artifact_manifest_test.sh
           sh test/agent_response_manifest_demo_test.sh

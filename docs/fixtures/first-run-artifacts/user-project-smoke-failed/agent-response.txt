@@ -2,6 +2,8 @@
 
 证据：
 - first_run_agent_next_step=inspect-user-project
+- first_run_status=failed
+- first_run_failed_count=1
 - failed_section=用户项目 smoke
 - exit_code=7
 - first_run_report=docs/fixtures/first-run-artifacts/user-project-smoke-failed/verification-report.md

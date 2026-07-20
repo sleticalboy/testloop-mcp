@@ -23,6 +23,8 @@ required_snippets = [
     "docs/fixtures/onboarding-artifacts/user-project-smoke-failed/",
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
+    "sh scripts/verify-agent-artifact.sh",
+    "agent_artifact_status=passed",
     "./fixtures/agent-response-artifact-manifest.json",
     "./fixtures/agent-response-artifact-manifest.schema.json",
     "./fixtures/verification-summary.schema.json",
@@ -30,6 +32,7 @@ required_snippets = [
     "./fixtures/dual-project-summary/laoxia-passed.json",
     "local_summary_schema=verification-summary.schema.json",
     "sections[].signals.action",
+    "response_action=inspect-user-project",
     "verification-summary-decision-demo",
     "go run ./examples/agent-response-manifest-demo",
     "go run ./examples/first-run-agent-response-demo",
@@ -51,6 +54,7 @@ command_paths = {
     "go run ./examples/first-run-agent-response-demo": Path("examples/first-run-agent-response-demo/main.go"),
     "sh scripts/render-first-run-agent-response.sh": Path("scripts/render-first-run-agent-response.sh"),
     "sh scripts/render-onboarding-agent-response.sh": Path("scripts/render-onboarding-agent-response.sh"),
+    "sh scripts/verify-agent-artifact.sh": Path("scripts/verify-agent-artifact.sh"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():

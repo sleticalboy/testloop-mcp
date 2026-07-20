@@ -64,6 +64,7 @@ first-run fixture 包含：
 
 - `verification-report.md`
 - `verification-summary.json`
+- `verification-summary.schema.json`
 - `agent-decision.txt`
 - `first-run-context.txt`
 - `agent-response.txt`
@@ -73,6 +74,7 @@ onboarding fixture 包含：
 
 - `verification-report.md`
 - `verification-summary.json`
+- `verification-summary.schema.json`
 - `agent-decision.txt`
 - `agent-response.txt`
 
@@ -97,6 +99,20 @@ onboarding artifact 用对应目录入口：
 sh scripts/render-onboarding-agent-response.sh \
   docs/fixtures/onboarding-artifacts/user-project-smoke-failed/
 ```
+
+如果要直接校验下载后的 artifact 目录是否自洽，使用目录级 verifier：
+
+```bash
+sh scripts/verify-agent-artifact.sh \
+  first-run \
+  docs/fixtures/first-run-artifacts/user-project-smoke-failed/
+
+sh scripts/verify-agent-artifact.sh \
+  onboarding \
+  docs/fixtures/onboarding-artifacts/user-project-smoke-failed/
+```
+
+正常输出会包含 `agent_artifact_status=passed`、`decision_action=inspect-user-project` 和 `response_action=inspect-user-project`。这个检查覆盖必备文件、同目录 summary schema、`agent-response.txt` 四段结构、失败 section、`exit_code` 和 `section_signal`。
 
 也可以手动指定文件：
 

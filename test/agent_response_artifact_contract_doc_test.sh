@@ -36,6 +36,9 @@ assert_contains "./fixtures/onboarding-artifacts/user-project-smoke-failed/"
 assert_contains "./fixtures/agent-response-artifact-manifest.json"
 assert_contains "./fixtures/agent-response-artifact-manifest.schema.json"
 assert_contains "./fixtures/verification-summary.schema.json"
+assert_contains "sh scripts/verify-agent-artifact.sh"
+assert_contains "agent_artifact_status=passed"
+assert_contains "response_action=..."
 assert_contains "go run ./examples/agent-response-manifest-demo"
 assert_contains "./ci-agent-triage.md"
 assert_contains "./client-integration.md"
@@ -46,6 +49,7 @@ for path in \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" \
   "${repo_root}/docs/fixtures/agent-response-artifact-manifest.schema.json" \
   "${repo_root}/docs/fixtures/verification-summary.schema.json" \
+  "${repo_root}/scripts/verify-agent-artifact.sh" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
   "${repo_root}/docs/ci-agent-triage.md" \
   "${repo_root}/docs/client-integration.md"

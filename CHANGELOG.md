@@ -12,10 +12,12 @@
 - 新增 dual-project summary artifact 自包含 schema：通用双项目报告和 laoxia wrapper 会把 `dual-project-summary.schema.json` 写到 combined summary 同目录。
 - 新增 `test/ci_workflow_test.sh`，要求默认 CI 显式运行每个 `test/*_test.sh`。
 - 新增 `test/repository_hygiene_test.sh`，拒绝被 `.gitignore` 忽略但仍被 Git 跟踪的文件，并防止重新提交 `__pycache__/` 或 `.pyc`。
+- 新增 `scripts/verify-agent-artifact.sh` 和 `examples/agent-artifact-verify`，可离线校验下载后的 first-run/onboarding artifact 目录。
 
 ### Changed
 
 - Agent response artifact manifest 的每个 artifact 现在带有本地 `summary_schema=verification-summary.schema.json` 指针，客户端下载单个 artifact 目录后可以离线校验 summary。
+- first-run Agent 回复现在会输出 `first_run_status` 和 `first_run_failed_count`，与 artifact contract 和 `first-run-context.txt` 保持一致。
 - README、showcase、CI 集成、接入指南、fixture 索引和 artifact contract 已从 first-run 六件套 / onboarding 四件套更新为 first-run 七件套 / onboarding 五件套。
 - 默认 GitHub Actions CI 已补跑 first-run/onboarding Agent response、artifact manifest、artifact fixture、外部 dry-run 文档、接入指南、README snippet 和 MCP 客户端契约等所有现有 shell 契约测试。
 - `.gitignore` 为有意保留的 demo 输出和 first-run fixture log 增加精确例外，避免 fixture 被通用忽略规则误伤。

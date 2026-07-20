@@ -43,6 +43,8 @@ ruby -rjson -e 'JSON.parse(File.read(ARGV.fetch(0)));' "$fixture_dir/verificatio
 assert_contains "$fixture_dir/agent-decision.txt" "agent_next_step=inspect-user-project"
 assert_contains "$fixture_dir/first-run-context.txt" "first_run_agent_next_step=inspect-user-project"
 assert_contains "$fixture_dir/agent-response.txt" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
+assert_contains "$fixture_dir/agent-response.txt" "- first_run_status=failed"
+assert_contains "$fixture_dir/agent-response.txt" "- first_run_failed_count=1"
 assert_contains "$fixture_dir/agent-response.txt" "- failed_section=用户项目 smoke"
 assert_contains "$fixture_dir/agent-response.txt" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"
 assert_contains "$fixture_dir/verification-summary.json" '"overall_status": "failed"'
@@ -65,6 +67,8 @@ out="${tmp_dir}/response.out"
   "$fixture_dir/verification-summary.json") > "$out"
 
 assert_contains "$out" "结论：testloop-mcp 接入链路本身是通的，失败发生在用户项目 smoke。"
+assert_contains "$out" "- first_run_status=failed"
+assert_contains "$out" "- first_run_failed_count=1"
 assert_contains "$out" "- failed_section=用户项目 smoke"
 assert_contains "$out" "- exit_code=7"
 assert_contains "$out" "- section_signal=独立 CLI 生成动作 smoke action=manual_review"

@@ -46,11 +46,13 @@ func run(args []string) error {
 	}
 
 	var summary verificationSummary
+	summaryLoaded := false
 	if len(args) == 2 {
 		summary, err = loadSummary(args[1])
 		if err != nil {
 			return err
 		}
+		summaryLoaded = true
 	}
 
 	action := context["first_run_agent_next_step"]
@@ -64,6 +66,18 @@ func run(args []string) error {
 	fmt.Printf("结论：%s\n\n", plan.Conclusion)
 	fmt.Println("证据：")
 	fmt.Printf("- first_run_agent_next_step=%s\n", action)
+	status := context["first_run_status"]
+	failedCount := context["first_run_failed_count"]
+	if summaryLoaded {
+		status = summary.OverallStatus
+		failedCount = fmt.Sprintf("%d", summary.FailedCount)
+	}
+	if status != "" {
+		fmt.Printf("- first_run_status=%s\n", status)
+	}
+	if failedCount != "" {
+		fmt.Printf("- first_run_failed_count=%s\n", failedCount)
+	}
 	if failedSection != "" {
 		fmt.Printf("- failed_section=%s\n", failedSection)
 	}

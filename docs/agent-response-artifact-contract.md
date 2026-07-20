@@ -79,6 +79,17 @@ CI 失败时按这个顺序读取：
 - [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)
 - [verification-summary.schema.json](./fixtures/verification-summary.schema.json)
 
+## 目录校验
+
+下载 CI artifact 后，可以先用仓库自带 verifier 对整个目录做离线校验：
+
+```bash
+sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run
+sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding
+```
+
+这个入口会检查必备文件、用同目录的 `verification-summary.schema.json` 校验 `verification-summary.json`，并确认 `agent-decision.txt`、`agent-response.txt`、失败 section、`exit_code` 和 `section_signal` 一致。正常输出会包含 `agent_artifact_status=passed`、`decision_action=...` 和 `response_action=...`。
+
 最小消费 demo：
 
 ```bash

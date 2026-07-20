@@ -25,6 +25,9 @@ assert_contains "dual-project-summary.schema.json"
 assert_contains "npx --yes ajv-cli validate"
 assert_contains "sections[].signals.action"
 assert_contains "go run ./examples/agent-response-manifest-demo"
+assert_contains "sh scripts/verify-agent-artifact.sh"
+assert_contains "agent_artifact_status=passed"
+assert_contains "response_action=inspect-user-project"
 assert_contains "fallback_order[0]"
 assert_contains "summary_schema=verification-summary.schema.json"
 assert_contains "first_run_agent_next_step"
@@ -38,6 +41,7 @@ for path in \
   "${repo_root}/docs/fixtures/dual-project-summary.schema.json" \
   "${repo_root}/docs/fixtures/dual-project-summary/laoxia-passed.json" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
+  "${repo_root}/scripts/verify-agent-artifact.sh" \
   "${repo_root}/test/e2e"
 do
   if [ ! -e "$path" ]; then
