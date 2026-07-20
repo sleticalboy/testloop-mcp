@@ -376,6 +376,31 @@ PY
   assert_contains "$failed_output_dir/pair-summary.json" '"overall_status": "failed"'
   assert_contains "$failed_output_dir/pair-summary.json" '"failed_count": 1'
   assert_contains "$failed_output_dir/web/verification-report.md" "web failed"
+
+  both_failed_out="${tmp_dir}/pair-both-failed.out"
+  both_failed_output_dir="${tmp_dir}/pair-both-failed-artifacts"
+  run_expect_code 1 "$both_failed_out" env \
+    TESTLOOP_PAIR_PREFIX=pair \
+    TESTLOOP_PAIR_OUTPUT_DIR="$both_failed_output_dir" \
+    TESTLOOP_PAIR_FIRST_NAME=api \
+    TESTLOOP_PAIR_FIRST_DIR="$api_dir" \
+    TESTLOOP_PAIR_FIRST_COMMAND='echo api failed; exit 5' \
+    TESTLOOP_PAIR_SECOND_NAME=web \
+    TESTLOOP_PAIR_SECOND_DIR="$web_dir" \
+    TESTLOOP_PAIR_SECOND_COMMAND='echo web failed; exit 7' \
+    TESTLOOP_REPORT_SKIP_BASIC=true \
+    TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+    TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+    TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+    bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
+
+  assert_contains "$both_failed_out" "pair_api_status=failed"
+  assert_contains "$both_failed_out" "pair_web_status=failed"
+  assert_contains "$both_failed_out" "pair_status=failed"
+  assert_contains "$both_failed_output_dir/pair-summary.json" '"overall_status": "failed"'
+  assert_contains "$both_failed_output_dir/pair-summary.json" '"failed_count": 2'
+  assert_contains "$both_failed_output_dir/api/verification-report.md" "api failed"
+  assert_contains "$both_failed_output_dir/web/verification-report.md" "web failed"
 }
 
 test_showcase_scripts_are_valid_bash

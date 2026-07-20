@@ -162,11 +162,12 @@ from pathlib import Path
 
 first_summary_payload = json.loads(Path(first_summary).read_text(encoding="utf-8"))
 second_summary_payload = json.loads(Path(second_summary).read_text(encoding="utf-8"))
+failed_count = int(first_summary_payload.get("failed_count", 0)) + int(second_summary_payload.get("failed_count", 0))
 
 payload = {
     "output_dir": output_dir,
     "overall_status": summary_status,
-    "failed_count": 0 if summary_status == "passed" else 1,
+    "failed_count": failed_count,
     first_name: {
         "status": first_status,
         "command": first_command,
