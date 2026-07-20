@@ -179,6 +179,12 @@ scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
 
 它会同时落下 server/web 两份 `verification-report.md`、两份 `verification-summary.json`，以及一份顶层 `laoxia-summary.json`，后者会嵌套两边的子 summary，方便机器直接读取总状态。
 
+更通用的双项目场景可以直接用：
+
+```bash
+scripts/showcase-dual-project-report.sh "$(command -v testloop-mcp)"
+```
+
 详细用法见 [用户项目验收报告](./docs/verification-report.md)、[Onboarding CI 复制模板](./docs/onboarding-ci-template.md)、[Onboarding CI 失败排查](./docs/onboarding-ci-failure-triage.md) 和 [验收报告 CI 集成](./docs/verification-ci.md)。
 
 ### Codex
