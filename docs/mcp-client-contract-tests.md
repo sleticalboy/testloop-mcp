@@ -91,6 +91,14 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
 
 JSON 输出会固定 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`。验证失败时脚本仍输出可解析 JSON，并用 `status=failed` 与非 0 退出码同时表达失败。
 
+如果不想复制整个仓库，可以先导出最小决策 fixture 包：
+
+```bash
+node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures
+```
+
+导出包保留 `docs/fixtures/...` 路径和 validator 脚本，适合直接放进客户端仓库的契约测试目录。
+
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
 ```text

@@ -53,6 +53,14 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
 
 该 JSON 固定包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
 
+如果接入方只想复制最小决策 fixture 包，而不是整个仓库，可以先导出：
+
+```bash
+node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures
+```
+
+导出目录会包含 `docs/fixtures/agent-decision-fixtures.json`、schema、manifest 中列出的 8 个 fixture，以及 `scripts/validate-agent-decision-fixtures.mjs`。路径保持为 `docs/fixtures/...`，所以复制到目标项目后仍可直接运行同一条 `--json` 校验命令。
+
 ## 使用真实 fixture
 
 [真实结构化 fixture](./fixtures.md) 提供了来自 handler 的稳定 JSON 投影，适合直接放进客户端测试用例：

@@ -620,6 +620,14 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
 
 JSON 输出会包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；验证失败时仍输出 JSON，同时返回非 0 退出码。
 
+如果要给外部 MCP 客户端项目复制一份最小决策 fixture 包：
+
+```bash
+node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures
+```
+
+导出目录会保留 `docs/fixtures/...` 和 `scripts/validate-agent-decision-fixtures.mjs`，因此复制后仍可在目标项目内运行同一条 `--json` 校验命令。
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：
