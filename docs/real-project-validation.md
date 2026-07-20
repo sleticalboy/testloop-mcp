@@ -26,7 +26,7 @@
 
 `普通 repair` 指最新验证结果中仍需要修生成测试本身的 `repair_generated_test` / `apply_fix_suggestions` / `generation_error` 数量。`manual_review_*` 不计入普通 repair，它表示工具已经给 Agent 一个稳定动作分类：不要继续盲修同一份生成测试，应改走公共入口、依赖注入、集成环境或人工复核。
 
-补充：`/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0` 这类 Go + Vue 双仓库脚手架也可以作为稳定样本使用。当前已在本机复验 `car-admin-server` 的 `go test ./...`，以及 `car-admin-web` 的 `pnpm build:prod`；两者都通过，只留下常见的 macOS gopsutil deprecated warning、Browserslist outdated 提示和前端 bundle 体积警告，不影响作为真实项目 smoke 的可用性。两个子仓库当前也都是干净工作树，因此后续如果需要跑用户项目验收报告或展示闭环，可以直接复用这组路径。
+补充：`/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0` 这类 Go + Vue 双仓库脚手架也可以作为稳定样本使用。当前已在本机复验 `car-admin-server` 的 `go test ./...`，以及 `car-admin-web` 的 `pnpm build:prod`；两者都通过，只留下常见的 macOS gopsutil deprecated warning、Browserslist outdated 提示和前端 bundle 体积警告，不影响作为真实项目 smoke 的可用性。随后又用当前 `testloop-mcp` 生成了两份验收报告：`/tmp/testloop-laoxia-server-report.md` 与 `/tmp/testloop-laoxia-web-report.md`，两者的用户项目 smoke 也都保持 `passed`。两个子仓库当前也都是干净工作树，因此后续如果需要跑用户项目验收报告或展示闭环，可以直接复用这组路径。
 
 表格补充：Apache Commons Codec 的 `language/` 非 bm 收口又验证了 `ColognePhonetic.java` top2，结果为 `passed=2/manual_review_internal=2`，目标集中在内部 `CologneInputBuffer.copyData` 状态路径；`Nysiis.java` 和 `RefinedSoundex.java` 当前过滤后无候选任务。
 
