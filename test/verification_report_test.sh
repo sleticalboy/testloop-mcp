@@ -98,6 +98,7 @@ assert_contains "$project_file_out" "project path must be a directory"
 out="${tmp_dir}/report.out"
 report="${tmp_dir}/report.md"
 summary_json="${tmp_dir}/summary.json"
+summary_schema="${tmp_dir}/verification-summary.schema.json"
 run_expect_code 0 "$out" env \
   TESTLOOP_REPORT_SKIP_BASIC=true \
   TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
@@ -110,6 +111,7 @@ run_expect_code 0 "$out" env \
 
 assert_contains "$out" "Wrote $report"
 assert_contains "$out" "Wrote $summary_json"
+assert_contains "$out" "Wrote $summary_schema"
 assert_contains "$report" "# testloop-mcp 验收报告"
 assert_contains "$report" '| 基础安装验收 | `skipped` | `-` |'
 assert_contains "$report" '| 独立 CLI 生成动作 smoke | `skipped` | `-` |'
@@ -138,6 +140,7 @@ assert_json_field "$summary_json" "data['sections'][0]['exit_code']" "None"
 assert_json_field "$summary_json" "data['sections'][-1]['name']" "用户项目 smoke"
 assert_json_field "$summary_json" "data['sections'][-1]['status']" "passed"
 assert_json_field "$summary_json" "data['sections'][-1]['exit_code']" "0"
+assert_contains "$summary_schema" '"title": "testloop-mcp verification summary"'
 
 failed_report="${tmp_dir}/failed-report.md"
 failed_summary_json="${tmp_dir}/failed-summary.json"
@@ -157,6 +160,7 @@ assert_json_field "$failed_summary_json" "data['overall_status']" "failed"
 assert_json_field "$failed_summary_json" "data['failed_count']" "1"
 assert_json_field "$failed_summary_json" "data['sections'][-1]['status']" "failed"
 assert_json_field "$failed_summary_json" "data['sections'][-1]['exit_code']" "7"
+assert_contains "${tmp_dir}/verification-summary.schema.json" '"title": "testloop-mcp verification summary"'
 
 action_report="${tmp_dir}/action-report.md"
 action_summary_json="${tmp_dir}/action-summary.json"

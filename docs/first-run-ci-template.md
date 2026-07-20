@@ -6,6 +6,7 @@
 
 - `verification-report.md`：给人看的完整验收报告。
 - `verification-summary.json`：给 Agent / CI 读取的结构化结果。
+- `verification-summary.schema.json`：`verification-summary.json` 的结构契约。
 - `agent-decision.txt`：最小下一步动作，核心字段是 `agent_next_step`。
 - `first-run-context.txt`：可直接粘贴给 AI Agent 的最小上下文。
 - `agent-response.txt`：由 `first-run-context.txt` 和可选 summary 渲染出的 Agent 四段回复草稿。
@@ -48,6 +49,7 @@ jobs:
           path: |
             /tmp/testloop-first-run/verification-report.md
             /tmp/testloop-first-run/verification-summary.json
+            /tmp/testloop-first-run/verification-summary.schema.json
             /tmp/testloop-first-run/agent-decision.txt
             /tmp/testloop-first-run/first-run-context.txt
             /tmp/testloop-first-run/agent-response.txt
@@ -98,6 +100,7 @@ jobs:
           path: |
             /tmp/testloop-web-first-run/verification-report.md
             /tmp/testloop-web-first-run/verification-summary.json
+            /tmp/testloop-web-first-run/verification-summary.schema.json
             /tmp/testloop-web-first-run/agent-decision.txt
             /tmp/testloop-web-first-run/first-run-context.txt
             /tmp/testloop-web-first-run/agent-response.txt

@@ -62,13 +62,14 @@ jobs:
           path: |
             /tmp/testloop-onboarding/verification-report.md
             /tmp/testloop-onboarding/verification-summary.json
+            /tmp/testloop-onboarding/verification-summary.schema.json
             /tmp/testloop-onboarding/agent-decision.txt
             /tmp/testloop-onboarding/agent-response.txt
 ```
 
 这段 workflow 的关键点：
 
-- `scripts/showcase-agent-onboarding-report.sh`：失败时也会尽量保留 Markdown / JSON / decision 输出。
+- `scripts/showcase-agent-onboarding-report.sh`：失败时也会尽量保留 Markdown / JSON / schema / decision 输出。
 - `scripts/run-onboarding-ci.sh`：适合外部用户项目，负责准备 testloop-mcp 二进制和报告脚本。
 - `if: always()`：无论验收通过还是失败，都上传 Markdown 和 JSON。
 - `project-smoke-command`：接入方显式指定自己的 smoke 命令。
@@ -119,6 +120,8 @@ Vue / React / Node 项目可以把用户项目 smoke 换成包管理器命令。
     TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
       bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'
 ```
+
+对应输出目录 `/tmp/testloop-web-onboarding` 里也会同时包含 `/tmp/testloop-web-onboarding/verification-summary.schema.json`，方便后续离线校验 summary 合同。
 
 ## Agent 分流建议
 

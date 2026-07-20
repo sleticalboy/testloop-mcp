@@ -113,7 +113,10 @@ write_output_block() {
 
 write_summary_json() {
   local json_output="$1"
+  local schema_output
+  schema_output="$(dirname "$json_output")/verification-summary.schema.json"
   mkdir -p "$(dirname "$json_output")"
+  cp "$repo_root/docs/fixtures/verification-summary.schema.json" "$schema_output"
   python3 - "$summary_file" "$json_output" "$title" "$generated_at" "$repo_root" "$git_ref" "$binary" "${version_output:-unknown}" "$output" "$failed_count" <<'PY'
 import csv
 import json
@@ -371,6 +374,7 @@ printf 'Wrote %s\n' "$output"
 if [[ -n "$summary_json" ]]; then
   write_summary_json "$summary_json"
   printf 'Wrote %s\n' "$summary_json"
+  printf 'Wrote %s\n' "$(dirname "$summary_json")/verification-summary.schema.json"
 fi
 if [[ "$failed_count" -gt 0 ]]; then
   exit 1

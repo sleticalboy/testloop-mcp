@@ -15,7 +15,7 @@ testloop-mcp 的展示路径分三层：默认 CI 保护基础契约，公开 sh
 | 生成 Agent onboarding 演示制品 | `scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 在完整首次接入路径基础上输出 Markdown、summary JSON 和 `agent_next_step` 决策文本。 |
 | 渲染 onboarding Agent 回复 | `sh scripts/render-onboarding-agent-response.sh /tmp/testloop-onboarding` | 是，脚本回归 | 从 onboarding artifact 目录自动读取 summary，输出 Agent 可直接回复用户的四段结构。 |
 | 演练外部项目 Onboarding CI | `scripts/showcase-onboarding-ci-external-project.sh` | 否，脚本入口回归 | 在 `/tmp` 创建非 testloop Go 或 Node 项目，从该项目目录运行 bootstrap，验证复制路径能产出四件套 artifact，并先拦截坏的输出目录输入。 |
-| 生成用户项目验收报告 | `scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md` | 否，脚本入口回归 | 聚合基础安装验收、真实 MCP 协议 smoke、最小 Agent demo，可 opt-in 公开 showcase 和用户项目 smoke。 |
+| 生成用户项目验收报告 | `scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md` | 否，脚本入口回归 | 聚合基础安装验收、真实 MCP 协议 smoke、最小 Agent demo，可 opt-in 公开 showcase 和用户项目 smoke；输出报告时会同时落盘 `verification-summary.schema.json`。 |
 | 生成通用双项目报告 | `scripts/showcase-dual-project-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 提供任意两条 user-project smoke 的通用底座，输出两份报告、嵌套子 summary 的总状态文件和 `dual-project-summary.schema.json`；`TESTLOOP_PAIR_SUMMARY_JSON` 需要指向普通文件路径。 |
 | 生成 laoxia 双栈验收报告 | `scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"` | 否，脚本入口回归 | 一次生成 `car-admin-server` 和 `car-admin-web` 两份验收报告、一份嵌套子 summary 的总 `laoxia-summary.json` 和 `dual-project-summary.schema.json`；`TESTLOOP_LAOXIA_SUMMARY_JSON` 需要指向普通文件路径。 |
 | 生成 QuickSmoke Go/Java 双项目报告 | `TESTLOOP_PAIR_PREFIX=quicksmoke ... scripts/showcase-dual-project-report.sh /tmp/testloop-mcp` | 否，脚本入口回归 | 用干净的 Go 与 Java 项目验证 shared helper 的跨语言复用性，输出 `quicksmoke-summary.json` 及两份子 summary。 |

@@ -64,6 +64,7 @@ run_expect_code 0 "$out" env \
 
 report="${output_dir}/verification-report.md"
 summary="${output_dir}/verification-summary.json"
+summary_schema="${output_dir}/verification-summary.schema.json"
 decision="${output_dir}/agent-decision.txt"
 
 assert_contains "$out" "onboarding_report=$report"
@@ -72,6 +73,7 @@ assert_contains "$out" "onboarding_decision=$decision"
 assert_contains "$out" "agent_next_step=ready"
 assert_contains "$report" "# testloop-mcp 验收报告"
 assert_contains "$summary" '"overall_status": "passed"'
+assert_contains "$summary_schema" '"title": "testloop-mcp verification summary"'
 assert_contains "$decision" "agent_next_step=ready"
 
 run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-agent-onboarding-report.sh" --help

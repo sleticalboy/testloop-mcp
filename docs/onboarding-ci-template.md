@@ -4,6 +4,7 @@
 
 - `verification-report.md`：给人看的完整验收报告。
 - `verification-summary.json`：给 Agent / CI 读取的结构化结果。
+- `verification-summary.schema.json`：`verification-summary.json` 的结构契约。
 - `agent-decision.txt`：最小下一步动作，核心字段是 `agent_next_step`。
 - `agent-response.txt`：按 summary 渲染出的 Agent 四段回复草稿。
 
@@ -45,6 +46,7 @@ jobs:
           path: |
             /tmp/testloop-onboarding/verification-report.md
             /tmp/testloop-onboarding/verification-summary.json
+            /tmp/testloop-onboarding/verification-summary.schema.json
             /tmp/testloop-onboarding/agent-decision.txt
             /tmp/testloop-onboarding/agent-response.txt
 ```
@@ -96,6 +98,7 @@ jobs:
           path: |
             /tmp/testloop-web-onboarding/verification-report.md
             /tmp/testloop-web-onboarding/verification-summary.json
+            /tmp/testloop-web-onboarding/verification-summary.schema.json
             /tmp/testloop-web-onboarding/agent-decision.txt
             /tmp/testloop-web-onboarding/agent-response.txt
 ```
