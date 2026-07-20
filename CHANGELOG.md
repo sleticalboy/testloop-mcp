@@ -22,6 +22,7 @@
 - README、showcase、CI 集成、接入指南、fixture 索引和 artifact contract 已从 first-run 六件套 / onboarding 四件套更新为 first-run 七件套 / onboarding 五件套。
 - 默认 GitHub Actions CI 已补跑 first-run/onboarding Agent response、artifact manifest、artifact fixture、外部 dry-run 文档、接入指南、README snippet 和 MCP 客户端契约等所有现有 shell 契约测试。
 - `.gitignore` 为有意保留的 demo 输出和 first-run fixture log 增加精确例外，避免 fixture 被通用忽略规则误伤。
+- 真实接入案例已补充 laoxia server/web 最新 onboarding bootstrap 记录，确认 artifact verifier 在真实项目上输出 `passed`。
 
 ### Fixed
 

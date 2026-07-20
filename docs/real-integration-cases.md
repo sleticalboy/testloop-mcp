@@ -220,6 +220,81 @@ laoxia_status=passed
 `/tmp/testloop-laoxia-scaffold-live-20260720154617/laoxia-summary.json` 的顶层、server 子 summary 和 web 子 summary 均为 `overall_status=passed`、`failed_count=0`。
 这个 `laoxia-summary.json` 是双项目 combined summary，不是 `verification-summary.json`；结构契约见 [dual-project-summary.schema.json](./fixtures/dual-project-summary.schema.json)。直接喂给 `examples/verification-summary-decision-demo` 会因为缺少 `sections` 被拒绝。
 
+## laoxia 最新 bootstrap artifact 自检
+
+2026-07-20 使用当前源码构建临时二进制，并分别对 laoxia server/web 跑 onboarding bootstrap，确认新加入的 artifact verifier 在真实项目上输出 `passed`。
+
+构建二进制：
+
+```bash
+go build -o /tmp/testloop-mcp-latest .
+/tmp/testloop-mcp-latest --version
+```
+
+版本输出：
+
+```text
+testloop-mcp 0.5.13
+```
+
+Server onboarding：
+
+```bash
+TESTLOOP_MCP_REPO_DIR="$PWD" \
+TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-latest \
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.13 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-laoxia-server-onboarding-artifact-verify \
+TESTLOOP_ONBOARDING_TITLE='laoxia server onboarding artifact verify' \
+TESTLOOP_ONBOARDING_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-server \
+GITHUB_STEP_SUMMARY=/tmp/testloop-laoxia-server-onboarding-artifact-verify-step.md \
+  bash scripts/run-onboarding-ci.sh 'go test ./...'
+```
+
+Web onboarding：
+
+```bash
+TESTLOOP_MCP_REPO_DIR="$PWD" \
+TESTLOOP_MCP_COMMAND=/tmp/testloop-mcp-latest \
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.13 \
+TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-laoxia-web-onboarding-artifact-verify \
+TESTLOOP_ONBOARDING_TITLE='laoxia web onboarding artifact verify' \
+TESTLOOP_ONBOARDING_PROJECT_DIR=/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0/car-admin-web \
+GITHUB_STEP_SUMMARY=/tmp/testloop-laoxia-web-onboarding-artifact-verify-step.md \
+  bash scripts/run-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build:prod'
+```
+
+两边命令输出均包含：
+
+```text
+agent_next_step=ready
+agent_artifact_status=passed
+artifact_kind=onboarding
+overall_status=passed
+failed_count=0
+decision_action=ready
+response_action=ready
+section_signal=独立 CLI 生成动作 smoke action=manual_review
+required_files=5
+```
+
+两份 step summary 均包含：
+
+```text
+- Status: `passed`
+- Failed sections: `0`
+- agent_next_step: `ready`
+- Artifact verification: `passed`
+```
+
+summary JSON 结果：
+
+| 项目 | 输出目录 | overall_status | failed_count | agent_next_step | Artifact verification |
+| --- | --- | --- | --- | --- | --- |
+| server | `/tmp/testloop-laoxia-server-onboarding-artifact-verify` | `passed` | `0` | `ready` | `passed` |
+| web | `/tmp/testloop-laoxia-web-onboarding-artifact-verify` | `passed` | `0` | `ready` | `passed` |
+
+`car-admin-server` 和 `car-admin-web` 的本地 git 状态均为空，说明 bootstrap 和 artifact verifier 只写入 `/tmp/testloop-laoxia-*-onboarding-artifact-verify`，没有污染用户项目工作区。
+
 ## QuickSmoke Go/Java 双项目报告入口
 
 前面的 shared helper 也可以直接复用到跨语言的真实项目 pair。下面这组样本用一个干净的 Go 项目和一个干净的 Java 项目验证了 helper 的通用性：
