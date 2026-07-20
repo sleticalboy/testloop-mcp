@@ -286,6 +286,74 @@ PY
   assert_contains "$failed_output_dir/web/verification-summary.json" '"overall_status": "failed"'
 }
 
+test_dual_project_showcase_helper_directly() {
+  fake_binary="${tmp_dir}/dual-fake-bin"
+  cat > "$fake_binary" <<'SH'
+#!/usr/bin/env sh
+case "${1:-}" in
+  --version)
+    echo "testloop-mcp 0.5.13"
+    ;;
+  *)
+    echo "fake testloop-mcp"
+    ;;
+esac
+SH
+  chmod +x "$fake_binary"
+
+  pair_root="${tmp_dir}/pair-root"
+  api_dir="${pair_root}/api"
+  web_dir="${pair_root}/web"
+  mkdir -p "$api_dir" "$web_dir"
+
+  success_out="${tmp_dir}/pair-success.out"
+  output_dir="${tmp_dir}/pair-artifacts"
+  run_expect_code 0 "$success_out" env \
+    TESTLOOP_PAIR_PREFIX=pair \
+    TESTLOOP_PAIR_OUTPUT_DIR="$output_dir" \
+    TESTLOOP_PAIR_FIRST_NAME=api \
+    TESTLOOP_PAIR_FIRST_DIR="$api_dir" \
+    TESTLOOP_PAIR_FIRST_COMMAND='printf "api smoke ok\n"' \
+    TESTLOOP_PAIR_SECOND_NAME=web \
+    TESTLOOP_PAIR_SECOND_DIR="$web_dir" \
+    TESTLOOP_PAIR_SECOND_COMMAND='printf "web smoke ok\n"' \
+    TESTLOOP_REPORT_SKIP_BASIC=true \
+    TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+    TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+    TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+    bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
+
+  assert_contains "$success_out" "pair_output_dir=$output_dir"
+  assert_contains "$success_out" "pair_summary_json=$output_dir/pair-summary.json"
+  assert_contains "$success_out" "pair_api_report=$output_dir/api/verification-report.md"
+  assert_contains "$success_out" "pair_api_status=passed"
+  assert_contains "$success_out" "pair_web_report=$output_dir/web/verification-report.md"
+  assert_contains "$success_out" "pair_web_status=passed"
+  assert_contains "$success_out" "pair_status=passed"
+  assert_contains "$output_dir/pair-summary.json" '"overall_status": "passed"'
+  assert_contains "$output_dir/pair-summary.json" '"failed_count": 0'
+  assert_contains "$output_dir/pair-summary.json" '"api": {'
+  assert_contains "$output_dir/pair-summary.json" '"web": {'
+
+  python3 - "$output_dir/pair-summary.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if data["api"]["summary"]["overall_status"] != "passed":
+    raise SystemExit("expected api summary overall_status=passed")
+if data["web"]["summary"]["overall_status"] != "passed":
+    raise SystemExit("expected web summary overall_status=passed")
+if data["api"]["summary"]["failed_count"] != 0:
+    raise SystemExit("expected api summary failed_count=0")
+if data["web"]["summary"]["failed_count"] != 0:
+    raise SystemExit("expected web summary failed_count=0")
+PY
+  assert_contains "$output_dir/api/verification-report.md" "api smoke ok"
+  assert_contains "$output_dir/web/verification-report.md" "web smoke ok"
+}
+
 test_showcase_scripts_are_valid_bash
 test_onboarding_showcase_help_and_args
 test_doctor_first_run_help_and_args
@@ -296,6 +364,7 @@ test_go_showcase_help_and_args
 test_go_showcase_git_timeout
 test_js_showcase_help_args_and_missing_pnpm
 test_js_showcase_git_timeout
+test_dual_project_showcase_helper_directly
 test_laoxia_scaffold_showcase_help_args_and_run
 
 echo "showcase script tests passed"
