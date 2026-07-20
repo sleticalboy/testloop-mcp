@@ -41,11 +41,6 @@ if [[ $# -gt 1 ]]; then
   exit 2
 fi
 
-if ! command -v pnpm >/dev/null 2>&1; then
-  echo "error: pnpm is required for this showcase" >&2
-  exit 1
-fi
-
 repo="${TESTLOOP_SHOWCASE_JS_REPO:-https://github.com/unjs/ufo.git}"
 ref="${TESTLOOP_SHOWCASE_JS_REF:-f06c800d0c59f2a4a1b9ba65eb6cb61a84419be6}"
 project_dir="${TESTLOOP_SHOWCASE_JS_PROJECT_DIR:-}"
@@ -57,13 +52,19 @@ skip_install="${TESTLOOP_SHOWCASE_JS_SKIP_INSTALL:-false}"
 output="${1:-${TESTLOOP_SHOWCASE_JS_OUTPUT:-/tmp/testloop-ufo-showcase.jsonl}}"
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
 if [[ -e "$output" && -d "$output" ]]; then
   echo "error: output path must not be a directory: $output" >&2
   exit 1
 fi
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "error: pnpm is required for this showcase" >&2
+  exit 1
+fi
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
 run_with_timeout() {
   local seconds="$1"

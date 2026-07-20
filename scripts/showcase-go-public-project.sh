@@ -45,13 +45,14 @@ git_timeout="${TESTLOOP_SHOWCASE_GO_GIT_TIMEOUT:-60}"
 output="${1:-${TESTLOOP_SHOWCASE_GO_OUTPUT:-/tmp/testloop-google-uuid-showcase.jsonl}}"
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
 if [[ -e "$output" && -d "$output" ]]; then
   echo "error: output path must not be a directory: $output" >&2
   exit 1
 fi
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
 run_with_timeout() {
   local seconds="$1"
