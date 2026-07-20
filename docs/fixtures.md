@@ -4,7 +4,7 @@
 
 接入方如何把这些 fixture 用到自己的客户端回归里，见 [客户端集成说明](./client-integration.md)。
 
-Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段、fallback 顺序和 `expected_section_signals`，并通过 `summary_schema` 找到 `verification-summary.json` 的结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)。其中 `sections[].signals.action` 是可选的 section 级动作信号。
+Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段、fallback 顺序和 `expected_section_signals`，并通过 `summary_schema` 找到 `verification-summary.json` 的结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)。其中 `sections[].signals.action` 是可选的 section 级动作信号。双项目报告的 combined summary 使用独立结构契约：[dual-project-summary.schema.json](./fixtures/dual-project-summary.schema.json)，样例见 [laoxia-passed.json](./fixtures/dual-project-summary/laoxia-passed.json)。
 
 ## run_tests fixture 列表
 
@@ -89,8 +89,10 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 
 - `docs/fixtures/agent-response-artifact-manifest.schema.json`
 - `docs/fixtures/verification-summary.schema.json`
+- `docs/fixtures/dual-project-summary.schema.json`
 - `tools/agent_response_artifact_manifest_schema_test.go`
 - `tools/verification_summary_schema_test.go`
+- `tools/dual_project_summary_schema_test.go`
 - `test/verification_summary_decision_demo_test.sh`
 - `examples/agent-response-manifest-demo` 的输出断言
 - `expected_section_signals` 与 fixture summary / `agent-response.txt` 中的 `section_signal`
@@ -103,4 +105,5 @@ sh test/agent_response_artifact_manifest_test.sh
 sh test/agent_response_manifest_demo_test.sh
 sh test/verification_summary_decision_demo_test.sh
 go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
+go test ./tools -run TestDualProjectSummarySchema -count=1
 ```

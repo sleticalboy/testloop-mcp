@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/dual-project-summary.schema.json",
+  "title": "testloop-mcp dual project summary",
+  "description": "Machine-readable contract for showcase-dual-project-report combined summary JSON artifacts.",
+  "type": "object",
+  "minProperties": 5,
+  "additionalProperties": {
+    "$ref": "#/$defs/project"
+  },
+  "required": [
+    "output_dir",
+    "overall_status",
+    "failed_count"
+  ],
+  "properties": {
+    "output_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "failed_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "command",
+        "report",
+        "summary_json",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary_json": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "$ref": "#/$defs/verification_summary_minimum"
+        }
+      }
+    },
+    "verification_summary_minimum": {
+      "type": "object",
+      "required": [
+        "overall_status",
+        "failed_count",
+        "sections"
+      ],
+      "properties": {
+        "overall_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "failed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sections": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

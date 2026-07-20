@@ -1,0 +1,41 @@
+{
+  "output_dir": "/tmp/testloop-laoxia-scaffold",
+  "overall_status": "passed",
+  "failed_count": 0,
+  "server": {
+    "status": "passed",
+    "command": "go test ./...",
+    "report": "/tmp/testloop-laoxia-scaffold/server/verification-report.md",
+    "summary_json": "/tmp/testloop-laoxia-scaffold/server/verification-summary.json",
+    "summary": {
+      "overall_status": "passed",
+      "failed_count": 0,
+      "sections": [
+        {
+          "name": "用户项目 smoke",
+          "status": "passed",
+          "exit_code": 0,
+          "reason": null
+        }
+      ]
+    }
+  },
+  "web": {
+    "status": "passed",
+    "command": "pnpm install --frozen-lockfile && pnpm build:prod",
+    "report": "/tmp/testloop-laoxia-scaffold/web/verification-report.md",
+    "summary_json": "/tmp/testloop-laoxia-scaffold/web/verification-summary.json",
+    "summary": {
+      "overall_status": "passed",
+      "failed_count": 0,
+      "sections": [
+        {
+          "name": "用户项目 smoke",
+          "status": "passed",
+          "exit_code": 0,
+          "reason": null
+        }
+      ]
+    }
+  }
+}
