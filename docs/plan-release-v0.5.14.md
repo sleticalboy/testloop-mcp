@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.14 发布说明草案](./plan-release-notes-v0.5.14.md)。
 
-当前发布状态：候选边界整理中。尚未更新版本号、切 CHANGELOG 正式段、打 tag、生成 Release assets 或更新 Homebrew tap。
+当前发布状态：正式版本准备中。已更新版本号、切 CHANGELOG 正式段并同步当前安装/接入文档版本引用；尚未打 tag、生成正式 Release assets 或更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -24,7 +24,9 @@
 - [x] 默认 CI 显式运行全部 `test/*_test.sh`。
 - [x] 仓库卫生测试已防止重新提交 ignored tracked 文件和 Python bytecode。
 - [x] laoxia server/web 最新真实 bootstrap 已证明 `agent_artifact_status=passed`。
-- [x] `CHANGELOG.md` 的 `Unreleased` 已记录候选内容。
+- [x] `CHANGELOG.md` 的 `Unreleased` 已收敛到 `v0.5.14 - 2026-07-20`。
+- [x] `main.go` MCP implementation version 已更新到 `0.5.14`。
+- [x] 当前安装、quickstart、first-run/onboarding/verification CI 文档和对应测试期望已同步到 `0.5.14` / `v0.5.14`。
 
 ## 候选内容
 
@@ -57,18 +59,19 @@
 - [x] `c36758b` 远端 CI run `29737179225` passed，覆盖 laoxia artifact 自检复验证据。
 - [x] `ab81926` 远端 CI run `29737938722` passed，覆盖 v0.5.14 候选发布边界文档。
 - [x] `27a0410` 远端 CI run `29738560911` passed，覆盖 CLI help 退出码修复。
-- [ ] 最新 main CI 尚待最终确认；`7173228` 远端 CI run `29739075425` 仍在 GitHub Actions 队列中。
+- [x] `7173228` 远端 CI run `29739075425` passed，覆盖候选发布门禁脚本。
+- [ ] 最新 main CI 尚待最终确认；`b6ef1a8` 远端 CI run `29739151454` 仍在 GitHub Actions 队列中。
 
 ## 发布前门禁
 
-- [ ] 等最新 main CI 通过。
+- [ ] 等版本准备提交后的最新 main CI 通过。
 - [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
 - [x] `go test ./...`
 - [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
 - [x] `sh test/release_candidate_script_test.sh`
 - [x] `go build -o /tmp/testloop-mcp-v0.5.14-candidate .`
 - [x] `go build -o /tmp/testloop-testgen-v0.5.14-candidate ./cmd/testgen`
-- [x] `/tmp/testloop-mcp-v0.5.14-candidate --version` 当前仍输出 `testloop-mcp 0.5.13`，正式版本准备前不提前切版本号。
+- [x] `/tmp/testloop-mcp-v0.5.14-candidate --version` 正式版本准备后输出 `testloop-mcp 0.5.14`。
 - [x] `/tmp/testloop-mcp-v0.5.14-candidate --help`
 - [x] `/tmp/testloop-testgen-v0.5.14-candidate --help`
 - [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
@@ -78,11 +81,11 @@
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.14`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.14 - 2026-07-20`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.14` / `v0.5.14`。
-- [ ] 测试中的版本期望同步到 `0.5.14`。
-- [ ] 重新运行完整本地验证，确认版本准备改动可发布。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.14`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.14 - 2026-07-20`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.14` / `v0.5.14`。
+- [x] 测试中的版本期望同步到 `0.5.14`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布：`scripts/verify-release-candidate.sh v0.5.14` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.14`。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.14` 并推送。
 - [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -94,4 +97,4 @@
 
 ## 当前结论
 
-v0.5.14 已具备清晰候选边界，本地 release readiness 门禁已经补齐，但还不是正式发布状态。下一步先等待最新 main CI 从 GitHub Actions 队列中执行并通过；随后再决定是否进入正式版本准备。
+v0.5.14 已完成正式版本准备的本地验证，但还不是正式发布状态。下一步提交版本准备；提交后的 main CI 通过后，才进入 tag、Release assets、GitHub Release、Homebrew tap 和 Post-Release Verify。

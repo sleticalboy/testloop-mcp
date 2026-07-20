@@ -25,7 +25,7 @@ scripts/showcase-agent-onboarding-report.sh "$(command -v testloop-mcp)"
 如果要确认安装的是指定版本：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.13 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.14 scripts/showcase-onboarding.sh "$(command -v testloop-mcp)"
 ```
 
 ## 这条路径验证什么

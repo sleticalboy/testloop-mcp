@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.14 - 2026-07-20
+
 ### Added
 
 - 新增主 MCP 工具 handler 层结构化返回契约测试，固定 `generate_tests`、`run_tests`、`parse_results`、`parse_coverage` 和 `fix_suggestions` 的 `structuredContent`、handler 返回值与 `content[0].text` JSON 语义一致。
@@ -13,6 +15,7 @@
 - 新增 `test/ci_workflow_test.sh`，要求默认 CI 显式运行每个 `test/*_test.sh`。
 - 新增 `test/repository_hygiene_test.sh`，拒绝被 `.gitignore` 忽略但仍被 Git 跟踪的文件，并防止重新提交 `__pycache__/` 或 `.pyc`。
 - 新增 `scripts/verify-agent-artifact.sh` 和 `examples/agent-artifact-verify`，可离线校验下载后的 first-run/onboarding artifact 目录，并支持 manifest 批量模式和 `--json` 结构化输出。
+- 新增 `scripts/verify-release-candidate.sh`，把本地 release readiness 的 shell 语法、Go 测试、shell 契约测试、候选二进制构建、help/version、打包 dry-run、sha256 和 tarball 内容检查收敛成一个维护者入口。
 
 ### Changed
 

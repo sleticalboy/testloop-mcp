@@ -64,13 +64,13 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 
 Windows Git Bash/MSYS 用户需要确保安装目录在 `PATH` 中；详细说明见 [安装与接入](docs/installation.md)。
 
-当前 `v0.5.13` Release 已提供 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 二进制。手动下载示例：
+当前 `v0.5.14` Release 已提供 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 二进制。手动下载示例：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.13/testloop-mcp_v0.5.13_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.13/testloop-mcp_v0.5.13_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.5.13_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.5.13_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.5.14_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.5.14_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
@@ -80,14 +80,14 @@ Windows amd64/arm64 可直接下载 zip；将 `$arch` 设为 `amd64` 或 `arm64`
 
 ```powershell
 $arch = "amd64"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.13/testloop-mcp_v0.5.13_windows_$arch.zip"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.13/testloop-mcp_v0.5.13_windows_$arch.zip.sha256"
-$expected = (Get-Content ".\testloop-mcp_v0.5.13_windows_$arch.zip.sha256").Split()[0]
-$actual = (Get-FileHash ".\testloop-mcp_v0.5.13_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_windows_$arch.zip"
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.14/testloop-mcp_v0.5.14_windows_$arch.zip.sha256"
+$expected = (Get-Content ".\testloop-mcp_v0.5.14_windows_$arch.zip.sha256").Split()[0]
+$actual = (Get-FileHash ".\testloop-mcp_v0.5.14_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive ".\testloop-mcp_v0.5.13_windows_$arch.zip"
-& ".\testloop-mcp_v0.5.13_windows_$arch\testloop-mcp.exe" --help
-& ".\testloop-mcp_v0.5.13_windows_$arch\testloop-testgen.exe" --help
+Expand-Archive ".\testloop-mcp_v0.5.14_windows_$arch.zip"
+& ".\testloop-mcp_v0.5.14_windows_$arch\testloop-mcp.exe" --help
+& ".\testloop-mcp_v0.5.14_windows_$arch\testloop-testgen.exe" --help
 ```
 
 其他未覆盖平台或需要从源码构建：
@@ -146,7 +146,7 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 如果要确认 PATH 没有指到旧版本，可以加版本门禁：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.13 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.14 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
 如果还要做深度协议验收，确认真实 MCP 客户端能通过 stdio 和 Streamable HTTP 启动该二进制并调用轻量工具：
@@ -158,7 +158,7 @@ scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp
 如果要生成一份可复制的 Markdown 验收报告，可以把基础安装验收、真实 MCP 协议 smoke、最小 Agent demo 和可选用户项目命令聚合起来：
 
 ```bash
-TESTLOOP_REPORT_EXPECT_VERSION=0.5.13 \
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.14 \
   scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
@@ -604,7 +604,7 @@ go run ./examples/mcp-client-demo
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.13 \
+TESTLOOP_MCP_VERSION=v0.5.14 \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
 TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-first-run-ci.sh 'go test ./...'
@@ -614,7 +614,7 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.13 \
+TESTLOOP_MCP_VERSION=v0.5.14 \
 TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
 TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
@@ -648,7 +648,7 @@ jobs:
       - name: Run testloop first-run
         run: |
           curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-          TESTLOOP_MCP_VERSION=v0.5.13 \
+          TESTLOOP_MCP_VERSION=v0.5.14 \
           TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
           TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
             bash /tmp/testloop-first-run-ci.sh 'go test ./...'
