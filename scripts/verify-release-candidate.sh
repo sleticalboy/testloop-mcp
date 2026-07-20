@@ -50,6 +50,8 @@ goos="${TESTLOOP_RELEASE_CANDIDATE_GOOS:-darwin}"
 goarch="${TESTLOOP_RELEASE_CANDIDATE_GOARCH:-arm64}"
 mcp_binary="${tmp_dir}/testloop-mcp-${safe_tag}-candidate"
 testgen_binary="${tmp_dir}/testloop-testgen-${safe_tag}-candidate"
+agent_decision_fixture_dir="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}"
+agent_decision_fixture_json="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}.json"
 
 step() {
   printf '==> %s\n' "$*"
@@ -106,6 +108,8 @@ verify_archive_contents() {
 cd "$repo_root"
 
 require_command go
+require_command node
+require_command npm
 
 step "check shell syntax"
 find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n
@@ -117,6 +121,11 @@ step "run shell contract tests"
 while IFS= read -r test_script; do
   sh "$test_script"
 done < <(find test -maxdepth 1 -name '*_test.sh' -print | sort)
+
+step "verify agent decision fixture export package"
+rm -rf "$agent_decision_fixture_dir" "$agent_decision_fixture_json"
+node scripts/export-agent-decision-fixtures.mjs "$agent_decision_fixture_dir"
+(cd "$agent_decision_fixture_dir" && npm test --silent > "$agent_decision_fixture_json")
 
 step "build candidate binaries"
 go build -o "$mcp_binary" .

@@ -52,8 +52,13 @@ run_expect_code 2 "$bad_tag_out" bash "$script" 0.5.14
 assert_contains "$bad_tag_out" "TAG must look like vMAJOR.MINOR.PATCH"
 
 assert_contains "$script" "find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n"
+assert_contains "$script" "require_command node"
+assert_contains "$script" "require_command npm"
 assert_contains "$script" "go test ./..."
 assert_contains "$script" "find test -maxdepth 1 -name '*_test.sh'"
+assert_contains "$script" "verify agent decision fixture export package"
+assert_contains "$script" 'node scripts/export-agent-decision-fixtures.mjs "$agent_decision_fixture_dir"'
+assert_contains "$script" 'npm test --silent > "$agent_decision_fixture_json"'
 assert_contains "$script" 'go build -o "$mcp_binary" .'
 assert_contains "$script" 'go build -o "$testgen_binary" ./cmd/testgen'
 assert_contains "$script" '"$mcp_binary" --version'
