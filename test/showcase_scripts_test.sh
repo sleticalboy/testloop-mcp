@@ -46,6 +46,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-first-run-ci-external-project.sh"
   bash -n "${repo_root}/scripts/showcase-go-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
+  bash -n "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
 }
 
@@ -184,6 +185,84 @@ SH
   assert_contains "$out" "error: command timed out after 0.1s: git clone"
 }
 
+test_laoxia_scaffold_showcase_help_args_and_run() {
+  out="${tmp_dir}/laoxia-help.out"
+  run_expect_code 0 "$out" bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" --help
+  assert_contains "$out" "Usage: scripts/showcase-laoxia-scaffold-report.sh [testloop-mcp-binary]"
+  assert_contains "$out" "TESTLOOP_LAOXIA_OUTPUT_DIR"
+  assert_contains "$out" "TESTLOOP_LAOXIA_WEB_COMMAND"
+
+  out="${tmp_dir}/laoxia-args.out"
+  run_expect_code 2 "$out" bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" one two
+  assert_contains "$out" "Usage: scripts/showcase-laoxia-scaffold-report.sh [testloop-mcp-binary]"
+
+  fake_binary="${tmp_dir}/laoxia-fake-bin"
+  cat > "$fake_binary" <<'SH'
+#!/usr/bin/env sh
+case "${1:-}" in
+  --version)
+    echo "testloop-mcp 0.5.13"
+    ;;
+  *)
+    echo "fake testloop-mcp"
+    ;;
+esac
+SH
+  chmod +x "$fake_binary"
+
+  laoxia_root="${tmp_dir}/laoxia-root"
+  server_dir="${laoxia_root}/car-admin-server"
+  web_dir="${laoxia_root}/car-admin-web"
+  mkdir -p "$server_dir" "$web_dir"
+
+  success_out="${tmp_dir}/laoxia-success.out"
+  output_dir="${tmp_dir}/laoxia-artifacts"
+  run_expect_code 0 "$success_out" env \
+    TESTLOOP_LAOXIA_OUTPUT_DIR="$output_dir" \
+    TESTLOOP_LAOXIA_SERVER_DIR="$server_dir" \
+    TESTLOOP_LAOXIA_WEB_DIR="$web_dir" \
+    TESTLOOP_LAOXIA_SERVER_COMMAND='printf "server smoke ok\n"' \
+    TESTLOOP_LAOXIA_WEB_COMMAND='printf "web smoke ok\n"' \
+    TESTLOOP_REPORT_SKIP_BASIC=true \
+    TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+    TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+    TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+    bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" "$fake_binary"
+
+  assert_contains "$success_out" "laoxia_output_dir=$output_dir"
+  assert_contains "$success_out" "laoxia_server_report=$output_dir/server/verification-report.md"
+  assert_contains "$success_out" "laoxia_server_summary=$output_dir/server/verification-summary.json"
+  assert_contains "$success_out" "laoxia_server_status=passed"
+  assert_contains "$success_out" "laoxia_web_report=$output_dir/web/verification-report.md"
+  assert_contains "$success_out" "laoxia_web_summary=$output_dir/web/verification-summary.json"
+  assert_contains "$success_out" "laoxia_web_status=passed"
+  assert_contains "$success_out" "laoxia_status=passed"
+  assert_contains "$output_dir/server/verification-report.md" "server smoke ok"
+  assert_contains "$output_dir/web/verification-report.md" "web smoke ok"
+  assert_contains "$output_dir/server/verification-summary.json" '"overall_status": "passed"'
+  assert_contains "$output_dir/web/verification-summary.json" '"overall_status": "passed"'
+
+  failed_output_dir="${tmp_dir}/laoxia-failed-artifacts"
+  failure_out="${tmp_dir}/laoxia-failure.out"
+  run_expect_code 1 "$failure_out" env \
+    TESTLOOP_LAOXIA_OUTPUT_DIR="$failed_output_dir" \
+    TESTLOOP_LAOXIA_SERVER_DIR="$server_dir" \
+    TESTLOOP_LAOXIA_WEB_DIR="$web_dir" \
+    TESTLOOP_LAOXIA_SERVER_COMMAND='printf "server smoke ok\n"' \
+    TESTLOOP_LAOXIA_WEB_COMMAND='echo web failed; exit 7' \
+    TESTLOOP_REPORT_SKIP_BASIC=true \
+    TESTLOOP_REPORT_SKIP_PROCESS_SMOKE=true \
+    TESTLOOP_REPORT_SKIP_AGENT_DEMO=true \
+    TESTLOOP_REPORT_SKIP_TESTGEN_SMOKE=true \
+    bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" "$fake_binary"
+
+  assert_contains "$failure_out" "laoxia_server_status=passed"
+  assert_contains "$failure_out" "laoxia_web_status=failed"
+  assert_contains "$failure_out" "laoxia_status=failed"
+  assert_contains "$failed_output_dir/web/verification-report.md" "web failed"
+  assert_contains "$failed_output_dir/web/verification-summary.json" '"overall_status": "failed"'
+}
+
 test_showcase_scripts_are_valid_bash
 test_onboarding_showcase_help_and_args
 test_doctor_first_run_help_and_args
@@ -194,5 +273,6 @@ test_go_showcase_help_and_args
 test_go_showcase_git_timeout
 test_js_showcase_help_args_and_missing_pnpm
 test_js_showcase_git_timeout
+test_laoxia_scaffold_showcase_help_args_and_run
 
 echo "showcase script tests passed"

@@ -175,6 +175,23 @@ section 结果：
 
 项目侧 smoke 输出包含 `pnpm approve-builds`、Browserslist 和 Webpack asset size warning，但 `pnpm install --frozen-lockfile && pnpm build:prod` 退出码为 0，因此只作为项目 warning 记录。
 
+## laoxia 双栈报告入口
+
+前面的 server/web 验收已经证明两条 smoke 都能通过。为了后续复用更方便，可以直接使用新的双栈入口一次性产出两份报告：
+
+```bash
+scripts/showcase-laoxia-scaffold-report.sh "$(command -v testloop-mcp)"
+```
+
+默认输出目录为 `/tmp/testloop-laoxia-scaffold`，里面会分别落下：
+
+- `server/verification-report.md`
+- `server/verification-summary.json`
+- `web/verification-report.md`
+- `web/verification-summary.json`
+
+这个入口适合做项目级回归和发布前复验。它不替代 `generate-verification-report.sh`，只是把 laoxia 这类已经确认过的真实项目路径收成一个更省心的命令。
+
 ### Server onboarding
 
 运行命令：
