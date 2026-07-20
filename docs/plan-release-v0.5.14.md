@@ -27,6 +27,7 @@
 - [x] `CHANGELOG.md` 的 `Unreleased` 已收敛到 `v0.5.14 - 2026-07-20`。
 - [x] `main.go` MCP implementation version 已更新到 `0.5.14`。
 - [x] 当前安装、quickstart、first-run/onboarding/verification CI 文档和对应测试期望已同步到 `0.5.14` / `v0.5.14`。
+- [x] Release Artifacts、Post-Release Verify、Windows ARM64 Probe 和 Homebrew Formula 生成器已同步 `--help` 退出码 0。
 
 ## 候选内容
 

@@ -67,6 +67,17 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  file="$1"
+  needle="$2"
+  if grep -F -- "$needle" "$file" >/dev/null 2>&1; then
+    echo "expected $file to not contain: $needle" >&2
+    echo "--- $file ---" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
 test_complete_release_assets_pass() {
   gh_log="${tmp_dir}/gh-complete.log"
   out="${tmp_dir}/complete.out"
@@ -103,7 +114,23 @@ test_missing_release_assets_fail() {
   assert_contains "$out" "testloop-mcp_v9.9.9_windows_arm64.zip.sha256"
 }
 
+test_release_help_checks_expect_exit_zero() {
+  assert_contains "${repo_root}/.github/workflows/release.yml" 'test "$mcp_status" -eq 0'
+  assert_contains "${repo_root}/.github/workflows/release.yml" 'test "$testgen_status" -eq 0'
+  assert_contains "${repo_root}/.github/workflows/post-release-verify.yml" 'test "$mcp_status" -eq 0'
+  assert_contains "${repo_root}/.github/workflows/post-release-verify.yml" 'test "$testgen_status" -eq 0'
+  assert_contains "${repo_root}/.github/workflows/windows-arm64-probe.yml" 'test "$mcp_status" -eq 0'
+  assert_contains "${repo_root}/.github/workflows/windows-arm64-probe.yml" 'test "$testgen_status" -eq 0'
+  assert_not_contains "${repo_root}/.github/workflows/release.yml" 'test "$mcp_status" -eq 2'
+  assert_not_contains "${repo_root}/.github/workflows/post-release-verify.yml" 'test "$mcp_status" -eq 2'
+  assert_not_contains "${repo_root}/.github/workflows/windows-arm64-probe.yml" 'test "$mcp_status" -eq 2'
+  assert_contains "${repo_root}/scripts/generate-homebrew-formula.sh" 'shell_output("#{bin}/testloop-mcp --help 2>&1")'
+  assert_contains "${repo_root}/scripts/generate-homebrew-formula.sh" 'shell_output("#{bin}/testloop-testgen --help 2>&1")'
+  assert_not_contains "${repo_root}/scripts/generate-homebrew-formula.sh" 'shell_output("#{bin}/testloop-mcp --help 2>&1", 2)'
+}
+
 test_complete_release_assets_pass
 test_missing_release_assets_fail
+test_release_help_checks_expect_exit_zero
 
 echo "release asset tests passed"

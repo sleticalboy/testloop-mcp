@@ -54,6 +54,7 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - 新增 `scripts/verify-release-candidate.sh`，把本地 release readiness 的 shell 语法、Go 测试、shell 契约测试、候选二进制构建、help/version、打包 dry-run、sha256 和 tarball 内容检查收敛成一个维护者入口。
 - 已移除仓库里曾被跟踪的 Python bytecode 缓存。
 - `testloop-mcp --help` 和 `testgen --help` 会以退出码 0 返回，发布门禁、安装自检和脚本 wrapper 不再需要为帮助输出特殊处理非 0 状态。
+- Release Artifacts、Post-Release Verify、Windows ARM64 Probe 和 Homebrew Formula 生成器已同步 `--help` 退出码 0，避免正式发布验证继续按旧行为期待退出码 2。
 
 ### 真实项目证据
 

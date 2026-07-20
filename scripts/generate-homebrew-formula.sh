@@ -68,8 +68,8 @@ class TestloopMcp < Formula
   end
 
   test do
-    assert_match "Usage of testloop-mcp", shell_output("#{bin}/testloop-mcp --help 2>&1", 2)
-    assert_match "Usage: testgen", shell_output("#{bin}/testloop-testgen --help 2>&1", 2)
+    assert_match "Usage of testloop-mcp", shell_output("#{bin}/testloop-mcp --help 2>&1")
+    assert_match "Usage: testgen", shell_output("#{bin}/testloop-testgen --help 2>&1")
   end
 end
 FORMULA

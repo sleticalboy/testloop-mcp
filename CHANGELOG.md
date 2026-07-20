@@ -34,6 +34,7 @@
 - `verification-summary-decision-demo` 会先校验 `overall_status`、`failed_count` 和 `sections` 必填字段，避免把非 verification summary JSON 误判成 `ready`。
 - 公开 showcase、外部 onboarding/first-run bootstrap、regression smoke 和 regression sample 输出路径都增加了更早的目录/文件输入校验。
 - `testloop-mcp --help` 和 `testgen --help` 现在会在打印帮助后返回退出码 0，方便直接作为发布门禁或安装自检命令。
+- Release Artifacts、Post-Release Verify、Windows ARM64 Probe 和 Homebrew Formula 生成器已同步 `--help` 退出码 0，避免正式发布时仍按旧退出码 2 校验。
 
 ### Removed
 

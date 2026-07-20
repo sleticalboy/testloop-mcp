@@ -77,7 +77,7 @@ jobs:
           testgen_status=$?
           set -e
 
-          test "$mcp_status" -eq 2
-          test "$testgen_status" -eq 2
+          test "$mcp_status" -eq 0
+          test "$testgen_status" -eq 0
           grep -F "Usage of testloop-mcp" mcp-help.txt
           grep -F "Usage: testgen" testgen-help.txt
