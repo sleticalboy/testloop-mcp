@@ -600,6 +600,16 @@ go run ./examples/mcp-client-demo
 
 预期输出会包含 `run_tests: status=fail action=apply_fix_suggestions`、`repair_task: category=...`、`rerun: status=pass action=ready` 和 `parse_coverage`。这条路径用于验证 Agent/编辑器集成如何优先消费结构化 MCP 返回，而不是解析自然语言日志。
 
+如果要验证客户端能按 manifest 消费所有 `validate_coverage_task` 决策 fixture，而不是硬编码文件名或只看 `status`：
+
+```bash
+node scripts/validate-agent-decision-fixtures.mjs \
+  docs/fixtures/agent-decision-fixtures.json \
+  .
+```
+
+预期输出会包含 `agent_decision_fixture_status=passed`、`fixture_count=8` 和 `agent_decision_fixture_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input`。
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：

@@ -45,6 +45,7 @@ required_commands = [
     "go run ./examples/first-run-agent-response-demo",
     "go run ./examples/mcp-client-demo",
     "go run ./examples/verification-summary-decision-demo",
+    "node scripts/validate-agent-decision-fixtures.mjs",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
