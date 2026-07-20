@@ -19,6 +19,7 @@ testloop-mcp v0.5.15
 - [x] GitHub Release 正文已更新为正式 v0.5.15 发布说明。
 - [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.15`。
 - [x] Homebrew tap 已更新到 `0.5.15` 并推送，tap commit `d72ab7d`。
+- [x] Post-Release Verify run `29757718773` passed，覆盖资产清单和五个平台安装脚本 dry run。
 
 ## 摘要
 
@@ -87,5 +88,5 @@ v0.5.15 继续围绕“面向 AI 编程代理的测试反馈闭环 MCP 服务”
 
 - 对外文案应强调“Agent 决策 fixture 可复制、可 JSON 校验、可进入客户端 CI”，而不是“多语言测试生成能力增强”。
 - 推荐演示路径：`go run ./examples/mcp-client-demo` 展示最小失败修复闭环，再运行 `node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures` 和导出包内的 `npm test --silent` 展示客户端契约回归。
-- v0.5.15 已完成正式 GitHub Release、Release assets、资产校验、仓库内 Formula 和 Homebrew tap 更新。
-- 发布后验证证据：Release Artifacts run `29756859746`、资产清单校验、tap commit `d72ab7d` 均已通过。
+- v0.5.15 已完成正式 GitHub Release、Release assets、资产校验、仓库内 Formula、Homebrew tap 和 Post-Release Verify。
+- 发布后验证证据：Release Artifacts run `29756859746`、资产清单校验、tap commit `d72ab7d`、Post-Release Verify run `29757718773` 均已通过。

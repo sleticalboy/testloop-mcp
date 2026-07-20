@@ -54,6 +54,7 @@
 - [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.15` 已验证正式 Release 的 10 个资产完整。
 - [x] `ruby -c Formula/testloop-mcp.rb` 和 `sh test/release_assets_test.sh` 已验证仓库内 Homebrew Formula。
 - [x] Homebrew tap 已更新到 `0.5.15` 并推送：tap commit `d72ab7d`。
+- [x] Post-Release Verify run `29757718773` passed，覆盖资产清单和五个平台安装脚本 dry run。
 
 ## 发布前门禁
 
@@ -76,8 +77,8 @@
 - [x] 更新 GitHub Release 正文为正式 v0.5.15 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.15` 更新仓库内 Formula。
 - [x] 更新 Homebrew tap 到 `0.5.15` 并推送：tap commit `d72ab7d`。
-- [ ] 手动触发 Post-Release Verify。
+- [x] 手动触发 Post-Release Verify：run `29757718773` passed。
 
 ## 当前结论
 
-v0.5.15 已完成正式发布、Release Artifacts、资产清单校验、GitHub Release 正文、仓库内 Formula 和 Homebrew tap 更新。发布收尾只剩提交并推送本仓库的 Formula 与发布记录更新，再触发 Post-Release Verify。
+v0.5.15 已完成正式发布、Release Artifacts、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify 五平台安装 dry run。发布收尾只剩提交并推送本发布记录更新，然后回到主线产品价值。
