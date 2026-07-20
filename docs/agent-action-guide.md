@@ -5,7 +5,7 @@
 ## 核心规则
 
 - `action=ready`：可以吸收生成测试，进入下一个任务或重新统计覆盖率。
-- `action=manual_review_*`：不要继续自动修同一个生成测试；记录原因，改走公共入口、环境设计、依赖注入或人工复核。
+- `action=manual_review_*`：不要继续自动修同一个生成测试；记录原因，改走公共入口、环境设计、依赖注入或人工复核。该 action 可出现在 `passed` 或 `failed` 状态。
 - `action=apply_fix_suggestions`：优先读取 `run_result.fix_suggestions[].repair_task`。
 - `action=repair_generated_test`：读取 `run_result.failures[]`，判断修测试草稿还是修实现。
 - `action=needs_better_input`：测试可能通过了，但目标覆盖行没命中；需要更强输入或更合适的公共入口。
@@ -25,6 +25,7 @@
 | `passed` | `manual_review_internal` | 不要导入未导出内部符号；改走已导出的公共 API、测试 seam 或模块级集成测试。 |
 | `passed` | `manual_review_no_runtime` | 不要为纯类型/barrel 文件生成运行时测试；通过消费方测试、类型检查或包入口测试验证。 |
 | `failed` | `apply_fix_suggestions` | 读取 `run_result.fix_suggestions[].repair_task`，按 `target_file`、`editable_files` 和 `suggested_commands` 执行修复闭环。 |
+| `failed` | `manual_review_external_service` | 失败来自 live RPC、对象存储、路由状态或长重试时序；不要自动修生成测试，改用 fake client、route data 或集成环境验证。 |
 | `failed` | `repair_generated_test` | 读取 `run_result.failures[]`；如果失败来自测试草稿输入/断言，修生成测试；如果暴露真实 bug，再修实现。 |
 | `failed` | `needs_better_input` | 当前测试没有命中目标行；根据 `metadata.coverage_miss_reason`、`coverage_hit_lines`、`coverage_missed_lines` 重新选择输入或公共入口。 |
 | `generation_error` | `inspect_generation_error` | 读取 `error`；通常是文件缺失、源码不可解析或静态生成器无法处理。先修任务上下文或源码路径。 |
@@ -34,7 +35,7 @@
 ## 不要做的事
 
 - 不要只看 `status=passed` 就自动合入测试；`manual_review_*` 也常常是 `passed`，它表示生成了可运行的手审草稿或 skip。
-- 不要对 `manual_review_*` 反复调用同一个 `generate_tests`；这通常只会得到同类手审结果。
+- 不要对 `manual_review_*` 反复调用同一个 `generate_tests`；即使它的 `status=failed`，也不应直接进入 `apply_fix_suggestions` 修复循环。
 - 不要把 `suggested_fix` 当补丁直接应用；应优先使用 `repair_task` 限定修复范围。
 - 不要无限重试 provider；同一任务最多重试一次，仍失败时降级 `static` 或提示用户修配置。
 

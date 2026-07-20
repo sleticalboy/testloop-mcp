@@ -78,10 +78,11 @@ Agent 决策应以 `status/action` 为准：
 
 - `passed/ready`：生成测试已通过，可以进入下一个任务或重新统计覆盖率。
 - `failed/apply_fix_suggestions`：读取 `run_result.fix_suggestions[].repair_task`。
+- `failed/manual_review_external_service`：失败来自外部服务、路由状态或长重试时序；不要自动修同一个生成测试。
 - `failed/needs_better_input`：测试通过能力不足，目标覆盖行未命中，需要更强输入或公共入口。
 - `generation_error`：读取 `provider_error.action` 或 `error`。
 - `run_error`：先修测试命令、依赖或项目环境。
-- `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计。
+- `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计；该 action 可出现在 `passed` 或 `failed` 状态。
 
 更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)，典型返回可对照 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)，客户端回归建议见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
 
