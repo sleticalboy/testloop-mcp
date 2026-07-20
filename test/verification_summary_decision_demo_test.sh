@@ -88,7 +88,25 @@ cat > "$transport_failed_summary" <<'JSON'
 }
 JSON
 
+missing_sections_summary="${tmp_dir}/missing-sections-summary.json"
+cat > "$missing_sections_summary" <<'JSON'
+{
+  "overall_status": "passed",
+  "failed_count": 0
+}
+JSON
+
+invalid_status_summary="${tmp_dir}/invalid-status-summary.json"
+cat > "$invalid_status_summary" <<'JSON'
+{
+  "overall_status": "unknown",
+  "failed_count": 0,
+  "sections": []
+}
+JSON
+
 out="${tmp_dir}/decision.out"
+err="${tmp_dir}/decision.err"
 
 (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$passed_summary") > "$out"
 assert_contains "$out" "verification_summary: status=passed failed=0 sections=3"
@@ -104,5 +122,17 @@ assert_contains "$out" "markdown_report=/tmp/testloop-project-report.md"
 (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$transport_failed_summary") > "$out"
 assert_contains "$out" "1. failed_section=真实 MCP 协议 smoke exit_code=1 decision=inspect-mcp-transport"
 assert_contains "$out" "agent_next_step=inspect-mcp-transport"
+
+if (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$missing_sections_summary") >"$out" 2>"$err"; then
+  echo "expected missing sections summary to fail" >&2
+  exit 1
+fi
+assert_contains "$err" "missing sections"
+
+if (cd "$repo_root" && go run ./examples/verification-summary-decision-demo "$invalid_status_summary") >"$out" 2>"$err"; then
+  echo "expected invalid status summary to fail" >&2
+  exit 1
+fi
+assert_contains "$err" "invalid overall_status"
 
 echo "verification summary decision demo test passed"

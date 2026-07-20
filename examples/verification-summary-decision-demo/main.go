@@ -83,12 +83,26 @@ func loadSummary(path string) (verificationSummary, error) {
 	if err != nil {
 		return verificationSummary{}, err
 	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return verificationSummary{}, fmt.Errorf("%s invalid JSON: %w", path, err)
+	}
+	for _, field := range []string{"overall_status", "failed_count", "sections"} {
+		if _, ok := raw[field]; !ok {
+			return verificationSummary{}, fmt.Errorf("%s missing %s", path, field)
+		}
+	}
+
 	var summary verificationSummary
 	if err := json.Unmarshal(data, &summary); err != nil {
 		return verificationSummary{}, fmt.Errorf("%s invalid JSON: %w", path, err)
 	}
-	if summary.OverallStatus == "" {
-		return verificationSummary{}, fmt.Errorf("%s missing overall_status", path)
+	if summary.OverallStatus != "passed" && summary.OverallStatus != "failed" {
+		return verificationSummary{}, fmt.Errorf("%s invalid overall_status: %s", path, summary.OverallStatus)
+	}
+	if summary.FailedCount < 0 {
+		return verificationSummary{}, fmt.Errorf("%s invalid failed_count: %d", path, summary.FailedCount)
 	}
 	return summary, nil
 }

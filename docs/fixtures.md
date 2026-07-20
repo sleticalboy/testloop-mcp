@@ -91,6 +91,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 - `docs/fixtures/verification-summary.schema.json`
 - `tools/agent_response_artifact_manifest_schema_test.go`
 - `tools/verification_summary_schema_test.go`
+- `test/verification_summary_decision_demo_test.sh`
 - `examples/agent-response-manifest-demo` 的输出断言
 - `expected_section_signals` 与 fixture summary / `agent-response.txt` 中的 `section_signal`
 - README、quickstart、接入方一页式验证指南和 MCP 客户端契约测试说明里的 manifest/schema 入口
@@ -100,5 +101,6 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 ```bash
 sh test/agent_response_artifact_manifest_test.sh
 sh test/agent_response_manifest_demo_test.sh
+sh test/verification_summary_decision_demo_test.sh
 go test ./tools -run TestAgentResponseArtifactManifestSchema -count=1
 ```
