@@ -84,13 +84,13 @@
 - [x] 重新运行完整本地验证，确认版本准备改动可发布。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [x] 打 tag `v0.5.13` 并推送。
-- [ ] Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.13` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.13 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.13` 更新仓库内 Formula。
+- [x] Release Artifacts workflow 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.13` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.13 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.13` 更新仓库内 Formula。
 - [ ] 更新 Homebrew tap 到 `0.5.13` 并推送。
 - [ ] 手动触发 Post-Release Verify，确认资产清单和五平台安装脚本 dry run 通过。
 
 ## 当前结论
 
-v0.5.13 已完成正式版本准备，本地 release readiness 已通过，tag `v0.5.13` 已推送。Release Artifacts 前两次失败都发生在 GitHub Release API 503：第一次卡在 `gh release view`，第二次卡在 `gh release upload`。构建和本地资产校验本身已通过。当前已给 release workflow 的 release view/create/upload 加重试，下一步应提交 workflow 加固后用 workflow_dispatch 对 `v0.5.13` 重跑资产构建。
+v0.5.13 已完成正式版本准备、tag、Release Artifacts、资产完整性校验、GitHub Release 正文和仓库内 Formula 更新。Release Artifacts 初始失败都发生在 GitHub Release API/Upload API 503；workflow 加重试后，workflow_dispatch run `29710581315` 已成功。下一步应提交仓库内 Formula 与 workflow 加固，然后更新 Homebrew tap 并触发 Post-Release Verify。
