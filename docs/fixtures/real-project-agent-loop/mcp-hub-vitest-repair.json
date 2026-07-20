@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "action": "ready",
+  "task": {
+    "id": "vitest-mcp-hub-repair-1",
+    "framework": "vitest",
+    "target": "ConfigManager.loadConfig",
+    "file": "src/utils/config.js",
+    "line_range": "136-136",
+    "gap_type": "branch",
+    "missing_branches": [
+      "未覆盖 if 分支: !this.configPaths || this.configPaths.length === 0"
+    ],
+    "test_name": "covers ConfigManager.loadConfig empty config paths branch",
+    "priority": 121,
+    "confidence": 0.9
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 1,
+    "action": "ready"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "ready",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "metadata": {
+    "framework": "vitest",
+    "test_file": "tests/utils/config.test.js"
+  },
+  "regression_note": "该真实 mcp-hub 样本用于防止 async throwing branch 从 passed/ready 回退到 repair_generated_test。",
+  "redaction_note": "该 fixture 只保留真实 mcp-hub 验证摘要；原始 run_result.raw_output 包含外部项目测试日志和本机临时路径，不能入仓。"
+}

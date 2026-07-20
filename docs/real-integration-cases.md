@@ -471,6 +471,60 @@ summary={"limit":1,"status_counts":{"passed":1},"action_counts":{"ready":1},"zer
 
 原始 JSONL 不入仓。原因是 `run_result.raw_output` 会包含外部项目测试日志和本机环境变量；文档和 fixture 只保留可公开复查的结构化摘要。
 
+## mcp-hub 历史 repair 回归样例
+
+这个样例用于验证真实 JS/Vitest 项目里曾经容易退回 `repair_generated_test` 的 async throwing branch。当前期望不是失败，而是生成器可以构造 `await expect(...).rejects.toThrow(...)` 断言，并让 Agent 得到 `passed/ready`。
+
+运行命令：
+
+```bash
+TESTLOOP_VALIDATE_JS_TASKS_FILE=/Users/binlee/code/open-source/testloop-mcp/testdata/js-mcp-hub/repair-tasks.jsonl \
+TESTLOOP_VALIDATE_JS_TASK_IDS=vitest-mcp-hub-repair-1 \
+TESTLOOP_JS_TEST_COMMAND='npx vitest run {path}' \
+  scripts/validate-js-coverage-top-tasks.sh \
+  /Users/binlee/code/open-source/mcp-hub \
+  vitest \
+  /tmp/testloop-mcp-hub-repair-agent-loop.jsonl
+```
+
+本次输出摘要：
+
+```text
+task.validate.done index=1 id=vitest-mcp-hub-repair-1 target=ConfigManager.loadConfig status=passed action=ready
+summary={"limit":1,"framework":"vitest","status_counts":{"passed":1},"action_counts":{"ready":1},"zero_skip":1,"skipped_total":0}
+```
+
+脱敏后的稳定 fixture 见 [mcp-hub-vitest-repair.json](./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json)。关键字段：
+
+```json
+{
+  "status": "passed",
+  "action": "ready",
+  "task": {
+    "id": "vitest-mcp-hub-repair-1",
+    "target": "ConfigManager.loadConfig",
+    "file": "src/utils/config.js",
+    "line_range": "136-136",
+    "gap_type": "branch"
+  },
+  "generated": {
+    "status": "ok",
+    "generated_cases": 1,
+    "action": "ready"
+  },
+  "run_result": {
+    "status": "pass",
+    "action": "ready",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  }
+}
+```
+
+这条证据补齐了 ready 分支之外的历史 repair 回归场景：Agent 不需要盲修生成测试，而是可以把该 coverage task 视为已收敛，继续处理下一个任务。
+
 ## laoxia v0.5.4 历史 onboarding 样例
 
 下面保留 v0.5.4 时期使用 `scripts/showcase-agent-onboarding-report.sh` 的历史样例，用来说明项目接入模板的演进。新接入项目应优先复制上面的 v0.5.7 CI bootstrap 示例。

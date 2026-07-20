@@ -26,6 +26,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 | 文件 | status/action | 来源 | Agent 下一步 |
 | --- | --- | --- | --- |
 | [real-project-agent-loop/laoxia-server-go-utils.json](./fixtures/real-project-agent-loop/laoxia-server-go-utils.json) | `passed/ready` | laoxia `car-admin-server` 的 `utils` 包，`scripts/validate-go-coverage-top-tasks.sh` 验证 1 个真实 Go coverage task | 接受本次低依赖 utils 增量测试证据，继续处理下一个 coverage task；不要提交原始 `raw_output`。 |
+| [real-project-agent-loop/mcp-hub-vitest-repair.json](./fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json) | `passed/ready` | mcp-hub `ConfigManager.loadConfig` 历史 repair 回归样本，`scripts/validate-js-coverage-top-tasks.sh` 验证 1 个真实 Vitest coverage task | 接受 async throwing branch 已生成正确 reject 断言的证据；防止回退到 `repair_generated_test`。 |
 
 ## first-run artifact fixture
 
