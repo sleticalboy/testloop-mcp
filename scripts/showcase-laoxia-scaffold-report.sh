@@ -15,7 +15,7 @@ The script writes:
 
 Environment:
   TESTLOOP_LAOXIA_OUTPUT_DIR      Output dir. Default: /tmp/testloop-laoxia-scaffold
-  TESTLOOP_LAOXIA_SUMMARY_JSON    Optional combined summary JSON path.
+  TESTLOOP_LAOXIA_SUMMARY_JSON    Optional combined summary JSON file path.
   TESTLOOP_LAOXIA_SERVER_DIR      Go server project dir.
   TESTLOOP_LAOXIA_WEB_DIR         Vue web project dir.
   TESTLOOP_LAOXIA_SERVER_COMMAND  Server smoke command. Default: go test ./...

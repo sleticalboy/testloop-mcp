@@ -15,7 +15,7 @@ Arguments:
 Environment:
   TESTLOOP_PAIR_PREFIX              Output key prefix. Default: dual
   TESTLOOP_PAIR_OUTPUT_DIR          Output dir. Default: /tmp/testloop-dual-project
-  TESTLOOP_PAIR_SUMMARY_JSON        Optional combined summary JSON path.
+  TESTLOOP_PAIR_SUMMARY_JSON        Optional combined summary JSON file path.
   TESTLOOP_PAIR_FIRST_NAME          First project name used for output paths.
   TESTLOOP_PAIR_FIRST_DIR           First project directory.
   TESTLOOP_PAIR_FIRST_COMMAND       First project smoke command.
