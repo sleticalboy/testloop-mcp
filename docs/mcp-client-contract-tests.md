@@ -98,6 +98,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 ```
 
 导出包保留 `docs/fixtures/...` 路径和 validator 脚本，适合直接放进客户端仓库的契约测试目录。
+导出包还包含无依赖 `package.json`，客户端 CI 可以直接执行 `npm test --silent`。
 
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 

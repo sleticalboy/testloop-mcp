@@ -40,6 +40,8 @@ required_snippets = [
     "node scripts/validate-agent-decision-fixtures.mjs --json \\",
     "node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures",
     "最小决策 fixture 包",
+    "package.json",
+    "npm test --silent",
     "fixture_count",
     "decisions[]",
     "fixtures[]",

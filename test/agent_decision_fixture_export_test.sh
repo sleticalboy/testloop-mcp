@@ -33,6 +33,7 @@ assert_exists() {
 assert_contains "$out" "agent_decision_fixture_export_status=passed"
 assert_contains "$out" "fixture_count=8"
 assert_exists "$export_dir/README.md"
+assert_exists "$export_dir/package.json"
 assert_exists "$export_dir/scripts/validate-agent-decision-fixtures.mjs"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.json"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.schema.json"
@@ -69,6 +70,22 @@ assert payload["decisions"] == [
     "apply-repair",
     "needs-better-input",
 ]
+assert payload["failures"] == []
+PY
+
+npm_json_out="${tmp_dir}/validator-npm.json"
+(
+  cd "$export_dir"
+  npm test --silent > "$npm_json_out"
+)
+python3 - "$npm_json_out" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "passed"
+assert payload["fixture_count"] == 8
 assert payload["failures"] == []
 PY
 

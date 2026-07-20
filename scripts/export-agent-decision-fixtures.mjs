@@ -64,6 +64,14 @@ try {
     }
     copyRequiredFile(item.path);
   }
+  fs.writeFileSync(path.join(outputDir, 'package.json'), `${JSON.stringify({
+    name: 'testloop-agent-decision-fixtures',
+    private: true,
+    type: 'module',
+    scripts: {
+      test: 'node scripts/validate-agent-decision-fixtures.mjs --json docs/fixtures/agent-decision-fixtures.json .',
+    },
+  }, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, 'README.md'), [
     '# testloop-mcp Agent decision fixtures',
     '',
@@ -73,6 +81,12 @@ try {
     'node scripts/validate-agent-decision-fixtures.mjs --json \\',
     '  docs/fixtures/agent-decision-fixtures.json \\',
     '  .',
+    '```',
+    '',
+    'Or run the bundled package script:',
+    '',
+    '```bash',
+    'npm test --silent',
     '```',
     '',
     'The validator returns non-zero on failure and still writes parseable JSON with `status=failed`.',
