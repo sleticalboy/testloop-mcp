@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.15 候选发布说明](./plan-release-notes-v0.5.15.md)。
 
-当前发布状态：候选边界整理中。尚未更新 implementation version、尚未收敛 `CHANGELOG.md` 正式版本段、尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
+当前发布状态：正式版本准备文件已更新。implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.15` / `v0.5.15`；尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -51,18 +51,18 @@
 
 ## 发布前门禁
 
-- [ ] 等候选边界整理后的最新 main CI 通过。
-- [ ] `scripts/verify-release-candidate.sh v0.5.15`
-- [ ] `git diff --check`
-- [ ] 确认 `testloop-mcp --version` 已在正式版本准备后输出 `testloop-mcp 0.5.15`。
+- [x] 候选边界整理后的 main CI 已通过：`34f0954` run `29750391251` passed。
+- [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.15-candidate-dist scripts/verify-release-candidate.sh v0.5.15`
+- [x] `git diff --check`
+- [x] 确认 `testloop-mcp --version` 已在正式版本准备后输出 `testloop-mcp 0.5.15`。
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.15`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.15 - 2026-07-20`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.15` / `v0.5.15`。
-- [ ] 测试中的版本期望同步到 `0.5.15`。
-- [ ] 重新运行完整本地验证，确认版本准备改动可发布。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.15`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.15 - 2026-07-20`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.15` / `v0.5.15`。
+- [x] 测试中的版本期望同步到 `0.5.15`。
+- [x] 重新运行完整本地验证，确认版本准备改动可发布：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.15` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -74,4 +74,4 @@
 
 ## 当前结论
 
-v0.5.15 已具备候选范围草案和本地 dry-run 证据，但尚未进入正式版本准备。下一步应提交候选文档并等待 main CI；CI 通过后，再决定是否进入正式发布流程。
+v0.5.15 正式版本准备文件和本地门禁都已完成，但尚未提交版本准备、打 tag、生成 Release assets 或更新 Homebrew tap。下一步应提交版本准备并等待 main CI；CI 通过后，再决定是否打 `v0.5.15` tag 并进入 Release Artifacts。

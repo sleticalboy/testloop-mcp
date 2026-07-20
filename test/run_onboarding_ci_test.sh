@@ -37,7 +37,7 @@ cat > "$fake_binary" <<'SH'
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.14"
+    echo "testloop-mcp 0.5.15"
     ;;
   *)
     echo "fake testloop-mcp"
@@ -70,7 +70,7 @@ assert_contains "$out" "output path must be a directory"
 run_expect_code 0 "$out" env \
   TESTLOOP_MCP_REPO_DIR="$repo_root" \
   TESTLOOP_MCP_COMMAND="$fake_binary" \
-  TESTLOOP_MCP_VERSION=v0.5.14 \
+  TESTLOOP_MCP_VERSION=v0.5.15 \
   TESTLOOP_ONBOARDING_PROJECT_DIR="$project_dir" \
   TESTLOOP_ONBOARDING_OUTPUT_DIR="$output_dir" \
   TESTLOOP_REPORT_SKIP_BASIC=true \

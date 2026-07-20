@@ -39,7 +39,7 @@ test_verify_client_setup_passes_with_skip_http() {
 test_verify_client_setup_checks_expected_version() {
   out="${tmp_dir}/verify-version.out"
   TESTLOOP_MCP_VERIFY_SKIP_HTTP=true \
-    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.14 \
+    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.15 \
     bash "${repo_root}/scripts/verify-client-setup.sh" "$binary" > "$out"
 
   assert_contains "$out" "==> version"
@@ -59,7 +59,7 @@ test_verify_client_setup_rejects_version_mismatch() {
     echo "expected version mismatch verification to fail" >&2
     exit 1
   fi
-  assert_contains "$out" "error: version mismatch: expected 9.9.9, got 0.5.14"
+  assert_contains "$out" "error: version mismatch: expected 9.9.9, got 0.5.15"
   assert_contains "$out" "brew upgrade sleticalboy/tap/testloop-mcp"
 }
 
@@ -85,7 +85,7 @@ SH
   out="${tmp_dir}/old-version.out"
   set +e
   TESTLOOP_MCP_VERIFY_SKIP_HTTP=true \
-    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.14 \
+    TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.15 \
     bash "${repo_root}/scripts/verify-client-setup.sh" "$old_binary" > "$out" 2>&1
   code=$?
   set -e

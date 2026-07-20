@@ -8,9 +8,13 @@ testloop-mcp v0.5.15
 
 - [x] 创建 v0.5.15 候选发布说明草案。
 - [x] 梳理 v0.5.14 之后围绕真实项目 Agent 决策 fixture、manifest 驱动客户端契约、JSON validator、最小导出包和 release readiness 门禁的改动边界。
-- [x] 当前仍是候选边界整理：不更新 implementation version、不收敛 `CHANGELOG.md` 的正式版本段、不打 tag、不创建 GitHub Release、不更新 Homebrew tap。
+- [x] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.15` / `v0.5.15`。
 - [x] 完整本地 dry-run 门禁已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.15-candidate-dist scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`。
 - [x] 最新已完成的远端 CI：`153574f` run `29750125793` passed，覆盖 release readiness 显式校验 Agent 决策 fixture 导出包。
+- [x] 候选边界整理提交 `34f0954` 的远端 CI run `29750391251` passed。
+- [x] 版本准备后的完整本地门禁已通过：`scripts/verify-release-candidate.sh v0.5.15` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.15`。
+- [ ] 版本准备后的远端 CI 尚待重新运行。
+- [ ] 尚未打 tag、尚未创建 GitHub Release、尚未更新 Homebrew tap。
 
 ## 摘要
 
@@ -79,4 +83,4 @@ v0.5.15 候选继续围绕“面向 AI 编程代理的测试反馈闭环 MCP 服
 
 - 对外文案应强调“Agent 决策 fixture 可复制、可 JSON 校验、可进入客户端 CI”，而不是“多语言测试生成能力增强”。
 - 推荐演示路径：`go run ./examples/mcp-client-demo` 展示最小失败修复闭环，再运行 `node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures` 和导出包内的 `npm test --silent` 展示客户端契约回归。
-- 正式发布前仍需要更新版本号、收敛 CHANGELOG、跑正式 release readiness、等待 main CI 通过后再打 tag。
+- 正式发布前仍需要跑版本准备后的 release readiness、提交并等待 main CI 通过后再打 tag。

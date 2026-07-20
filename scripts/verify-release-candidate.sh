@@ -10,7 +10,7 @@ The script does not update versions, create tags, publish GitHub Releases, or
 touch Homebrew taps.
 
 Example:
-  scripts/verify-release-candidate.sh v0.5.14
+  scripts/verify-release-candidate.sh v0.5.15
 
 Environment:
   TESTLOOP_RELEASE_CANDIDATE_TMP_DIR   Directory for candidate binaries. Default: /tmp

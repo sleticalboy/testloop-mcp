@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## v0.5.15 - 2026-07-20
+
+### Added
+
+- 新增 Agent decision fixture manifest 和 schema，固定 `validate_coverage_task` 的最小 `status/action -> decision` 客户端合同。
+- 新增真实项目 Agent 闭环 fixture，覆盖 Go ready、Vitest ready、Python environment 手审和 Python external-service 失败手审分流。
+- 新增无依赖 `scripts/validate-agent-decision-fixtures.mjs`，支持文本输出和 `--json` 输出，用于客户端 CI 校验全部 Agent 决策 fixture。
+- 新增 `scripts/export-agent-decision-fixtures.mjs`，可导出最小 Agent 决策 fixture 包，包含 manifest、schema、fixture、validator、README 和无依赖 `package.json`。
+- 新增 release readiness 导出包门禁，`scripts/verify-release-candidate.sh` 会导出 Agent 决策 fixture 包并运行 `npm test --silent`。
+- 新增 v0.5.15 候选发布说明和发布检查清单。
+
+### Changed
+
+- `examples/agent-decision-demo` 改为读取 `agent-decision-fixtures.json`，避免 demo、文档和客户端 fixture 清单分叉。
+- 客户端集成说明、MCP 客户端契约测试说明和 README 已改为推荐 manifest 驱动校验，并暴露 `--json` 和导出包接入路径。
+- `scripts/validate-agent-decision-fixtures.mjs` 现在会显式校验 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`。
+- release readiness 现在提前检查 `node` 和 `npm`，让导出包门禁缺依赖时更早失败。
+- MCP server implementation version 更新为 `0.5.15`。
+
+### Fixed
+
+- 文档明确 `status=failed` 不等于自动修复，只有 `failed/apply_fix_suggestions` 进入 repair task 闭环；`failed/manual_review_*` 应转人工复核、fake client、依赖注入或集成环境验证。
+
 ## v0.5.14 - 2026-07-20
 
 ### Added
