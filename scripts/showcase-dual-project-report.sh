@@ -85,6 +85,7 @@ second_title="${TESTLOOP_PAIR_SECOND_TITLE:-${second_name} 接入验收报告}"
 [[ -d "$first_dir" ]] || fail "first project path must be a directory: $first_dir"
 [[ -d "$second_dir" ]] || fail "second project path must be a directory: $second_dir"
 [[ ! -e "$output_dir" || -d "$output_dir" ]] || fail "output path must be a directory: $output_dir"
+[[ ! -d "$summary_json" ]] || fail "summary JSON path must not be a directory: $summary_json"
 
 first_output_dir="${output_dir}/${first_name}"
 second_output_dir="${output_dir}/${second_name}"

@@ -359,6 +359,18 @@ SH
     bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
   assert_contains "$output_file_out" "output path must be a directory"
 
+  summary_dir="${tmp_dir}/pair-summary-dir"
+  mkdir -p "$summary_dir"
+  summary_dir_out="${tmp_dir}/pair-summary-dir.out"
+  run_expect_code 1 "$summary_dir_out" env \
+    TESTLOOP_PAIR_SUMMARY_JSON="$summary_dir" \
+    TESTLOOP_PAIR_FIRST_DIR="$api_dir" \
+    TESTLOOP_PAIR_FIRST_COMMAND='echo api' \
+    TESTLOOP_PAIR_SECOND_DIR="$web_dir" \
+    TESTLOOP_PAIR_SECOND_COMMAND='echo web' \
+    bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$fake_binary"
+  assert_contains "$summary_dir_out" "summary JSON path must not be a directory"
+
   success_out="${tmp_dir}/pair-success.out"
   output_dir="${tmp_dir}/pair-artifacts"
   run_expect_code 0 "$success_out" env \
@@ -456,6 +468,38 @@ PY
   assert_contains "$both_failed_output_dir/web/verification-report.md" "web failed"
 }
 
+test_laoxia_scaffold_showcase_rejects_directory_summary_json() {
+  fake_binary="${tmp_dir}/laoxia-summary-fake-bin"
+  cat > "$fake_binary" <<'SH'
+#!/usr/bin/env sh
+case "${1:-}" in
+  --version)
+    echo "testloop-mcp 0.5.13"
+    ;;
+  *)
+    echo "fake testloop-mcp"
+    ;;
+esac
+SH
+  chmod +x "$fake_binary"
+
+  laoxia_root="${tmp_dir}/laoxia-summary-root"
+  server_dir="${laoxia_root}/car-admin-server"
+  web_dir="${laoxia_root}/car-admin-web"
+  summary_dir="${tmp_dir}/laoxia-summary-dir"
+  mkdir -p "$server_dir" "$web_dir" "$summary_dir"
+
+  out="${tmp_dir}/laoxia-summary-dir.out"
+  run_expect_code 1 "$out" env \
+    TESTLOOP_LAOXIA_SUMMARY_JSON="$summary_dir" \
+    TESTLOOP_LAOXIA_SERVER_DIR="$server_dir" \
+    TESTLOOP_LAOXIA_WEB_DIR="$web_dir" \
+    TESTLOOP_LAOXIA_SERVER_COMMAND='echo server' \
+    TESTLOOP_LAOXIA_WEB_COMMAND='echo web' \
+    bash "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh" "$fake_binary"
+  assert_contains "$out" "summary JSON path must not be a directory"
+}
+
 test_dual_project_showcase_rejects_directory_binary_path() {
   out="${tmp_dir}/pair-binary-dir.out"
   run_expect_code 1 "$out" bash "${repo_root}/scripts/showcase-dual-project-report.sh" "$repo_root"
@@ -473,6 +517,7 @@ test_go_showcase_git_timeout
 test_js_showcase_help_args_and_missing_pnpm
 test_js_showcase_git_timeout
 test_dual_project_showcase_helper_directly
+test_laoxia_scaffold_showcase_rejects_directory_summary_json
 test_laoxia_scaffold_showcase_help_args_and_run
 
 echo "showcase script tests passed"
