@@ -40,6 +40,22 @@ func TestRunTestgenInvalidFlag(t *testing.T) {
 	}
 }
 
+func TestRunTestgenHelpExitsZero(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	code := runTestgen([]string{"--help"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "Usage: testgen") {
+		t.Fatalf("stderr missing usage: %q", stderr.String())
+	}
+}
+
 func TestRunTestgenRejectsUnknownProvider(t *testing.T) {
 	dir := t.TempDir()
 	source := writeSource(t, dir)

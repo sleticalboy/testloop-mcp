@@ -19,6 +19,7 @@
 - [x] first-run Agent response 已补齐 `first_run_status` 和 `first_run_failed_count`。
 - [x] first-run/onboarding bootstrap 会在 helper 支持时自动运行 artifact verifier。
 - [x] GitHub step summary 会记录 `Artifact verification`。
+- [x] `testloop-mcp --help` 和 `testgen --help` 会以退出码 0 返回。
 - [x] 默认 CI 显式运行全部 `test/*_test.sh`。
 - [x] 仓库卫生测试已防止重新提交 ignored tracked 文件和 Python bytecode。
 - [x] laoxia server/web 最新真实 bootstrap 已证明 `agent_artifact_status=passed`。
@@ -52,22 +53,23 @@
 - [x] `80d8030` 远端 CI run `29735864478` passed，覆盖 bootstrap 自动 artifact 自检。
 - [x] `e9530c1` 远端 CI run `29736423222` passed，覆盖 manifest 批量校验。
 - [x] `4764823` 远端 CI run `29736802986` passed，覆盖 verifier JSON 输出。
-- [ ] `c36758b` 远端 CI run `29737179225` 仍在 GitHub Actions 队列中，尚未进入 runner。
+- [x] `c36758b` 远端 CI run `29737179225` passed，覆盖 laoxia artifact 自检复验证据。
+- [ ] 最新 main CI 尚待最终确认；本地门禁补齐时，`ab81926` 远端 CI run `29737938722` 仍在 GitHub Actions 队列中。
 
 ## 发布前门禁
 
 - [ ] 等最新 main CI 通过。
-- [ ] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
-- [ ] `go test ./...`
-- [ ] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
-- [ ] `go build -o /tmp/testloop-mcp-v0.5.14-candidate .`
-- [ ] `go build -o /tmp/testloop-testgen-v0.5.14-candidate ./cmd/testgen`
-- [ ] `/tmp/testloop-mcp-v0.5.14-candidate --version` 当前应仍输出 `testloop-mcp 0.5.13`，正式版本准备前不提前切版本号。
-- [ ] `/tmp/testloop-mcp-v0.5.14-candidate --help`
-- [ ] `/tmp/testloop-testgen-v0.5.14-candidate --help`
-- [ ] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
-- [ ] 校验 darwin arm64 `.sha256` 和 tarball 内容。
-- [ ] `git diff --check`
+- [x] `find scripts test -name '*.sh' -print0 | xargs -0 -n1 bash -n`
+- [x] `go test ./...`
+- [x] `for f in $(find test -maxdepth 1 -name '*_test.sh' -print | sort); do sh "$f"; done`
+- [x] `go build -o /tmp/testloop-mcp-v0.5.14-candidate .`
+- [x] `go build -o /tmp/testloop-testgen-v0.5.14-candidate ./cmd/testgen`
+- [x] `/tmp/testloop-mcp-v0.5.14-candidate --version` 当前仍输出 `testloop-mcp 0.5.13`，正式版本准备前不提前切版本号。
+- [x] `/tmp/testloop-mcp-v0.5.14-candidate --help`
+- [x] `/tmp/testloop-testgen-v0.5.14-candidate --help`
+- [x] `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
+- [x] 校验 darwin arm64 `.sha256` 和 tarball 内容，tarball 包含 `LICENSE`、`README.md`、`testloop-mcp` 和 `testloop-testgen`。
+- [x] `git diff --check`
 
 ## 正式发布前待办
 
@@ -87,4 +89,4 @@
 
 ## 当前结论
 
-v0.5.14 已具备清晰候选边界，但还不是正式发布状态。下一步先等待最新 main CI 从 GitHub Actions 队列中执行并通过；随后补齐 release readiness 门禁，再决定是否进入正式版本准备。
+v0.5.14 已具备清晰候选边界，本地 release readiness 门禁已经补齐，但还不是正式发布状态。下一步先等待最新 main CI 从 GitHub Actions 队列中执行并通过；随后再决定是否进入正式版本准备。

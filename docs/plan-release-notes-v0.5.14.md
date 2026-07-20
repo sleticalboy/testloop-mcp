@@ -8,9 +8,9 @@ testloop-mcp v0.5.14
 
 - [x] 创建 v0.5.14 发布说明草案。
 - [x] 梳理 v0.5.13 之后围绕 CI artifact 自检、summary schema 自包含、双项目 summary、默认 CI 覆盖、仓库卫生和真实项目证据的改动边界。
-- [x] 最近本地验证已通过：全部 `test/*_test.sh`、`go test ./...`、文档链接和 `git diff --check`。
-- [x] 最近远端 CI 已通过：`4764823` run `29736802986` passed，覆盖 Agent artifact verifier JSON 输出。
-- [ ] 最新真实案例文档提交 `c36758b` 的 CI run `29737179225` 仍在 GitHub Actions 队列中，尚未进入 runner。
+- [x] 最近本地验证已通过：shell 语法检查、全部 `test/*_test.sh`、`go test ./...`、候选二进制 build、`--version`、`--help`、darwin arm64 release asset dry-run、tarball `.sha256` 校验和 `git diff --check`。
+- [x] 最近远端 CI 已通过：`c36758b` run `29737179225` passed，覆盖 laoxia artifact 自检复验证据。
+- [ ] 最新 main CI 尚待最终确认；本地门禁补齐时，候选边界文档提交 `ab81926` 的 CI run `29737938722` 仍在 GitHub Actions 队列中。
 - [ ] 尚未更新 implementation version、CHANGELOG 正式版本段、tag、Release assets 或 Homebrew tap。
 
 ## 摘要
@@ -49,6 +49,7 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - 新增 `test/ci_workflow_test.sh` 防止后续新增 shell 契约测试但忘记放进 CI。
 - 新增 `test/repository_hygiene_test.sh` 防止提交被 `.gitignore` 忽略的跟踪文件、`__pycache__/` 或 `.pyc`。
 - 已移除仓库里曾被跟踪的 Python bytecode 缓存。
+- `testloop-mcp --help` 和 `testgen --help` 会以退出码 0 返回，发布门禁、安装自检和脚本 wrapper 不再需要为帮助输出特殊处理非 0 状态。
 
 ### 真实项目证据
 
@@ -77,6 +78,14 @@ v0.5.14 候选重点不是扩语言，也不是声称测试生成质量大幅提
 - `sh test/docs_links_test.sh`
 - `for script in test/*_test.sh; do sh "$script"; done`
 - `go test ./...`
+- `go build -o /tmp/testloop-mcp-v0.5.14-candidate .`
+- `go build -o /tmp/testloop-testgen-v0.5.14-candidate ./cmd/testgen`
+- `/tmp/testloop-mcp-v0.5.14-candidate --version`
+- `/tmp/testloop-mcp-v0.5.14-candidate --help`
+- `/tmp/testloop-testgen-v0.5.14-candidate --help`
+- `TESTLOOP_MCP_DIST_DIR=/tmp/testloop-v0.5.14-candidate-dist scripts/package-release-asset.sh v0.5.14 darwin_arm64 darwin arm64`
+- `cd /tmp/testloop-v0.5.14-candidate-dist && shasum -a 256 -c testloop-mcp_v0.5.14_darwin_arm64.tar.gz.sha256`
+- `tar -tzf /tmp/testloop-v0.5.14-candidate-dist/testloop-mcp_v0.5.14_darwin_arm64.tar.gz`
 - `git diff --check`
 
 ## 发布备注

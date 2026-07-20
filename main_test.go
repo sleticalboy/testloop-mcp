@@ -54,6 +54,19 @@ func TestParseServerConfigInvalidFlag(t *testing.T) {
 	}
 }
 
+func TestParseServerConfigHelpExitsZero(t *testing.T) {
+	var stderr bytes.Buffer
+
+	_, code := parseServerConfig([]string{"--help"}, &stderr)
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0", code)
+	}
+	if !strings.Contains(stderr.String(), "Usage of testloop-mcp") {
+		t.Fatalf("stderr missing usage: %q", stderr.String())
+	}
+}
+
 func TestParseServerConfigRejectsUnsupportedTransport(t *testing.T) {
 	var stderr bytes.Buffer
 
