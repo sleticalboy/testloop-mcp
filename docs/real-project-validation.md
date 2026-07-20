@@ -26,6 +26,8 @@
 
 `普通 repair` 指最新验证结果中仍需要修生成测试本身的 `repair_generated_test` / `apply_fix_suggestions` / `generation_error` 数量。`manual_review_*` 不计入普通 repair，它表示工具已经给 Agent 一个稳定动作分类：不要继续盲修同一份生成测试，应改走公共入口、依赖注入、集成环境或人工复核。
 
+补充：`/Users/binlee/code/free-works/laoxia-scaffold-v1.0.0` 这类 Go + Vue 双仓库脚手架也可以作为稳定样本使用。当前已在本机复验 `car-admin-server` 的 `go test ./...`，以及 `car-admin-web` 的 `pnpm build:prod`；两者都通过，只留下常见的 macOS gopsutil deprecated warning、Browserslist outdated 提示和前端 bundle 体积警告，不影响作为真实项目 smoke 的可用性。两个子仓库当前也都是干净工作树，因此后续如果需要跑用户项目验收报告或展示闭环，可以直接复用这组路径。
+
 表格补充：Apache Commons Codec 的 `language/` 非 bm 收口又验证了 `ColognePhonetic.java` top2，结果为 `passed=2/manual_review_internal=2`，目标集中在内部 `CologneInputBuffer.copyData` 状态路径；`Nysiis.java` 和 `RefinedSoundex.java` 当前过滤后无候选任务。
 
 补充：新增 Java/JUnit 目标行命中校验后，`validate_coverage_task` 会在 ready 前解析 JaCoCo XML 并确认 `coverage_task.line_range` 实际覆盖。本轮先用 Commons Lang `Failable.tryWithResources 651-651` 真实复核，结果仍为 `passed/ready`，metadata 显示 `coverage_target_hit=true`、`coverage_hit_lines=[651]`；随后回归历史弱 ready 的 `ClassUtils.java` top4，`getShortClassName 1111/1114` 与 `hierarchy 1222/1258` 全部保持 `passed/ready`，且 metadata 分别确认命中 `[1111]`、`[1114]`、`[1222]`、`[1258]`；`CharSequenceUtils.toCharArray 419-419` 也确认命中 `[419]`。Commons Codec `Metaphone.metaphone 279-279` 则被新校验推翻旧 ready：`agned` 可以覆盖行为分支，但 JaCoCo 279 行映射到被 `GN` 短路遮蔽的 `GNED` 侧，复跑收敛为 `passed/manual_review_unreachable`。RocketMQ `StatusChecker.java` top4 也完成目标行命中复验：生成器会按 line range 选择 `MESSAGE_NOT_FOUND`、`MESSAGE_BODY_EMPTY` 和 `NOT_IMPLEMENTED` 等真实 protobuf `Code`，并为异常分支生成具体 checked exception 断言；最终 `passed=4/ready=4`、`zero_skip=4`、`skipped_total=0`。这意味着 Java ready 开始从“生成测试可运行”升级为“生成测试可运行且目标行被确认命中”。
