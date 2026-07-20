@@ -114,6 +114,16 @@ sh scripts/verify-agent-artifact.sh \
 
 正常输出会包含 `agent_artifact_status=passed`、`decision_action=inspect-user-project` 和 `response_action=inspect-user-project`。这个检查覆盖必备文件、同目录 summary schema、`agent-response.txt` 四段结构、失败 section、`exit_code` 和 `section_signal`。
 
+如果要一次性校验 manifest 里登记的 first-run 和 onboarding artifact fixture：
+
+```bash
+sh scripts/verify-agent-artifact.sh \
+  manifest \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+正常输出会包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。
+
 也可以手动指定文件：
 
 ```bash

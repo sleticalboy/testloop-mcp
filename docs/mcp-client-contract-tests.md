@@ -131,6 +131,16 @@ sh scripts/verify-agent-artifact.sh \
 
 正常输出应包含 `agent_artifact_status=passed`、`decision_action=inspect-user-project` 和 `response_action=inspect-user-project`，用于确认必备文件、同目录 summary schema、decision、Agent 回复草稿和 section signal 没有漂移。
 
+客户端测试也可以直接用 manifest 批量模式，避免手写两条 fixture 路径：
+
+```bash
+sh scripts/verify-agent-artifact.sh \
+  manifest \
+  docs/fixtures/agent-response-artifact-manifest.json
+```
+
+正常输出应包含 `agent_artifact_manifest_status=passed` 和 `artifact_count=2`。
+
 客户端自己的测试建议额外断言：
 
 - `schema_version=1`。

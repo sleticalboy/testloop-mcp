@@ -26,6 +26,8 @@
       ],
       "required_response_fields": [
         "first_run_agent_next_step",
+        "first_run_status",
+        "first_run_failed_count",
         "failed_section",
         "exit_code",
         "first_run_report"

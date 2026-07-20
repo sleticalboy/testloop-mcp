@@ -31,7 +31,7 @@ assert_contains "$out" "decision_action=inspect-user-project"
 assert_contains "$out" "summary_validated=verification-summary.json"
 assert_contains "$out" "local_summary_schema=verification-summary.schema.json"
 assert_contains "$out" "expected_section_signals=独立 CLI 生成动作 smoke:manual_review"
-assert_contains "$out" "required_response_fields=first_run_agent_next_step,failed_section,exit_code,first_run_report"
+assert_contains "$out" "required_response_fields=first_run_agent_next_step,first_run_status,first_run_failed_count,failed_section,exit_code,first_run_report"
 assert_contains "$out" "required_response_fields=agent_next_step,overall_status,failed_count,failed_section,exit_code,markdown_report"
 assert_contains "$out" "fallback_order=agent-response.txt > agent-decision.txt"
 

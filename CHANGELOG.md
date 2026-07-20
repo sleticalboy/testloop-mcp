@@ -12,7 +12,7 @@
 - 新增 dual-project summary artifact 自包含 schema：通用双项目报告和 laoxia wrapper 会把 `dual-project-summary.schema.json` 写到 combined summary 同目录。
 - 新增 `test/ci_workflow_test.sh`，要求默认 CI 显式运行每个 `test/*_test.sh`。
 - 新增 `test/repository_hygiene_test.sh`，拒绝被 `.gitignore` 忽略但仍被 Git 跟踪的文件，并防止重新提交 `__pycache__/` 或 `.pyc`。
-- 新增 `scripts/verify-agent-artifact.sh` 和 `examples/agent-artifact-verify`，可离线校验下载后的 first-run/onboarding artifact 目录。
+- 新增 `scripts/verify-agent-artifact.sh` 和 `examples/agent-artifact-verify`，可离线校验下载后的 first-run/onboarding artifact 目录，并支持 manifest 批量模式。
 
 ### Changed
 

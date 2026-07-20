@@ -61,8 +61,21 @@ assert_contains "$out" "decision_action=inspect-user-project"
 assert_contains "$out" "response_action=inspect-user-project"
 assert_contains "$out" "required_files=5"
 
+sh "${repo_root}/scripts/verify-agent-artifact.sh" \
+  manifest \
+  "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" > "$out"
+
+assert_contains "$out" "agent_artifact_manifest_status=passed"
+assert_contains "$out" "manifest_schema_version=1"
+assert_contains "$out" "artifact_count=2"
+assert_contains "$out" "1. artifact_kind=first-run expected_action=inspect-user-project"
+assert_contains "$out" "2. artifact_kind=onboarding expected_action=inspect-user-project"
+assert_contains "$out" "required_files=7"
+assert_contains "$out" "required_files=5"
+
 run_expect_code 0 "$out" sh "${repo_root}/scripts/verify-agent-artifact.sh" --help
 assert_contains "$out" "Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>"
+assert_contains "$out" "scripts/verify-agent-artifact.sh manifest <agent-response-artifact-manifest.json>"
 
 run_expect_code 2 "$err" sh "${repo_root}/scripts/verify-agent-artifact.sh" first-run
 assert_contains "$err" "Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>"
@@ -90,5 +103,11 @@ cp -R "${repo_root}/docs/fixtures/first-run-artifacts/user-project-smoke-failed"
 perl -0pi -e 's/- first_run_failed_count=1\n//' "$bad_first_run_response/agent-response.txt"
 run_expect_code 1 "$err" sh "${repo_root}/scripts/verify-agent-artifact.sh" first-run "$bad_first_run_response"
 assert_contains "$err" "agent-response.txt missing first_run_failed_count=1"
+
+bad_manifest="${tmp_dir}/bad-manifest.json"
+cp "${repo_root}/docs/fixtures/agent-response-artifact-manifest.json" "$bad_manifest"
+perl -0pi -e 's/"expected_action": "inspect-user-project"/"expected_action": "ready"/' "$bad_manifest"
+run_expect_code 1 "$err" sh "${repo_root}/scripts/verify-agent-artifact.sh" manifest "$bad_manifest"
+assert_contains "$err" 'expected_action="ready", want "inspect-user-project"'
 
 echo "agent artifact verify test passed"

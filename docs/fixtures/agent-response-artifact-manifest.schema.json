@@ -150,6 +150,8 @@
               "failed_count",
               "failed_section",
               "first_run_agent_next_step",
+              "first_run_failed_count",
+              "first_run_status",
               "first_run_report",
               "markdown_report",
               "overall_status"

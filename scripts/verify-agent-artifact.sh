@@ -4,12 +4,15 @@ set -eu
 usage() {
   cat <<'USAGE'
 Usage: scripts/verify-agent-artifact.sh <first-run|onboarding> <artifact-dir>
+       scripts/verify-agent-artifact.sh manifest <agent-response-artifact-manifest.json>
 
 Verify a downloaded testloop-mcp Agent artifact directory.
 
 The verifier checks required files, validates verification-summary.json against
 the local verification-summary.schema.json, and confirms decision/response
 actions agree with the failed section.
+Manifest mode verifies every artifact listed in the manifest and checks the
+manifest expectations against each artifact directory.
 
 Environment:
   TESTLOOP_MCP_REPO_DIR  Path to a testloop-mcp checkout. Defaults to this script's repo.

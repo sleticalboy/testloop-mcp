@@ -49,6 +49,7 @@ required_commands = [
     "sh scripts/render-first-run-agent-response.sh",
     "sh scripts/render-onboarding-agent-response.sh",
     "sh scripts/verify-agent-artifact.sh",
+    "sh scripts/verify-agent-artifact.sh manifest docs/fixtures/agent-response-artifact-manifest.json",
     "scripts/run-first-run-ci.sh",
     "scripts/generate-verification-report.sh",
     "scripts/run-onboarding-ci.sh",
