@@ -10,7 +10,7 @@ Agent response artifact 的机器可读索引见 [agent-response-artifact-manife
 
 Agent 决策客户端 CI 模板安装 dry-run 的 JSON 摘要结构见 [agent-decision-client-ci-template-install-summary.schema.json](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-ci-template-install.sh --json` 输出；可运行 `node scripts/validate-agent-decision-client-ci-install-summary.mjs` 做无依赖校验。
 
-Agent 决策客户端消费端 smoke 的 JSON 摘要结构见 [agent-decision-client-consumer-smoke-summary.schema.json](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json` 输出。它比安装 dry-run 多校验一层接入方消费路径：安装 summary、导出 fixture manifest 和 `agent-decision-fixtures-result.json` 必须互相一致。
+Agent 决策客户端消费端 smoke 的 JSON 摘要结构见 [agent-decision-client-consumer-smoke-summary.schema.json](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json` 输出。它比安装 dry-run 多校验一层接入方消费路径：安装 summary、导出 fixture manifest 和 `agent-decision-fixtures-result.json` 必须互相一致；可运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs` 做无依赖校验。
 
 ## run_tests fixture 列表
 

@@ -6,6 +6,7 @@
 
 - 新增 `scripts/showcase-agent-decision-client-consumer-smoke.sh`，用临时外部 client 串起 workflow 安装、安装 summary 校验、导出 fixture manifest 校验和 result JSON 消费检查。
 - 新增 Agent 决策客户端消费端 smoke summary schema 和通过态样例，固定端到端消费 smoke 的 JSON 输出契约。
+- 新增无依赖消费端 smoke summary validator，客户端可直接校验 `showcase-agent-decision-client-consumer-smoke.sh --json` 输出。
 
 ## v0.5.17 - 2026-07-21
 
