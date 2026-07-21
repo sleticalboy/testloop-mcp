@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `scripts/install-agent-decision-client-ci-template.sh`，可一键向外部 MCP 客户端仓库写入 Agent 决策契约 GitHub Actions workflow，支持固定 helper ref、dry-run 和强制覆盖。
+
 ## v0.5.16 - 2026-07-21
 
 ### Added

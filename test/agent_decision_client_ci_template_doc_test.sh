@@ -15,6 +15,10 @@ text = doc.read_text(encoding="utf-8")
 required = [
     "name: testloop agent decision contract",
     ".github/workflows/testloop-agent-decision-contract.yml",
+    "scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo",
+    "scripts/install-agent-decision-client-ci-template.sh --version v0.5.16 /absolute/path/to/client-repo",
+    "scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to/client-repo",
+    "--force",
     "actions/checkout@v4",
     "actions/setup-node@v4",
     "repository: sleticalboy/testloop-mcp",
@@ -45,6 +49,7 @@ required = [
 failures = [f"{doc}: missing required snippet {item!r}" for item in required if item not in text]
 for path in [
     Path("scripts/showcase-agent-decision-client-ci.sh"),
+    Path("scripts/install-agent-decision-client-ci-template.sh"),
     Path("test/agent_decision_client_ci_template_dry_run_test.sh"),
     Path("docs/client-integration.md"),
     Path("docs/mcp-client-contract-tests.md"),

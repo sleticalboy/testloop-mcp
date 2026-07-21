@@ -77,7 +77,13 @@ scripts/showcase-agent-decision-client-ci.sh --json
 ```
 
 该 JSON 固定包含 `status`、`client_dir`、`fixture_dir`、`result_json`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。
-如果要直接复制 GitHub Actions job，见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)。
+如果要直接安装 GitHub Actions job 到外部客户端仓库：
+
+```bash
+scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
+```
+
+该脚本默认生成 `.github/workflows/testloop-agent-decision-contract.yml`，并把 helper 固定到当前版本 tag；手动复制版本见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)。
 
 ## 使用真实 fixture
 

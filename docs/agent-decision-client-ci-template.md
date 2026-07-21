@@ -10,6 +10,23 @@
 
 当前模板 checkout `v0.5.16` tag 上的 helper，确保客户端 CI 使用稳定的 fixture 导出脚本、JSON 输出合同和外部仓库 dry-run 已验证过的相对路径。
 
+## 一键安装模板
+
+维护者或接入方可以用脚本把 workflow 写入外部客户端仓库：
+
+```bash
+scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
+```
+
+脚本默认从 `main.go` 读取当前版本并生成 `ref: v0.5.16`。如果需要固定到其他 tag 或预览写入路径：
+
+```bash
+scripts/install-agent-decision-client-ci-template.sh --version v0.5.16 /absolute/path/to/client-repo
+scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to/client-repo
+```
+
+默认写入 `.github/workflows/testloop-agent-decision-contract.yml`；已有文件不会被覆盖，除非显式传入 `--force`。
+
 ## GitHub Actions 模板
 
 保存为 `.github/workflows/testloop-agent-decision-contract.yml`：
