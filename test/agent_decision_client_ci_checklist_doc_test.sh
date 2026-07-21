@@ -1,0 +1,73 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+
+cd "$repo_root"
+
+python3 - <<'PY'
+from pathlib import Path
+import json
+import re
+import sys
+
+doc = Path("docs/agent-decision-client-ci-checklist.md")
+text = doc.read_text(encoding="utf-8")
+
+required = [
+    "v0.5.16",
+    "install-agent-decision-client-ci-template.sh",
+    "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh",
+    ".github/workflows/testloop-agent-decision-contract.yml",
+    ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json",
+    "/tmp/testloop-agent-decision-client-summary.json",
+    "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
+    "agent-decision-fixtures.json",
+    "fixtures[].expected_decision",
+    "passed/ready",
+    "failed/apply_fix_suggestions",
+    "failed/needs_better_input",
+    "manual_review_*",
+    "scripts/showcase-agent-decision-client-ci-template-install.sh --json",
+    "./fixtures/agent-decision-client-ci-template-install-summary.schema.json",
+    "./agent-decision-client-ci-template.md",
+    "./client-integration.md",
+    "./mcp-client-contract-tests.md",
+]
+
+failures = [f"{doc}: missing required snippet {item!r}" for item in required if item not in text]
+for path in [
+    Path("scripts/install-agent-decision-client-ci-template.sh"),
+    Path("scripts/showcase-agent-decision-client-ci-template-install.sh"),
+    Path("docs/fixtures/agent-decision-client-ci-template-install-summary.schema.json"),
+    Path("docs/agent-decision-client-ci-template.md"),
+    Path("docs/client-integration.md"),
+    Path("docs/mcp-client-contract-tests.md"),
+]:
+    if not path.exists():
+        failures.append(f"{doc}: referenced path does not exist: {path}")
+
+blocks = re.findall(r"```json\n(.*?)\n```", text, flags=re.S)
+if len(blocks) != 1:
+    failures.append(f"{doc}: expected exactly 1 json example, found {len(blocks)}")
+else:
+    try:
+        payload = json.loads(blocks[0])
+    except json.JSONDecodeError as exc:
+        failures.append(f"{doc}: invalid json example at line {exc.lineno}, column {exc.colno}: {exc.msg}")
+    else:
+        if payload.get("status") != "passed":
+            failures.append(f"{doc}: json example status must be passed")
+        if payload.get("fixture_count") != 8:
+            failures.append(f"{doc}: json example fixture_count must be 8")
+        if payload.get("failures") != []:
+            failures.append(f"{doc}: json example failures must be empty")
+
+if failures:
+    print("Agent decision client CI checklist doc test failed:", file=sys.stderr)
+    for failure in failures:
+        print(f"- {failure}", file=sys.stderr)
+    sys.exit(1)
+
+print("Agent decision client CI checklist doc test passed")
+PY

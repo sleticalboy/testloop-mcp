@@ -2,6 +2,8 @@
 
 这份文档面向 MCP 客户端、编辑器插件和 AI Coding Agent 的接入方。目标不是重新解释所有字段，而是给出一条可回归的消费流程：优先读取 `structuredContent`，按 `status/action` 分流，再用真实 fixture 固定自己的客户端行为。
 
+只接入 Agent 决策 fixture CI 时，可以先看 [Agent 决策客户端 CI 接入 Checklist](./agent-decision-client-ci-checklist.md)。
+
 ## 消费顺序
 
 1. 调用 MCP tool 后，优先读取 `structuredContent`。

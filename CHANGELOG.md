@@ -8,6 +8,7 @@
 - `scripts/install-agent-decision-client-ci-template.sh` 支持脱离仓库单文件运行，方便接入方从 `main` raw URL 下载 installer，并生成固定 helper tag 的 workflow。
 - 新增 `scripts/showcase-agent-decision-client-ci-template-install.sh`，覆盖下载安装脚本、生成 workflow、模拟 `.testloop-mcp` helper checkout 并运行 Agent 决策 fixture contract 的外部客户端 dry-run。
 - 新增 `agent-decision-client-ci-template-install-summary.schema.json`，固定安装 dry-run 的 JSON 摘要输出。
+- 新增 [Agent 决策客户端 CI 接入 Checklist](./docs/agent-decision-client-ci-checklist.md)，把外部客户端接入步骤压成一页式执行清单。
 
 ## v0.5.16 - 2026-07-21
 

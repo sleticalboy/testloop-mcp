@@ -632,6 +632,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 如果要模拟外部客户端 CI 从导出到校验的完整链路，可以运行 `scripts/showcase-agent-decision-client-ci.sh`；预期输出包含 `agent_decision_client_status=passed` 和 `agent_decision_fixture_count=8`。
 机器断言推荐运行 `scripts/showcase-agent-decision-client-ci.sh --json`，直接读取 `status`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。
 客户端仓库可直接复制的 GitHub Actions 模板见 [Agent 决策客户端 CI 模板](./docs/agent-decision-client-ci-template.md)，保存路径建议为 `.github/workflows/testloop-agent-decision-contract.yml`。
+最短接入步骤见 [Agent 决策客户端 CI 接入 Checklist](./docs/agent-decision-client-ci-checklist.md)。
 如果要直接把模板安装到外部客户端仓库，可以运行：
 
 ```bash

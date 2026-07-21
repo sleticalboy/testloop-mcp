@@ -2,6 +2,8 @@
 
 这份文档面向 MCP 客户端、编辑器插件和 AI Coding Agent 的接入方。目标是把 testloop-mcp 当前的客户端消费约束压成一组可复制的 CI 检查，避免客户端只在人工试跑时才发现 `structuredContent`、`status/action` 或 fixture 映射漂移。
 
+Agent 决策 fixture CI 的最短接入步骤见 [Agent 决策客户端 CI 接入 Checklist](./agent-decision-client-ci-checklist.md)。
+
 ## 最小契约
 
 客户端至少应固定这些行为：

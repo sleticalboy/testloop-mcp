@@ -2,6 +2,8 @@
 
 这份模板面向 MCP 客户端、编辑器插件和 AI Coding Agent 集成方。它不验证用户项目构建，而是验证客户端能稳定消费 testloop-mcp 的 Agent 决策 fixture 包：导出最小 fixture 包，运行包内 `npm test --silent`，并断言 `status/action -> decision` 合同没有漂移。
 
+最短接入步骤见 [Agent 决策客户端 CI 接入 Checklist](./agent-decision-client-ci-checklist.md)。
+
 适合放在客户端仓库的 smoke job 中，尤其是这些场景：
 
 - 客户端实现了 `validate_coverage_task`、真实项目 summary 或 CI artifact 的分流逻辑。
