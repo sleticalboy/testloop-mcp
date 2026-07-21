@@ -45,6 +45,11 @@ required_snippets = [
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json",
     "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
+    "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
+    "agent_next_step",
+    "inspect-consumer-smoke-validator",
+    "inspect-agent-decision-fixtures",
+    "inspect-consumer-smoke-summary",
     "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
     "./fixtures/agent-decision-client-consumer-smoke-summary/passed.json",
     "agent_decision_client_status=passed",
@@ -96,6 +101,7 @@ command_paths = {
     "scripts/showcase-agent-decision-client-ci.sh": Path("scripts/showcase-agent-decision-client-ci.sh"),
     "scripts/showcase-agent-decision-client-consumer-smoke.sh": Path("scripts/showcase-agent-decision-client-consumer-smoke.sh"),
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs": Path("scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"),
+    "node scripts/render-agent-decision-client-consumer-response.mjs": Path("scripts/render-agent-decision-client-consumer-response.mjs"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():

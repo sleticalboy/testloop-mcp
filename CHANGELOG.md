@@ -6,6 +6,10 @@
 
 - Release Artifacts workflow 改为单独的 `ensure-release` 前置 job 创建 GitHub Release，并按 tag 加 `concurrency` 串行，避免矩阵 job 并发创建出重复空 Release。
 
+### Added
+
+- 新增 `scripts/render-agent-decision-client-consumer-response.mjs`，可把消费端 smoke summary 转成稳定的 `agent_next_step`，方便外部 MCP 客户端或 Agent 直接分流。
+
 ## v0.5.18 - 2026-07-21
 
 ### Added
