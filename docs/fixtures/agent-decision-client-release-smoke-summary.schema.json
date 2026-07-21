@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-client-release-smoke-summary.schema.json",
+  "title": "testloop Agent decision client release smoke summary",
+  "description": "Machine-readable contract for scripts/showcase-agent-decision-client-release-smoke.sh --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "release_ref",
+    "installer_url",
+    "install_summary_json",
+    "client_summary_json",
+    "client_response_json",
+    "consumer_summary_json",
+    "consumer_agent_response_json",
+    "helper_refs",
+    "fixture_count",
+    "decisions",
+    "agent_next_steps",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "release_ref": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "installer_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "install_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_response_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "consumer_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "consumer_agent_response_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "helper_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "install",
+        "consumer"
+      ],
+      "properties": {
+        "install": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consumer": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fixture_count": {
+      "type": "integer",
+      "const": 8
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "agent_next_steps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client",
+        "consumer"
+      ],
+      "properties": {
+        "client": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consumer": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "failures": {
+      "type": "array"
+    }
+  }
+}

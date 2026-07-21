@@ -12,6 +12,8 @@ Agent 决策客户端 CI 模板安装 dry-run 的 JSON 摘要结构见 [agent-de
 
 Agent 决策客户端消费端 smoke 的 JSON 摘要结构见 [agent-decision-client-consumer-smoke-summary.schema.json](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)，失败态样例见 [validator-failed.json](./fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)，对应 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json` 输出。它比安装 dry-run 多校验一层接入方消费路径：安装 summary、导出 fixture manifest 和 `agent-decision-fixtures-result.json` 必须互相一致，并会生成 `agent_response_json`；可运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs` 做无依赖校验，也可运行 `node scripts/render-agent-decision-client-consumer-response.mjs` 把 summary 转成 `agent_next_step`。
 
+Agent 决策客户端 release smoke 的 JSON 摘要结构见 [agent-decision-client-release-smoke-summary.schema.json](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-release-smoke.sh --json` 输出。它用于正式发布后把 release tag raw installer、基础客户端 CI response 和 consumer smoke response 合成一份 Agent 可消费证据，正常结果应同时固定 `helper_refs.install=v0.5.19`、`helper_refs.consumer=v0.5.19`、`fixture_count=8` 和 `agent_next_steps.client/consumer=ready`。
+
 ## run_tests fixture 列表
 
 | 文件 | status/action | category | 来源 | Agent 下一步 |

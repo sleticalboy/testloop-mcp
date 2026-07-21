@@ -15,6 +15,11 @@ Run a real external-client smoke for the Agent decision CI contract:
 Environment:
   TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR      External client directory.
                                              Default: a fresh temp directory.
+  TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH  Local installer script path.
+                                             Default: this repository's installer.
+  TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL   Installer URL when local path is not set.
+  TESTLOOP_AGENT_DECISION_CI_HELPER_DIR      testloop-mcp helper checkout directory.
+                                             Default: this repository.
   TESTLOOP_AGENT_DECISION_CI_VERSION         Helper ref passed to installer.
                                              Default: installer default.
 
@@ -62,9 +67,22 @@ command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
 [[ ! -e "$client_dir" || -d "$client_dir" ]] || fail "client dir path must be a directory: $client_dir"
 mkdir -p "$client_dir"
 
-TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH="${repo_root}/scripts/install-agent-decision-client-ci-template.sh" \
-TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR="$client_dir" \
-TESTLOOP_AGENT_DECISION_CI_HELPER_DIR="$repo_root" \
+installer_env=(
+  "TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR=$client_dir"
+  "TESTLOOP_AGENT_DECISION_CI_HELPER_DIR=${TESTLOOP_AGENT_DECISION_CI_HELPER_DIR:-$repo_root}"
+)
+if [[ -n "${TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH+x}" ]]; then
+  installer_env+=("TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH=$TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH")
+elif [[ -n "${TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL:-}" ]]; then
+  installer_env+=("TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL=$TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL")
+else
+  installer_env+=("TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH=${repo_root}/scripts/install-agent-decision-client-ci-template.sh")
+fi
+if [[ -n "${TESTLOOP_AGENT_DECISION_CI_VERSION:-}" ]]; then
+  installer_env+=("TESTLOOP_AGENT_DECISION_CI_VERSION=$TESTLOOP_AGENT_DECISION_CI_VERSION")
+fi
+
+env "${installer_env[@]}" \
   bash "${repo_root}/scripts/showcase-agent-decision-client-ci-template-install.sh" --json > "$install_summary_json"
 
 set +e

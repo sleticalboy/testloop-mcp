@@ -15,6 +15,10 @@ Environment:
   TESTLOOP_AGENT_DECISION_CI_INSTALLER_PATH  Local installer script path.
   TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL   Installer URL when local path is not set.
                                              Default: raw GitHub main installer.
+  TESTLOOP_AGENT_DECISION_CI_DOWNLOAD_RETRIES
+                                             curl retry count. Default: 3.
+  TESTLOOP_AGENT_DECISION_CI_DOWNLOAD_MAX_TIME
+                                             curl max time in seconds. Default: 120.
   TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR      External client directory.
                                              Default: a fresh temp directory.
   TESTLOOP_AGENT_DECISION_CI_HELPER_DIR      testloop-mcp helper checkout directory.
@@ -67,7 +71,15 @@ command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
 if [[ -z "$installer_path" ]]; then
   command -v curl >/dev/null 2>&1 || fail "missing required command: curl"
   installer_path="${tmp_dir}/install-agent-decision-client-ci-template.sh"
-  curl -fsSL "$installer_url" -o "$installer_path"
+  curl_retries="${TESTLOOP_AGENT_DECISION_CI_DOWNLOAD_RETRIES:-3}"
+  curl_max_time="${TESTLOOP_AGENT_DECISION_CI_DOWNLOAD_MAX_TIME:-120}"
+  curl -fsSL \
+    --retry "$curl_retries" \
+    --retry-delay 2 \
+    --retry-connrefused \
+    --max-time "$curl_max_time" \
+    "$installer_url" \
+    -o "$installer_path"
 fi
 
 [[ -f "$installer_path" ]] || fail "installer script does not exist: $installer_path"

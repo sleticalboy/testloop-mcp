@@ -91,6 +91,13 @@ scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-re
 如果要继续验证接入方能否消费安装后的 artifact 链路，可运行 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json`。该命令会校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致，并在 summary 中返回 `agent_response_json`；JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。无依赖校验入口是 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
 如果客户端希望把消费端 smoke summary 直接喂给 Agent，可运行 `node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json`。该脚本会输出稳定的 `agent_next_step`：通过态为 `ready`；validator 失败分流到 `inspect-consumer-smoke-validator`；fixture 数量或决策序列漂移分流到 `inspect-agent-decision-fixtures`；其他结构问题分流到 `inspect-consumer-smoke-summary`。
 消费端失败态 fixture 见 [validator-failed.json](./fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)，适合客户端固定失败分流测试。
+正式发布后需要一次性确认 release tag raw installer、基础客户端 CI response 和 consumer smoke response 时，可运行：
+
+```bash
+scripts/showcase-agent-decision-client-release-smoke.sh --json
+```
+
+该 JSON 输出结构见 [Agent 决策客户端 release smoke summary schema](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)。正常结果会固定 `release_ref=v0.5.19`、`helper_refs.install=v0.5.19`、`helper_refs.consumer=v0.5.19`、`fixture_count=8`，并要求基础客户端和消费端的 `agent_next_step` 都是 `ready`。
 
 ## 使用真实 fixture
 
