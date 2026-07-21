@@ -8,6 +8,7 @@
 - 新增 `scripts/export-agent-decision-release-response-client.mjs`，可导出 release response 客户端最小包，包含 renderer、断言脚本、`package.json`、response schema 和通过/失败态 fixture。
 - 新增 release response 通过态与失败态 fixture，覆盖 `ready`、`inspect-release-installer`、`inspect-release-client-response`、`inspect-release-consumer-response` 和 `inspect-agent-decision-fixtures`。
 - 新增 `scripts/showcase-agent-decision-client-release-response-ci.sh --json`，可创建临时外部客户端仓库、写入 `.github/workflows/testloop-release-response-contract.yml`，并按 workflow 核心命令运行导出包 `npm test --silent`。
+- 新增 `scripts/install-agent-decision-release-response-client.sh`，可把 release response 客户端包和 `.github/workflows/testloop-release-response-contract.yml` 安装到真实外部仓库，并在目标包目录运行 `npm test --silent`。
 - release readiness 现在会显式导出 release response 客户端最小包并运行导出包内的 `npm test --silent`。
 
 ## v0.5.19 - 2026-07-21

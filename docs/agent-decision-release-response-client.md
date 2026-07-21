@@ -61,6 +61,20 @@ npm test --silent
 
 之后把 `testloop-release-smoke-summary.json` 替换成真实 `scripts/showcase-agent-decision-client-release-smoke.sh --json` 输出即可。导出包也会携带 release response schema 和通过/失败态 fixture，方便接入方把这些样例放进自己的单元测试。
 
+如果要直接把 release response 客户端包和 GitHub Actions workflow 安装到真实外部仓库，运行：
+
+```bash
+scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo
+```
+
+如果已有正式 release smoke summary，可以指定输入：
+
+```bash
+scripts/install-agent-decision-release-response-client.sh --summary-json /path/to/release-smoke-summary.json /absolute/path/to/client-repo
+```
+
+安装脚本会写入 `testloop-release-response-client/` 和 `.github/workflows/testloop-release-response-contract.yml`，然后在目标包目录执行 `npm test --silent`。默认不会覆盖已有 workflow 或包目录；需要覆盖时显式传 `--force`。通过态输出会给出 `workflow_path`、`package_dir`、`agent_response_json`、`release_ref`、`fixture_count` 和 `agent_next_step=ready`，方便 Agent 直接判断接入是否可提交。
+
 如果要验证外部仓库的 CI 形态，可以运行：
 
 ```bash

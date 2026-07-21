@@ -50,6 +50,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh"
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-ci.sh"
   bash -n "${repo_root}/scripts/install-agent-decision-client-ci-template.sh"
+  bash -n "${repo_root}/scripts/install-agent-decision-release-response-client.sh"
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-ci-template-install.sh"
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-consumer-smoke.sh"
   node --check "${repo_root}/scripts/render-agent-decision-client-ci-response.mjs"

@@ -54,6 +54,7 @@ required_commands = [
     "scripts/showcase-agent-decision-client-release-smoke.sh --json",
     "scripts/showcase-agent-decision-client-release-response-smoke.sh --json",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
+    "scripts/install-agent-decision-release-response-client.sh",
     "node scripts/export-agent-decision-release-response-client.mjs",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs",
     "npm test --silent",

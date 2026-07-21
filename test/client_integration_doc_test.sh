@@ -50,6 +50,7 @@ required_snippets = [
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
+    "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
@@ -112,6 +113,7 @@ command_paths = {
     "scripts/showcase-agent-decision-client-consumer-smoke.sh": Path("scripts/showcase-agent-decision-client-consumer-smoke.sh"),
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs": Path("scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"),
     "node scripts/render-agent-decision-client-consumer-response.mjs": Path("scripts/render-agent-decision-client-consumer-response.mjs"),
+    "scripts/install-agent-decision-release-response-client.sh": Path("scripts/install-agent-decision-release-response-client.sh"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():
