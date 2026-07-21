@@ -29,7 +29,7 @@ scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to
 外部接入方不想 clone 整个仓库时，也可以下载单脚本运行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.16/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
 bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
 ```
 

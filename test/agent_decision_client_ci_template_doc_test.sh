@@ -18,7 +18,7 @@ required = [
     "scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo",
     "scripts/install-agent-decision-client-ci-template.sh --version v0.5.16 /absolute/path/to/client-repo",
     "scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to/client-repo",
-    "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.16/scripts/install-agent-decision-client-ci-template.sh",
+    "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh",
     "bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo",
     "--force",
     "actions/checkout@v4",

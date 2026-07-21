@@ -641,7 +641,7 @@ scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-re
 也可以不 clone 仓库，直接下载 v0.5.16 的单脚本安装模板：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.16/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
 bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
 ```
 
