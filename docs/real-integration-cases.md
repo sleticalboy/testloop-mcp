@@ -215,6 +215,55 @@ accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,need
 
 这条 smoke 和 Post-Release Verify 的分工不同：Post-Release Verify 验证正式二进制资产下载、安装和 help/version 自检；release smoke 验证外部 MCP 客户端能从 release tag raw installer 安装 workflow，并把 fixture contract summary 转成 Agent 下一步动作。
 
+## v0.5.19 release response 真实安装接入记录
+
+这条记录面向外部客户端仓库。目标是验证接入方可以把 release response 客户端包和 GitHub Actions workflow 写入自己的仓库，并用安装 summary validator 固定结果。
+
+本地演练使用固定 release smoke summary fixture 代替网络 release smoke 输出，避免把 raw.githubusercontent.com 抖动混进安装路径判断：
+
+```bash
+tmp_dir=$(mktemp -d)
+client_dir="$tmp_dir/external-client"
+mkdir -p "$client_dir"
+
+scripts/install-agent-decision-release-response-client.sh \
+  --summary-json docs/fixtures/agent-decision-client-release-smoke-summary/passed.json \
+  --json "$client_dir" > "$tmp_dir/install-summary.json"
+
+node scripts/validate-agent-decision-release-response-client-install-summary.mjs \
+  "$tmp_dir/install-summary.json"
+```
+
+关键结果：
+
+```text
+status=written
+release_ref=v0.5.19
+fixture_count=8
+agent_next_step=ready
+npm_exit_code=0
+workflow_exists=true
+package_exists=true
+agent_response_exists=true
+```
+
+决策序列：
+
+```text
+accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input
+```
+
+安装后外部仓库固定拥有：
+
+- `.github/workflows/testloop-release-response-contract.yml`
+- `testloop-release-response-client/package.json`
+- `testloop-release-response-client/testloop-release-smoke-summary.json`
+- `testloop-release-response-client/testloop-release-response.json`
+- `testloop-release-response-client/docs/fixtures/agent-decision-client-release-response.schema.json`
+- `testloop-release-response-client/docs/fixtures/agent-decision-client-release-response/*.json`
+
+这条记录和 release response checklist 的分工不同：checklist 告诉接入方如何执行；本记录证明按 checklist 的核心安装步骤，接入方能得到可校验的 summary、workflow、导出包和 Agent response。
+
 ## laoxia 双栈报告入口
 
 前面的 server/web 验收已经证明两条 smoke 都能通过。为了后续复用更方便，可以直接使用新的双栈入口一次性产出两份报告：
