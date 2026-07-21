@@ -19,6 +19,7 @@ testloop-mcp v0.5.17
 - [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.17`。
 - [x] Homebrew tap 已更新到 `0.5.17` 并推送，tap commit `3fec8ad`。
 - [x] Post-Release Verify run `29809495498` passed，覆盖资产清单和五个平台安装验证。
+- [x] 发布后 raw installer smoke 已通过：`scripts/showcase-agent-decision-client-ci-template-install.sh --json` 从 `main` raw URL 下载 installer 后输出 `status=passed`、`helper_ref=v0.5.17`、`fixture_count=8`。
 
 ## 摘要
 
