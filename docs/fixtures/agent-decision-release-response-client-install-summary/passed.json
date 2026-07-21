@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "written",
+  "client_dir": "/tmp/testloop-release-response-client-install/external-client",
+  "workflow_path": "/tmp/testloop-release-response-client-install/external-client/.github/workflows/testloop-release-response-contract.yml",
+  "package_dir": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client",
+  "release_summary_json": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client/testloop-release-smoke-summary.json",
+  "agent_response_json": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client/testloop-release-response.json",
+  "release_ref": "v0.5.19",
+  "fixture_count": 8,
+  "decisions": [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input"
+  ],
+  "agent_next_step": "ready",
+  "npm_exit_code": 0,
+  "failures": []
+}

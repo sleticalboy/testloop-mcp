@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-release-response-client-install-summary.schema.json",
+  "title": "testloop Agent decision release response client install summary",
+  "description": "Machine-readable contract for scripts/install-agent-decision-release-response-client.sh --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "client_dir",
+    "workflow_path",
+    "package_dir",
+    "release_summary_json",
+    "agent_response_json",
+    "release_ref",
+    "fixture_count",
+    "decisions",
+    "agent_next_step",
+    "npm_exit_code",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "written",
+        "failed",
+        "dry-run"
+      ]
+    },
+    "client_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_response_json": {
+      "type": "string"
+    },
+    "release_ref": {
+      "type": "string"
+    },
+    "fixture_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "agent_next_step": {
+      "type": "string"
+    },
+    "npm_exit_code": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "failures": {
+      "type": "array"
+    }
+  }
+}

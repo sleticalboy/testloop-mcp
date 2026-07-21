@@ -111,6 +111,8 @@ jobs:
           sh test/agent_decision_release_response_client_doc_test.sh
           sh test/agent_decision_release_response_client_export_test.sh
           sh test/install_agent_decision_release_response_client_test.sh
+          sh test/agent_decision_release_response_client_install_summary_schema_test.sh
+          sh test/agent_decision_release_response_client_install_summary_validator_test.sh
           sh test/agent_decision_client_ci_checklist_doc_test.sh
           sh test/agent_decision_client_ci_checklist_commands_test.sh
           sh test/agent_decision_client_ci_template_doc_test.sh

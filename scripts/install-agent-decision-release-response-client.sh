@@ -130,6 +130,10 @@ console.log(JSON.stringify({
   package_dir: packageDir,
   release_summary_json: summaryJson,
   agent_response_json: '',
+  release_ref: '',
+  fixture_count: 0,
+  decisions: [],
+  agent_next_step: '',
   npm_exit_code: null,
   failures: [],
 }, null, 2));

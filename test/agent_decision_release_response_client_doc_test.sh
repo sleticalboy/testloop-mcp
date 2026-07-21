@@ -16,6 +16,9 @@ assert_contains "scripts/showcase-agent-decision-client-release-response-smoke.s
 assert_contains "scripts/showcase-agent-decision-client-release-response-ci.sh --json"
 assert_contains "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo"
 assert_contains "scripts/install-agent-decision-release-response-client.sh --summary-json /path/to/release-smoke-summary.json /absolute/path/to/client-repo"
+assert_contains "node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json"
+assert_contains "agent-decision-release-response-client-install-summary.schema.json"
+assert_contains "agent-decision-release-response-client-install-summary/passed.json"
 assert_contains "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client"
 assert_contains ".github/workflows/testloop-release-response-contract.yml"
 assert_contains "cd /tmp/testloop-release-response-client"
@@ -48,13 +51,16 @@ for path in \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-smoke.sh" \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-ci.sh" \
   "${repo_root}/scripts/install-agent-decision-release-response-client.sh" \
+  "${repo_root}/scripts/validate-agent-decision-release-response-client-install-summary.mjs" \
   "${repo_root}/scripts/export-agent-decision-release-response-client.mjs" \
   "${repo_root}/scripts/render-agent-decision-client-release-response.mjs" \
   "${repo_root}/test/agent_decision_client_release_response_smoke_test.sh" \
   "${repo_root}/docs/client-integration.md" \
   "${repo_root}/docs/mcp-client-contract-tests.md" \
   "${repo_root}/docs/agent-decision-client-ci-template.md" \
-  "${repo_root}/docs/fixtures.md"
+  "${repo_root}/docs/fixtures.md" \
+  "${repo_root}/docs/fixtures/agent-decision-release-response-client-install-summary.schema.json" \
+  "${repo_root}/docs/fixtures/agent-decision-release-response-client-install-summary/passed.json"
 do
   if [ ! -e "$path" ]; then
     echo "missing referenced path: $path" >&2

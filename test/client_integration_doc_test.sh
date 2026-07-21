@@ -51,6 +51,9 @@ required_snippets = [
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
     "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo",
+    "node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json",
+    "./fixtures/agent-decision-release-response-client-install-summary.schema.json",
+    "./fixtures/agent-decision-release-response-client-install-summary/passed.json",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
@@ -114,6 +117,7 @@ command_paths = {
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs": Path("scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"),
     "node scripts/render-agent-decision-client-consumer-response.mjs": Path("scripts/render-agent-decision-client-consumer-response.mjs"),
     "scripts/install-agent-decision-release-response-client.sh": Path("scripts/install-agent-decision-release-response-client.sh"),
+    "node scripts/validate-agent-decision-release-response-client-install-summary.mjs": Path("scripts/validate-agent-decision-release-response-client-install-summary.mjs"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():

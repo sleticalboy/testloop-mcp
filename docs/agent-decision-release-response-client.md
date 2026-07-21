@@ -75,6 +75,12 @@ scripts/install-agent-decision-release-response-client.sh --summary-json /path/t
 
 安装脚本会写入 `testloop-release-response-client/` 和 `.github/workflows/testloop-release-response-contract.yml`，然后在目标包目录执行 `npm test --silent`。默认不会覆盖已有 workflow 或包目录；需要覆盖时显式传 `--force`。通过态输出会给出 `workflow_path`、`package_dir`、`agent_response_json`、`release_ref`、`fixture_count` 和 `agent_next_step=ready`，方便 Agent 直接判断接入是否可提交。
 
+安装脚本的 JSON summary 结构见 [agent-decision-release-response-client-install-summary.schema.json](./fixtures/agent-decision-release-response-client-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-release-response-client-install-summary/passed.json)。接入方可以把安装输出保存后运行：
+
+```bash
+node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json
+```
+
 如果要验证外部仓库的 CI 形态，可以运行：
 
 ```bash
