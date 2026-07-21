@@ -11,10 +11,14 @@ testloop-mcp v0.5.18
 - [x] 最新已完成的远端 CI：`f501697` run `29817455457` passed，覆盖消费端 smoke 文档同步。
 - [x] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用同步到 `0.5.18` / `v0.5.18`。
 - [x] 正式版本准备后的 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.18-release-prep-dist scripts/verify-release-candidate.sh v0.5.18` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.18`。
-- [ ] `v0.5.18` tag 已推送，Release Artifacts workflow 已完成。
-- [ ] GitHub Release 正文已更新为正式 v0.5.18 发布说明。
-- [ ] 仓库内 Homebrew Formula 和 `sleticalboy/homebrew-tap` 已更新到 `0.5.18`。
-- [ ] Post-Release Verify 已通过。
+- [x] `v0.5.18` tag 已推送，Release Artifacts run `29818715613` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.18` 已验证正式 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.18 发布说明。
+- [x] Release Artifacts 并发创建出的重复空 Release 已删除，仅保留带 10 个资产的正式 Release。
+- [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.18`。
+- [x] Homebrew tap 已更新到 `0.5.18` 并推送，tap commit `d125310`。
+- [x] Post-Release Verify run `29819216549` passed，覆盖资产清单和五个平台安装验证。
+- [x] 发布后 raw installer smoke 已通过：首次 raw 下载因网络超时失败，重试后 `scripts/showcase-agent-decision-client-ci-template-install.sh --json` 输出 `status=passed`、`helper_ref=v0.5.18`、`fixture_count=8`。
 
 ## 摘要
 
@@ -79,4 +83,4 @@ v0.5.17 解决的是“客户端仓库可以安装 workflow，并校验安装 dr
 
 - 对外文案应强调“外部 MCP 客户端可以用一条消费端 smoke 固定安装 summary、fixture manifest 和 result JSON 的 artifact 消费合同”。
 - 推荐演示路径：运行 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json`，再运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
-- 正式发布前仍需完成 Release assets、Homebrew Formula / tap 和 Post-Release Verify。
+- v0.5.18 已完成正式 GitHub Release、Release assets、资产校验、GitHub Release 正文、仓库内 Formula、Homebrew tap、Post-Release Verify 和发布后 raw installer smoke。

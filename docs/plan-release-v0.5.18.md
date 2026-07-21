@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.18 发布说明](./plan-release-notes-v0.5.18.md)。
 
-当前发布状态：正式版本准备进行中，尚未正式发布。implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.18` / `v0.5.18`；`v0.5.18` tag、GitHub Release、Release assets、Homebrew Formula / tap 和 Post-Release Verify 尚未执行。
+当前发布状态：已正式发布。`v0.5.18` tag 已推送，GitHub Release 已创建，五个平台 Release assets 和 `.sha256` 已上传并校验，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.18`，Post-Release Verify 已通过。
 
 ## 当前差异核对
 
@@ -53,6 +53,14 @@
 - [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.18-release-prep-dist scripts/verify-release-candidate.sh v0.5.18`
 - [x] `git diff --check`
 - [x] `main.go` implementation version 更新到 `0.5.18`。
+- [x] `c8b2096` 远端 CI run `29818535669` passed，覆盖 v0.5.18 正式版本准备。
+- [x] `v0.5.18` Release Artifacts run `29818715613` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.18` 已验证正式 Release 资产完整。
+- [x] Release Artifacts 并发创建出的重复空 Release 已删除，仅保留带 10 个资产的正式 Release。
+- [x] 仓库内 `Formula/testloop-mcp.rb` 已更新到 `0.5.18`，并通过 `ruby -c Formula/testloop-mcp.rb` 和 `sh test/release_assets_test.sh`。
+- [x] `sleticalboy/homebrew-tap` 已更新到 `0.5.18` 并推送，tap commit `d125310`。
+- [x] Post-Release Verify run `29819216549` passed，覆盖资产清单和五个平台安装验证。
+- [x] 发布后 raw installer smoke 已通过：首次 raw 下载因网络超时失败，重试后输出 `status=passed`、`helper_ref=v0.5.18`、`fixture_count=8`。
 
 ## 正式发布前待办
 
@@ -61,15 +69,15 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.18` / `v0.5.18`。
 - [x] 测试中的版本期望同步到 `0.5.18`。
 - [x] 重新运行完整 release readiness。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.18` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.18` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.18 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.18` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.18` 并推送。
-- [ ] 手动触发 Post-Release Verify。
+- [x] 提交版本准备改动后确认远端 CI passed：`c8b2096` run `29818535669` passed。
+- [x] 打 tag `v0.5.18` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29818715613` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.18` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.18 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.18` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.18` 并推送：tap commit `d125310`。
+- [x] 手动触发 Post-Release Verify：run `29819216549` passed。
 
 ## 当前结论
 
-v0.5.18 正式版本准备文件和本地 release readiness 已完成，但尚未提交版本准备、打 tag、生成 Release assets 或更新 Homebrew。这个版本不承诺生成质量提升，而是把外部客户端 CI 接入路径从“installer + 安装 dry-run summary validator”推进到“消费端 smoke + summary schema/sample + 无依赖 validator + 客户端文档入口”，更贴合项目“AI Agent 测试反馈基础设施”的定位。
+v0.5.18 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap、Post-Release Verify 和发布后 raw installer smoke。这个版本不承诺生成质量提升，而是把外部客户端 CI 接入路径从“installer + 安装 dry-run summary validator”推进到“消费端 smoke + summary schema/sample + 无依赖 validator + 客户端文档入口”，更贴合项目“AI Agent 测试反馈基础设施”的定位。
