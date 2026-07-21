@@ -58,6 +58,16 @@
 - [x] `go test ./...`
 - [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.20-release-prep-dist scripts/verify-release-candidate.sh v0.5.20` 输出 `release_candidate_status=passed`。
 - [x] `353d255` 远端 CI run `29846178265` passed，覆盖 v0.5.20 正式版本准备。
+- [x] `v0.5.20` tag 已推送，指向 `44c2344`。
+- [x] Release Artifacts workflow run `29847487312` passed，生成五平台资产和 `.sha256`。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.20` 已验证 10 个 Release assets。
+- [x] GitHub Release 正文已更新为正式 v0.5.20 发布说明。
+- [x] 仓库内 `Formula/testloop-mcp.rb` 已更新到 `0.5.20`。
+- [x] `sleticalboy/homebrew-tap` 已更新到 `0.5.20` 并推送，tap commit `bee0521`。
+- [x] 本机 Homebrew tap 已 fast-forward 到 `bee0521`，`brew fetch --force --formula sleticalboy/tap/testloop-mcp` 成功，`brew audit --formula --strict sleticalboy/tap/testloop-mcp` 通过。
+- [x] 发布后 release smoke 已通过：`status=passed`、`release_ref=v0.5.20`、`helper_refs.install=v0.5.20`、`helper_refs.consumer=v0.5.20`、`fixture_count=8`、`agent_next_steps.client=ready`、`agent_next_steps.consumer=ready`。
+- [x] 发布后 release response smoke 已通过：`status=passed`、`release_ref=v0.5.20`、`fixture_count=8`、`agent_next_step=ready`、`npm_exit_code=0`。
+- [ ] Post-Release Verify run `29848148743` 已触发，当前等待 GitHub runner 分配。
 
 ## 发布前门禁
 
@@ -80,15 +90,15 @@
 - [x] 测试中的版本期望同步到 `0.5.20`。
 - [x] 重新运行完整 release readiness。
 - [x] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.20` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.20` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.20 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.20` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.20`。
+- [x] 打 tag `v0.5.20` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.20` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.20 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.20` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.20`。
 - [ ] Post-Release Verify。
-- [ ] 发布后运行 release response checklist 核心 smoke。
+- [x] 发布后运行 release response checklist 核心 smoke。
 
 ## 当前结论
 
-v0.5.20 已完成正式版本准备的本地门禁和远端 CI：v0.5.19 之后的 release response 消费链路已经从 renderer/fixture 推进到最小包导出、外部仓库 CI 形态、真实仓库安装、安装 summary 契约、release readiness 门禁和 checklist 命令回归。当前仍不打 tag；下一步应进入正式 tag 与 Release assets 阶段。
+v0.5.20 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和发布后 release response smoke。当前仍在等待 Post-Release Verify run `29848148743` 获取 GitHub runner；该 run 完成后应提交发布完成记录并等待 main CI。
