@@ -50,6 +50,8 @@ required_snippets = [
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
+    "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
+    ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
     "agent_next_step",
     "inspect-consumer-smoke-validator",

@@ -53,6 +53,7 @@ required_commands = [
     "scripts/showcase-agent-decision-client-ci.sh --json",
     "scripts/showcase-agent-decision-client-release-smoke.sh --json",
     "scripts/showcase-agent-decision-client-release-response-smoke.sh --json",
+    "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
     "node scripts/export-agent-decision-release-response-client.mjs",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs",
     "npm test --silent",
@@ -113,6 +114,7 @@ required_phrases = [
     "release tag raw installer",
     "Agent 决策 release response 客户端接入",
     "testloop-release-response-client",
+    "GitHub Actions",
     "validator_exit_code",
     ".github/workflows/testloop-agent-decision-contract.yml",
 ]

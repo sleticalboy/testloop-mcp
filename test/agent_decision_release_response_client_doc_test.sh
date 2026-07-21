@@ -13,7 +13,9 @@ assert_contains() {
 }
 
 assert_contains "scripts/showcase-agent-decision-client-release-response-smoke.sh --json"
+assert_contains "scripts/showcase-agent-decision-client-release-response-ci.sh --json"
 assert_contains "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client"
+assert_contains ".github/workflows/testloop-release-response-contract.yml"
 assert_contains "cd /tmp/testloop-release-response-client"
 assert_contains "npm test --silent"
 assert_contains "TESTLOOP_AGENT_DECISION_RELEASE_RESPONSE_SUMMARY_JSON=/path/to/release-smoke-summary.json"
@@ -42,6 +44,7 @@ assert_contains "./fixtures.md"
 
 for path in \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-smoke.sh" \
+  "${repo_root}/scripts/showcase-agent-decision-client-release-response-ci.sh" \
   "${repo_root}/scripts/export-agent-decision-release-response-client.mjs" \
   "${repo_root}/scripts/render-agent-decision-client-release-response.mjs" \
   "${repo_root}/test/agent_decision_client_release_response_smoke_test.sh" \

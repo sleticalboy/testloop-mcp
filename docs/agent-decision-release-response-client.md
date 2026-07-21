@@ -61,6 +61,14 @@ npm test --silent
 
 之后把 `testloop-release-smoke-summary.json` 替换成真实 `scripts/showcase-agent-decision-client-release-smoke.sh --json` 输出即可。导出包也会携带 release response schema 和通过/失败态 fixture，方便接入方把这些样例放进自己的单元测试。
 
+如果要验证外部仓库的 CI 形态，可以运行：
+
+```bash
+scripts/showcase-agent-decision-client-release-response-ci.sh --json
+```
+
+这个 showcase 会创建临时外部客户端仓库，写入 `.github/workflows/testloop-release-response-contract.yml`，导出 release response 客户端包，并按 workflow 的核心命令执行 `npm test --silent`。通过态表示接入方可以把导出包目录提交到自己的仓库，并用同一条 workflow 做 release response contract smoke。
+
 如果已有 release smoke summary，可以复用它：
 
 ```bash

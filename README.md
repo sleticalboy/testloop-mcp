@@ -684,6 +684,7 @@ scripts/showcase-agent-decision-client-release-response-smoke.sh --json
 
 这条 smoke 会创建临时 Node 客户端项目，复制 release summary 和 renderer，再运行该项目自己的 `npm test --silent`。可复制目录结构见 [Agent 决策 release response 客户端接入](./docs/agent-decision-release-response-client.md)。
 如果要导出可复制最小包，可运行 `node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client`。
+如果要模拟接入方仓库的 GitHub Actions 形态，可运行 `scripts/showcase-agent-decision-client-release-response-ci.sh --json`。
 
 ### 用户项目接入：直接复制
 
