@@ -9,6 +9,7 @@
 - 新增 `scripts/showcase-agent-decision-client-ci-template-install.sh`，覆盖下载安装脚本、生成 workflow、模拟 `.testloop-mcp` helper checkout 并运行 Agent 决策 fixture contract 的外部客户端 dry-run。
 - 新增 `agent-decision-client-ci-template-install-summary.schema.json`，固定安装 dry-run 的 JSON 摘要输出。
 - 新增 [Agent 决策客户端 CI 接入 Checklist](./docs/agent-decision-client-ci-checklist.md)，把外部客户端接入步骤压成一页式执行清单。
+- 新增 checklist 命令回归测试，实际执行文档中的安装、contract 和安装 dry-run 命令，避免 Markdown 命令漂移。
 
 ## v0.5.16 - 2026-07-21
 

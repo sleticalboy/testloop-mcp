@@ -97,6 +97,7 @@ jobs:
           sh test/agent_decision_client_ci_template_install_showcase_test.sh
           sh test/agent_decision_client_ci_template_install_summary_schema_test.sh
           sh test/agent_decision_client_ci_checklist_doc_test.sh
+          sh test/agent_decision_client_ci_checklist_commands_test.sh
           sh test/agent_decision_client_ci_template_doc_test.sh
           sh test/agent_decision_client_ci_template_yaml_test.sh
           sh test/agent_decision_client_ci_template_dry_run_test.sh
