@@ -75,7 +75,7 @@ CI 会 checkout `sleticalboy/testloop-mcp` helper，运行：
 scripts/showcase-agent-decision-client-ci-template-install.sh --json
 ```
 
-该命令会下载或读取 installer，生成 workflow，模拟 `.testloop-mcp` helper checkout，并执行 Agent 决策 fixture contract。JSON 输出结构见 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)。
+该命令会下载或读取 installer，生成 workflow，模拟 `.testloop-mcp` helper checkout，并执行 Agent 决策 fixture contract。JSON 输出结构见 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)。
 
 ## 失败排查
 

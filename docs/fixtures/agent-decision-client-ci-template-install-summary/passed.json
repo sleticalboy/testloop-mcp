@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "installer_path": "/tmp/testloop-agent-decision-template-install/install-agent-decision-client-ci-template.sh",
+  "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh",
+  "client_dir": "/tmp/testloop-agent-decision-template-install/external-client",
+  "workflow_path": "/tmp/testloop-agent-decision-template-install/external-client/.github/workflows/testloop-agent-decision-contract.yml",
+  "helper_dir": "/tmp/testloop-agent-decision-template-install/external-client/.testloop-mcp",
+  "helper_ref": "v0.5.16",
+  "summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",
+  "fixture_count": 8,
+  "decisions": [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input"
+  ],
+  "failures": [],
+  "contract_exit_code": 0,
+  "validator_exit_code": 0
+}

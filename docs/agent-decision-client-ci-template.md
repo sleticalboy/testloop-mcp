@@ -113,6 +113,6 @@ sh test/agent_decision_client_ci_template_dry_run_test.sh
 scripts/showcase-agent-decision-client-ci-template-install.sh --json
 ```
 
-该 showcase 默认从 `main` raw URL 下载 installer。仓库测试会用本地 installer 路径和 `file://` URL 代替网络下载，保证 CI 稳定。`--json` 输出结构由 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json) 固定。
+该 showcase 默认从 `main` raw URL 下载 installer。仓库测试会用本地 installer 路径和 `file://` URL 代替网络下载，保证 CI 稳定。`--json` 输出结构由 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)。
 
 更多背景见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。

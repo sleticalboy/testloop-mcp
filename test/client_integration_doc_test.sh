@@ -42,6 +42,7 @@ required_snippets = [
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",
     "./agent-decision-client-ci-template.md",
+    "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
     "validator_exit_code",

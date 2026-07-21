@@ -8,7 +8,7 @@ Agent decision fixture 的机器可读索引见 [agent-decision-fixtures.json](.
 
 Agent response artifact 的机器可读索引见 [agent-response-artifact-manifest.json](./fixtures/agent-response-artifact-manifest.json)，JSON Schema 见 [agent-response-artifact-manifest.schema.json](./fixtures/agent-response-artifact-manifest.schema.json)。客户端测试可以用它直接发现 first-run / onboarding artifact fixture、必备文件、固定字段、fallback 顺序和 `expected_section_signals`，并通过顶层 `summary_schema` 找到 canonical 结构契约：[verification-summary.schema.json](./fixtures/verification-summary.schema.json)，也可以通过每个 artifact 的 `summary_schema` 读取同目录自包含的 `verification-summary.schema.json`。其中 `sections[].signals.action` 是可选的 section 级动作信号。双项目报告的 combined summary 使用独立结构契约：[dual-project-summary.schema.json](./fixtures/dual-project-summary.schema.json)，样例见 [laoxia-passed.json](./fixtures/dual-project-summary/laoxia-passed.json)。
 
-Agent 决策客户端 CI 模板安装 dry-run 的 JSON 摘要结构见 [agent-decision-client-ci-template-install-summary.schema.json](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)，对应 `scripts/showcase-agent-decision-client-ci-template-install.sh --json` 输出。
+Agent 决策客户端 CI 模板安装 dry-run 的 JSON 摘要结构见 [agent-decision-client-ci-template-install-summary.schema.json](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-ci-template-install.sh --json` 输出。
 
 ## run_tests fixture 列表
 
