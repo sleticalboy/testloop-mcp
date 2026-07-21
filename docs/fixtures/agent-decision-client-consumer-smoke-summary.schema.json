@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-client-consumer-smoke-summary.schema.json",
+  "title": "testloop Agent decision client consumer smoke summary",
+  "description": "Machine-readable contract for scripts/showcase-agent-decision-client-consumer-smoke.sh --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "client_dir",
+    "workflow_path",
+    "helper_ref",
+    "install_summary_json",
+    "install_summary_validator_json",
+    "client_summary_json",
+    "fixture_dir",
+    "fixture_validation_json",
+    "result_json",
+    "fixture_count",
+    "decisions",
+    "failures",
+    "install_summary_validator_exit_code",
+    "fixture_validator_exit_code",
+    "npm_validator_exit_code"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "client_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "helper_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "install_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "install_summary_validator_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_validation_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "failures": {
+      "type": "array"
+    },
+    "install_summary_validator_exit_code": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fixture_validator_exit_code": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "npm_validator_exit_code": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

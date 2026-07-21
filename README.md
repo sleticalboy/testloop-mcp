@@ -665,6 +665,7 @@ scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 ```
 
 它会临时创建外部 client，生成 workflow，运行 helper dry-run，并校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json`。
+JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./docs/fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。
 
 ### 用户项目接入：直接复制
 

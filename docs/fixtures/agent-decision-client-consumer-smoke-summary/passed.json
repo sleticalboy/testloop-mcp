@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "client_dir": "/tmp/testloop-agent-decision-consumer-smoke/external-client",
+  "workflow_path": "/tmp/testloop-agent-decision-consumer-smoke/external-client/.github/workflows/testloop-agent-decision-contract.yml",
+  "helper_ref": "v0.5.17",
+  "install_summary_json": "/tmp/testloop-agent-decision-consumer-smoke/install-summary.json",
+  "install_summary_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/install-summary-validation.json",
+  "client_summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",
+  "fixture_dir": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/testloop-agent-decision-fixtures",
+  "fixture_validation_json": "/tmp/testloop-agent-decision-consumer-smoke/fixture-validation.json",
+  "result_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/agent-decision-fixtures-result.json",
+  "fixture_count": 8,
+  "decisions": [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input"
+  ],
+  "failures": [],
+  "install_summary_validator_exit_code": 0,
+  "fixture_validator_exit_code": 0,
+  "npm_validator_exit_code": 0
+}
