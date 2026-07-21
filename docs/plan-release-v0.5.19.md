@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.19 发布说明草案](./plan-release-notes-v0.5.19.md)。
 
-当前发布状态：正式版本准备中。候选边界整理提交后的 main CI 已通过，`main.go` implementation version、`CHANGELOG.md` 和当前安装/接入版本引用已同步到 `0.5.19` / `v0.5.19`。尚未打 tag，尚未生成 Release assets 或更新 Homebrew tap。
+当前发布状态：正式版本准备已完成。候选边界整理和版本准备提交后的 main CI 均已通过，`main.go` implementation version、`CHANGELOG.md` 和当前安装/接入版本引用已同步到 `0.5.19` / `v0.5.19`。尚未打 tag，尚未生成 Release assets 或更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -58,6 +58,7 @@
 - [x] `d0d81d1` 远端 CI run `29821925051` passed，覆盖 consumer smoke `agent_response_json`。
 - [x] `b78a375` 远端 CI run `29826190450` passed，覆盖基础客户端 CI response artifact。
 - [x] `0f8d971` 远端 CI run `29826825652` passed，覆盖 v0.5.19 候选边界整理。
+- [x] `d026283` 远端 CI run `29827369739` passed，覆盖 v0.5.19 正式版本准备。
 
 ## 发布前门禁
 
@@ -74,7 +75,7 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.19` / `v0.5.19`。
 - [x] 测试中的版本期望同步到 `0.5.19`。
 - [x] 重新运行完整 release readiness。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI passed：`d026283` run `29827369739` passed。
 - [ ] 打 tag `v0.5.19` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.19` 验证 Release 资产完整。
@@ -86,4 +87,4 @@
 
 ## 当前结论
 
-v0.5.19 候选边界已经具备发布价值，正式版本准备本地门禁已通过：它把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步应提交版本准备并等待 main CI。
+v0.5.19 候选边界已经具备发布价值，正式版本准备本地门禁和远端 CI 均已通过：它把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步应打 tag 并等待 Release Artifacts workflow 生成正式资产。

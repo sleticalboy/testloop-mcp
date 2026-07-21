@@ -8,7 +8,7 @@ testloop-mcp v0.5.19
 
 - [x] 创建 v0.5.19 候选发布说明草案。
 - [x] 梳理 v0.5.18 之后围绕 Release Artifacts 并发加固、消费端 smoke Agent 分流、失败态 fixture、`agent_response_json` 和基础客户端 CI response artifact 的改动边界。
-- [x] 最新已完成的远端 CI：`0f8d971` run `29826825652` passed，覆盖 v0.5.19 候选边界整理。
+- [x] 最新已完成的远端 CI：`d026283` run `29827369739` passed，覆盖 v0.5.19 正式版本准备。
 - [x] 正式版本准备已经开始：`main.go` implementation version、`CHANGELOG.md` 和当前安装/接入文档版本引用已同步到 `0.5.19` / `v0.5.19`。
 - [x] 正式版本准备后的 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-release-prep-dist scripts/verify-release-candidate.sh v0.5.19` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.19`。
 - [ ] 尚未打 `v0.5.19` tag，尚未生成 Release assets，尚未更新 Homebrew Formula / tap。
