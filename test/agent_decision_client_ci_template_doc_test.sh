@@ -30,6 +30,9 @@ required = [
     "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
     "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json",
     "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json",
+    "sh test/agent_decision_client_ci_template_dry_run_test.sh",
+    ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json | tee",
+    "testloop-agent-decision-client-summary.json",
     '"status": "passed"',
     '"fixture_count": 8',
     '"decisions": ["accept", "accept", "accept", "manual-review", "manual-review", "manual-review", "apply-repair", "needs-better-input"]',
@@ -42,6 +45,7 @@ required = [
 failures = [f"{doc}: missing required snippet {item!r}" for item in required if item not in text]
 for path in [
     Path("scripts/showcase-agent-decision-client-ci.sh"),
+    Path("test/agent_decision_client_ci_template_dry_run_test.sh"),
     Path("docs/client-integration.md"),
     Path("docs/mcp-client-contract-tests.md"),
 ]:

@@ -12,6 +12,10 @@
 - `scripts/showcase-agent-decision-client-ci.sh` 支持 `--json`，输出 `status`、`client_dir`、`fixture_dir`、`result_json`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`，方便客户端 CI 和 Agent 直接机器消费。
 - README、客户端集成说明和 MCP 客户端契约测试说明已同步外部客户端 CI showcase、GitHub Actions 模板和 JSON 输出路径。
 
+### Fixed
+
+- `scripts/export-agent-decision-fixtures.mjs` 现在按脚本自身位置定位仓库根目录，外部客户端从 `.testloop-mcp/scripts/...` 调用 helper 时不再误到客户端仓库目录查找 `docs/fixtures/...`。
+
 ## v0.5.15 - 2026-07-20
 
 ### Added

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 function usage() {
   console.error('Usage: node scripts/export-agent-decision-fixtures.mjs <output-dir> [manifest-json]');
@@ -22,8 +23,10 @@ if (process.argv.length < 3 || process.argv.length > 4) {
 }
 
 const outputDir = path.resolve(process.argv[2]);
-const manifestPath = path.resolve(process.argv[3] || 'docs/fixtures/agent-decision-fixtures.json');
-const repoRoot = process.cwd();
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const manifestPath = process.argv[3]
+  ? path.resolve(process.argv[3])
+  : path.resolve(repoRoot, 'docs/fixtures/agent-decision-fixtures.json');
 
 function readJSON(filePath) {
   try {

@@ -72,4 +72,14 @@ jobs:
 
 如果失败，先下载 `testloop-agent-decision-contract` artifact，查看 `testloop-agent-decision-client-summary.json` 和 `agent-decision-fixtures-result.json` 的 `failures[]`。失败通常意味着客户端同步的 fixture、manifest 元数据或 `manual_review_*` 分流语义已经漂移。
 
+## 本地 dry-run
+
+维护者可以用仓库内回归测试模拟外部客户端仓库的关键路径：
+
+```bash
+sh test/agent_decision_client_ci_template_dry_run_test.sh
+```
+
+这个测试会创建临时客户端目录，把当前仓库挂成 `.testloop-mcp` helper checkout，按模板中的相对路径运行 `.testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json | tee ...`，并验证 `testloop-agent-decision-client-summary.json`、`agent-decision-fixtures-result.json`、导出包 `package.json` 和 manifest 都真实存在。
+
 更多背景见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
