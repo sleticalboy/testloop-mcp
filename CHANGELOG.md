@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.17 - 2026-07-21
+
 ### Added
 
 - 新增 `scripts/install-agent-decision-client-ci-template.sh`，可一键向外部 MCP 客户端仓库写入 Agent 决策契约 GitHub Actions workflow，支持固定 helper ref、dry-run 和强制覆盖。
@@ -12,6 +14,10 @@
 - 新增无依赖安装 dry-run 摘要 validator，客户端可直接校验 `showcase-agent-decision-client-ci-template-install.sh --json` 输出。
 - 新增 [Agent 决策客户端 CI 接入 Checklist](./docs/agent-decision-client-ci-checklist.md)，把外部客户端接入步骤压成一页式执行清单。
 - 新增 checklist 命令回归测试，实际执行文档中的安装、contract 和安装 dry-run 命令，避免 Markdown 命令漂移。
+
+### Changed
+
+- MCP server implementation version 更新为 `0.5.17`。
 
 ## v0.5.16 - 2026-07-21
 

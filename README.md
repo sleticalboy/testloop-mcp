@@ -64,13 +64,13 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 
 Windows Git Bash/MSYS 用户需要确保安装目录在 `PATH` 中；详细说明见 [安装与接入](docs/installation.md)。
 
-当前 `v0.5.16` Release 已提供 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 二进制。手动下载示例：
+当前 `v0.5.17` Release 已提供 Linux amd64、Linux arm64、macOS arm64、Windows amd64 和 Windows arm64 二进制。手动下载示例：
 
 ```bash
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.16/testloop-mcp_v0.5.16_linux_amd64.tar.gz
-curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.16/testloop-mcp_v0.5.16_linux_amd64.tar.gz.sha256
-sha256sum -c testloop-mcp_v0.5.16_linux_amd64.tar.gz.sha256
-tar -xzf testloop-mcp_v0.5.16_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.17/testloop-mcp_v0.5.17_linux_amd64.tar.gz
+curl -LO https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.17/testloop-mcp_v0.5.17_linux_amd64.tar.gz.sha256
+sha256sum -c testloop-mcp_v0.5.17_linux_amd64.tar.gz.sha256
+tar -xzf testloop-mcp_v0.5.17_linux_amd64.tar.gz
 ./testloop-mcp --help
 ```
 
@@ -80,14 +80,14 @@ Windows amd64/arm64 可直接下载 zip；将 `$arch` 设为 `amd64` 或 `arm64`
 
 ```powershell
 $arch = "amd64"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.16/testloop-mcp_v0.5.16_windows_$arch.zip"
-curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.16/testloop-mcp_v0.5.16_windows_$arch.zip.sha256"
-$expected = (Get-Content ".\testloop-mcp_v0.5.16_windows_$arch.zip.sha256").Split()[0]
-$actual = (Get-FileHash ".\testloop-mcp_v0.5.16_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.17/testloop-mcp_v0.5.17_windows_$arch.zip"
+curl.exe -LO "https://github.com/sleticalboy/testloop-mcp/releases/download/v0.5.17/testloop-mcp_v0.5.17_windows_$arch.zip.sha256"
+$expected = (Get-Content ".\testloop-mcp_v0.5.17_windows_$arch.zip.sha256").Split()[0]
+$actual = (Get-FileHash ".\testloop-mcp_v0.5.17_windows_$arch.zip" -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "checksum mismatch" }
-Expand-Archive ".\testloop-mcp_v0.5.16_windows_$arch.zip"
-& ".\testloop-mcp_v0.5.16_windows_$arch\testloop-mcp.exe" --help
-& ".\testloop-mcp_v0.5.16_windows_$arch\testloop-testgen.exe" --help
+Expand-Archive ".\testloop-mcp_v0.5.17_windows_$arch.zip"
+& ".\testloop-mcp_v0.5.17_windows_$arch\testloop-mcp.exe" --help
+& ".\testloop-mcp_v0.5.17_windows_$arch\testloop-testgen.exe" --help
 ```
 
 其他未覆盖平台或需要从源码构建：
@@ -146,7 +146,7 @@ scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 如果要确认 PATH 没有指到旧版本，可以加版本门禁：
 
 ```bash
-TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.16 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
+TESTLOOP_MCP_VERIFY_EXPECT_VERSION=0.5.17 scripts/verify-client-setup.sh /absolute/path/to/testloop-mcp
 ```
 
 如果还要做深度协议验收，确认真实 MCP 客户端能通过 stdio 和 Streamable HTTP 启动该二进制并调用轻量工具：
@@ -158,7 +158,7 @@ scripts/verify-mcp-process-smoke.sh /absolute/path/to/testloop-mcp
 如果要生成一份可复制的 Markdown 验收报告，可以把基础安装验收、真实 MCP 协议 smoke、最小 Agent demo 和可选用户项目命令聚合起来：
 
 ```bash
-TESTLOOP_REPORT_EXPECT_VERSION=0.5.16 \
+TESTLOOP_REPORT_EXPECT_VERSION=0.5.17 \
   scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testloop-report.md
 ```
 
@@ -639,7 +639,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
-也可以不 clone 仓库，直接下载 v0.5.16 的单脚本安装模板：
+也可以不 clone 仓库，直接下载 v0.5.17 的单脚本安装模板：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
@@ -664,7 +664,7 @@ node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/inst
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.16 \
+TESTLOOP_MCP_VERSION=v0.5.17 \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
 TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-first-run-ci.sh 'go test ./...'
@@ -674,7 +674,7 @@ TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
-TESTLOOP_MCP_VERSION=v0.5.16 \
+TESTLOOP_MCP_VERSION=v0.5.17 \
 TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
 TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
   bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
@@ -708,7 +708,7 @@ jobs:
       - name: Run testloop first-run
         run: |
           curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh
-          TESTLOOP_MCP_VERSION=v0.5.16 \
+          TESTLOOP_MCP_VERSION=v0.5.17 \
           TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run \
           TESTLOOP_FIRST_RUN_PROJECT_DIR="$PWD" \
             bash /tmp/testloop-first-run-ci.sh 'go test ./...'
@@ -804,7 +804,7 @@ scripts/generate-verification-report.sh "$(command -v testloop-mcp)" /tmp/testlo
 维护者准备候选发布时，可以用一条命令跑本地 release readiness 门禁：
 
 ```bash
-scripts/verify-release-candidate.sh v0.5.16
+scripts/verify-release-candidate.sh v0.5.17
 ```
 
 这个入口只做本地验证、候选二进制构建、help/version 检查、darwin arm64 打包 dry-run、sha256 与 tarball 内容校验，不会改版本号、打 tag、创建 Release 或更新 Homebrew tap。

@@ -66,7 +66,7 @@ else:
     workflow_text = workflow.read_text(encoding="utf-8")
     for needle in [
         "repository: sleticalboy/testloop-mcp",
-        "ref: v0.5.16",
+        "ref: v0.5.17",
         ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json",
     ]:
         if needle not in workflow_text:

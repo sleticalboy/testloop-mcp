@@ -16,7 +16,7 @@ Environment:
   TESTLOOP_EXTERNAL_ONBOARDING_BOOTSTRAP   Bootstrap script path. Default: <workdir>/testloop-onboarding-ci.sh
   TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE go, node, or all. Default: go.
   TESTLOOP_MCP_COMMAND                     Existing testloop-mcp binary path/command.
-  TESTLOOP_MCP_VERSION                     Expected binary version. Default: v0.5.16
+  TESTLOOP_MCP_VERSION                     Expected binary version. Default: v0.5.17
   TESTLOOP_MCP_REPO_DIR                    Existing testloop-mcp source checkout. Default: current repo.
 
 Examples:
@@ -45,7 +45,7 @@ workdir="${TESTLOOP_EXTERNAL_ONBOARDING_WORKDIR:-/tmp/testloop-external-onboardi
 output_dir="${TESTLOOP_EXTERNAL_ONBOARDING_OUTPUT_DIR:-$workdir/artifacts}"
 bootstrap="${TESTLOOP_EXTERNAL_ONBOARDING_BOOTSTRAP:-$workdir/testloop-onboarding-ci.sh}"
 project_type="${TESTLOOP_EXTERNAL_ONBOARDING_PROJECT_TYPE:-go}"
-version="${TESTLOOP_MCP_VERSION:-v0.5.16}"
+version="${TESTLOOP_MCP_VERSION:-v0.5.17}"
 repo_dir="${TESTLOOP_MCP_REPO_DIR:-$repo_root}"
 
 case "$project_type" in

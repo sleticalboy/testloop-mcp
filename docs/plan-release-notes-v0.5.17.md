@@ -9,8 +9,9 @@ testloop-mcp v0.5.17
 - [x] 创建 v0.5.17 候选发布说明草案。
 - [x] 梳理 v0.5.16 之后围绕 Agent 决策客户端 CI 安装路径、接入 Checklist、安装 dry-run 摘要契约和无依赖 validator 的改动边界。
 - [x] 最新已完成的远端 CI：`25d0278` run `29807556910` passed，覆盖安装摘要 validator。
-- [ ] 正式版本准备文件待更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用需同步到 `0.5.17` / `v0.5.17`。
-- [ ] 正式版本准备后的 release readiness 待运行：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.17-release-prep-dist scripts/verify-release-candidate.sh v0.5.17`。
+- [x] 候选边界整理提交 `f351e7c` 的远端 CI run `29808013697` passed。
+- [x] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.17` / `v0.5.17`。
+- [x] 正式版本准备后的 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.17-release-prep-dist scripts/verify-release-candidate.sh v0.5.17` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.17`。
 - [ ] `v0.5.17` tag、GitHub Release、Release assets、资产校验、Homebrew Formula、Homebrew tap 和 Post-Release Verify 待执行。
 
 ## 摘要

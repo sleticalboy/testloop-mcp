@@ -16,7 +16,7 @@ required_snippets = [
     "name: testloop onboarding",
     "name: testloop web onboarding",
     "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh",
-    "TESTLOOP_MCP_VERSION=v0.5.16",
+    "TESTLOOP_MCP_VERSION=v0.5.17",
     "sh scripts/verify-agent-artifact.sh onboarding /tmp/testloop-onboarding",
     "Artifact verification",
     "TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding",
