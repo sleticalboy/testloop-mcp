@@ -98,6 +98,14 @@ scripts/showcase-agent-decision-client-release-smoke.sh --json
 ```
 
 该 JSON 输出结构见 [Agent 决策客户端 release smoke summary schema](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)。正常结果会固定 `release_ref=v0.5.19`、`helper_refs.install=v0.5.19`、`helper_refs.consumer=v0.5.19`、`fixture_count=8`，并要求基础客户端和消费端的 `agent_next_step` 都是 `ready`。
+如果客户端希望把发布后 smoke 汇总直接变成 Agent 下一步动作，可运行：
+
+```bash
+node scripts/render-agent-decision-client-release-response.mjs \
+  /path/to/release-smoke-summary.json
+```
+
+通过态输出 `agent_next_step=ready`；release installer 或 helper tag 漂移分流到 `inspect-release-installer`；基础客户端 response 漂移分流到 `inspect-release-client-response`；consumer response 漂移分流到 `inspect-release-consumer-response`；fixture 数量或决策序列漂移分流到 `inspect-agent-decision-fixtures`。这给外部 Agent 一个可复制的最小消费样例：先跑 release smoke，再用 renderer 把 summary 转成稳定动作。
 
 ## 使用真实 fixture
 
