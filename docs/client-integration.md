@@ -106,6 +106,13 @@ node scripts/render-agent-decision-client-release-response.mjs \
 ```
 
 通过态输出 `agent_next_step=ready`；release installer 或 helper tag 漂移分流到 `inspect-release-installer`；基础客户端 response 漂移分流到 `inspect-release-client-response`；consumer response 漂移分流到 `inspect-release-consumer-response`；fixture 数量或决策序列漂移分流到 `inspect-agent-decision-fixtures`。这给外部 Agent 一个可复制的最小消费样例：先跑 release smoke，再用 renderer 把 summary 转成稳定动作。
+如果要验证“复制到独立客户端项目后仍可用”，可以运行：
+
+```bash
+scripts/showcase-agent-decision-client-release-response-smoke.sh --json
+```
+
+该脚本会创建一个临时 Node 客户端项目，把 release smoke summary、release response renderer、`package.json` 和断言脚本放进去，再运行该客户端自己的 `npm test`。通过态表示接入方可以只消费 summary JSON 和 renderer，不依赖 testloop-mcp 仓库内部路径。
 
 ## 使用真实 fixture
 
