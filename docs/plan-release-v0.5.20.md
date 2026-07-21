@@ -57,10 +57,11 @@
 - [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19` 输出 `release_candidate_status=passed`。
 - [x] `go test ./...`
 - [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.20-release-prep-dist scripts/verify-release-candidate.sh v0.5.20` 输出 `release_candidate_status=passed`。
+- [x] `353d255` 远端 CI run `29846178265` passed，覆盖 v0.5.20 正式版本准备。
 
 ## 发布前门禁
 
-- [x] 最新 main CI passed：`a704d4e` run `29844159254` passed。
+- [x] 最新 main CI passed：`353d255` run `29846178265` passed。
 - [x] 本地 release readiness passed：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19`。
 - [x] readiness 输出包含 release response 导出包验证：`response_fixture_count=5`。
 - [x] readiness 输出包含真实仓库安装 summary 验证：`agent_decision_release_response_client_install_summary_status=passed release_ref=v0.5.19`。
@@ -78,7 +79,7 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.20` / `v0.5.20`。
 - [x] 测试中的版本期望同步到 `0.5.20`。
 - [x] 重新运行完整 release readiness。
-- [ ] 提交版本准备改动后确认远端 CI passed。
+- [x] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.20` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
 - [ ] 使用 `scripts/verify-release-assets.sh v0.5.20` 验证 Release 资产完整。
@@ -90,4 +91,4 @@
 
 ## 当前结论
 
-v0.5.20 已完成正式版本准备的本地门禁：v0.5.19 之后的 release response 消费链路已经从 renderer/fixture 推进到最小包导出、外部仓库 CI 形态、真实仓库安装、安装 summary 契约、release readiness 门禁和 checklist 命令回归。当前仍不打 tag；下一步应提交版本准备改动，并等待 main CI。
+v0.5.20 已完成正式版本准备的本地门禁和远端 CI：v0.5.19 之后的 release response 消费链路已经从 renderer/fixture 推进到最小包导出、外部仓库 CI 形态、真实仓库安装、安装 summary 契约、release readiness 门禁和 checklist 命令回归。当前仍不打 tag；下一步应进入正式 tag 与 Release assets 阶段。
