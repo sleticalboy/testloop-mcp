@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `scripts/showcase-agent-decision-client-ci.sh`，模拟外部客户端 CI：导出 Agent 决策 fixture 包、运行包内 `npm test --silent`，并输出稳定摘要。
+- 新增 [Agent 决策客户端 CI 模板](./docs/agent-decision-client-ci-template.md)，接入方可直接复制 `.github/workflows/testloop-agent-decision-contract.yml` 验证 `status/action -> decision` 合同。
+
+### Changed
+
+- `scripts/showcase-agent-decision-client-ci.sh` 支持 `--json`，输出 `status`、`client_dir`、`fixture_dir`、`result_json`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`，方便客户端 CI 和 Agent 直接机器消费。
+- README、客户端集成说明和 MCP 客户端契约测试说明已同步外部客户端 CI showcase、GitHub Actions 模板和 JSON 输出路径。
+
 ## v0.5.15 - 2026-07-20
 
 ### Added
