@@ -43,11 +43,14 @@ required = [
     "path: .testloop-mcp",
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",
+    "scripts/render-agent-decision-client-ci-response.mjs",
     "tee /tmp/testloop-agent-decision-client-summary.json",
+    "tee /tmp/testloop-agent-decision-client-response.json",
     "TESTLOOP_AGENT_DECISION_CLIENT_DIR=/tmp/testloop-agent-decision-client",
     "actions/upload-artifact@v4",
     "if: always()",
     "/tmp/testloop-agent-decision-client-summary.json",
+    "/tmp/testloop-agent-decision-client-response.json",
     "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
     "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json",
     "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json",
@@ -66,6 +69,7 @@ required = [
 failures = [f"{doc}: missing required snippet {item!r}" for item in required if item not in text]
 for path in [
     Path("scripts/showcase-agent-decision-client-ci.sh"),
+    Path("scripts/render-agent-decision-client-ci-response.mjs"),
     Path("scripts/install-agent-decision-client-ci-template.sh"),
     Path("scripts/showcase-agent-decision-client-ci-template-install.sh"),
     Path("scripts/validate-agent-decision-client-ci-install-summary.mjs"),

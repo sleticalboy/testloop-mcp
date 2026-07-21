@@ -90,6 +90,7 @@ required_text = [
     "./docs/fixtures/verification-summary.schema.json",
     "./docs/fixtures/dual-project-summary.schema.json",
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
+    "node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "agent_response_json",
     "agent_next_step=ready",

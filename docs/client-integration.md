@@ -78,7 +78,7 @@ CI 中需要机器断言时可以直接使用 JSON 输出：
 scripts/showcase-agent-decision-client-ci.sh --json
 ```
 
-该 JSON 固定包含 `status`、`client_dir`、`fixture_dir`、`result_json`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。
+该 JSON 固定包含 `status`、`client_dir`、`fixture_dir`、`result_json`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。如果要把基础客户端 CI summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json`；通过态输出 `agent_next_step=ready`，失败时分流到 `inspect-client-validator`、`inspect-agent-decision-fixtures` 或 `inspect-agent-decision-client-summary`。
 如果要直接安装 GitHub Actions job 到外部客户端仓库：
 
 ```bash

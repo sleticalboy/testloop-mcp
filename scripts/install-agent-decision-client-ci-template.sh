@@ -133,9 +133,39 @@ jobs:
 
       - name: Verify Agent decision fixture contract
         run: |
+          set -euo pipefail
           TESTLOOP_AGENT_DECISION_CLIENT_DIR=/tmp/testloop-agent-decision-client \\
             .testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json \\
             | tee /tmp/testloop-agent-decision-client-summary.json
+
+      - name: Render Agent decision response
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f /tmp/testloop-agent-decision-client-summary.json ]; then
+            printf '%s\n' \\
+              '{' \\
+              '  "schema_version": 1,' \\
+              '  "status": "failed",' \\
+              '  "agent_next_step": "inspect-agent-decision-client-summary",' \\
+              '  "summary_json": "/tmp/testloop-agent-decision-client-summary.json",' \\
+              '  "evidence": {' \\
+              '    "client_dir": "",' \\
+              '    "fixture_dir": "",' \\
+              '    "result_json": "",' \\
+              '    "fixture_count": 0,' \\
+              '    "decisions": [],' \\
+              '    "validator_exit_code": -1' \\
+              '  },' \\
+              '  "failures": [' \\
+              '    "missing /tmp/testloop-agent-decision-client-summary.json"' \\
+              '  ]' \\
+              '}' > /tmp/testloop-agent-decision-client-response.json
+            exit 1
+          fi
+          node .testloop-mcp/scripts/render-agent-decision-client-ci-response.mjs \\
+            --json /tmp/testloop-agent-decision-client-summary.json \\
+            | tee /tmp/testloop-agent-decision-client-response.json
 
       - name: Upload Agent decision result
         if: always()
@@ -144,6 +174,7 @@ jobs:
           name: testloop-agent-decision-contract
           path: |
             /tmp/testloop-agent-decision-client-summary.json
+            /tmp/testloop-agent-decision-client-response.json
             /tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json

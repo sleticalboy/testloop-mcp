@@ -49,6 +49,7 @@ CI 会 checkout `sleticalboy/testloop-mcp` helper，运行：
 
 ```text
 /tmp/testloop-agent-decision-client-summary.json
+/tmp/testloop-agent-decision-client-response.json
 /tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json
 /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json
 /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json
@@ -92,7 +93,10 @@ JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fix
 
 ## 失败排查
 
-- `status=failed` 且 `failures[]` 非空：先读 `agent-decision-fixtures-result.json`，确认是 manifest、fixture 内容还是客户端期望漂移。
+- `testloop-agent-decision-client-response.json` 的 `agent_next_step=ready`：基础契约通过，可以继续接入 consumer smoke 或真实客户端逻辑。
+- `agent_next_step=inspect-client-validator`：先检查 Node/npm、导出包内 `npm test --silent` 和 `validator_exit_code`。
+- `agent_next_step=inspect-agent-decision-fixtures`：先读 `agent-decision-fixtures-result.json`，确认是 manifest、fixture 内容还是客户端期望漂移。
+- `status=failed` 且 `failures[]` 非空：先读 `testloop-agent-decision-client-response.json`，再下钻 `agent-decision-fixtures-result.json`。
 - `validator_exit_code` 非 0：优先检查 Node/npm 是否可用，以及导出包内 `npm test --silent` 输出。
 - helper checkout 失败：确认 workflow 中 `repository: sleticalboy/testloop-mcp` 和 `ref: v0.5.18` 是否可访问。
 - 不要把 `manual_review_*` 当成自动修复入口；只有 `failed/apply_fix_suggestions` 才进入 repair task 闭环。
