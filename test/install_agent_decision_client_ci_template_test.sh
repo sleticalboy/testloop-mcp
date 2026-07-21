@@ -49,6 +49,26 @@ script="${repo_root}/scripts/install-agent-decision-client-ci-template.sh"
 client_dir="${tmp_dir}/client"
 mkdir -p "$client_dir"
 
+python3 - "$repo_root" "$script" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+repo_root = Path(sys.argv[1])
+script = Path(sys.argv[2])
+main_go = (repo_root / "main.go").read_text(encoding="utf-8")
+script_text = script.read_text(encoding="utf-8")
+version = re.search(r'^const appVersion = "([^"]+)"', main_go, flags=re.M)
+default_ref = re.search(r'^default_helper_ref="([^"]+)"', script_text, flags=re.M)
+if not version or not default_ref:
+    print("failed to read appVersion or default_helper_ref", file=sys.stderr)
+    sys.exit(1)
+want = f"v{version.group(1)}"
+if default_ref.group(1) != want:
+    print(f"default_helper_ref = {default_ref.group(1)!r}, want {want!r}", file=sys.stderr)
+    sys.exit(1)
+PY
+
 out="${tmp_dir}/help.out"
 run_expect_code 0 "$out" bash "$script" --help
 assert_contains "$out" "Usage: scripts/install-agent-decision-client-ci-template.sh"
