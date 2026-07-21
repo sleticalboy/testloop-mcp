@@ -652,6 +652,12 @@ bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
 scripts/showcase-agent-decision-client-ci-template-install.sh --json
 ```
 
+安装 dry-run 输出可用无依赖 validator 校验：
+
+```bash
+node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json
+```
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：

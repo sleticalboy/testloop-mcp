@@ -51,6 +51,7 @@ required_commands = [
     "node scripts/export-agent-decision-fixtures.mjs",
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",
+    "node scripts/validate-agent-decision-client-ci-install-summary.mjs",
     "npm test --silent",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",
