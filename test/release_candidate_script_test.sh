@@ -59,6 +59,9 @@ assert_contains "$script" "find test -maxdepth 1 -name '*_test.sh'"
 assert_contains "$script" "verify agent decision fixture export package"
 assert_contains "$script" 'node scripts/export-agent-decision-fixtures.mjs "$agent_decision_fixture_dir"'
 assert_contains "$script" 'npm test --silent > "$agent_decision_fixture_json"'
+assert_contains "$script" "verify agent decision release response client export package"
+assert_contains "$script" 'node scripts/export-agent-decision-release-response-client.mjs "$agent_decision_release_response_client_dir"'
+assert_contains "$script" '(cd "$agent_decision_release_response_client_dir" && npm test --silent)'
 assert_contains "$script" 'go build -o "$mcp_binary" .'
 assert_contains "$script" 'go build -o "$testgen_binary" ./cmd/testgen'
 assert_contains "$script" '"$mcp_binary" --version'

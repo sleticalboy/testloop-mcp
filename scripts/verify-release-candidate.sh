@@ -52,6 +52,7 @@ mcp_binary="${tmp_dir}/testloop-mcp-${safe_tag}-candidate"
 testgen_binary="${tmp_dir}/testloop-testgen-${safe_tag}-candidate"
 agent_decision_fixture_dir="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}"
 agent_decision_fixture_json="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}.json"
+agent_decision_release_response_client_dir="${tmp_dir}/testloop-release-response-client-${safe_tag}"
 
 step() {
   printf '==> %s\n' "$*"
@@ -126,6 +127,11 @@ step "verify agent decision fixture export package"
 rm -rf "$agent_decision_fixture_dir" "$agent_decision_fixture_json"
 node scripts/export-agent-decision-fixtures.mjs "$agent_decision_fixture_dir"
 (cd "$agent_decision_fixture_dir" && npm test --silent > "$agent_decision_fixture_json")
+
+step "verify agent decision release response client export package"
+rm -rf "$agent_decision_release_response_client_dir"
+node scripts/export-agent-decision-release-response-client.mjs "$agent_decision_release_response_client_dir"
+(cd "$agent_decision_release_response_client_dir" && npm test --silent)
 
 step "build candidate binaries"
 go build -o "$mcp_binary" .
