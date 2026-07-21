@@ -8,7 +8,7 @@
 - 客户端需要固定 `accept`、`manual-review`、`apply-repair`、`needs-better-input` 四类机器动作。
 - 客户端不想复制整个 testloop-mcp 仓库，只想用最小 fixture 包做契约测试。
 
-当前模板 checkout `main` 分支上的 helper，因为 `scripts/showcase-agent-decision-client-ci.sh` 是 v0.5.15 之后新增的接入脚本。后续发布正式版本后，接入方可以把 `ref: main` 固定到对应 tag。
+当前模板 checkout `v0.5.16` tag 上的 helper，确保客户端 CI 使用稳定的 fixture 导出脚本、JSON 输出合同和外部仓库 dry-run 已验证过的相对路径。
 
 ## GitHub Actions 模板
 
@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sleticalboy/testloop-mcp
-          ref: main
+          ref: v0.5.16
           path: .testloop-mcp
 
       - name: Verify Agent decision fixture contract

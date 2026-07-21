@@ -15,7 +15,7 @@ required = [
     "name: testloop first run",
     "name: testloop web first run",
     "curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-first-run-ci.sh -o /tmp/testloop-first-run-ci.sh",
-    "TESTLOOP_MCP_VERSION=v0.5.15",
+    "TESTLOOP_MCP_VERSION=v0.5.16",
     "TESTLOOP_MCP_REPO_REF",
     "helper checkout 默认使用 `main`",
     "sh scripts/verify-agent-artifact.sh first-run /tmp/testloop-first-run",

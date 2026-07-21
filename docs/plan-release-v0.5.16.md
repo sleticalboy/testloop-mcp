@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.16 发布说明](./plan-release-notes-v0.5.16.md)。
 
-当前发布状态：候选边界整理中。暂不更新 `main.go` implementation version，不收敛 `CHANGELOG.md` 正式版本段，不打 tag，不创建 GitHub Release，不更新 Homebrew tap。
+当前发布状态：正式版本准备中。`main.go` implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.16` / `v0.5.16`；尚未打 tag、创建 GitHub Release、生成 Release assets 或更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -44,21 +44,23 @@
 - [x] `76a1be0` 远端 CI run `29796336606` passed，覆盖 showcase JSON 输出。
 - [x] `ebfe245` 远端 CI run `29796478139` passed，覆盖 CHANGELOG 收敛。
 - [x] `08ff2a4` 远端 CI run `29797835817` passed，覆盖外部客户端模板 dry-run 和导出脚本定位修复。
+- [x] `63409a6` 远端 CI run `29798075470` passed，覆盖 v0.5.16 候选边界文档。
+- [x] 正式版本准备后的完整本地门禁已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.16-release-prep-dist scripts/verify-release-candidate.sh v0.5.16` 输出 `release_candidate_status=passed`，候选二进制 `--version` 输出 `testloop-mcp 0.5.16`。
 
 ## 发布前门禁
 
-- [ ] 候选边界整理提交后的 main CI 通过。
-- [ ] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.16-candidate-dist scripts/verify-release-candidate.sh v0.5.16`
-- [ ] `git diff --check`
-- [ ] 如果进入正式版本准备，再更新 `main.go` implementation version 到 `0.5.16`。
+- [x] 候选边界整理提交后的 main CI 已通过：`63409a6` run `29798075470` passed。
+- [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.16-release-prep-dist scripts/verify-release-candidate.sh v0.5.16`
+- [x] `git diff --check`
+- [x] `main.go` implementation version 已更新到 `0.5.16`。
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.16`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.16 - 2026-07-21`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.16` / `v0.5.16`。
-- [ ] 测试中的版本期望同步到 `0.5.16`。
-- [ ] 重新运行完整 release readiness。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.16`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.16 - 2026-07-21`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.16` / `v0.5.16`。
+- [x] 测试中的版本期望同步到 `0.5.16`。
+- [x] 重新运行完整 release readiness。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.16` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。

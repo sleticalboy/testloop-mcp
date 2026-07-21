@@ -11,7 +11,7 @@ scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 建议发布后或 Homebrew 安装后加版本门禁：
 
 ```bash
-TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.15 \
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.16 \
   scripts/doctor-first-run.sh "$(command -v testloop-mcp)"
 ```
 
@@ -62,7 +62,7 @@ first_run_log=/tmp/testloop-mcp-first-run/first-run.log
 
 ```bash
 go build -o /tmp/testloop-mcp-first-run .
-TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.15 \
+TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.16 \
 TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-mcp-first-run-check \
   scripts/doctor-first-run.sh /tmp/testloop-mcp-first-run
 ```

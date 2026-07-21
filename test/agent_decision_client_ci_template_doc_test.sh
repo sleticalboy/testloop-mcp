@@ -18,7 +18,7 @@ required = [
     "actions/checkout@v4",
     "actions/setup-node@v4",
     "repository: sleticalboy/testloop-mcp",
-    "ref: main",
+    "ref: v0.5.16",
     "path: .testloop-mcp",
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",

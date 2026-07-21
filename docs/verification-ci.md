@@ -49,7 +49,7 @@ jobs:
       - name: Generate onboarding report
         run: |
           curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
-          TESTLOOP_MCP_VERSION=v0.5.15 \
+          TESTLOOP_MCP_VERSION=v0.5.16 \
           TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-onboarding \
           TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
             bash /tmp/testloop-onboarding-ci.sh 'go test ./...'
@@ -82,7 +82,7 @@ jobs:
 - name: Generate verification report
   run: |
     set +e
-    TESTLOOP_REPORT_EXPECT_VERSION=0.5.15 \
+    TESTLOOP_REPORT_EXPECT_VERSION=0.5.16 \
     TESTLOOP_REPORT_SUMMARY_JSON=/tmp/testloop-summary.json \
     TESTLOOP_REPORT_PROJECT_DIR="$PWD" \
     TESTLOOP_REPORT_PROJECT_COMMAND='go test ./...' \
@@ -115,7 +115,7 @@ Vue / React / Node 项目可以把用户项目 smoke 换成包管理器命令。
 - name: Generate web verification report
   run: |
     curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/run-onboarding-ci.sh -o /tmp/testloop-onboarding-ci.sh
-    TESTLOOP_MCP_VERSION=v0.5.15 \
+    TESTLOOP_MCP_VERSION=v0.5.16 \
     TESTLOOP_ONBOARDING_OUTPUT_DIR=/tmp/testloop-web-onboarding \
     TESTLOOP_ONBOARDING_PROJECT_DIR="$PWD" \
       bash /tmp/testloop-onboarding-ci.sh 'pnpm install --frozen-lockfile && pnpm build'
