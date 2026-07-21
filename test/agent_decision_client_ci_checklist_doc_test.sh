@@ -31,6 +31,7 @@ required = [
     "scripts/showcase-agent-decision-client-ci-template-install.sh --json",
     "./fixtures/agent-decision-client-ci-template-install-summary.schema.json",
     "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
+    "node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json",
     "./agent-decision-client-ci-template.md",
     "./client-integration.md",
     "./mcp-client-contract-tests.md",
@@ -40,6 +41,7 @@ failures = [f"{doc}: missing required snippet {item!r}" for item in required if 
 for path in [
     Path("scripts/install-agent-decision-client-ci-template.sh"),
     Path("scripts/showcase-agent-decision-client-ci-template-install.sh"),
+    Path("scripts/validate-agent-decision-client-ci-install-summary.mjs"),
     Path("docs/fixtures/agent-decision-client-ci-template-install-summary.schema.json"),
     Path("docs/fixtures/agent-decision-client-ci-template-install-summary/passed.json"),
     Path("docs/agent-decision-client-ci-template.md"),
