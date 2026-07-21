@@ -43,7 +43,10 @@ required_snippets = [
     "scripts/showcase-agent-decision-client-ci.sh --json",
     "./agent-decision-client-ci-template.md",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json",
+    "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
+    "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
     "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
+    "./fixtures/agent-decision-client-consumer-smoke-summary/passed.json",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
     "validator_exit_code",
@@ -91,6 +94,8 @@ command_paths = {
     "sh scripts/render-onboarding-agent-response.sh": Path("scripts/render-onboarding-agent-response.sh"),
     "sh scripts/verify-agent-artifact.sh": Path("scripts/verify-agent-artifact.sh"),
     "scripts/showcase-agent-decision-client-ci.sh": Path("scripts/showcase-agent-decision-client-ci.sh"),
+    "scripts/showcase-agent-decision-client-consumer-smoke.sh": Path("scripts/showcase-agent-decision-client-consumer-smoke.sh"),
+    "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs": Path("scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():
