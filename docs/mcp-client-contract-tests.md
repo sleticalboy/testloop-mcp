@@ -122,6 +122,8 @@ scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-re
 scripts/showcase-agent-decision-client-ci-template-install.sh --json
 ```
 
+该命令的 JSON 输出结构见 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)。
+
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
 ```text

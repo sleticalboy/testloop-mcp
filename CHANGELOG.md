@@ -7,6 +7,7 @@
 - 新增 `scripts/install-agent-decision-client-ci-template.sh`，可一键向外部 MCP 客户端仓库写入 Agent 决策契约 GitHub Actions workflow，支持固定 helper ref、dry-run 和强制覆盖。
 - `scripts/install-agent-decision-client-ci-template.sh` 支持脱离仓库单文件运行，方便接入方从固定 release tag 直接下载脚本生成 workflow。
 - 新增 `scripts/showcase-agent-decision-client-ci-template-install.sh`，覆盖下载安装脚本、生成 workflow、模拟 `.testloop-mcp` helper checkout 并运行 Agent 决策 fixture contract 的外部客户端 dry-run。
+- 新增 `agent-decision-client-ci-template-install-summary.schema.json`，固定安装 dry-run 的 JSON 摘要输出。
 
 ## v0.5.16 - 2026-07-21
 

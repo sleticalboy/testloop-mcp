@@ -66,6 +66,7 @@ import sys
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 client_dir = sys.argv[2]
 workflow = sys.argv[3]
+assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["client_dir"] == client_dir
 assert payload["workflow_path"] == workflow

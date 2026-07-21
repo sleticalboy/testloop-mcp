@@ -85,7 +85,7 @@ scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-re
 
 该脚本默认生成 `.github/workflows/testloop-agent-decision-contract.yml`，并把 helper 固定到当前版本 tag；手动复制版本见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)。
 外部接入方也可以从 release tag 下载单脚本运行，不需要 clone 整个 testloop-mcp 仓库。
-维护者可以运行 `scripts/showcase-agent-decision-client-ci-template-install.sh --json`，验证下载安装脚本、生成 workflow 和执行 contract 的完整外部客户端 dry-run。
+维护者可以运行 `scripts/showcase-agent-decision-client-ci-template-install.sh --json`，验证下载安装脚本、生成 workflow 和执行 contract 的完整外部客户端 dry-run；JSON 输出结构见 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)。
 
 ## 使用真实 fixture
 

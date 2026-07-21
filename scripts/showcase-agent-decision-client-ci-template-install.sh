@@ -58,8 +58,8 @@ installer_url="${TESTLOOP_AGENT_DECISION_CI_INSTALLER_URL:-https://raw.githubuse
 client_dir="${TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR:-${tmp_dir}/external-client}"
 helper_dir="${TESTLOOP_AGENT_DECISION_CI_HELPER_DIR:-$repo_root}"
 workflow_path="${client_dir}/.github/workflows/testloop-agent-decision-contract.yml"
-summary_json="/tmp/testloop-agent-decision-client-summary.json"
-contract_client_dir="/tmp/testloop-agent-decision-client"
+summary_json="${tmp_dir}/testloop-agent-decision-client-summary.json"
+contract_client_dir="${tmp_dir}/testloop-agent-decision-client"
 
 command -v node >/dev/null 2>&1 || fail "missing required command: node"
 command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
@@ -116,6 +116,7 @@ const contractSummary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
 const installerOutput = fs.readFileSync(installerOutputPath, 'utf8');
 const refMatch = installerOutput.match(/^agent_decision_client_ci_template_ref=(.+)$/m);
 const payload = {
+  schema_version: 1,
   status: contractSummary.status === 'passed' && contractExitCode === 0 ? 'passed' : 'failed',
   installer_path: installerPath,
   installer_url: installerUrl,
