@@ -92,6 +92,8 @@ required_text = [
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "agent_next_step=ready",
+    "./docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json",
+    "./docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json",
 ]
 
 missing_text = [item for item in required_text if item not in text]

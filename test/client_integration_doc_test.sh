@@ -52,6 +52,8 @@ required_snippets = [
     "inspect-consumer-smoke-summary",
     "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
     "./fixtures/agent-decision-client-consumer-smoke-summary/passed.json",
+    "./fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json",
+    "./fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
     "validator_exit_code",

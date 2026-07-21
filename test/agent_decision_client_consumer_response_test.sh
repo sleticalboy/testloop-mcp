@@ -72,33 +72,14 @@ node "$script" "$runtime_summary" > "${tmp_dir}/runtime-response.out"
 assert_contains "${tmp_dir}/runtime-response.out" "agent_decision_client_consumer_response_status=passed"
 assert_contains "${tmp_dir}/runtime-response.out" "agent_next_step=ready"
 
-bad_validator="${tmp_dir}/bad-validator.json"
-python3 - "$bad_validator" <<'PY'
-from pathlib import Path
-import json
-import sys
-
-payload = json.loads(Path("docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json").read_text(encoding="utf-8"))
-payload["fixture_validator_exit_code"] = 1
-Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-PY
+bad_validator="docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json"
 
 run_expect_code 1 "${tmp_dir}/bad-validator.out" node "$script" "$bad_validator"
 assert_contains "${tmp_dir}/bad-validator.out" "agent_decision_client_consumer_response_status=failed"
 assert_contains "${tmp_dir}/bad-validator.out" "agent_next_step=inspect-consumer-smoke-validator"
 assert_contains "${tmp_dir}/bad-validator.out" "fixture_validator_exit_code=1"
 
-bad_decisions="${tmp_dir}/bad-decisions.json"
-python3 - "$bad_decisions" <<'PY'
-from pathlib import Path
-import json
-import sys
-
-payload = json.loads(Path("docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json").read_text(encoding="utf-8"))
-payload["fixture_count"] = 7
-payload["decisions"] = payload["decisions"][:-1]
-Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-PY
+bad_decisions="docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json"
 
 run_expect_code 1 "${tmp_dir}/bad-decisions.out" node "$script" "$bad_decisions"
 assert_contains "${tmp_dir}/bad-decisions.out" "agent_next_step=inspect-agent-decision-fixtures"

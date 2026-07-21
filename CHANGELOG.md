@@ -9,6 +9,7 @@
 ### Added
 
 - 新增 `scripts/render-agent-decision-client-consumer-response.mjs`，可把消费端 smoke summary 转成稳定的 `agent_next_step`，方便外部 MCP 客户端或 Agent 直接分流。
+- 新增消费端 smoke summary 失败态 fixture，覆盖 validator 失败和 fixture 决策漂移两类 Agent 分流。
 
 ## v0.5.18 - 2026-07-21
 

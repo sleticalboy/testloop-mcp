@@ -90,4 +90,12 @@ assert payload["failures"]
 assert any("status must be passed" in item for item in payload["failures"])
 PY
 
+if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json > "${tmp_dir}/validator-fixture.out" 2>&1; then
+  echo "expected validator-failed fixture to fail validation" >&2
+  exit 1
+fi
+assert_contains "${tmp_dir}/validator-fixture.out" "status must be passed"
+assert_contains "${tmp_dir}/validator-fixture.out" "fixture_validator_exit_code must be 0"
+assert_contains "${tmp_dir}/validator-fixture.out" "failures must be an empty array"
+
 echo "agent decision client consumer smoke summary validator test passed"
