@@ -9,7 +9,8 @@ Install the testloop Agent decision contract GitHub Actions workflow into an
 external MCP client repository.
 
 Options:
-  --version REF          testloop-mcp helper ref. Default: v<main.go appVersion>.
+  --version REF          testloop-mcp helper ref. Default: v<main.go appVersion>,
+                         or a built-in stable ref when run as a standalone script.
   --workflow-path PATH   Workflow path under client-dir.
                          Default: .github/workflows/testloop-agent-decision-contract.yml
   --force               Overwrite an existing workflow file.

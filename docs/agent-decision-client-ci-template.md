@@ -18,7 +18,7 @@
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
-脚本默认从 `main.go` 读取当前版本并生成 `ref: v0.5.16`。如果需要固定到其他 tag 或预览写入路径：
+脚本在仓库内运行时默认从 `main.go` 读取当前版本并生成 `ref: v0.5.16`；脱离仓库单文件运行时会回退到内置稳定 ref。如果需要固定到其他 tag 或预览写入路径：
 
 ```bash
 scripts/install-agent-decision-client-ci-template.sh --version v0.5.16 /absolute/path/to/client-repo

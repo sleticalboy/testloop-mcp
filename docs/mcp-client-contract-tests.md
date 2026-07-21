@@ -115,7 +115,7 @@ scripts/showcase-agent-decision-client-ci.sh
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
-这个安装脚本也支持脱离仓库单文件运行，适合用 `curl` 从固定 release tag 下载后写入客户端仓库。
+这个安装脚本也支持脱离仓库单文件运行，适合用 `curl` 从 `main` raw URL 下载后写入客户端仓库；生成的 workflow 仍会固定到稳定 helper tag。
 完整安装链路的 dry-run 入口是：
 
 ```bash
