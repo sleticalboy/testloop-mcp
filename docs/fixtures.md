@@ -14,6 +14,8 @@ Agent 决策客户端消费端 smoke 的 JSON 摘要结构见 [agent-decision-cl
 
 Agent 决策客户端 release smoke 的 JSON 摘要结构见 [agent-decision-client-release-smoke-summary.schema.json](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)，对应 `scripts/showcase-agent-decision-client-release-smoke.sh --json` 输出。它用于正式发布后把 release tag raw installer、基础客户端 CI response 和 consumer smoke response 合成一份 Agent 可消费证据，正常结果应同时固定 `helper_refs.install=v0.5.19`、`helper_refs.consumer=v0.5.19`、`fixture_count=8` 和 `agent_next_steps.client/consumer=ready`。如果接入方需要最小消费器，可运行 `node scripts/render-agent-decision-client-release-response.mjs /path/to/release-smoke-summary.json`，把 summary 转成稳定的 `agent_next_step`。
 
+Agent 决策客户端 release response 的 JSON 结构见 [agent-decision-client-release-response.schema.json](./fixtures/agent-decision-client-release-response.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-response/passed.json)，失败态样例见 [installer-drift.json](./fixtures/agent-decision-client-release-response/installer-drift.json)、[client-response-drift.json](./fixtures/agent-decision-client-release-response/client-response-drift.json)、[consumer-response-drift.json](./fixtures/agent-decision-client-release-response/consumer-response-drift.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-release-response/fixture-drift.json)。这些样例固定 `ready`、`inspect-release-installer`、`inspect-release-client-response`、`inspect-release-consumer-response` 和 `inspect-agent-decision-fixtures` 分流，适合接入方直接放进客户端单元测试。
+
 ## run_tests fixture 列表
 
 | 文件 | status/action | category | 来源 | Agent 下一步 |

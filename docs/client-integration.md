@@ -106,6 +106,7 @@ node scripts/render-agent-decision-client-release-response.mjs \
 ```
 
 通过态输出 `agent_next_step=ready`；release installer 或 helper tag 漂移分流到 `inspect-release-installer`；基础客户端 response 漂移分流到 `inspect-release-client-response`；consumer response 漂移分流到 `inspect-release-consumer-response`；fixture 数量或决策序列漂移分流到 `inspect-agent-decision-fixtures`。这给外部 Agent 一个可复制的最小消费样例：先跑 release smoke，再用 renderer 把 summary 转成稳定动作。
+release response 的结构契约见 [Agent 决策客户端 release response schema](./fixtures/agent-decision-client-release-response.schema.json)，通过态和失败态 fixture 见 [passed.json](./fixtures/agent-decision-client-release-response/passed.json)、[installer-drift.json](./fixtures/agent-decision-client-release-response/installer-drift.json)、[client-response-drift.json](./fixtures/agent-decision-client-release-response/client-response-drift.json)、[consumer-response-drift.json](./fixtures/agent-decision-client-release-response/consumer-response-drift.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-release-response/fixture-drift.json)。
 如果要验证“复制到独立客户端项目后仍可用”，可以运行：
 
 ```bash

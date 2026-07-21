@@ -103,6 +103,14 @@ TESTLOOP_AGENT_DECISION_RELEASE_INSTALLER_URL="file://${PWD}/scripts/install-age
 - `evidence.agent_next_steps`
 - `failures[]`
 
+通过态和失败态 fixture 见：
+
+- [passed.json](./fixtures/agent-decision-client-release-response/passed.json)
+- [installer-drift.json](./fixtures/agent-decision-client-release-response/installer-drift.json)
+- [client-response-drift.json](./fixtures/agent-decision-client-release-response/client-response-drift.json)
+- [consumer-response-drift.json](./fixtures/agent-decision-client-release-response/consumer-response-drift.json)
+- [fixture-drift.json](./fixtures/agent-decision-client-release-response/fixture-drift.json)
+
 ## 建议 CI artifact
 
 失败时建议上传：

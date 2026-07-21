@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "agent_next_step": "inspect-release-installer",
+  "summary_json": "docs/fixtures/agent-decision-client-release-smoke-summary/passed.json",
+  "evidence": {
+    "release_ref": "v0.5.19",
+    "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.19/scripts/install-agent-decision-client-ci-template.sh",
+    "helper_refs": {
+      "install": "v0.5.19",
+      "consumer": "v0.5.18"
+    },
+    "fixture_count": 8,
+    "decisions": [
+      "accept",
+      "accept",
+      "accept",
+      "manual-review",
+      "manual-review",
+      "manual-review",
+      "apply-repair",
+      "needs-better-input"
+    ],
+    "agent_next_steps": {
+      "client": "ready",
+      "consumer": "ready"
+    }
+  },
+  "failures": [
+    "helper_refs.consumer=v0.5.18, want v0.5.19"
+  ]
+}

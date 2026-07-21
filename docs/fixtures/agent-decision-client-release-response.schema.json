@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-client-release-response.schema.json",
+  "title": "testloop Agent decision client release response",
+  "description": "Machine-readable contract for scripts/render-agent-decision-client-release-response.mjs --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "agent_next_step",
+    "summary_json",
+    "evidence",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "agent_next_step": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_ref",
+        "installer_url",
+        "helper_refs",
+        "fixture_count",
+        "decisions",
+        "agent_next_steps"
+      ],
+      "properties": {
+        "release_ref": {
+          "type": "string"
+        },
+        "installer_url": {
+          "type": "string"
+        },
+        "helper_refs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "install",
+            "consumer"
+          ],
+          "properties": {
+            "install": {
+              "type": "string"
+            },
+            "consumer": {
+              "type": "string"
+            }
+          }
+        },
+        "fixture_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "agent_next_steps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "client",
+            "consumer"
+          ],
+          "properties": {
+            "client": {
+              "type": "string"
+            },
+            "consumer": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
