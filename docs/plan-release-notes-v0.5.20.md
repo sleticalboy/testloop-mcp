@@ -8,7 +8,7 @@ testloop-mcp v0.5.20
 
 - [x] 创建 v0.5.20 候选发布说明草案。
 - [x] 梳理 v0.5.19 之后围绕 release response 独立客户端消费、真实外部仓库安装、安装 summary 契约、release readiness 门禁和接入 checklist 的改动边界。
-- [x] 最新已完成的远端 CI：`461a3ce` run `29843072721` passed，覆盖 release response 真实安装案例记录。
+- [x] 最新已完成的远端 CI：`a704d4e` run `29844159254` passed，覆盖 v0.5.20 候选发布边界整理。
 - [x] 候选 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19` 输出 `release_candidate_status=passed`。
 - [ ] 尚未进入正式版本准备：`main.go` implementation version 仍为 `0.5.19`，`CHANGELOG.md` 仍保留 Unreleased。
 - [ ] 尚未打 `v0.5.20` tag。

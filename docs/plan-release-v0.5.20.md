@@ -53,11 +53,12 @@
 - [x] `go test ./...`
 - [x] `git diff --check`
 - [x] `461a3ce` 远端 CI run `29843072721` passed，覆盖 release response 真实安装案例记录。
+- [x] `a704d4e` 远端 CI run `29844159254` passed，覆盖 v0.5.20 候选发布边界整理。
 - [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19` 输出 `release_candidate_status=passed`。
 
 ## 发布前门禁
 
-- [x] 最新 main CI passed：`461a3ce` run `29843072721` passed。
+- [x] 最新 main CI passed：`a704d4e` run `29844159254` passed。
 - [x] 本地 release readiness passed：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19`。
 - [x] readiness 输出包含 release response 导出包验证：`response_fixture_count=5`。
 - [x] readiness 输出包含真实仓库安装 summary 验证：`agent_decision_release_response_client_install_summary_status=passed release_ref=v0.5.19`。
