@@ -51,6 +51,8 @@ required_commands = [
     "node scripts/export-agent-decision-fixtures.mjs",
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",
+    "scripts/showcase-agent-decision-client-release-smoke.sh --json",
+    "scripts/showcase-agent-decision-client-release-response-smoke.sh --json",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs",
     "npm test --silent",
     "scripts/doctor-first-run.sh",
@@ -107,6 +109,8 @@ required_phrases = [
     "client_expectation",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
+    "release tag raw installer",
+    "Agent 决策 release response 客户端接入",
     "validator_exit_code",
     ".github/workflows/testloop-agent-decision-contract.yml",
 ]

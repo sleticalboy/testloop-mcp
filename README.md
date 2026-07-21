@@ -670,6 +670,20 @@ JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./doc
 如果要把该 summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json`；通过态会输出 `agent_next_step=ready`，失败时会分流到 `inspect-consumer-smoke-validator`、`inspect-agent-decision-fixtures` 或 `inspect-consumer-smoke-summary`。
 失败态样例见 [validator-failed.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)。
 
+正式发布后如果要把 release tag raw installer、基础客户端 response 和 consumer response 收成一份 Agent 可消费证据：
+
+```bash
+scripts/showcase-agent-decision-client-release-smoke.sh --json
+```
+
+如果要验证接入方独立项目复制后也能消费 release summary：
+
+```bash
+scripts/showcase-agent-decision-client-release-response-smoke.sh --json
+```
+
+这条 smoke 会创建临时 Node 客户端项目，复制 release summary 和 renderer，再运行该项目自己的 `npm test --silent`。可复制目录结构见 [Agent 决策 release response 客户端接入](./docs/agent-decision-release-response-client.md)。
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：
