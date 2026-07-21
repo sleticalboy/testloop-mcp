@@ -53,6 +53,8 @@ testgen_binary="${tmp_dir}/testloop-testgen-${safe_tag}-candidate"
 agent_decision_fixture_dir="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}"
 agent_decision_fixture_json="${tmp_dir}/testloop-agent-decision-fixtures-${safe_tag}.json"
 agent_decision_release_response_client_dir="${tmp_dir}/testloop-release-response-client-${safe_tag}"
+agent_decision_release_response_install_dir="${tmp_dir}/testloop-release-response-install-${safe_tag}"
+agent_decision_release_response_install_summary="${tmp_dir}/testloop-release-response-install-${safe_tag}.json"
 
 step() {
   printf '==> %s\n' "$*"
@@ -132,6 +134,12 @@ step "verify agent decision release response client export package"
 rm -rf "$agent_decision_release_response_client_dir"
 node scripts/export-agent-decision-release-response-client.mjs "$agent_decision_release_response_client_dir"
 (cd "$agent_decision_release_response_client_dir" && npm test --silent)
+
+step "verify agent decision release response client install summary"
+rm -rf "$agent_decision_release_response_install_dir" "$agent_decision_release_response_install_summary"
+mkdir -p "$agent_decision_release_response_install_dir"
+scripts/install-agent-decision-release-response-client.sh --json "$agent_decision_release_response_install_dir" > "$agent_decision_release_response_install_summary"
+node scripts/validate-agent-decision-release-response-client-install-summary.mjs "$agent_decision_release_response_install_summary"
 
 step "build candidate binaries"
 go build -o "$mcp_binary" .

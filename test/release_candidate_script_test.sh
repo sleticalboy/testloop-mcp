@@ -62,6 +62,9 @@ assert_contains "$script" 'npm test --silent > "$agent_decision_fixture_json"'
 assert_contains "$script" "verify agent decision release response client export package"
 assert_contains "$script" 'node scripts/export-agent-decision-release-response-client.mjs "$agent_decision_release_response_client_dir"'
 assert_contains "$script" '(cd "$agent_decision_release_response_client_dir" && npm test --silent)'
+assert_contains "$script" "verify agent decision release response client install summary"
+assert_contains "$script" 'scripts/install-agent-decision-release-response-client.sh --json "$agent_decision_release_response_install_dir" > "$agent_decision_release_response_install_summary"'
+assert_contains "$script" 'node scripts/validate-agent-decision-release-response-client-install-summary.mjs "$agent_decision_release_response_install_summary"'
 assert_contains "$script" 'go build -o "$mcp_binary" .'
 assert_contains "$script" 'go build -o "$testgen_binary" ./cmd/testgen'
 assert_contains "$script" '"$mcp_binary" --version'
