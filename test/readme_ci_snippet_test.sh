@@ -63,7 +63,7 @@ required = [
     "actions/setup-go@v5",
     "actions/upload-artifact@v4",
     "scripts/run-first-run-ci.sh",
-    "TESTLOOP_MCP_VERSION=v0.5.18",
+    "TESTLOOP_MCP_VERSION=v0.5.19",
     "TESTLOOP_FIRST_RUN_OUTPUT_DIR=/tmp/testloop-first-run",
     "TESTLOOP_FIRST_RUN_PROJECT_DIR=\"$PWD\"",
     "go test ./...",

@@ -10,7 +10,7 @@ text = doc.read_text(encoding="utf-8")
 required = [
     "brew install testloop-mcp",
     "testloop-mcp --version",
-    "TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.18",
+    "TESTLOOP_FIRST_RUN_EXPECT_VERSION=0.5.19",
     "scripts/doctor-first-run.sh",
     "first_run_agent_next_step=ready",
     "scripts/verify-client-setup.sh",

@@ -107,8 +107,8 @@ func TestVersionFlag(t *testing.T) {
 	if !cfg.version {
 		t.Fatalf("version = false, want true")
 	}
-	if appVersion != "0.5.18" {
-		t.Fatalf("appVersion = %q, want 0.5.18", appVersion)
+	if appVersion != "0.5.19" {
+		t.Fatalf("appVersion = %q, want 0.5.19", appVersion)
 	}
 }
 

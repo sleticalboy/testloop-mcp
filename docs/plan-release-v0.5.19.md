@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.19 发布说明草案](./plan-release-notes-v0.5.19.md)。
 
-当前发布状态：候选边界整理中。尚未进入正式版本准备，尚未更新 `main.go` implementation version，尚未打 tag，尚未生成 Release assets 或更新 Homebrew tap。
+当前发布状态：正式版本准备中。候选边界整理提交后的 main CI 已通过，`main.go` implementation version、`CHANGELOG.md` 和当前安装/接入版本引用已同步到 `0.5.19` / `v0.5.19`。尚未打 tag，尚未生成 Release assets 或更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -57,22 +57,23 @@
 - [x] `113e0af` 远端 CI run `29821447588` passed，覆盖客户端模板失败分流示例。
 - [x] `d0d81d1` 远端 CI run `29821925051` passed，覆盖 consumer smoke `agent_response_json`。
 - [x] `b78a375` 远端 CI run `29826190450` passed，覆盖基础客户端 CI response artifact。
+- [x] `0f8d971` 远端 CI run `29826825652` passed，覆盖 v0.5.19 候选边界整理。
 
 ## 发布前门禁
 
-- [ ] 候选边界整理提交后的 main CI passed。
-- [ ] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-release-prep-dist scripts/verify-release-candidate.sh v0.5.19`
-- [ ] `git diff --check`
-- [ ] `main.go` implementation version 更新到 `0.5.19`。
-- [ ] `CHANGELOG.md` 的 Unreleased 内容收敛到 `v0.5.19 - 2026-07-21`。
+- [x] 候选边界整理提交后的 main CI passed：`0f8d971` run `29826825652` passed。
+- [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-release-prep-dist scripts/verify-release-candidate.sh v0.5.19`
+- [x] `git diff --check`
+- [x] `main.go` implementation version 更新到 `0.5.19`。
+- [x] `CHANGELOG.md` 的 Unreleased 内容收敛到 `v0.5.19 - 2026-07-21`。
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.19`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.19 - 2026-07-21`，并保留新的空 Unreleased。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.19` / `v0.5.19`。
-- [ ] 测试中的版本期望同步到 `0.5.19`。
-- [ ] 重新运行完整 release readiness。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.19`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.19 - 2026-07-21`，并保留新的空 Unreleased。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.19` / `v0.5.19`。
+- [x] 测试中的版本期望同步到 `0.5.19`。
+- [x] 重新运行完整 release readiness。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.19` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -85,4 +86,4 @@
 
 ## 当前结论
 
-v0.5.19 候选边界已经具备发布价值：它把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。正式发布前还需要执行版本准备和 release readiness。
+v0.5.19 候选边界已经具备发布价值，正式版本准备本地门禁已通过：它把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步应提交版本准备并等待 main CI。

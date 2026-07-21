@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.19 - 2026-07-21
+
 ### Fixed
 
 - Release Artifacts workflow 改为单独的 `ensure-release` 前置 job 创建 GitHub Release，并按 tag 加 `concurrency` 串行，避免矩阵 job 并发创建出重复空 Release。
@@ -13,6 +15,7 @@
 - Agent 决策客户端 CI 模板文档新增 consumer smoke summary 到 `agent_next_step` 的通过态和失败态最小示例。
 - `scripts/showcase-agent-decision-client-consumer-smoke.sh --json` 现在会在 summary 中返回 `agent_response_json`，指向 renderer 生成的 Agent 下一步动作 JSON。
 - 新增 `scripts/render-agent-decision-client-ci-response.mjs`，并将安装脚本生成的客户端 CI workflow 接入 `testloop-agent-decision-client-response.json` artifact。
+- MCP server implementation version 更新为 `0.5.19`。
 
 ## v0.5.18 - 2026-07-21
 
