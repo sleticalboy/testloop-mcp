@@ -13,12 +13,59 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-artifacts-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
+  ensure-release:
+    name: Ensure GitHub Release
+    runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+
+    steps:
+      - name: Resolve release tag
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure GitHub Release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.resolve.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+              sleep $((attempt * 5))
+            done
+            "$@"
+          }
+          if ! retry gh release view "$TAG_NAME" >/dev/null; then
+            retry gh release create "$TAG_NAME" --title "testloop-mcp ${TAG_NAME}" --generate-notes
+          fi
+
   build:
     name: Build ${{ matrix.asset }}
+    needs: ensure-release
     runs-on: ${{ matrix.runner }}
     env:
       GH_REPO: ${{ github.repository }}
+      TAG_NAME: ${{ needs.ensure-release.outputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -62,9 +109,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
+          tag="${TAG_NAME}"
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            tag="${{ inputs.tag }}"
             git fetch --tags --force origin
             git checkout "$tag"
           fi
@@ -184,26 +230,6 @@ jobs:
             dist/*.zip
             dist/*.sha256
           if-no-files-found: error
-
-      - name: Ensure GitHub Release exists
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          retry() {
-            local attempt
-            for attempt in 1 2 3 4 5; do
-              if "$@"; then
-                return 0
-              fi
-              sleep $((attempt * 5))
-            done
-            "$@"
-          }
-          if ! retry gh release view "$TAG_NAME" >/dev/null; then
-            retry gh release create "$TAG_NAME" --title "testloop-mcp ${TAG_NAME}" --generate-notes
-          fi
 
       - name: Upload release assets
         env:

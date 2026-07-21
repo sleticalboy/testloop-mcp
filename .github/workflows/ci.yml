@@ -88,6 +88,7 @@ jobs:
           sh test/validate_coverage_top_tasks_output_test.sh
           sh test/repository_hygiene_test.sh
           sh test/release_candidate_script_test.sh
+          sh test/release_workflow_test.sh
           sh test/release_doc_index_test.sh
           sh test/agent_decision_fixtures_manifest_test.sh
           sh test/agent_decision_fixture_validator_test.sh
