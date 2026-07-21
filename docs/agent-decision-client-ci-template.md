@@ -124,4 +124,24 @@ scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 
 该 smoke 会在安装 dry-run 基础上继续校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致。JSON 输出结构由 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)；也可以运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json` 做无依赖校验。
 
+## Agent 分流示例
+
+接入方拿到 consumer smoke summary 后，可以用 renderer 生成稳定的下一步动作：
+
+```bash
+scripts/showcase-agent-decision-client-consumer-smoke.sh --json > /tmp/testloop-agent-decision-consumer-smoke-summary.json
+node scripts/render-agent-decision-client-consumer-response.mjs /tmp/testloop-agent-decision-consumer-smoke-summary.json
+```
+
+通过态输出包含 `agent_next_step=ready`。失败分流可以用内置样例本地演示：
+
+```bash
+node scripts/render-agent-decision-client-consumer-response.mjs \
+  docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json || true
+node scripts/render-agent-decision-client-consumer-response.mjs \
+  docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json || true
+```
+
+这两类失败分别输出 `agent_next_step=inspect-consumer-smoke-validator` 和 `agent_next_step=inspect-agent-decision-fixtures`，用于区分“校验器/运行环境问题”和“fixture 或客户端决策语义漂移”。
+
 更多背景见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
