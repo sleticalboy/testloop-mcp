@@ -658,6 +658,14 @@ scripts/showcase-agent-decision-client-ci-template-install.sh --json
 node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json
 ```
 
+更接近真实接入方的端到端消费 smoke 可以直接运行：
+
+```bash
+scripts/showcase-agent-decision-client-consumer-smoke.sh --json
+```
+
+它会临时创建外部 client，生成 workflow，运行 helper dry-run，并校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json`。
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：

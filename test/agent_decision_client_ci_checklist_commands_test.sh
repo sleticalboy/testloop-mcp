@@ -22,8 +22,8 @@ text = doc.read_text(encoding="utf-8")
 blocks = re.findall(r"```bash\n(.*?)\n```", text, flags=re.S)
 
 failures = []
-if len(blocks) != 3:
-    failures.append(f"{doc}: expected exactly 3 bash command blocks, found {len(blocks)}")
+if len(blocks) != 4:
+    failures.append(f"{doc}: expected exactly 4 bash command blocks, found {len(blocks)}")
 
 client_dir = tmp_dir / "client"
 client_dir.mkdir()
@@ -130,6 +130,39 @@ if not failures:
                     failures.append("install showcase status must be passed")
                 if payload.get("fixture_count") != 8:
                     failures.append("install showcase fixture_count must be 8")
+
+if not failures:
+    consumer_smoke_block = blocks[3]
+    if consumer_smoke_block.strip() != "scripts/showcase-agent-decision-client-consumer-smoke.sh --json":
+        failures.append(f"{doc}: fourth bash block must be the consumer smoke command")
+    else:
+        env = {
+            "TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR": str(tmp_dir / "consumer-client"),
+        }
+        result = run_shell(consumer_smoke_block, repo_root, env=env)
+        if result.returncode != 0:
+            failures.append(
+                "consumer smoke checklist command failed:\nSTDOUT:\n"
+                + result.stdout
+                + "\nSTDERR:\n"
+                + result.stderr
+            )
+        else:
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                failures.append(f"consumer smoke command did not emit JSON: {exc}")
+            else:
+                if payload.get("schema_version") != 1:
+                    failures.append("consumer smoke schema_version must be 1")
+                if payload.get("status") != "passed":
+                    failures.append("consumer smoke status must be passed")
+                if payload.get("fixture_count") != 8:
+                    failures.append("consumer smoke fixture_count must be 8")
+                if payload.get("install_summary_validator_exit_code") != 0:
+                    failures.append("consumer smoke install_summary_validator_exit_code must be 0")
+                if payload.get("fixture_validator_exit_code") != 0:
+                    failures.append("consumer smoke fixture_validator_exit_code must be 0")
 
 if failures:
     print("Agent decision client CI checklist command test failed:", file=sys.stderr)

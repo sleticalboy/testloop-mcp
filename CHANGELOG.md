@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `scripts/showcase-agent-decision-client-consumer-smoke.sh`，用临时外部 client 串起 workflow 安装、安装 summary 校验、导出 fixture manifest 校验和 result JSON 消费检查。
+
 ## v0.5.17 - 2026-07-21
 
 ### Added

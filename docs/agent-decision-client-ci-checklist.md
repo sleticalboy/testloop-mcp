@@ -78,6 +78,14 @@ scripts/showcase-agent-decision-client-ci-template-install.sh --json
 该命令会下载或读取 installer，生成 workflow，模拟 `.testloop-mcp` helper checkout，并执行 Agent 决策 fixture contract。JSON 输出结构见 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)。
 如果要在客户端 CI 中固定输出形状，可运行 `node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json`。
 
+如果要模拟接入方从安装、summary 校验到 fixture artifact 消费的完整链路，可运行：
+
+```bash
+scripts/showcase-agent-decision-client-consumer-smoke.sh --json
+```
+
+该命令会创建一个临时外部 client，使用本仓库 installer 生成 workflow，运行安装后的 helper dry-run，校验安装 summary，并再次校验导出的 fixture manifest 与 `agent-decision-fixtures-result.json`。成功时会输出 `agent_decision_client_consumer_smoke_status=passed`，并给出 `workflow_path`、`client_summary_json`、`fixture_validation_json` 和 `result_json`，方便接入方复用同样的 artifact 消费检查。
+
 ## 失败排查
 
 - `status=failed` 且 `failures[]` 非空：先读 `agent-decision-fixtures-result.json`，确认是 manifest、fixture 内容还是客户端期望漂移。
