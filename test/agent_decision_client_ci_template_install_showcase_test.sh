@@ -55,7 +55,7 @@ run_expect_code 0 "$out" env \
 
 workflow="${client_dir}/.github/workflows/testloop-agent-decision-contract.yml"
 assert_contains "$workflow" "repository: sleticalboy/testloop-mcp"
-assert_contains "$workflow" "ref: v0.5.19"
+assert_contains "$workflow" "ref: v0.5.20"
 assert_contains "$workflow" ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json"
 
 python3 - "$out" "$client_dir" "$workflow" <<'PY'
@@ -70,7 +70,7 @@ assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["client_dir"] == client_dir
 assert payload["workflow_path"] == workflow
-assert payload["helper_ref"] == "v0.5.19"
+assert payload["helper_ref"] == "v0.5.20"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == [
     "accept",
@@ -96,6 +96,6 @@ run_expect_code 0 "$url_out" env \
   TESTLOOP_AGENT_DECISION_CI_HELPER_DIR="$repo_root" \
   bash "$script"
 assert_contains "$url_out" "agent_decision_template_install_status=passed"
-assert_contains "$url_out" "agent_decision_template_install_helper_ref=v0.5.19"
+assert_contains "$url_out" "agent_decision_template_install_helper_ref=v0.5.20"
 
 echo "Agent decision client CI template install showcase test passed"

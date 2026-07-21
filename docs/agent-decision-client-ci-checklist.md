@@ -5,7 +5,7 @@
 ## 接入步骤
 
 1. 选择 helper ref。
-   - 默认推荐使用当前稳定 ref：`v0.5.19`。
+   - 默认推荐使用当前稳定 ref：`v0.5.20`。
    - 需要验证下一版变更时，再显式传入其他 tag 或临时 ref。
 
 2. 生成 GitHub Actions workflow。
@@ -98,7 +98,7 @@ JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fix
 - `agent_next_step=inspect-agent-decision-fixtures`：先读 `agent-decision-fixtures-result.json`，确认是 manifest、fixture 内容还是客户端期望漂移。
 - `status=failed` 且 `failures[]` 非空：先读 `testloop-agent-decision-client-response.json`，再下钻 `agent-decision-fixtures-result.json`。
 - `validator_exit_code` 非 0：优先检查 Node/npm 是否可用，以及导出包内 `npm test --silent` 输出。
-- helper checkout 失败：确认 workflow 中 `repository: sleticalboy/testloop-mcp` 和 `ref: v0.5.19` 是否可访问。
+- helper checkout 失败：确认 workflow 中 `repository: sleticalboy/testloop-mcp` 和 `ref: v0.5.20` 是否可访问。
 - 不要把 `manual_review_*` 当成自动修复入口；只有 `failed/apply_fix_suggestions` 才进入 repair task 闭环。
 
 完整背景见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)、[客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。

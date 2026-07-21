@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "status": "passed",
-  "release_ref": "v0.5.19",
-  "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.19/scripts/install-agent-decision-client-ci-template.sh",
+  "release_ref": "v0.5.20",
+  "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.20/scripts/install-agent-decision-client-ci-template.sh",
   "install_summary_json": "/tmp/testloop-agent-decision-release-smoke/install-summary.json",
   "client_summary_json": "/tmp/testloop-agent-decision-release-smoke/client-summary.json",
   "client_response_json": "/tmp/testloop-agent-decision-release-smoke/client-response.json",
   "consumer_summary_json": "/tmp/testloop-agent-decision-release-smoke/consumer-summary.json",
   "consumer_agent_response_json": "/tmp/testloop-agent-decision-release-smoke/consumer-agent-response.json",
   "helper_refs": {
-    "install": "v0.5.19",
-    "consumer": "v0.5.19"
+    "install": "v0.5.20",
+    "consumer": "v0.5.20"
   },
   "fixture_count": 8,
   "decisions": [

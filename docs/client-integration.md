@@ -97,7 +97,7 @@ scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-re
 scripts/showcase-agent-decision-client-release-smoke.sh --json
 ```
 
-该 JSON 输出结构见 [Agent 决策客户端 release smoke summary schema](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)。正常结果会固定 `release_ref=v0.5.19`、`helper_refs.install=v0.5.19`、`helper_refs.consumer=v0.5.19`、`fixture_count=8`，并要求基础客户端和消费端的 `agent_next_step` 都是 `ready`。
+该 JSON 输出结构见 [Agent 决策客户端 release smoke summary schema](./fixtures/agent-decision-client-release-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-release-smoke-summary/passed.json)。正常结果会固定 `release_ref=v0.5.20`、`helper_refs.install=v0.5.20`、`helper_refs.consumer=v0.5.20`、`fixture_count=8`，并要求基础客户端和消费端的 `agent_next_step` 都是 `ready`。
 如果客户端希望把发布后 smoke 汇总直接变成 Agent 下一步动作，可运行：
 
 ```bash

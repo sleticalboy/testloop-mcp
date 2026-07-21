@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.20 - 2026-07-21
+
 ### Added
 
 - 新增 release smoke 汇总与 release response 客户端消费链路：`scripts/showcase-agent-decision-client-release-smoke.sh --json`、`scripts/render-agent-decision-client-release-response.mjs` 和 `scripts/showcase-agent-decision-client-release-response-smoke.sh --json`。
@@ -12,6 +14,10 @@
 - 新增 release response 客户端安装 summary schema、通过态 fixture 和 `scripts/validate-agent-decision-release-response-client-install-summary.mjs`，用于机器校验真实仓库安装结果。
 - 新增 `docs/agent-decision-release-response-checklist.md`，把 release smoke summary 生成、真实仓库安装、安装 summary 校验、CI artifact 和 Agent 分流整理成接入 checklist。
 - release readiness 现在会显式导出 release response 客户端最小包并运行导出包内的 `npm test --silent`，同时运行真实仓库 installer 并校验安装 summary。
+
+### Changed
+
+- MCP server implementation version 更新为 `0.5.20`。
 
 ## v0.5.19 - 2026-07-21
 

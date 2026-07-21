@@ -39,7 +39,7 @@ npm test --silent
 通过态 JSON 固定包含：
 
 - `status=passed`
-- `release_ref=v0.5.19`
+- `release_ref=v0.5.20`
 - `fixture_count=8`
 - `agent_next_step=ready`
 - `npm_exit_code=0`

@@ -72,7 +72,7 @@ run_expect_code 0 "$write_out" "$script" --summary-json "$sample" "$client_dir"
 workflow="${client_dir}/.github/workflows/testloop-release-response-contract.yml"
 package_dir="${client_dir}/testloop-release-response-client"
 assert_contains "$write_out" "agent_decision_release_response_client_install_status=written"
-assert_contains "$write_out" "agent_decision_release_response_client_install_release_ref=v0.5.19"
+assert_contains "$write_out" "agent_decision_release_response_client_install_release_ref=v0.5.20"
 assert_contains "$write_out" "agent_decision_release_response_client_install_fixture_count=8"
 assert_contains "$write_out" "agent_decision_release_response_client_install_agent_next_step=ready"
 assert_contains "$write_out" "agent_decision_release_response_client_install_npm_exit_code=0"
@@ -120,7 +120,7 @@ assert payload["status"] == "written"
 assert payload["client_dir"] == str(client_dir)
 assert payload["workflow_path"] == str(client_dir / ".github/workflows/custom-release-response.yml")
 assert payload["package_dir"] == str(client_dir / "tools/testloop-release-response-client")
-assert payload["release_ref"] == "v0.5.19"
+assert payload["release_ref"] == "v0.5.20"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == expected_decisions
 assert payload["agent_next_step"] == "ready"

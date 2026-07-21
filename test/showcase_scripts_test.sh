@@ -242,7 +242,7 @@ test_laoxia_scaffold_showcase_help_args_and_run() {
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.19"
+    echo "testloop-mcp 0.5.20"
     ;;
   *)
     echo "fake testloop-mcp"
@@ -334,7 +334,7 @@ test_dual_project_showcase_helper_directly() {
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.19"
+    echo "testloop-mcp 0.5.20"
     ;;
   *)
     echo "fake testloop-mcp"
@@ -490,7 +490,7 @@ test_laoxia_scaffold_showcase_rejects_directory_summary_json() {
 #!/usr/bin/env sh
 case "${1:-}" in
   --version)
-    echo "testloop-mcp 0.5.19"
+    echo "testloop-mcp 0.5.20"
     ;;
   *)
     echo "fake testloop-mcp"

@@ -49,7 +49,7 @@ TESTLOOP_AGENT_DECISION_RELEASE_RESPONSE_REPO_DIR="$repo_dir" \
 TESTLOOP_AGENT_DECISION_RELEASE_RESPONSE_SUMMARY_JSON="$sample" \
   "$script" > "$out"
 assert_contains "$out" "agent_decision_client_release_response_ci_status=passed"
-assert_contains "$out" "agent_decision_client_release_response_ci_release_ref=v0.5.19"
+assert_contains "$out" "agent_decision_client_release_response_ci_release_ref=v0.5.20"
 assert_contains "$out" "agent_decision_client_release_response_ci_fixture_count=8"
 assert_contains "$out" "agent_decision_client_release_response_ci_agent_next_step=ready"
 
@@ -86,7 +86,7 @@ expected_decisions = [
 
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.19"
+assert payload["release_ref"] == "v0.5.20"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == expected_decisions
 assert payload["agent_next_step"] == "ready"

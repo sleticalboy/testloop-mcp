@@ -34,7 +34,7 @@ required = [
     "inspect-release-smoke-summary",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
-    "scripts/verify-release-candidate.sh v0.5.19",
+    "scripts/verify-release-candidate.sh v0.5.20",
     "./agent-decision-release-response-client.md",
     "./client-integration.md",
     "./agent-decision-client-ci-checklist.md",
@@ -69,7 +69,7 @@ else:
     else:
         expected = {
             "status": "written",
-            "release_ref": "v0.5.19",
+            "release_ref": "v0.5.20",
             "fixture_count": 8,
             "agent_next_step": "ready",
             "npm_exit_code": 0,

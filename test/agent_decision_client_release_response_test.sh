@@ -47,8 +47,8 @@ out="${tmp_dir}/response.out"
 node "$script" > "$out"
 assert_contains "$out" "agent_decision_client_release_response_status=passed"
 assert_contains "$out" "agent_next_step=ready"
-assert_contains "$out" "release_ref=v0.5.19"
-assert_contains "$out" "helper_refs=v0.5.19,v0.5.19"
+assert_contains "$out" "release_ref=v0.5.20"
+assert_contains "$out" "helper_refs=v0.5.20,v0.5.20"
 assert_contains "$out" "agent_next_steps=ready,ready"
 
 json_out="${tmp_dir}/response.json"
@@ -62,8 +62,8 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
-assert payload["evidence"]["release_ref"] == "v0.5.19"
-assert payload["evidence"]["helper_refs"] == {"install": "v0.5.19", "consumer": "v0.5.19"}
+assert payload["evidence"]["release_ref"] == "v0.5.20"
+assert payload["evidence"]["helper_refs"] == {"install": "v0.5.20", "consumer": "v0.5.20"}
 assert payload["evidence"]["agent_next_steps"] == {"client": "ready", "consumer": "ready"}
 assert payload["failures"] == []
 PY
@@ -87,7 +87,7 @@ Path(sys.argv[2]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf
 PY
 run_expect_code 1 "${tmp_dir}/bad-installer.out" node "$script" "$bad_installer"
 assert_contains "${tmp_dir}/bad-installer.out" "agent_next_step=inspect-release-installer"
-assert_contains "${tmp_dir}/bad-installer.out" "helper_refs.consumer=v0.5.18, want v0.5.19"
+assert_contains "${tmp_dir}/bad-installer.out" "helper_refs.consumer=v0.5.18, want v0.5.20"
 
 bad_client="${tmp_dir}/bad-client.json"
 python3 - "$sample" "$bad_client" <<'PY'
