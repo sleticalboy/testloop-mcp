@@ -28,6 +28,7 @@ fail() {
 }
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+default_helper_ref="v0.5.16"
 client_dir="."
 workflow_path=".github/workflows/testloop-agent-decision-contract.yml"
 helper_ref="${TESTLOOP_AGENT_DECISION_CI_VERSION:-}"
@@ -74,9 +75,16 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [[ -z "$helper_ref" ]]; then
-  app_version="$(sed -n 's/^const appVersion = "\([^"]*\)"/\1/p' "$repo_root/main.go" | head -n 1)"
-  [[ -n "$app_version" ]] || fail "failed to read appVersion from $repo_root/main.go"
-  helper_ref="v${app_version}"
+  if [[ -f "$repo_root/main.go" ]]; then
+    app_version="$(sed -n 's/^const appVersion = "\([^"]*\)"/\1/p' "$repo_root/main.go" | head -n 1)"
+  else
+    app_version=""
+  fi
+  if [[ -n "$app_version" ]]; then
+    helper_ref="v${app_version}"
+  else
+    helper_ref="$default_helper_ref"
+  fi
 fi
 
 [[ "$helper_ref" != *[$'\n\r\t ']* ]] || fail "helper ref must not contain whitespace"

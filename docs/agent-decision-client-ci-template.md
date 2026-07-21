@@ -26,6 +26,12 @@ scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to
 ```
 
 默认写入 `.github/workflows/testloop-agent-decision-contract.yml`；已有文件不会被覆盖，除非显式传入 `--force`。
+外部接入方不想 clone 整个仓库时，也可以下载单脚本运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.16/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
+bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
+```
 
 ## GitHub Actions 模板
 

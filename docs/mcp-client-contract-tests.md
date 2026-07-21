@@ -115,6 +115,8 @@ scripts/showcase-agent-decision-client-ci.sh
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
+这个安装脚本也支持脱离仓库单文件运行，适合用 `curl` 从固定 release tag 下载后写入客户端仓库。
+
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
 ```text

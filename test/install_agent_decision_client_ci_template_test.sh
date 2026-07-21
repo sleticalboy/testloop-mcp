@@ -91,6 +91,15 @@ out="${tmp_dir}/bad-path.out"
 run_expect_code 1 "$out" bash "$script" --workflow-path ../bad.yml "$custom_client_dir"
 assert_contains "$out" "--workflow-path must not contain .."
 
+standalone_dir="${tmp_dir}/standalone"
+standalone_client_dir="${tmp_dir}/standalone-client"
+mkdir -p "$standalone_dir" "$standalone_client_dir"
+cp "$script" "${standalone_dir}/install-agent-decision-client-ci-template.sh"
+out="${tmp_dir}/standalone.out"
+run_expect_code 0 "$out" bash "${standalone_dir}/install-agent-decision-client-ci-template.sh" "$standalone_client_dir"
+assert_contains "$out" "agent_decision_client_ci_template_ref=v0.5.16"
+assert_contains "${standalone_client_dir}/.github/workflows/testloop-agent-decision-contract.yml" "ref: v0.5.16"
+
 ruby -e 'require "yaml"; data = YAML.load_file(ARGV.fetch(0)); raise "missing jobs" unless data["jobs"] || data[true]' "$custom_workflow"
 
 python3 - "${repo_root}/docs/agent-decision-client-ci-template.md" "$custom_workflow" <<'PY'

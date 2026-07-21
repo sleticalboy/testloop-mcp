@@ -638,6 +638,13 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
+也可以不 clone 仓库，直接下载 v0.5.16 的单脚本安装模板：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.16/scripts/install-agent-decision-client-ci-template.sh -o /tmp/install-testloop-agent-decision-ci.sh
+bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
+```
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：
