@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.19 发布说明](./plan-release-notes-v0.5.19.md)。
 
-当前发布状态：正式发布收敛中。`v0.5.19` tag 已推送，Release Artifacts run `29827625494` 已通过，五个平台 10 个正式资产已上传并通过资产清单校验，GitHub Release 正文已更新，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.19`。Post-Release Verify run `29828306451` 已触发，当前等待 GitHub runner。
+当前发布状态：已正式发布。`v0.5.19` tag 已推送，Release Artifacts run `29827625494` 已通过，五个平台 10 个正式资产已上传并通过资产清单校验，GitHub Release 正文已更新，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.19`，Post-Release Verify run `29828306451` 已通过。
 
 ## 当前差异核对
 
@@ -82,9 +82,9 @@
 - [x] 更新 GitHub Release 正文为正式 v0.5.19 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.19` 更新仓库内 Formula。
 - [x] 更新 Homebrew tap 到 `0.5.19` 并推送：tap commit `72123db`。
-- [x] 手动触发 Post-Release Verify：run `29828306451` queued，等待 GitHub runner。
+- [x] Post-Release Verify：run `29828306451` passed。
 - [x] 发布后运行 raw installer smoke、基础客户端 CI response smoke 和 consumer smoke。
 
 ## 当前结论
 
-v0.5.19 已完成正式 tag、Release assets、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和发布后 smoke。这个版本把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步等待 Post-Release Verify run `29828306451` 从 GitHub runner 队列执行完成。
+v0.5.19 已完成正式 tag、Release assets、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap、Post-Release Verify 和发布后 smoke。这个版本把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。
