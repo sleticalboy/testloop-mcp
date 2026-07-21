@@ -1,12 +1,12 @@
-# v0.5.16 候选发布检查清单
+# v0.5.16 发布检查清单
 
 ## 当前目标
 
-这是 v0.5.16 的候选发布检查清单。目标是把 v0.5.15 之后围绕 Agent 决策 fixture 外部客户端 CI 接入的改动整理成一个可发布边界。
+这是 v0.5.16 的发布检查清单。目标是把 v0.5.15 之后围绕 Agent 决策 fixture 外部客户端 CI 接入的改动整理成一个可发布边界，并完成正式发布、资产校验和 Homebrew 分发更新。
 
 发布重点见 [v0.5.16 发布说明](./plan-release-notes-v0.5.16.md)。
 
-当前发布状态：正式版本准备中。`main.go` implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.16` / `v0.5.16`；尚未打 tag、创建 GitHub Release、生成 Release assets 或更新 Homebrew tap。
+当前发布状态：已正式发布。`v0.5.16` tag 已推送，GitHub Release 已创建，五个平台 Release assets 和 `.sha256` 已上传并校验，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.16`。
 
 ## 当前差异核对
 
@@ -46,6 +46,11 @@
 - [x] `08ff2a4` 远端 CI run `29797835817` passed，覆盖外部客户端模板 dry-run 和导出脚本定位修复。
 - [x] `63409a6` 远端 CI run `29798075470` passed，覆盖 v0.5.16 候选边界文档。
 - [x] 正式版本准备后的完整本地门禁已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.16-release-prep-dist scripts/verify-release-candidate.sh v0.5.16` 输出 `release_candidate_status=passed`，候选二进制 `--version` 输出 `testloop-mcp 0.5.16`。
+- [x] `64995fc` 远端 CI run `29801283144` passed，覆盖 v0.5.16 正式版本准备。
+- [x] `v0.5.16` Release Artifacts run `29801398746` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.16` 已验证正式 Release 资产完整。
+- [x] Homebrew tap 已更新到 `0.5.16` 并推送：tap commit `1de9ae4`。
+- [x] Post-Release Verify run `29801687152` passed，覆盖资产清单和五个平台安装验证。
 
 ## 发布前门禁
 
@@ -61,15 +66,15 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.16` / `v0.5.16`。
 - [x] 测试中的版本期望同步到 `0.5.16`。
 - [x] 重新运行完整 release readiness。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.16` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.16` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.16 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.16` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.16` 并推送。
-- [ ] 手动触发 Post-Release Verify。
+- [x] 提交版本准备改动后确认远端 CI passed：`64995fc` run `29801283144` passed。
+- [x] 打 tag `v0.5.16` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29801398746` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.16` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.16 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.16` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.16` 并推送：tap commit `1de9ae4`。
+- [x] 手动触发 Post-Release Verify：run `29801687152` passed。
 
 ## 当前结论
 
-v0.5.16 候选范围足够清晰：它不是扩语言或提升测试生成算法，而是把 v0.5.15 的 Agent 决策 fixture 导出包继续推进到外部客户端可复制、可 dry-run、可 JSON 断言的 CI 接入路径。
+v0.5.16 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify。这个版本不是扩语言或提升测试生成算法，而是把 v0.5.15 的 Agent 决策 fixture 导出包继续推进到外部客户端可复制、可 dry-run、可 JSON 断言的 CI 接入路径。
