@@ -63,6 +63,14 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 导出目录会包含 `docs/fixtures/agent-decision-fixtures.json`、schema、manifest 中列出的 8 个 fixture，以及 `scripts/validate-agent-decision-fixtures.mjs`。路径保持为 `docs/fixtures/...`，所以复制到目标项目后仍可直接运行同一条 `--json` 校验命令。
 导出包也包含无依赖 `package.json`，可以在客户端 CI 中用 `npm test --silent` 直接运行同一套契约测试。
 
+如果要模拟外部客户端 CI 的完整接入路径，可以直接运行：
+
+```bash
+scripts/showcase-agent-decision-client-ci.sh
+```
+
+该脚本会在临时客户端目录中导出最小 fixture 包，进入导出目录执行 `npm test --silent`，把 validator JSON 写到客户端目录，并输出稳定摘要。正常输出应包含 `agent_decision_client_status=passed`、`agent_decision_fixture_count=8` 和完整 `agent_decision_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input`。
+
 ## 使用真实 fixture
 
 [真实结构化 fixture](./fixtures.md) 提供了来自 handler 的稳定 JSON 投影，适合直接放进客户端测试用例：

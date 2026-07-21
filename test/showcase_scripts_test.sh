@@ -48,6 +48,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-js-public-project.sh"
   bash -n "${repo_root}/scripts/showcase-dual-project-report.sh"
   bash -n "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh"
+  bash -n "${repo_root}/scripts/showcase-agent-decision-client-ci.sh"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
 }
 

@@ -629,6 +629,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 
 导出目录会保留 `docs/fixtures/...` 和 `scripts/validate-agent-decision-fixtures.mjs`，因此复制后仍可在目标项目内运行同一条 `--json` 校验命令。
 导出目录还包含无依赖 `package.json`，接入方也可以直接运行 `npm test --silent`。
+如果要模拟外部客户端 CI 从导出到校验的完整链路，可以运行 `scripts/showcase-agent-decision-client-ci.sh`；预期输出包含 `agent_decision_client_status=passed` 和 `agent_decision_fixture_count=8`。
 
 ### 用户项目接入：直接复制
 
