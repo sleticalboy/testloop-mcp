@@ -112,7 +112,7 @@ node scripts/render-agent-decision-client-release-response.mjs \
 scripts/showcase-agent-decision-client-release-response-smoke.sh --json
 ```
 
-该脚本会创建一个临时 Node 客户端项目，把 release smoke summary、release response renderer、`package.json` 和断言脚本放进去，再运行该客户端自己的 `npm test`。通过态表示接入方可以只消费 summary JSON 和 renderer，不依赖 testloop-mcp 仓库内部路径。
+该脚本会创建一个临时 Node 客户端项目，把 release smoke summary、release response renderer、`package.json` 和断言脚本放进去，再运行该客户端自己的 `npm test`。通过态表示接入方可以只消费 summary JSON 和 renderer，不依赖 testloop-mcp 仓库内部路径。可复制目录结构见 [Agent 决策 release response 客户端接入](./agent-decision-release-response-client.md)。
 
 ## 使用真实 fixture
 
