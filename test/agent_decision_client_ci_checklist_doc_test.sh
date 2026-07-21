@@ -15,7 +15,7 @@ doc = Path("docs/agent-decision-client-ci-checklist.md")
 text = doc.read_text(encoding="utf-8")
 
 required = [
-    "v0.5.17",
+    "v0.5.18",
     "install-agent-decision-client-ci-template.sh",
     "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh",
     ".github/workflows/testloop-agent-decision-contract.yml",

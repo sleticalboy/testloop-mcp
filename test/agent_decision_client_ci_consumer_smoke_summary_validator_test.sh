@@ -70,7 +70,7 @@ if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs "$bad_
   exit 1
 fi
 assert_contains "${tmp_dir}/bad.out" "status must be passed"
-assert_contains "${tmp_dir}/bad.out" "helper_ref must be v0.5.17"
+assert_contains "${tmp_dir}/bad.out" "helper_ref must be v0.5.18"
 assert_contains "${tmp_dir}/bad.out" "fixture_validator_exit_code must be 0"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
 

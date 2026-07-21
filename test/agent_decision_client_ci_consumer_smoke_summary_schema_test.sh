@@ -58,7 +58,7 @@ def validate_payload(payload, label):
     expected_exact = {
         "schema_version": 1,
         "status": "passed",
-        "helper_ref": "v0.5.17",
+        "helper_ref": "v0.5.18",
         "fixture_count": 8,
         "install_summary_validator_exit_code": 0,
         "fixture_validator_exit_code": 0,

@@ -2,12 +2,18 @@
 
 ## Unreleased
 
+## v0.5.18 - 2026-07-21
+
 ### Added
 
 - 新增 `scripts/showcase-agent-decision-client-consumer-smoke.sh`，用临时外部 client 串起 workflow 安装、安装 summary 校验、导出 fixture manifest 校验和 result JSON 消费检查。
 - 新增 Agent 决策客户端消费端 smoke summary schema 和通过态样例，固定端到端消费 smoke 的 JSON 输出契约。
 - 新增无依赖消费端 smoke summary validator，客户端可直接校验 `showcase-agent-decision-client-consumer-smoke.sh --json` 输出。
 - 客户端集成说明、MCP 客户端契约测试说明和 Agent 决策客户端 CI 模板已同步消费端 smoke、summary schema/sample 和 validator 入口。
+
+### Changed
+
+- MCP server implementation version 更新为 `0.5.18`。
 
 ## v0.5.17 - 2026-07-21
 

@@ -11,7 +11,7 @@ out="${tmp_dir}/consumer-smoke.out"
 scripts/showcase-agent-decision-client-consumer-smoke.sh > "$out"
 
 grep -F "agent_decision_client_consumer_smoke_status=passed" "$out" >/dev/null
-grep -F "agent_decision_client_consumer_smoke_helper_ref=v0.5.17" "$out" >/dev/null
+grep -F "agent_decision_client_consumer_smoke_helper_ref=v0.5.18" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_fixture_count=8" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input" "$out" >/dev/null
 
@@ -37,7 +37,7 @@ expected_decisions = [
 
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
-assert payload["helper_ref"] == "v0.5.17"
+assert payload["helper_ref"] == "v0.5.18"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == expected_decisions
 assert payload["failures"] == []

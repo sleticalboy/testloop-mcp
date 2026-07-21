@@ -10,7 +10,7 @@
 - 客户端需要固定 `accept`、`manual-review`、`apply-repair`、`needs-better-input` 四类机器动作。
 - 客户端不想复制整个 testloop-mcp 仓库，只想用最小 fixture 包做契约测试。
 
-当前模板 checkout `v0.5.17` tag 上的 helper，确保客户端 CI 使用稳定的 fixture 导出脚本、JSON 输出合同和外部仓库 dry-run 已验证过的相对路径。
+当前模板 checkout `v0.5.18` tag 上的 helper，确保客户端 CI 使用稳定的 fixture 导出脚本、JSON 输出合同和外部仓库 dry-run 已验证过的相对路径。
 
 ## 一键安装模板
 
@@ -20,10 +20,10 @@
 scripts/install-agent-decision-client-ci-template.sh /absolute/path/to/client-repo
 ```
 
-脚本在仓库内运行时默认从 `main.go` 读取当前版本并生成 `ref: v0.5.17`；脱离仓库单文件运行时会回退到内置稳定 ref。如果需要固定到其他 tag 或预览写入路径：
+脚本在仓库内运行时默认从 `main.go` 读取当前版本并生成 `ref: v0.5.18`；脱离仓库单文件运行时会回退到内置稳定 ref。如果需要固定到其他 tag 或预览写入路径：
 
 ```bash
-scripts/install-agent-decision-client-ci-template.sh --version v0.5.17 /absolute/path/to/client-repo
+scripts/install-agent-decision-client-ci-template.sh --version v0.5.18 /absolute/path/to/client-repo
 scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to/client-repo
 ```
 
@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sleticalboy/testloop-mcp
-          ref: v0.5.17
+          ref: v0.5.18
           path: .testloop-mcp
 
       - name: Verify Agent decision fixture contract

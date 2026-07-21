@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.18 发布说明](./plan-release-notes-v0.5.18.md)。
 
-当前发布状态：候选边界已整理，尚未正式发布。`v0.5.18` tag、GitHub Release、Release assets、Homebrew Formula / tap 和 Post-Release Verify 尚未执行。
+当前发布状态：正式版本准备进行中，尚未正式发布。implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.18` / `v0.5.18`；`v0.5.18` tag、GitHub Release、Release assets、Homebrew Formula / tap 和 Post-Release Verify 尚未执行。
 
 ## 当前差异核对
 
@@ -49,18 +49,18 @@
 
 ## 发布前门禁
 
-- [ ] 候选边界整理提交后的 main CI passed。
-- [ ] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.18-release-prep-dist scripts/verify-release-candidate.sh v0.5.18`
-- [ ] `git diff --check`
-- [ ] `main.go` implementation version 更新到 `0.5.18`。
+- [x] 候选边界整理提交后的 main CI passed：`e2b9208` run `29818006076` passed。
+- [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.18-release-prep-dist scripts/verify-release-candidate.sh v0.5.18`
+- [x] `git diff --check`
+- [x] `main.go` implementation version 更新到 `0.5.18`。
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.18`。
-- [ ] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.18 - 2026-07-21`。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.18` / `v0.5.18`。
-- [ ] 测试中的版本期望同步到 `0.5.18`。
-- [ ] 重新运行完整 release readiness。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.18`。
+- [x] 将 `CHANGELOG.md` 的 `Unreleased` 内容收敛到 `v0.5.18 - 2026-07-21`。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.18` / `v0.5.18`。
+- [x] 测试中的版本期望同步到 `0.5.18`。
+- [x] 重新运行完整 release readiness。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.18` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -72,4 +72,4 @@
 
 ## 当前结论
 
-v0.5.18 候选边界适合作为一个小版本发布：它不承诺生成质量提升，而是把外部客户端 CI 接入路径从“installer + 安装 dry-run summary validator”推进到“消费端 smoke + summary schema/sample + 无依赖 validator + 客户端文档入口”，更贴合项目“AI Agent 测试反馈基础设施”的定位。
+v0.5.18 正式版本准备文件和本地 release readiness 已完成，但尚未提交版本准备、打 tag、生成 Release assets 或更新 Homebrew。这个版本不承诺生成质量提升，而是把外部客户端 CI 接入路径从“installer + 安装 dry-run summary validator”推进到“消费端 smoke + summary schema/sample + 无依赖 validator + 客户端文档入口”，更贴合项目“AI Agent 测试反馈基础设施”的定位。

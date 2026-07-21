@@ -9,8 +9,8 @@ testloop-mcp v0.5.18
 - [x] 创建 v0.5.18 候选发布说明草案。
 - [x] 梳理 v0.5.17 之后围绕 Agent 决策客户端消费端 smoke、summary schema/sample、无依赖 validator 和文档同步的改动边界。
 - [x] 最新已完成的远端 CI：`f501697` run `29817455457` passed，覆盖消费端 smoke 文档同步。
-- [ ] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用同步到 `0.5.18` / `v0.5.18`。
-- [ ] 正式版本准备后的 release readiness 已通过。
+- [x] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用同步到 `0.5.18` / `v0.5.18`。
+- [x] 正式版本准备后的 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.18-release-prep-dist scripts/verify-release-candidate.sh v0.5.18` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.18`。
 - [ ] `v0.5.18` tag 已推送，Release Artifacts workflow 已完成。
 - [ ] GitHub Release 正文已更新为正式 v0.5.18 发布说明。
 - [ ] 仓库内 Homebrew Formula 和 `sleticalboy/homebrew-tap` 已更新到 `0.5.18`。
@@ -42,7 +42,7 @@ v0.5.17 解决的是“客户端仓库可以安装 workflow，并校验安装 dr
 - 新增 `scripts/validate-agent-decision-client-consumer-smoke-summary.mjs`。
 - validator 支持默认校验通过态 fixture，也可指定任意消费端 smoke summary JSON。
 - 支持文本输出和 `--json` 输出。
-- 固定 `helper_ref=v0.5.17`、`fixture_count=8`、决策序列、空 `failures[]`、安装 summary validator 退出码、fixture validator 退出码和 npm validator 退出码。
+- 固定 `helper_ref=v0.5.18`、`fixture_count=8`、决策序列、空 `failures[]`、安装 summary validator 退出码、fixture validator 退出码和 npm validator 退出码。
 
 ### 文档同步
 
@@ -79,4 +79,4 @@ v0.5.17 解决的是“客户端仓库可以安装 workflow，并校验安装 dr
 
 - 对外文案应强调“外部 MCP 客户端可以用一条消费端 smoke 固定安装 summary、fixture manifest 和 result JSON 的 artifact 消费合同”。
 - 推荐演示路径：运行 `scripts/showcase-agent-decision-client-consumer-smoke.sh --json`，再运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
-- 正式发布前仍需更新版本号、CHANGELOG 正式版本段、Release assets、Homebrew Formula / tap 和 Post-Release Verify。
+- 正式发布前仍需完成 Release assets、Homebrew Formula / tap 和 Post-Release Verify。
