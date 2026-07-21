@@ -84,12 +84,29 @@ custom_client_dir="${tmp_dir}/custom-client"
 mkdir -p "$custom_client_dir"
 out="${tmp_dir}/custom.out"
 run_expect_code 0 "$out" bash "$script" --workflow-path .github/workflows/custom.yml "$custom_client_dir"
-assert_contains "${custom_client_dir}/.github/workflows/custom.yml" "ref: v0.5.16"
+custom_workflow="${custom_client_dir}/.github/workflows/custom.yml"
+assert_contains "$custom_workflow" "ref: v0.5.16"
 
 out="${tmp_dir}/bad-path.out"
 run_expect_code 1 "$out" bash "$script" --workflow-path ../bad.yml "$custom_client_dir"
 assert_contains "$out" "--workflow-path must not contain .."
 
-ruby -e 'require "yaml"; data = YAML.load_file(ARGV.fetch(0)); raise "missing jobs" unless data["jobs"] || data[true]' "$workflow"
+ruby -e 'require "yaml"; data = YAML.load_file(ARGV.fetch(0)); raise "missing jobs" unless data["jobs"] || data[true]' "$custom_workflow"
+
+python3 - "${repo_root}/docs/agent-decision-client-ci-template.md" "$custom_workflow" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+doc = Path(sys.argv[1])
+workflow = Path(sys.argv[2])
+blocks = re.findall(r"```yaml\n(.*?)\n```", doc.read_text(encoding="utf-8"), flags=re.S)
+if len(blocks) != 1:
+    print(f"{doc}: expected exactly 1 yaml block, found {len(blocks)}", file=sys.stderr)
+    sys.exit(1)
+if blocks[0].strip() != workflow.read_text(encoding="utf-8").strip():
+    print("generated workflow does not match documented YAML template", file=sys.stderr)
+    sys.exit(1)
+PY
 
 echo "install Agent decision client CI template test passed"
