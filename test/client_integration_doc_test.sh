@@ -40,6 +40,7 @@ required_snippets = [
     "node scripts/validate-agent-decision-fixtures.mjs --json \\",
     "node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures",
     "scripts/showcase-agent-decision-client-ci.sh",
+    "./agent-decision-client-ci-template.md",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
     "最小决策 fixture 包",
@@ -85,6 +86,7 @@ command_paths = {
     "sh scripts/render-first-run-agent-response.sh": Path("scripts/render-first-run-agent-response.sh"),
     "sh scripts/render-onboarding-agent-response.sh": Path("scripts/render-onboarding-agent-response.sh"),
     "sh scripts/verify-agent-artifact.sh": Path("scripts/verify-agent-artifact.sh"),
+    "scripts/showcase-agent-decision-client-ci.sh": Path("scripts/showcase-agent-decision-client-ci.sh"),
 }
 for command, path in command_paths.items():
     if command in text and not path.exists():

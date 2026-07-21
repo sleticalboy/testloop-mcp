@@ -70,6 +70,7 @@ scripts/showcase-agent-decision-client-ci.sh
 ```
 
 该脚本会在临时客户端目录中导出最小 fixture 包，进入导出目录执行 `npm test --silent`，把 validator JSON 写到客户端目录，并输出稳定摘要。正常输出应包含 `agent_decision_client_status=passed`、`agent_decision_fixture_count=8` 和完整 `agent_decision_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input`。
+如果要直接复制 GitHub Actions job，见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)。
 
 ## 使用真实 fixture
 

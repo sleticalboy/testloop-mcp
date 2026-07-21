@@ -42,6 +42,7 @@ assert_contains "--json"
 assert_contains "node scripts/validate-agent-decision-fixtures.mjs --json"
 assert_contains "node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures"
 assert_contains "scripts/showcase-agent-decision-client-ci.sh"
+assert_contains "./agent-decision-client-ci-template.md"
 assert_contains "agent_decision_client_status=passed"
 assert_contains "agent_decision_fixture_count=8"
 assert_contains "最小决策 fixture 包"
@@ -78,6 +79,8 @@ for path in \
   "${repo_root}/docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json" \
   "${repo_root}/examples/agent-response-manifest-demo/main.go" \
   "${repo_root}/scripts/verify-agent-artifact.sh" \
+  "${repo_root}/scripts/showcase-agent-decision-client-ci.sh" \
+  "${repo_root}/docs/agent-decision-client-ci-template.md" \
   "${repo_root}/test/e2e"
 do
   if [ ! -e "$path" ]; then

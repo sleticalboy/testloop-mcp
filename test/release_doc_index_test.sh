@@ -21,6 +21,7 @@ required_entries = {
     "真实结构化 fixture": "./docs/fixtures.md",
     "客户端集成说明": "./docs/client-integration.md",
     "MCP 客户端契约测试说明": "./docs/mcp-client-contract-tests.md",
+    "Agent 决策客户端 CI 模板": "./docs/agent-decision-client-ci-template.md",
     "首跑诊断": "./docs/first-run-diagnostics.md",
     "首跑诊断 CI 复制模板": "./docs/first-run-ci-template.md",
     "首跑诊断失败样例": "./docs/first-run-failures.md",
@@ -104,6 +105,7 @@ required_phrases = [
     "client_expectation",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
+    ".github/workflows/testloop-agent-decision-contract.yml",
 ]
 
 failures = []
