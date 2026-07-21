@@ -175,6 +175,46 @@ section 结果：
 
 项目侧 smoke 输出包含 `pnpm approve-builds`、Browserslist 和 Webpack asset size warning，但 `pnpm install --frozen-lockfile && pnpm build:prod` 退出码为 0，因此只作为项目 warning 记录。
 
+## v0.5.19 客户端 release smoke 实跑记录
+
+这条记录面向 MCP 客户端和 AI Agent 接入方，不依赖 laoxia 项目。目标是验证正式 release tag 上的 raw installer、基础客户端 CI response 和 consumer smoke response 可以合成一份 Agent 可消费 JSON evidence。
+
+运行命令：
+
+```bash
+scripts/showcase-agent-decision-client-release-smoke.sh --json
+```
+
+实跑过程中 raw.githubusercontent.com 出现过两次 transient 传输错误：
+
+```text
+curl: (56) Recv failure: Operation timed out
+curl: (56) Send failure: Broken pipe
+```
+
+`showcase-agent-decision-client-ci-template-install.sh` 已使用 `curl --retry`、`--retry-all-errors`、`--retry-connrefused` 和 `--max-time` 处理这类网络抖动；最终 release smoke 通过。
+
+关键结果：
+
+```text
+status=passed
+release_ref=v0.5.19
+installer_url=https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.19/scripts/install-agent-decision-client-ci-template.sh
+helper_refs.install=v0.5.19
+helper_refs.consumer=v0.5.19
+fixture_count=8
+agent_next_steps.client=ready
+agent_next_steps.consumer=ready
+```
+
+决策序列：
+
+```text
+accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input
+```
+
+这条 smoke 和 Post-Release Verify 的分工不同：Post-Release Verify 验证正式二进制资产下载、安装和 help/version 自检；release smoke 验证外部 MCP 客户端能从 release tag raw installer 安装 workflow，并把 fixture contract summary 转成 Agent 下一步动作。
+
 ## laoxia 双栈报告入口
 
 前面的 server/web 验收已经证明两条 smoke 都能通过。为了后续复用更方便，可以直接使用新的双栈入口一次性产出两份报告：

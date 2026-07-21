@@ -75,6 +75,7 @@ if [[ -z "$installer_path" ]]; then
   curl_max_time="${TESTLOOP_AGENT_DECISION_CI_DOWNLOAD_MAX_TIME:-120}"
   curl -fsSL \
     --retry "$curl_retries" \
+    --retry-all-errors \
     --retry-delay 2 \
     --retry-connrefused \
     --max-time "$curl_max_time" \
