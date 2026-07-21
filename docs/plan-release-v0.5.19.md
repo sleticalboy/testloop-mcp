@@ -4,9 +4,9 @@
 
 这是 v0.5.19 的候选发布检查清单。目标是把 v0.5.18 之后围绕发布流程加固、外部客户端 Agent response artifact、消费端 smoke 失败态 fixture 和文档同步的改动整理成一个可发布边界。
 
-发布重点见 [v0.5.19 发布说明草案](./plan-release-notes-v0.5.19.md)。
+发布重点见 [v0.5.19 发布说明](./plan-release-notes-v0.5.19.md)。
 
-当前发布状态：正式版本准备已完成。候选边界整理和版本准备提交后的 main CI 均已通过，`main.go` implementation version、`CHANGELOG.md` 和当前安装/接入版本引用已同步到 `0.5.19` / `v0.5.19`。尚未打 tag，尚未生成 Release assets 或更新 Homebrew tap。
+当前发布状态：正式发布收敛中。`v0.5.19` tag 已推送，Release Artifacts run `29827625494` 已通过，五个平台 10 个正式资产已上传并通过资产清单校验，GitHub Release 正文已更新，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.19`。Post-Release Verify run `29828306451` 已触发，当前等待 GitHub runner。
 
 ## 当前差异核对
 
@@ -76,15 +76,15 @@
 - [x] 测试中的版本期望同步到 `0.5.19`。
 - [x] 重新运行完整 release readiness。
 - [x] 提交版本准备改动后确认远端 CI passed：`d026283` run `29827369739` passed。
-- [ ] 打 tag `v0.5.19` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.19` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.19 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.19` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.19` 并推送。
-- [ ] 手动触发 Post-Release Verify。
-- [ ] 发布后运行 raw installer smoke、基础客户端 CI response smoke 和 consumer smoke。
+- [x] 打 tag `v0.5.19` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29827625494` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.19` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.19 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.19` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.19` 并推送：tap commit `72123db`。
+- [x] 手动触发 Post-Release Verify：run `29828306451` queued，等待 GitHub runner。
+- [x] 发布后运行 raw installer smoke、基础客户端 CI response smoke 和 consumer smoke。
 
 ## 当前结论
 
-v0.5.19 候选边界已经具备发布价值，正式版本准备本地门禁和远端 CI 均已通过：它把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步应打 tag 并等待 Release Artifacts workflow 生成正式资产。
+v0.5.19 已完成正式 tag、Release assets、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和发布后 smoke。这个版本把 v0.5.18 之后的客户端接入链路从“可校验 summary/result JSON”推进到“可直接产出 Agent 下一步动作 artifact”，同时修复了正式发布时暴露的 Release 创建并发问题。下一步等待 Post-Release Verify run `29828306451` 从 GitHub runner 队列执行完成。
