@@ -645,6 +645,12 @@ curl -fsSL https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scrip
 bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo
 ```
 
+维护者可以用完整安装 dry-run 验证“下载 installer -> 生成 workflow -> 执行 contract”链路：
+
+```bash
+scripts/showcase-agent-decision-client-ci-template-install.sh --json
+```
+
 ### 用户项目接入：直接复制
 
 首次接入、安装漂移排查、或者希望失败时直接给 AI Agent 一份可粘贴上下文，复制 first-run bootstrap：

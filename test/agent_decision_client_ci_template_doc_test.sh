@@ -20,6 +20,7 @@ required = [
     "scripts/install-agent-decision-client-ci-template.sh --dry-run /absolute/path/to/client-repo",
     "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh",
     "bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo",
+    "scripts/showcase-agent-decision-client-ci-template-install.sh --json",
     "--force",
     "actions/checkout@v4",
     "actions/setup-node@v4",
@@ -52,6 +53,7 @@ failures = [f"{doc}: missing required snippet {item!r}" for item in required if 
 for path in [
     Path("scripts/showcase-agent-decision-client-ci.sh"),
     Path("scripts/install-agent-decision-client-ci-template.sh"),
+    Path("scripts/showcase-agent-decision-client-ci-template-install.sh"),
     Path("test/agent_decision_client_ci_template_dry_run_test.sh"),
     Path("docs/client-integration.md"),
     Path("docs/mcp-client-contract-tests.md"),

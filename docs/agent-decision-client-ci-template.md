@@ -105,4 +105,12 @@ sh test/agent_decision_client_ci_template_dry_run_test.sh
 
 这个测试会创建临时客户端目录，把当前仓库挂成 `.testloop-mcp` helper checkout，按模板中的相对路径运行 `.testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json | tee ...`，并验证 `testloop-agent-decision-client-summary.json`、`agent-decision-fixtures-result.json`、导出包 `package.json` 和 manifest 都真实存在。
 
+如果要覆盖“下载 installer -> 生成 workflow -> 模拟 helper checkout -> 执行 contract”的完整链路：
+
+```bash
+scripts/showcase-agent-decision-client-ci-template-install.sh --json
+```
+
+该 showcase 默认从 `main` raw URL 下载 installer。仓库测试会用本地 installer 路径和 `file://` URL 代替网络下载，保证 CI 稳定。
+
 更多背景见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
