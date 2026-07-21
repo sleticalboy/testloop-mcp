@@ -46,6 +46,21 @@ npm test --silent
 - `release_summary_json`
 - `agent_response_json`
 
+如果要把最小客户端包导出到指定目录，直接运行：
+
+```bash
+node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client
+```
+
+导出目录可直接执行：
+
+```bash
+cd /tmp/testloop-release-response-client
+npm test --silent
+```
+
+之后把 `testloop-release-smoke-summary.json` 替换成真实 `scripts/showcase-agent-decision-client-release-smoke.sh --json` 输出即可。导出包也会携带 release response schema 和通过/失败态 fixture，方便接入方把这些样例放进自己的单元测试。
+
 如果已有 release smoke summary，可以复用它：
 
 ```bash
