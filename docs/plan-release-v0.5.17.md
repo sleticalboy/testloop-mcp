@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.17 发布说明](./plan-release-notes-v0.5.17.md)。
 
-当前发布状态：正式版本准备中。`main.go` implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.17` / `v0.5.17`，本地 release readiness 已通过；版本准备提交、tag、Release assets、Homebrew 和 Post-Release Verify 待执行。
+当前发布状态：已正式发布。`v0.5.17` tag 已推送，GitHub Release 已创建，五个平台 Release assets 和 `.sha256` 已上传并校验，仓库内 Formula 与 `sleticalboy/homebrew-tap` 已更新到 `0.5.17`，Post-Release Verify 已通过。
 
 ## 当前差异核对
 
@@ -50,6 +50,11 @@
 - [x] `25d0278` 远端 CI run `29807556910` passed，覆盖安装摘要 validator。
 - [x] `f351e7c` 远端 CI run `29808013697` passed，覆盖 v0.5.17 候选发布边界文档。
 - [x] 正式版本准备后的完整本地门禁已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.17-release-prep-dist scripts/verify-release-candidate.sh v0.5.17` 输出 `release_candidate_status=passed`，候选二进制 `--version` 输出 `testloop-mcp 0.5.17`。
+- [x] `9e040ba` 远端 CI run `29808559072` passed，覆盖 v0.5.17 正式版本准备。
+- [x] `v0.5.17` Release Artifacts run `29808977015` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.17` 已验证正式 Release 资产完整。
+- [x] Homebrew tap 已更新到 `0.5.17` 并推送：tap commit `3fec8ad`。
+- [x] Post-Release Verify run `29809495498` passed，覆盖资产清单和五个平台安装验证。
 
 ## 发布前门禁
 
@@ -65,15 +70,15 @@
 - [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.17` / `v0.5.17`。
 - [x] 测试中的版本期望同步到 `0.5.17`。
 - [x] 重新运行完整 release readiness。
-- [ ] 提交版本准备改动后确认远端 CI passed。
-- [ ] 打 tag `v0.5.17` 并推送。
-- [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
-- [ ] 使用 `scripts/verify-release-assets.sh v0.5.17` 验证 Release 资产完整。
-- [ ] 更新 GitHub Release 正文为正式 v0.5.17 发布说明。
-- [ ] 使用 `scripts/generate-homebrew-formula.sh v0.5.17` 更新仓库内 Formula。
-- [ ] 更新 Homebrew tap 到 `0.5.17` 并推送。
-- [ ] 手动触发 Post-Release Verify。
+- [x] 提交版本准备改动后确认远端 CI passed：`9e040ba` run `29808559072` passed。
+- [x] 打 tag `v0.5.17` 并推送。
+- [x] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`：run `29808977015` passed。
+- [x] 使用 `scripts/verify-release-assets.sh v0.5.17` 验证 Release 资产完整。
+- [x] 更新 GitHub Release 正文为正式 v0.5.17 发布说明。
+- [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.17` 更新仓库内 Formula。
+- [x] 更新 Homebrew tap 到 `0.5.17` 并推送：tap commit `3fec8ad`。
+- [x] 手动触发 Post-Release Verify：run `29809495498` passed。
 
 ## 当前结论
 
-v0.5.17 正式版本准备文件和本地门禁已经完成，但尚未提交版本准备、打 tag、生成 Release assets 或更新 Homebrew。这个版本不是扩语言或提升测试生成算法，而是把外部客户端 CI 接入路径从“复制模板”推进到“installer + checklist + 安装 dry-run + JSON schema/sample/validator + 命令回归”。下一步应提交版本准备并等待 main CI；通过后再进入正式发布动作。
+v0.5.17 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和 Post-Release Verify。这个版本不是扩语言或提升测试生成算法，而是把外部客户端 CI 接入路径从“复制模板”推进到“installer + checklist + 安装 dry-run + JSON schema/sample/validator + 命令回归”。

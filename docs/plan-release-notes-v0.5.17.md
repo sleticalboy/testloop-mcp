@@ -12,7 +12,13 @@ testloop-mcp v0.5.17
 - [x] 候选边界整理提交 `f351e7c` 的远端 CI run `29808013697` passed。
 - [x] 正式版本准备文件已更新：implementation version、`CHANGELOG.md` 正式版本段和当前安装/接入文档版本引用已同步到 `0.5.17` / `v0.5.17`。
 - [x] 正式版本准备后的 release readiness 已通过：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.17-release-prep-dist scripts/verify-release-candidate.sh v0.5.17` 输出 `release_candidate_status=passed`，`testloop-mcp --version` 输出 `testloop-mcp 0.5.17`。
-- [ ] `v0.5.17` tag、GitHub Release、Release assets、资产校验、Homebrew Formula、Homebrew tap 和 Post-Release Verify 待执行。
+- [x] 版本准备提交 `9e040ba` 的远端 CI run `29808559072` passed。
+- [x] `v0.5.17` tag 已推送，Release Artifacts run `29808977015` passed，五个平台 10 个资产已上传。
+- [x] `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.17` 已验证正式 Release 资产完整。
+- [x] GitHub Release 正文已更新为正式 v0.5.17 发布说明。
+- [x] 仓库内 Homebrew Formula 已用正式 Release asset digest 更新到 `0.5.17`。
+- [x] Homebrew tap 已更新到 `0.5.17` 并推送，tap commit `3fec8ad`。
+- [x] Post-Release Verify run `29809495498` passed，覆盖资产清单和五个平台安装验证。
 
 ## 摘要
 
@@ -75,9 +81,11 @@ v0.5.16 解决的是“客户端仓库可以复制 workflow 并跑 Agent 决策 
 - `go test ./...`
 - `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.17-release-prep-dist scripts/verify-release-candidate.sh v0.5.17`
 - `git diff --check`
+- `TESTLOOP_MCP_REPO=sleticalboy/testloop-mcp scripts/verify-release-assets.sh v0.5.17`
+- `gh workflow run post-release-verify.yml -f tag=v0.5.17`
 
 ## 发布备注
 
 - 对外文案应强调“外部 MCP 客户端可以一键安装 GitHub Actions contract，并用 JSON summary validator 固定 Agent 决策合同”。
 - 推荐演示路径：运行 installer 生成 workflow，再运行 `scripts/showcase-agent-decision-client-ci-template-install.sh --json`，最后运行 `node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json`。
-- 正式发布时需要把模板默认 `ref`、installer fallback、文档命令和测试期望统一更新到 `v0.5.17`。
+- v0.5.17 已完成正式 GitHub Release、Release assets、资产校验、仓库内 Formula、Homebrew tap 和 Post-Release Verify。
