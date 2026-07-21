@@ -50,6 +50,7 @@ const requiredFields = [
   'fixture_dir',
   'fixture_validation_json',
   'result_json',
+  'agent_response_json',
   'fixture_count',
   'decisions',
   'failures',
@@ -145,6 +146,7 @@ for (const field of [
   'fixture_dir',
   'fixture_validation_json',
   'result_json',
+  'agent_response_json',
 ]) {
   requireNonEmptyString(summary[field], `${summaryPath}: ${field}`);
 }

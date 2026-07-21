@@ -25,6 +25,7 @@ required = [
     "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /tmp/testloop-agent-decision-consumer-smoke-summary.json",
+    "agent_response_json",
     "docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json",
     "docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json",
     "agent_next_step=ready",

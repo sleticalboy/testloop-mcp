@@ -10,6 +10,7 @@
   "fixture_dir": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/testloop-agent-decision-fixtures",
   "fixture_validation_json": "/tmp/testloop-agent-decision-consumer-smoke/fixture-validation.json",
   "result_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/agent-decision-fixtures-result.json",
+  "agent_response_json": "/tmp/testloop-agent-decision-consumer-smoke/agent-response.json",
   "fixture_count": 7,
   "decisions": [
     "accept",

@@ -62,6 +62,7 @@ payload["status"] = "failed"
 payload["helper_ref"] = "main"
 payload["fixture_validator_exit_code"] = 1
 payload["failures"] = ["boom"]
+payload["agent_response_json"] = ""
 Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -73,6 +74,7 @@ assert_contains "${tmp_dir}/bad.out" "status must be passed"
 assert_contains "${tmp_dir}/bad.out" "helper_ref must be v0.5.18"
 assert_contains "${tmp_dir}/bad.out" "fixture_validator_exit_code must be 0"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
+assert_contains "${tmp_dir}/bad.out" "agent_response_json"
 
 if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs --json "$bad_summary" > "${tmp_dir}/bad.json"; then
   echo "expected JSON validator to fail for invalid consumer smoke summary" >&2

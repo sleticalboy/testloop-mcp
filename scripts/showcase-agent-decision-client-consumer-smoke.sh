@@ -53,6 +53,8 @@ client_dir="${TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR:-${tmp_dir}/external-client}
 install_summary_json="${tmp_dir}/install-summary.json"
 install_validation_json="${tmp_dir}/install-summary-validation.json"
 fixture_validation_json="${tmp_dir}/fixture-validation.json"
+consumer_summary_json="${tmp_dir}/consumer-smoke-summary.json"
+agent_response_json="${tmp_dir}/agent-response.json"
 
 command -v node >/dev/null 2>&1 || fail "missing required command: node"
 command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
@@ -94,22 +96,24 @@ fixture_validator_exit_code=$?
 set -e
 
 node - \
-  "$output_format" \
   "$install_summary_json" \
   "$install_validation_json" \
   "$client_summary_json" \
   "$fixture_validation_json" \
   "$install_summary_validator_exit_code" \
-  "$fixture_validator_exit_code" <<'JS'
+  "$fixture_validator_exit_code" \
+  "$consumer_summary_json" \
+  "$agent_response_json" <<'JS'
 const fs = require('node:fs');
 const [
-  outputFormat,
   installSummaryPath,
   installValidationPath,
   clientSummaryPath,
   fixtureValidationPath,
   installValidatorExitCodeRaw,
   fixtureValidatorExitCodeRaw,
+  consumerSummaryPath,
+  agentResponsePath,
 ] = process.argv.slice(2);
 
 function readJSON(filePath) {
@@ -173,6 +177,7 @@ const payload = {
   fixture_dir: clientSummary.fixture_dir,
   fixture_validation_json: fixtureValidationPath,
   result_json: resultJSONPath,
+  agent_response_json: agentResponsePath,
   fixture_count: installSummary.fixture_count,
   decisions: installSummary.decisions,
   failures,
@@ -181,19 +186,34 @@ const payload = {
   npm_validator_exit_code: clientSummary.validator_exit_code,
 };
 
-if (outputFormat === 'json') {
-  console.log(JSON.stringify(payload, null, 2));
-} else {
-  console.log(`agent_decision_client_consumer_smoke_status=${payload.status}`);
-  console.log(`agent_decision_client_consumer_smoke_client_dir=${payload.client_dir}`);
-  console.log(`agent_decision_client_consumer_smoke_workflow_path=${payload.workflow_path}`);
-  console.log(`agent_decision_client_consumer_smoke_helper_ref=${payload.helper_ref}`);
-  console.log(`agent_decision_client_consumer_smoke_fixture_count=${payload.fixture_count}`);
-  console.log(`agent_decision_client_consumer_smoke_decisions=${payload.decisions.join(',')}`);
-  console.log(`agent_decision_client_consumer_smoke_result_json=${payload.result_json}`);
-}
-
-if (payload.status !== 'passed') {
-  process.exitCode = 1;
-}
+fs.writeFileSync(consumerSummaryPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 JS
+
+set +e
+node "${repo_root}/scripts/render-agent-decision-client-consumer-response.mjs" \
+  --json "$consumer_summary_json" > "$agent_response_json"
+agent_response_exit_code=$?
+set -e
+
+if [[ "$output_format" = "json" ]]; then
+  cat "$consumer_summary_json"
+else
+  node - "$consumer_summary_json" "$agent_response_json" <<'JS'
+const fs = require('node:fs');
+const payload = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const response = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+console.log(`agent_decision_client_consumer_smoke_status=${payload.status}`);
+console.log(`agent_decision_client_consumer_smoke_client_dir=${payload.client_dir}`);
+console.log(`agent_decision_client_consumer_smoke_workflow_path=${payload.workflow_path}`);
+console.log(`agent_decision_client_consumer_smoke_helper_ref=${payload.helper_ref}`);
+console.log(`agent_decision_client_consumer_smoke_fixture_count=${payload.fixture_count}`);
+console.log(`agent_decision_client_consumer_smoke_decisions=${payload.decisions.join(',')}`);
+console.log(`agent_decision_client_consumer_smoke_result_json=${payload.result_json}`);
+console.log(`agent_decision_client_consumer_smoke_agent_response_json=${payload.agent_response_json}`);
+console.log(`agent_decision_client_consumer_smoke_agent_next_step=${response.agent_next_step}`);
+JS
+fi
+
+if [[ "$agent_response_exit_code" -ne 0 ]]; then
+  exit "$agent_response_exit_code"
+fi
