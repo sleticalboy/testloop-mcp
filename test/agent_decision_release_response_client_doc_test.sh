@@ -13,6 +13,7 @@ assert_contains() {
 }
 
 assert_contains "scripts/showcase-agent-decision-client-release-response-smoke.sh --json"
+assert_contains "./agent-decision-release-response-checklist.md"
 assert_contains "scripts/showcase-agent-decision-client-release-response-ci.sh --json"
 assert_contains "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo"
 assert_contains "scripts/install-agent-decision-release-response-client.sh --summary-json /path/to/release-smoke-summary.json /absolute/path/to/client-repo"
@@ -49,6 +50,7 @@ assert_contains "./fixtures.md"
 
 for path in \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-smoke.sh" \
+  "${repo_root}/docs/agent-decision-release-response-checklist.md" \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-ci.sh" \
   "${repo_root}/scripts/install-agent-decision-release-response-client.sh" \
   "${repo_root}/scripts/validate-agent-decision-release-response-client-install-summary.mjs" \

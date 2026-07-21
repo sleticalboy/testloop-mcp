@@ -36,6 +36,7 @@ required_entries = {
     "真实接入案例模板": "./docs/real-integration-cases.md",
     "验收 summary 失败分流样例": "./docs/verification-summary-failures.md",
     "验收报告 CI 集成": "./docs/verification-ci.md",
+    "Agent 决策 release response 接入 Checklist": "./docs/agent-decision-release-response-checklist.md",
 }
 
 required_commands = [
@@ -115,6 +116,7 @@ required_phrases = [
     "agent_decision_fixture_count=8",
     "release tag raw installer",
     "Agent 决策 release response 客户端接入",
+    "Agent 决策 release response 接入 Checklist",
     "testloop-release-response-client",
     "agent-decision-release-response-client-install-summary.schema.json",
     "GitHub Actions",

@@ -10,6 +10,7 @@
 - 新增 `scripts/showcase-agent-decision-client-release-response-ci.sh --json`，可创建临时外部客户端仓库、写入 `.github/workflows/testloop-release-response-contract.yml`，并按 workflow 核心命令运行导出包 `npm test --silent`。
 - 新增 `scripts/install-agent-decision-release-response-client.sh`，可把 release response 客户端包和 `.github/workflows/testloop-release-response-contract.yml` 安装到真实外部仓库，并在目标包目录运行 `npm test --silent`。
 - 新增 release response 客户端安装 summary schema、通过态 fixture 和 `scripts/validate-agent-decision-release-response-client-install-summary.mjs`，用于机器校验真实仓库安装结果。
+- 新增 `docs/agent-decision-release-response-checklist.md`，把 release smoke summary 生成、真实仓库安装、安装 summary 校验、CI artifact 和 Agent 分流整理成接入 checklist。
 - release readiness 现在会显式导出 release response 客户端最小包并运行导出包内的 `npm test --silent`，同时运行真实仓库 installer 并校验安装 summary。
 
 ## v0.5.19 - 2026-07-21

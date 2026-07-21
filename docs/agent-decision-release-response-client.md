@@ -1,6 +1,6 @@
 # Agent 决策 release response 客户端接入
 
-这份文档面向已经接入 Agent 决策 fixture CI 的客户端项目。它只说明发布后 smoke summary 的消费方式：把 release smoke 的 JSON 汇总转成稳定 `agent_next_step`，让 Codex、Claude、Cursor 或自研 Agent 知道下一步该接受、排查 installer，还是排查 fixture 漂移。
+这份文档面向已经接入 Agent 决策 fixture CI 的客户端项目。它只说明发布后 smoke summary 的消费方式：把 release smoke 的 JSON 汇总转成稳定 `agent_next_step`，让 Codex、Claude、Cursor 或自研 Agent 知道下一步该接受、排查 installer，还是排查 fixture 漂移。按步骤接入时优先看 [Agent 决策 release response 接入 Checklist](./agent-decision-release-response-checklist.md)。
 
 ## 最小目录
 
