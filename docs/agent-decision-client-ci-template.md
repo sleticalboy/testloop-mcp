@@ -41,7 +41,8 @@ jobs:
       - name: Verify Agent decision fixture contract
         run: |
           TESTLOOP_AGENT_DECISION_CLIENT_DIR=/tmp/testloop-agent-decision-client \
-            .testloop-mcp/scripts/showcase-agent-decision-client-ci.sh
+            .testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json \
+            | tee /tmp/testloop-agent-decision-client-summary.json
 
       - name: Upload Agent decision result
         if: always()
@@ -49,6 +50,7 @@ jobs:
         with:
           name: testloop-agent-decision-contract
           path: |
+            /tmp/testloop-agent-decision-client-summary.json
             /tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json
@@ -58,12 +60,16 @@ jobs:
 
 成功时 `Verify Agent decision fixture contract` step 会输出：
 
-```text
-agent_decision_client_status=passed
-agent_decision_fixture_count=8
-agent_decision_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input
+```json
+{
+  "status": "passed",
+  "fixture_count": 8,
+  "decisions": ["accept", "accept", "accept", "manual-review", "manual-review", "manual-review", "apply-repair", "needs-better-input"],
+  "failures": [],
+  "validator_exit_code": 0
+}
 ```
 
-如果失败，先下载 `testloop-agent-decision-contract` artifact，查看 `agent-decision-fixtures-result.json` 的 `failures[]`。失败通常意味着客户端同步的 fixture、manifest 元数据或 `manual_review_*` 分流语义已经漂移。
+如果失败，先下载 `testloop-agent-decision-contract` artifact，查看 `testloop-agent-decision-client-summary.json` 和 `agent-decision-fixtures-result.json` 的 `failures[]`。失败通常意味着客户端同步的 fixture、manifest 元数据或 `manual_review_*` 分流语义已经漂移。
 
 更多背景见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。

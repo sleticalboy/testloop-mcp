@@ -52,6 +52,7 @@ bash -n scripts/showcase-agent-decision-client-ci.sh
 help_out="${tmp_dir}/help.out"
 run_expect_code 0 "$help_out" bash scripts/showcase-agent-decision-client-ci.sh --help
 assert_contains "$help_out" "Usage: scripts/showcase-agent-decision-client-ci.sh"
+assert_contains "$help_out" "scripts/showcase-agent-decision-client-ci.sh --json"
 assert_contains "$help_out" "TESTLOOP_AGENT_DECISION_CLIENT_DIR"
 assert_contains "$help_out" "TESTLOOP_AGENT_DECISION_RESULT_JSON"
 
@@ -134,6 +135,39 @@ assert payload["decisions"] == [
     "needs-better-input",
 ]
 assert payload["failures"] == []
+PY
+
+json_client_dir="${tmp_dir}/json-client"
+json_fixture_dir="${json_client_dir}/testloop-agent-decision-fixtures"
+json_result_json="${json_client_dir}/agent-decision-fixtures-result.json"
+json_summary="${tmp_dir}/summary.json"
+run_expect_code 0 "$json_summary" env \
+  TESTLOOP_AGENT_DECISION_CLIENT_DIR="$json_client_dir" \
+  bash scripts/showcase-agent-decision-client-ci.sh --json
+python3 - "$json_summary" "$json_client_dir" "$json_fixture_dir" "$json_result_json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert summary["status"] == "passed"
+assert summary["client_dir"] == sys.argv[2]
+assert summary["fixture_dir"] == sys.argv[3]
+assert summary["result_json"] == sys.argv[4]
+assert summary["fixture_count"] == 8
+assert summary["decisions"] == [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input",
+]
+assert summary["failures"] == []
+assert summary["validator_exit_code"] == 0
+assert Path(summary["result_json"]).exists()
 PY
 
 echo "agent decision client CI showcase test passed"

@@ -50,6 +50,7 @@ required_commands = [
     "node scripts/validate-agent-decision-fixtures.mjs --json",
     "node scripts/export-agent-decision-fixtures.mjs",
     "scripts/showcase-agent-decision-client-ci.sh",
+    "scripts/showcase-agent-decision-client-ci.sh --json",
     "npm test --silent",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",
@@ -105,6 +106,7 @@ required_phrases = [
     "client_expectation",
     "agent_decision_client_status=passed",
     "agent_decision_fixture_count=8",
+    "validator_exit_code",
     ".github/workflows/testloop-agent-decision-contract.yml",
 ]
 

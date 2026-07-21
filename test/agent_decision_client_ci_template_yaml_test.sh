@@ -63,8 +63,10 @@ required = [
     "path: .testloop-mcp",
     "actions/setup-node@v4",
     "TESTLOOP_AGENT_DECISION_CLIENT_DIR=/tmp/testloop-agent-decision-client",
-    ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh",
+    ".testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json",
+    "tee /tmp/testloop-agent-decision-client-summary.json",
     "actions/upload-artifact@v4",
+    "/tmp/testloop-agent-decision-client-summary.json",
     "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
 ]
 for item in required:

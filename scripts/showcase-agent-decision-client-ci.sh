@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/showcase-agent-decision-client-ci.sh
+Usage: scripts/showcase-agent-decision-client-ci.sh [--json]
 
 Create a minimal external-client CI example for Agent decision fixtures:
   1. Export the testloop-mcp Agent decision fixture package.
@@ -20,6 +20,7 @@ Environment:
 
 Example:
   scripts/showcase-agent-decision-client-ci.sh
+  scripts/showcase-agent-decision-client-ci.sh --json
 USAGE
 }
 
@@ -28,15 +29,23 @@ fail() {
   exit 1
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
-
-if [[ "$#" -ne 0 ]]; then
-  usage >&2
-  exit 2
-fi
+output_format="text"
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --json)
+      output_format="json"
+      shift
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ -n "${TESTLOOP_AGENT_DECISION_CLIENT_DIR:-}" ]]; then
@@ -60,22 +69,40 @@ fi
 mkdir -p "$client_dir" "$(dirname "$result_json")"
 
 node "$repo_root/scripts/export-agent-decision-fixtures.mjs" "$fixture_dir" >/dev/null
+set +e
 (
   cd "$fixture_dir"
   npm test --silent > "$result_json"
 )
+npm_status=$?
+set -e
 
-node - "$result_json" "$client_dir" "$fixture_dir" <<'JS'
+node - "$result_json" "$client_dir" "$fixture_dir" "$output_format" "$npm_status" <<'JS'
 const fs = require('node:fs');
-const [resultPath, clientDir, fixtureDir] = process.argv.slice(2);
+const [resultPath, clientDir, fixtureDir, outputFormat, npmStatusRaw] = process.argv.slice(2);
+const npmStatus = Number(npmStatusRaw);
 const payload = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
-console.log(`agent_decision_client_status=${payload.status}`);
-console.log(`agent_decision_client_dir=${clientDir}`);
-console.log(`agent_decision_fixture_dir=${fixtureDir}`);
-console.log(`agent_decision_result_json=${resultPath}`);
-console.log(`agent_decision_fixture_count=${payload.fixture_count}`);
-console.log(`agent_decision_decisions=${payload.decisions.join(',')}`);
-if (payload.status !== 'passed') {
+const summary = {
+  status: payload.status,
+  client_dir: clientDir,
+  fixture_dir: fixtureDir,
+  result_json: resultPath,
+  fixture_count: payload.fixture_count,
+  decisions: payload.decisions,
+  failures: payload.failures || [],
+  validator_exit_code: npmStatus,
+};
+if (outputFormat === 'json') {
+  console.log(JSON.stringify(summary, null, 2));
+} else {
+  console.log(`agent_decision_client_status=${summary.status}`);
+  console.log(`agent_decision_client_dir=${summary.client_dir}`);
+  console.log(`agent_decision_fixture_dir=${summary.fixture_dir}`);
+  console.log(`agent_decision_result_json=${summary.result_json}`);
+  console.log(`agent_decision_fixture_count=${summary.fixture_count}`);
+  console.log(`agent_decision_decisions=${summary.decisions.join(',')}`);
+}
+if (payload.status !== 'passed' || npmStatus !== 0) {
   process.exitCode = 1;
 }
 JS

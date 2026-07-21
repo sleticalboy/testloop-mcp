@@ -108,6 +108,7 @@ scripts/showcase-agent-decision-client-ci.sh
 ```
 
 这条命令会创建一个最小客户端目录，导出 fixture 包，运行导出包的 `npm test --silent`，并输出 `agent_decision_client_status=passed`、`agent_decision_fixture_count=8` 和 validator JSON 路径。它适合放在客户端仓库的 smoke job 中，确认复制路径、包内脚本和 `status/action -> decision` 合同没有漂移。可复制 workflow 见 [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)。
+客户端 CI 更推荐运行 `scripts/showcase-agent-decision-client-ci.sh --json`，并断言输出 JSON 的 `status`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。
 
 脚本最小逻辑应由 manifest 驱动，而不是硬编码 glob：
 
