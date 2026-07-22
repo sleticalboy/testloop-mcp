@@ -624,7 +624,7 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
   .
 ```
 
-JSON 输出会包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；验证失败时仍输出 JSON，同时返回非 0 退出码。
+JSON 输出会包含 `schema_version`、`status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；输出结构见 [agent-decision-fixtures-result.schema.json](./docs/fixtures/agent-decision-fixtures-result.schema.json)，通过态样例见 [passed.json](./docs/fixtures/agent-decision-fixtures-result/passed.json)。验证失败时仍输出 JSON，同时返回非 0 退出码。
 validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`。
 
 如果要给外部 MCP 客户端项目复制一份最小决策 fixture 包：
@@ -633,7 +633,7 @@ validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kin
 node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures
 ```
 
-导出目录会保留 `docs/fixtures/...` 和 `scripts/validate-agent-decision-fixtures.mjs`，因此复制后仍可在目标项目内运行同一条 `--json` 校验命令。
+导出目录会保留 `docs/fixtures/...`、validator result schema 和 `scripts/validate-agent-decision-fixtures.mjs`，因此复制后仍可在目标项目内运行同一条 `--json` 校验命令。
 导出目录还包含无依赖 `package.json`，接入方也可以直接运行 `npm test --silent`。
 如果要模拟外部客户端 CI 从导出到校验的完整链路，可以运行 `scripts/showcase-agent-decision-client-ci.sh`；预期输出包含 `agent_decision_client_status=passed` 和 `agent_decision_fixture_count=8`。
 机器断言推荐运行 `scripts/showcase-agent-decision-client-ci.sh --json`，直接读取 `status`、`fixture_count`、`decisions[]`、`failures[]` 和 `validator_exit_code`。如果要把该 summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json`，通过态输出 `agent_next_step=ready`。

@@ -37,6 +37,8 @@ assert_exists "$export_dir/package.json"
 assert_exists "$export_dir/scripts/validate-agent-decision-fixtures.mjs"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.json"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.schema.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures-result.schema.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures-result/passed.json"
 assert_exists "$export_dir/docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json"
 
 if [ -e "$export_dir/docs/fixtures/run-tests/apply-fix-suggestions.json" ]; then
@@ -58,6 +60,7 @@ import json
 import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == [
@@ -84,6 +87,7 @@ import json
 import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["fixture_count"] == 8
 assert payload["failures"] == []

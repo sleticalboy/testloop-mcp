@@ -64,7 +64,7 @@ validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kin
 node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fixtures
 ```
 
-导出目录会包含 `docs/fixtures/agent-decision-fixtures.json`、schema、manifest 中列出的 8 个 fixture，以及 `scripts/validate-agent-decision-fixtures.mjs`。路径保持为 `docs/fixtures/...`，所以复制到目标项目后仍可直接运行同一条 `--json` 校验命令。
+导出目录会包含 `docs/fixtures/agent-decision-fixtures.json`、manifest schema、validator result schema、通过态 result fixture、manifest 中列出的 8 个 fixture，以及 `scripts/validate-agent-decision-fixtures.mjs`。路径保持为 `docs/fixtures/...`，所以复制到目标项目后仍可直接运行同一条 `--json` 校验命令。
 导出包也包含无依赖 `package.json`，可以在客户端 CI 中用 `npm test --silent` 直接运行同一套契约测试。
 
 如果要模拟外部客户端 CI 的完整接入路径，可以直接运行：

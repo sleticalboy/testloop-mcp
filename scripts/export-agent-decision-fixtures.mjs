@@ -60,6 +60,8 @@ try {
   manifest = readJSON(manifestPath);
   copyRequiredFile('docs/fixtures/agent-decision-fixtures.json');
   copyRequiredFile('docs/fixtures/agent-decision-fixtures.schema.json');
+  copyRequiredFile('docs/fixtures/agent-decision-fixtures-result.schema.json');
+  copyRequiredFile('docs/fixtures/agent-decision-fixtures-result/passed.json');
   copyRequiredFile('scripts/validate-agent-decision-fixtures.mjs');
   for (const item of manifest.fixtures || []) {
     if (!item || typeof item.path !== 'string') {
@@ -93,6 +95,7 @@ try {
     '```',
     '',
     'The validator returns non-zero on failure and still writes parseable JSON with `status=failed`.',
+    'The JSON result contract is copied to `docs/fixtures/agent-decision-fixtures-result.schema.json`.',
     '',
   ].join('\n'), 'utf8');
 } catch (error) {
