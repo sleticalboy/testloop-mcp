@@ -191,6 +191,44 @@ func TestRustCoverageFilePathHonorsEnvironment(t *testing.T) {
 	}
 }
 
+func TestJSCoverageFilePathHonorsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+
+	if got, want := jsCoverageFilePath(dir), filepath.Join(dir, "coverage", "coverage-final.json"); got != want {
+		t.Fatalf("default JS coverage file = %q, want %q", got, want)
+	}
+
+	t.Setenv("TESTLOOP_VALIDATE_JS_COVERAGE_FILE", "reports/istanbul.json")
+	if got, want := jsCoverageFilePath(dir), filepath.Join(dir, "reports", "istanbul.json"); got != want {
+		t.Fatalf("relative JS coverage file = %q, want %q", got, want)
+	}
+
+	absolute := filepath.Join(dir, "custom-istanbul.json")
+	t.Setenv("TESTLOOP_VALIDATE_JS_COVERAGE_FILE", absolute)
+	if got := jsCoverageFilePath(dir); got != absolute {
+		t.Fatalf("absolute JS coverage file = %q, want %q", got, absolute)
+	}
+}
+
+func TestPyCoverageFilePathHonorsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+
+	if got, want := pyCoverageFilePath(dir), filepath.Join(dir, "coverage.json"); got != want {
+		t.Fatalf("default Python coverage file = %q, want %q", got, want)
+	}
+
+	t.Setenv("TESTLOOP_VALIDATE_PY_COVERAGE_FILE", "reports/coverage.json")
+	if got, want := pyCoverageFilePath(dir), filepath.Join(dir, "reports", "coverage.json"); got != want {
+		t.Fatalf("relative Python coverage file = %q, want %q", got, want)
+	}
+
+	absolute := filepath.Join(dir, "custom-coverage.json")
+	t.Setenv("TESTLOOP_VALIDATE_PY_COVERAGE_FILE", absolute)
+	if got := pyCoverageFilePath(dir); got != absolute {
+		t.Fatalf("absolute Python coverage file = %q, want %q", got, absolute)
+	}
+}
+
 func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "calc_test.go")

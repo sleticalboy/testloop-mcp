@@ -20,6 +20,10 @@ Environment:
                                       Optional shell command template for baseline coverage.
                                       Use {args} for TESTLOOP_VALIDATE_PY_TEST_ARGS, e.g.
                                       "python3 -m pytest --cov=src --cov-report=json {args}".
+  TESTLOOP_VALIDATE_PY_COVERAGE_FILE Optional coverage.py JSON file path used by baseline
+                                      parsing and per-task target-hit validation.
+                                      Relative paths are resolved from the isolated
+                                      project copy. Default: coverage.json.
   TESTLOOP_PYTEST_COMMAND             Optional shell command template used by run_tests for
                                       each generated pytest task. Use {path}, {verbose},
                                       and {coverage}, e.g.

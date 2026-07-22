@@ -319,7 +319,7 @@ func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, 
 			continue
 		}
 		root := findPytestProjectRoot(path)
-		reportPath := filepath.Join(root, "coverage.json")
+		reportPath := pyCoverageFilePath(root)
 		if !fileExists(reportPath) {
 			continue
 		}
@@ -330,6 +330,17 @@ func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, 
 		return report, reportPath, true
 	}
 	return nil, "", false
+}
+
+func pyCoverageFilePath(root string) string {
+	coverageFile := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_PY_COVERAGE_FILE"))
+	if coverageFile == "" {
+		coverageFile = "coverage.json"
+	}
+	if !filepath.IsAbs(coverageFile) {
+		coverageFile = filepath.Join(root, coverageFile)
+	}
+	return coverageFile
 }
 
 func goCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {
@@ -383,7 +394,7 @@ func istanbulCoverageReportForValidation(framework string, paths ...string) (*ty
 			continue
 		}
 		root := findProjectRoot(path, "package.json")
-		reportPath := filepath.Join(root, "coverage", "coverage-final.json")
+		reportPath := jsCoverageFilePath(root)
 		if !fileExists(reportPath) {
 			continue
 		}
@@ -394,6 +405,17 @@ func istanbulCoverageReportForValidation(framework string, paths ...string) (*ty
 		return report, reportPath, true
 	}
 	return nil, "", false
+}
+
+func jsCoverageFilePath(root string) string {
+	coverageFile := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JS_COVERAGE_FILE"))
+	if coverageFile == "" {
+		coverageFile = filepath.Join("coverage", "coverage-final.json")
+	}
+	if !filepath.IsAbs(coverageFile) {
+		coverageFile = filepath.Join(root, coverageFile)
+	}
+	return coverageFile
 }
 
 func coverageTaskFindCoverageFile(report *types.CoverageReport, taskFile string) *types.CoverageFile {

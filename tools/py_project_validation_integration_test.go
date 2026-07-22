@@ -190,7 +190,7 @@ func parsePyCoverageReportForProject(t *testing.T, projectRoot string, testArgs 
 	logPyValidationStage(t, "baseline.coverage.start root=%s args=%q timeout=%s", projectRoot, strings.Join(testArgs, " "), timeout)
 	output, err := cmd.CombinedOutput()
 	logPyValidationStage(t, "baseline.coverage.done root=%s err=%v output_bytes=%d", projectRoot, err, len(output))
-	coverageFile := filepath.Join(projectRoot, "coverage.json")
+	coverageFile := pyCoverageFilePath(projectRoot)
 	if err != nil {
 		if _, statErr := os.Stat(coverageFile); statErr != nil {
 			t.Fatalf("baseline coverage failed and no coverage.json was produced: %v\n%s", err, output)

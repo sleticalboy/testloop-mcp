@@ -288,7 +288,7 @@ func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework
 	logJSValidationStage(t, "baseline.coverage.start root=%s framework=%s args=%q timeout=%s", projectRoot, framework, strings.Join(testArgs, " "), timeout)
 	output, err := cmd.CombinedOutput()
 	logJSValidationStage(t, "baseline.coverage.done root=%s framework=%s err=%v output_bytes=%d", projectRoot, framework, err, len(output))
-	coverageFile := filepath.Join(projectRoot, "coverage", "coverage-final.json")
+	coverageFile := jsCoverageFilePath(projectRoot)
 	if err != nil {
 		if _, statErr := os.Stat(coverageFile); statErr != nil {
 			t.Fatalf("baseline coverage failed and no coverage-final.json was produced: %v\n%s", err, output)

@@ -24,6 +24,11 @@ Environment:
                                       Optional shell command template for baseline coverage.
                                       Use {args} for TESTLOOP_VALIDATE_JS_TEST_ARGS, e.g.
                                       "npx egg-bin cov --timeout 60000 {args}".
+  TESTLOOP_VALIDATE_JS_COVERAGE_FILE Optional Istanbul JSON file path used by baseline
+                                      parsing and per-task target-hit validation.
+                                      Relative paths are resolved from the isolated
+                                      project copy. Default:
+                                      coverage/coverage-final.json.
   TESTLOOP_JS_TEST_COMMAND           Optional shell command template used by run_tests during
                                       generated task validation. Use {path} for the generated
                                       test file, e.g. "npx egg-bin test --timeout 60000 {path}".

@@ -535,7 +535,7 @@ TESTLOOP_VALIDATE_JS_FILE_FILTER='src/utils/' \
 scripts/validate-js-coverage-top-tasks.sh /path/to/js/project vitest 10 /tmp/testloop-js-top10.jsonl
 ```
 
-JS 脚本会读取 Istanbul `coverage/coverage-final.json`；如果项目覆盖率阈值导致 baseline coverage 命令非零退出，但覆盖率 JSON 已生成，脚本仍会继续解析并验证任务。验证单个 Jest/Vitest/Mocha coverage task 时，`validate_coverage_task coverage=true` 会读取项目根目录的 `coverage/coverage-final.json` 校验目标行命中，避免生成测试通过但没有覆盖缺口的弱 ready。
+JS 脚本会读取 Istanbul `coverage/coverage-final.json`；如果项目覆盖率阈值导致 baseline coverage 命令非零退出，但覆盖率 JSON 已生成，脚本仍会继续解析并验证任务。验证单个 Jest/Vitest/Mocha coverage task 时，`validate_coverage_task coverage=true` 默认读取项目根目录的 `coverage/coverage-final.json` 校验目标行命中，也可通过 `TESTLOOP_VALIDATE_JS_COVERAGE_FILE` 指向自定义 Istanbul JSON，避免生成测试通过但没有覆盖缺口的弱 ready。
 
 Python/pytest 项目可使用：
 
@@ -545,7 +545,7 @@ TESTLOOP_VALIDATE_PY_COVERAGE_COMMAND='python3 -m pytest --cov=src --cov-report=
 scripts/validate-py-coverage-top-tasks.sh /path/to/python/project 20 /tmp/testloop-py-top20.jsonl
 ```
 
-Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。验证单个 pytest coverage task 时，`validate_coverage_task coverage=true` 会读取项目根目录的 `coverage.json` 校验目标行命中，避免生成测试通过但没有覆盖缺口的弱 ready。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
+Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。验证单个 pytest coverage task 时，`validate_coverage_task coverage=true` 默认读取项目根目录的 `coverage.json` 校验目标行命中，也可通过 `TESTLOOP_VALIDATE_PY_COVERAGE_FILE` 指向自定义 coverage.py JSON，避免生成测试通过但没有覆盖缺口的弱 ready。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
 
 Rust/Cargo 项目可使用：
 
