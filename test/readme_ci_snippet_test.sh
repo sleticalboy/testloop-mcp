@@ -95,6 +95,7 @@ required_text = [
     "scripts/showcase-release-response-adopter.sh --json",
     "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
     "release-response-adopter-summary.schema.json",
+    "invalid-response.json",
     "./examples/release-response-adopter/README.md",
     "agent_response_json",
     "agent_next_step=ready",

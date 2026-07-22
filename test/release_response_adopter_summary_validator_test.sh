@@ -80,6 +80,36 @@ assert_contains "${tmp_dir}/bad.out" "should_accept must be true"
 assert_contains "${tmp_dir}/bad.out" "npm_exit_code must be 0"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
 
+failed_fixture="docs/fixtures/release-response-adopter-summary/invalid-response.json"
+if node "$validator" "$failed_fixture" > "${tmp_dir}/failed-fixture.out" 2>&1; then
+  echo "expected validator to fail for failed release response adopter summary fixture" >&2
+  exit 1
+fi
+assert_contains "${tmp_dir}/failed-fixture.out" "status must be passed"
+assert_contains "${tmp_dir}/failed-fixture.out" "agent_next_step must be ready"
+assert_contains "${tmp_dir}/failed-fixture.out" "should_accept must be true"
+assert_contains "${tmp_dir}/failed-fixture.out" "failures must be an empty array"
+
+if node "$validator" --json "$failed_fixture" > "${tmp_dir}/failed-fixture.json"; then
+  echo "expected JSON validator to fail for failed release response adopter summary fixture" >&2
+  exit 1
+fi
+python3 - "${tmp_dir}/failed-fixture.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "failed"
+assert payload["release_ref"] == "v0.5.20"
+assert payload["fixture_count"] == 8
+assert payload["agent_next_step"] == "inspect-release-smoke-summary"
+assert payload["should_accept"] is False
+assert payload["npm_exit_code"] == 0
+assert any("consumer agent_next_step=inspect-release-smoke-summary, want ready" in item for item in payload["failures"])
+assert any("agent_next_step must be ready" in item for item in payload["failures"])
+PY
+
 if node "$validator" --json "$bad_summary" > "${tmp_dir}/bad.json"; then
   echo "expected JSON validator to fail for invalid release response adopter summary" >&2
   exit 1
@@ -97,6 +127,7 @@ assert payload["agent_next_step"] == "inspect-release-installer"
 assert payload["should_accept"] is False
 assert payload["npm_exit_code"] == 1
 assert payload["failures"]
+assert "boom" in payload["failures"]
 assert any("status must be passed" in item for item in payload["failures"])
 PY
 

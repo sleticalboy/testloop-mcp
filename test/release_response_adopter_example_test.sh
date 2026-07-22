@@ -121,7 +121,9 @@ assert_contains "${repo_dir}/scripts/read-testloop-release-response.mjs" "testlo
 assert_contains "$readme" "scripts/install-agent-decision-release-response-client.sh"
 assert_contains "$readme" "scripts/showcase-release-response-adopter.sh --json"
 assert_contains "$readme" "node scripts/validate-release-response-adopter-summary.mjs"
+assert_contains "$readme" "docs/fixtures/release-response-adopter-summary/invalid-response.json"
 assert_contains "$readme" "agent_next_step"
+assert_contains "$readme" "failures[]"
 assert_contains "$readme" "inspect-release-installer"
 
 bad_out="${tmp_dir}/missing.out"

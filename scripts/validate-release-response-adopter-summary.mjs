@@ -73,6 +73,10 @@ function requireNonEmptyString(value, label) {
 }
 
 function emitJSON(status) {
+  const summaryFailures = Array.isArray(summary.failures) ? summary.failures : [];
+  const outputFailures = status === 'failed'
+    ? [...summaryFailures, ...failures]
+    : failures;
   console.log(JSON.stringify({
     status,
     summary_json: summaryPath,
@@ -81,7 +85,7 @@ function emitJSON(status) {
     agent_next_step: typeof summary.agent_next_step === 'string' ? summary.agent_next_step : '',
     should_accept: summary.should_accept === true,
     npm_exit_code: Number.isInteger(summary.npm_exit_code) ? summary.npm_exit_code : null,
-    failures,
+    failures: outputFailures,
   }, null, 2));
 }
 

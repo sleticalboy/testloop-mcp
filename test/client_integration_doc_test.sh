@@ -59,6 +59,7 @@ required_snippets = [
     "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
     "./fixtures/release-response-adopter-summary.schema.json",
     "./fixtures/release-response-adopter-summary/passed.json",
+    "./fixtures/release-response-adopter-summary/invalid-response.json",
     "../examples/release-response-adopter/README.md",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",

@@ -38,6 +38,15 @@ node scripts/validate-release-response-adopter-summary.mjs \
   /tmp/testloop-release-response-adopter-summary.json
 ```
 
+失败态可用 fixture 固定：
+
+```bash
+node scripts/validate-release-response-adopter-summary.mjs --json \
+  docs/fixtures/release-response-adopter-summary/invalid-response.json
+```
+
+该命令应返回非 0；JSON 输出里的 `agent_next_step` 和 `failures[]` 可直接交给 Agent 分流。
+
 然后复制接入方消费 helper：
 
 ```bash

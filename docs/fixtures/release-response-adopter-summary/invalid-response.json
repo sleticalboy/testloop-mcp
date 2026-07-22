@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "repo_dir": "/tmp/testloop-release-response-adopter/external-client-repo",
+  "readme_path": "/tmp/testloop-release-response-adopter/external-client-repo/README.md",
+  "workflow_path": "/tmp/testloop-release-response-adopter/external-client-repo/.github/workflows/testloop-release-response-contract.yml",
+  "package_dir": "/tmp/testloop-release-response-adopter/external-client-repo/testloop-release-response-client",
+  "install_summary_json": "/tmp/testloop-release-response-adopter/install-summary.json",
+  "agent_response_json": "/tmp/testloop-release-response-adopter/external-client-repo/testloop-release-response-client/testloop-release-response.json",
+  "consumer_json": "/tmp/testloop-release-response-adopter/consumer-response.json",
+  "release_ref": "v0.5.20",
+  "fixture_count": 8,
+  "agent_next_step": "inspect-release-smoke-summary",
+  "should_accept": false,
+  "npm_exit_code": 0,
+  "failures": [
+    "consumer agent_next_step=inspect-release-smoke-summary, want ready"
+  ]
+}
