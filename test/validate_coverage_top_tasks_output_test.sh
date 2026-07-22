@@ -54,6 +54,10 @@ out="${tmp_dir}/py-help.out"
 run_expect_code 0 "$out" bash "${repo_root}/scripts/validate-py-coverage-top-tasks.sh" --help
 assert_contains "$out" "TESTLOOP_VALIDATE_PY_COVERAGE_FILE"
 
+out="${tmp_dir}/java-help.out"
+run_expect_code 0 "$out" bash "${repo_root}/scripts/validate-java-coverage-top-tasks.sh" --help
+assert_contains "$out" "TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE"
+
 out="${tmp_dir}/go.out"
 run_expect_code 1 "$out" bash "${repo_root}/scripts/validate-go-coverage-top-tasks.sh" "$project_dir" 1 "$output_dir"
 assert_contains "$out" "output path must not be a directory"

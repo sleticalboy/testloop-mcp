@@ -224,24 +224,6 @@ func javaCoverageCommand(ctx context.Context, projectRoot string) *exec.Cmd {
 	return javaTestCommand(ctx, projectRoot, true)
 }
 
-func javaCoverageFile(projectRoot string) string {
-	if coverageFile := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE")); coverageFile != "" {
-		if filepath.IsAbs(coverageFile) {
-			return coverageFile
-		}
-		return filepath.Join(projectRoot, coverageFile)
-	}
-	for _, candidate := range []string{
-		filepath.Join(projectRoot, "target", "site", "jacoco", "jacoco.xml"),
-		filepath.Join(projectRoot, "build", "reports", "jacoco", "test", "jacocoTestReport.xml"),
-	} {
-		if fileExists(candidate) {
-			return candidate
-		}
-	}
-	return filepath.Join(projectRoot, "target", "site", "jacoco", "jacoco.xml")
-}
-
 func TestJavaCoverageCommandSupportsCustomTemplate(t *testing.T) {
 	t.Setenv("TESTLOOP_VALIDATE_JAVA_COVERAGE_COMMAND", "mvn -q test jacoco:report")
 

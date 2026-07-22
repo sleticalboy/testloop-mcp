@@ -229,6 +229,36 @@ func TestPyCoverageFilePathHonorsEnvironment(t *testing.T) {
 	}
 }
 
+func TestJavaCoverageFileHonorsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+
+	if got, want := javaCoverageFile(dir), filepath.Join(dir, "target", "site", "jacoco", "jacoco.xml"); got != want {
+		t.Fatalf("default Java coverage file = %q, want %q", got, want)
+	}
+
+	gradleReport := filepath.Join(dir, "build", "reports", "jacoco", "test", "jacocoTestReport.xml")
+	if err := os.MkdirAll(filepath.Dir(gradleReport), 0o755); err != nil {
+		t.Fatalf("mkdir gradle report dir: %v", err)
+	}
+	if err := os.WriteFile(gradleReport, []byte("<report/>"), 0o644); err != nil {
+		t.Fatalf("write gradle report: %v", err)
+	}
+	if got := javaCoverageFile(dir); got != gradleReport {
+		t.Fatalf("gradle Java coverage file = %q, want %q", got, gradleReport)
+	}
+
+	t.Setenv("TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE", "reports/jacoco.xml")
+	if got, want := javaCoverageFile(dir), filepath.Join(dir, "reports", "jacoco.xml"); got != want {
+		t.Fatalf("relative Java coverage file = %q, want %q", got, want)
+	}
+
+	absolute := filepath.Join(dir, "custom-jacoco.xml")
+	t.Setenv("TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE", absolute)
+	if got := javaCoverageFile(dir); got != absolute {
+		t.Fatalf("absolute Java coverage file = %q, want %q", got, absolute)
+	}
+}
+
 func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "calc_test.go")

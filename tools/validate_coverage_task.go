@@ -297,20 +297,15 @@ func javaCoverageReportForValidation(paths ...string) (*types.CoverageReport, st
 	if root == "" {
 		return nil, "", false
 	}
-	for _, reportPath := range []string{
-		filepath.Join(root, "target", "site", "jacoco", "jacoco.xml"),
-		filepath.Join(root, "build", "reports", "jacoco", "test", "jacocoTestReport.xml"),
-	} {
-		if !fileExists(reportPath) {
-			continue
-		}
-		report, err := coverage.ParseJaCoCoCoverage(reportPath)
-		if err != nil {
-			continue
-		}
-		return report, reportPath, true
+	reportPath := javaCoverageFile(root)
+	if !fileExists(reportPath) {
+		return nil, "", false
 	}
-	return nil, "", false
+	report, err := coverage.ParseJaCoCoCoverage(reportPath)
+	if err != nil {
+		return nil, "", false
+	}
+	return report, reportPath, true
 }
 
 func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {

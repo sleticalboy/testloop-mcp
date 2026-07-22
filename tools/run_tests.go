@@ -667,18 +667,31 @@ func rustCoverageFilePath(root string) string {
 
 func collectJavaCoveragePercent(path string) (float64, bool) {
 	root := findProjectRoot(path, "pom.xml", "build.gradle", "build.gradle.kts")
+	reportPath := javaCoverageFile(root)
+	if !fileExists(reportPath) {
+		return 0, false
+	}
+	report, err := coverage.ParseJaCoCoCoverage(reportPath)
+	if err != nil {
+		return 0, false
+	}
+	return report.TotalPercent, true
+}
+
+func javaCoverageFile(root string) string {
+	if coverageFile := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE")); coverageFile != "" {
+		if filepath.IsAbs(coverageFile) {
+			return coverageFile
+		}
+		return filepath.Join(root, coverageFile)
+	}
 	for _, reportPath := range []string{
 		filepath.Join(root, "target", "site", "jacoco", "jacoco.xml"),
 		filepath.Join(root, "build", "reports", "jacoco", "test", "jacocoTestReport.xml"),
 	} {
-		if !fileExists(reportPath) {
-			continue
+		if fileExists(reportPath) {
+			return reportPath
 		}
-		report, err := coverage.ParseJaCoCoCoverage(reportPath)
-		if err != nil {
-			continue
-		}
-		return report.TotalPercent, true
 	}
-	return 0, false
+	return filepath.Join(root, "target", "site", "jacoco", "jacoco.xml")
 }
