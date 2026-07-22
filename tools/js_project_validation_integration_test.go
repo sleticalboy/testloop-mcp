@@ -22,7 +22,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 	if projectDir == "" {
 		t.Skip("TESTLOOP_VALIDATE_JS_PROJECT_DIR is not set")
 	}
-	framework := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JS_FRAMEWORK"))
+	framework := normalizeFrameworkName(os.Getenv("TESTLOOP_VALIDATE_JS_FRAMEWORK"))
 	if framework == "" {
 		framework = "vitest"
 	}
@@ -218,6 +218,15 @@ func TestJSCoverageCommandSupportsCustomTemplate(t *testing.T) {
 	want := "sh -c npx egg-bin cov --timeout 60000 'test/index.test.ts' 'test/space name.test.ts'"
 	if got != want {
 		t.Fatalf("jsCoverageCommand args = %q, want %q", got, want)
+	}
+}
+
+func TestJSValidationHelpersNormalizeFramework(t *testing.T) {
+	if got := sanitizeJSValidationTaskID(" VITEST "); got != "vitest" {
+		t.Fatalf("sanitizeJSValidationTaskID = %q, want vitest", got)
+	}
+	if got := jsValidationCoverageTaskCommand(" MOCHA ", "test/calc.test.js"); got != "npx mocha test/calc.test.js" {
+		t.Fatalf("jsValidationCoverageTaskCommand = %q, want mocha command", got)
 	}
 }
 
@@ -452,7 +461,7 @@ func jsValidationSourceIsImportExportOnly(source string) bool {
 }
 
 func sanitizeJSValidationTaskID(framework string) string {
-	framework = strings.TrimSpace(framework)
+	framework = normalizeFrameworkName(framework)
 	if framework == "" {
 		framework = "js"
 	}
@@ -470,6 +479,7 @@ func jsValidationTestFileForSource(projectRoot string, sourcePath string) string
 }
 
 func jsValidationCoverageTaskCommand(framework string, file string) string {
+	framework = normalizeFrameworkName(framework)
 	switch framework {
 	case "jest":
 		return "npx jest " + filepath.ToSlash(file)
