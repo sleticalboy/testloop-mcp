@@ -221,6 +221,16 @@ func TestJSCoverageCommandSupportsCustomTemplate(t *testing.T) {
 	}
 }
 
+func TestJSCoverageCommandNormalizesFramework(t *testing.T) {
+	cmd := jsCoverageCommand(context.Background(), " VITEST ", []string{"tests/sum.test.ts"})
+
+	got := strings.Join(cmd.Args, " ")
+	want := "npx vitest run --coverage tests/sum.test.ts"
+	if got != want {
+		t.Fatalf("jsCoverageCommand args = %q, want %q", got, want)
+	}
+}
+
 func TestJSValidationHelpersNormalizeFramework(t *testing.T) {
 	if got := sanitizeJSValidationTaskID(" VITEST "); got != "vitest" {
 		t.Fatalf("sanitizeJSValidationTaskID = %q, want vitest", got)
@@ -323,6 +333,7 @@ func parseJSCoverageReportForProject(t *testing.T, projectRoot string, framework
 }
 
 func jsCoverageCommand(ctx context.Context, framework string, testArgs []string) *exec.Cmd {
+	framework = normalizeFrameworkName(framework)
 	if template := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_JS_COVERAGE_COMMAND")); template != "" {
 		args := make([]string, 0, len(testArgs))
 		for _, arg := range testArgs {
