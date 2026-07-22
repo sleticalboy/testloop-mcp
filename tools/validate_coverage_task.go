@@ -161,7 +161,7 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
 	framework = strings.ToLower(strings.TrimSpace(framework))
-	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha" && framework != "cargo-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha" && framework != "cargo-test" && framework != "go-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
@@ -187,6 +187,13 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 	}
 	if framework == "cargo-test" {
 		report, reportPath, ok := rustCoverageReportForValidation(generated.TestFile, task.File)
+		if !ok {
+			return false, "", nil, nil, false
+		}
+		return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+	}
+	if framework == "go-test" {
+		report, reportPath, ok := goCoverageReportForValidation(generated.TestFile, task.File)
 		if !ok {
 			return false, "", nil, nil, false
 		}
@@ -295,6 +302,32 @@ func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, 
 		}
 		report, err := coverage.ParsePytestCoverage(reportPath)
 		if err != nil {
+			continue
+		}
+		return report, reportPath, true
+	}
+	return nil, "", false
+}
+
+func goCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		root := findProjectRoot(path, "go.mod")
+		reportPath := goCoverageProfilePath(root)
+		if !fileExists(reportPath) {
+			continue
+		}
+		oldWD, err := os.Getwd()
+		if err == nil && root != "" {
+			_ = os.Chdir(root)
+		}
+		report, parseErr := coverage.ParseGoCoverage(reportPath)
+		if err == nil && oldWD != "" {
+			_ = os.Chdir(oldWD)
+		}
+		if parseErr != nil {
 			continue
 		}
 		return report, reportPath, true

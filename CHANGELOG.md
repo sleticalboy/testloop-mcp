@@ -10,6 +10,7 @@
 - `validate_coverage_task coverage=true` 支持读取 pytest 项目根目录的 `coverage.json` 校验目标行命中；测试通过但 coverage.py JSON 仍标记目标行 missing 时返回 `failed/needs_better_input`。
 - `validate_coverage_task coverage=true` 支持读取 Jest/Vitest/Mocha 的 Istanbul `coverage/coverage-final.json` 校验目标行命中；测试通过但目标行仍未覆盖时返回 `failed/needs_better_input`。
 - `validate_coverage_task coverage=true` 支持读取 Rust/Cargo LCOV 校验目标行命中；默认使用 `target/tarpaulin/lcov.info`，也支持 `TESTLOOP_VALIDATE_RUST_COVERAGE_FILE` 指向自定义 LCOV。
+- `run_tests coverage=true` 会为 Go 写入 `testloop-cover.out`；`validate_coverage_task coverage=true` 支持读取该 coverprofile 校验目标行命中，测试通过但目标行仍未覆盖时返回 `failed/needs_better_input`。
 
 ## v0.5.21 - 2026-07-22
 

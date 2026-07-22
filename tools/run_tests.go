@@ -434,12 +434,12 @@ func goTestCommand(ctx context.Context, path string, verbose bool, coverage bool
 	if verbose {
 		args = append(args, "-v")
 	}
-	if coverage {
-		args = append(args, "-cover")
-	}
 
 	testPath := normalizeGoTestPath(path)
 	root := findProjectRoot(path, "go.mod")
+	if coverage {
+		args = append(args, "-cover", "-coverprofile", goCoverageProfilePath(root))
+	}
 	if fileExists(filepath.Join(root, "go.mod")) {
 		if rel, ok := goRelativeTestPath(root, testPath); ok {
 			testPath = rel
@@ -452,6 +452,20 @@ func goTestCommand(ctx context.Context, path string, verbose bool, coverage bool
 		cmd.Dir = root
 	}
 	return cmd
+}
+
+func goCoverageProfilePath(root string) string {
+	profile := strings.TrimSpace(os.Getenv("TESTLOOP_GO_COVERPROFILE"))
+	if profile == "" {
+		profile = "testloop-cover.out"
+	}
+	if filepath.IsAbs(profile) {
+		return profile
+	}
+	if root != "" {
+		return filepath.Join(root, profile)
+	}
+	return profile
 }
 
 func goRelativeTestPath(root string, testPath string) (string, bool) {

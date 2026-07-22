@@ -222,7 +222,7 @@ func TestGoTestCommandUsesModuleRootForAbsolutePackagePath(t *testing.T) {
 	}
 
 	cmd := goTestCommand(context.Background(), pkg, true, true)
-	want := []string{"go", "test", "-json", "-v", "-cover", "./pkg"}
+	want := []string{"go", "test", "-json", "-v", "-cover", "-coverprofile", filepath.Join(dir, "testloop-cover.out"), "./pkg"}
 	if !equalStrings(cmd.Args, want) {
 		t.Fatalf("args = %v, want %v", cmd.Args, want)
 	}

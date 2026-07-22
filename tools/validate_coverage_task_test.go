@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -98,6 +99,141 @@ func Add(a, b int) int {
 	if !ok || structuredOutput.Status != "passed" {
 		t.Fatalf("structured output = %#v, want passed validation output", structured)
 	}
+}
+
+func TestHandleValidateCoverageTaskGoCoverageHit(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	src := strings.Join([]string{
+		"package calc",
+		"",
+		"func Add(a, b int) int {",
+		"\tif a == 0 {",
+		"\t\treturn b",
+		"\t}",
+		"\treturn a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := goCoverageHitTask(source, filepath.Join(dir, "calc_test.go"))
+	installFakeGoSuccessWithCoverprofile(t, goTestJSONPassOutput(), goCoverprofile("example.com/calc/calc.go", map[int]int{3: 1, 4: 1, 5: 1, 7: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "go-test",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != true {
+		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
+	}
+}
+
+func TestHandleValidateCoverageTaskGoCoverageMissNeedsBetterInput(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	source := filepath.Join(dir, "calc.go")
+	src := strings.Join([]string{
+		"package calc",
+		"",
+		"func Add(a, b int) int {",
+		"\tif a == 0 {",
+		"\t\treturn b",
+		"\t}",
+		"\treturn a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := goCoverageHitTask(source, filepath.Join(dir, "calc_test.go"))
+	installFakeGoSuccessWithCoverprofile(t, goTestJSONPassOutput(), goCoverprofile("example.com/calc/calc.go", map[int]int{3: 1, 4: 0, 5: 0, 7: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "go-test",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/testloop-cover.out") {
+		t.Fatalf("expected testloop-cover.out report metadata, got %+v", out.Metadata)
+	}
+}
+
+func goCoverageHitTask(source string, testFile string) types.CoverageTestTask {
+	return types.CoverageTestTask{
+		ID:              "go-test-1",
+		Framework:       "go-test",
+		File:            source,
+		Target:          "Add",
+		Kind:            "function",
+		LineRange:       "4-5",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{4, 5},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 Add 补充测试，覆盖未执行行段 4-5",
+		Command:         "go test ./...",
+		TestFile:        testFile,
+		TestName:        "TestAdd",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.95,
+	}
+}
+
+func goTestJSONPassOutput() string {
+	return strings.Join([]string{
+		`{"Action":"run","Package":"example.com/calc","Test":"TestAdd"}`,
+		`{"Action":"output","Package":"example.com/calc","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}`,
+		`{"Action":"pass","Package":"example.com/calc","Test":"TestAdd","Elapsed":0}`,
+		`{"Action":"output","Package":"example.com/calc","Output":"coverage: 80.0% of statements\n"}`,
+		`{"Action":"pass","Package":"example.com/calc","Elapsed":0}`,
+	}, "\n")
+}
+
+func goCoverprofile(path string, hitByLine map[int]int) string {
+	var lines []string
+	lines = append(lines, "mode: set")
+	for line, hit := range hitByLine {
+		lines = append(lines, fmt.Sprintf("%s:%d.1,%d.20 1 %d", path, line, line, hit))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestHandleValidateCoverageTaskGeneratesAndRunsNodeTestTask(t *testing.T) {
@@ -2157,6 +2293,39 @@ func installFakeCargoSuccessWithLCOV(t *testing.T, output string, lcov string) s
 	path := filepath.Join(fakeBin, "cargo")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake cargo: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
+}
+
+func installFakeGoSuccessWithCoverprofile(t *testing.T, output string, coverprofile string) string {
+	t.Helper()
+	realGo, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("find real go binary: %v", err)
+	}
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "go.log")
+	script := "#!/usr/bin/env sh\n" +
+		"if [ \"${1:-}\" != 'test' ]; then exec '" + realGo + "' \"$@\"; fi\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} >> '" + logPath + "'\n" +
+		"profile='testloop-cover.out'\n" +
+		"prev=''\n" +
+		"for arg in \"$@\"; do\n" +
+		"  if [ \"$prev\" = '-coverprofile' ]; then profile=\"$arg\"; break; fi\n" +
+		"  case \"$arg\" in -coverprofile=*) profile=\"${arg#-coverprofile=}\"; break ;; esac\n" +
+		"  prev=\"$arg\"\n" +
+		"done\n" +
+		"mkdir -p \"$(dirname \"$profile\")\"\n" +
+		"cat > \"$profile\" <<'COVERPROFILE'\n" + coverprofile + "\nCOVERPROFILE\n" +
+		"cat <<'GO_OUTPUT'\n" + output + "\nGO_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "go")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake go: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return logPath
