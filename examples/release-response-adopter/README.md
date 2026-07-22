@@ -121,6 +121,21 @@ testloop_release_response_summary_should_accept=true
 | `testloop_release_response_summary_should_accept` | adopter summary `should_accept` | `false` 时停止发布。 |
 | `testloop_release_response_summary_failures` | adopter summary `failures[]` | 失败时交给 Agent 排查。 |
 
+## CI artifact 清单
+
+外部仓库建议上传一个名为 `testloop-release-response-adopter-artifacts` 的 artifact，至少包含：
+
+| 文件 | 作用 |
+| --- | --- |
+| `testloop-release-response-adopter-summary.json` | `scripts/showcase-release-response-adopter.sh --json` 输出，Agent 的总入口。 |
+| `testloop-release-response-install-summary.json` | installer 输出，用来排查 workflow 或客户端包写入失败。 |
+| `testloop-release-response-client/testloop-release-smoke-summary.json` | release smoke 输入，用来排查 release tag 或 helper refs 漂移。 |
+| `testloop-release-response-client/testloop-release-response.json` | release response renderer 输出，用来读取 `agent_next_step`。 |
+| `testloop-release-response-consumer.json` | `read-testloop-release-response.mjs --json` 输出，用来排查接入方消费 helper。 |
+| `testloop-release-response-summary-consumer.json` | `read-testloop-release-response-summary.mjs --json` 输出，用来排查 summary helper。 |
+
+如果只能上传一份文件，优先上传 `testloop-release-response-adopter-summary.json`；它包含 `install_summary_json`、`agent_response_json` 和 `consumer_json` 路径，可让 Agent 继续定位缺失证据。
+
 ## Agent 契约
 
 Agent 只读取 `testloop-release-response-client/testloop-release-response.json`，并基于这些字段分流：

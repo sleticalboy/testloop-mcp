@@ -115,6 +115,7 @@ scripts/showcase-release-response-adopter.sh --json
 
 该入口会把 [Release response 接入方样板](../examples/release-response-adopter/README.md) 复制到临时外部仓库，确认 installer、workflow、`npm test --silent` 和接入方消费 helper 都能跑通。
 如果要把该 summary 纳入机器校验，保存 `--json` 输出后运行 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json`。结构契约见 [release-response-adopter-summary.schema.json](./fixtures/release-response-adopter-summary.schema.json)，通过态样例见 [passed.json](./fixtures/release-response-adopter-summary/passed.json)。
+外部 CI 建议上传 `testloop-release-response-adopter-artifacts`，至少包含 adopter summary、install summary、`testloop-release-response-client/testloop-release-response.json` 和两个 helper 的 `--json` 输出，方便 Agent 离线判断是 installer、renderer 还是接入方消费 helper 失败。
 
 如果只想导出最小包：
 

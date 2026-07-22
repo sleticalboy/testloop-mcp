@@ -9,6 +9,7 @@
 - 新增 release response 接入样板 summary 失败态 fixture `invalid-response.json`，并让 validator `--json` 在失败时合并原始 summary `failures[]`，方便 Agent 读取失败分流原因。
 - 新增 `read-testloop-release-response-summary.mjs`，接入方可直接把 adopter summary 转成 `testloop_release_response_summary_*` 键值；`should_accept=false` 时返回非 0，避免发布流程误继续。
 - Release response 接入方样板 README 新增 helper 输出字段表，固定 `testloop_release_response_*` 与 `testloop_release_response_summary_*` 的 Agent 消费契约。
+- Release response 接入方样板 README 新增 CI artifact 清单，建议上传 `testloop-release-response-adopter-artifacts`，覆盖 adopter summary、install summary、response JSON 和两个 helper 的 JSON 输出。
 - release readiness 现在会运行 `scripts/showcase-release-response-adopter.sh --json` 并用 `scripts/validate-release-response-adopter-summary.mjs` 校验接入样板 summary。
 
 ## v0.5.20 - 2026-07-21

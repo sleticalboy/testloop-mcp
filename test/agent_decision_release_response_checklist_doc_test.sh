@@ -37,6 +37,8 @@ required = [
     "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
     "release-response-adopter-summary.schema.json",
     "./fixtures/release-response-adopter-summary/passed.json",
+    "testloop-release-response-adopter-artifacts",
+    "testloop-release-response-client/testloop-release-response.json",
     "../examples/release-response-adopter/README.md",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
     "scripts/verify-release-candidate.sh v0.5.20",
