@@ -33,7 +33,7 @@ Release response 接入方样板 summary 的 JSON 结构见 [release-response-ad
 | [validate-coverage-task-ready.json](./fixtures/validate-coverage-task-ready.json) | `passed/ready` | 临时 Go 项目，`Add` 分支 coverage task 生成并运行通过 | 接受生成测试，继续下一个 coverage task 或重新统计覆盖率。 |
 | [validate-coverage-task-manual-review-internal.json](./fixtures/validate-coverage-task-manual-review-internal.json) | `passed/manual_review_internal` | 临时 JS/Vitest 项目，未导出的 `LocalCache.get` 只能生成可运行手审 skip | 不要合入为有效覆盖率补丁；改走导出 API、test seam 或人工复核。 |
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | `failed/apply_fix_suggestions` | 临时 Go 项目，已有失败测试触发 `failures[]`、`fix_suggestions[]` 和 `repair_task` | 优先读取 `run_result.fix_suggestions[].repair_task`，按限定文件和命令进入修复闭环。 |
-| [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | `failed/needs_better_input` | 临时 Java/JUnit 项目，测试命令通过但 JaCoCo 目标行未命中 | 不吸收该测试；读取 `metadata.coverage_miss_reason` 和未命中行，改用更强输入或更合适的公共入口。 |
+| [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | `failed/needs_better_input` | 临时 Java/JUnit 项目，测试命令通过但 JaCoCo 目标行未命中 | 不吸收该测试；优先读取 `metadata.next_action_reason` 和未命中行，改用更强输入或更合适的公共入口。 |
 
 ## 真实项目 Agent 闭环 fixture
 
@@ -84,6 +84,11 @@ Release response 接入方样板 summary 的 JSON 结构见 [release-response-ad
 - `metadata.coverage_target_hit`
 - `metadata.coverage_hit_lines`
 - `metadata.coverage_missed_lines`
+- `metadata.next_action_kind`
+- `metadata.next_action_reason`
+- `metadata.needs_better_input_reason`
+- `metadata.manual_review_kind`
+- `metadata.manual_review_reason`
 - `metadata.coverage_miss_reason`
 - `metadata`
 

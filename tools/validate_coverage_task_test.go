@@ -1154,6 +1154,11 @@ func validateCoverageTaskFixtureFromOutput(t *testing.T, root string, out types.
 		"coverage_missed_lines",
 		"coverage_target_hit",
 		"coverage_miss_reason",
+		"next_action_kind",
+		"next_action_reason",
+		"needs_better_input_reason",
+		"manual_review_kind",
+		"manual_review_reason",
 	} {
 		if value, ok := out.Metadata[key]; ok {
 			metadata[key] = value

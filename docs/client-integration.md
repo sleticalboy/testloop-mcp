@@ -149,7 +149,7 @@ scripts/showcase-agent-decision-client-release-response-smoke.sh --json
 - `passed/ready` 不读取 `run_result.fix_suggestions`。
 - `manual_review_*` 不触发自动修复循环。
 - `failed/apply_fix_suggestions` 能定位 `run_result.fix_suggestions[0].repair_task.target_file`、`editable_files` 和 `suggested_commands`。
-- `failed/needs_better_input` 能定位 `metadata.coverage_miss_reason` 和 `metadata.coverage_missed_lines`。
+- `failed/needs_better_input` 能定位 `metadata.next_action_reason`、`metadata.needs_better_input_reason` 和 `metadata.coverage_missed_lines`。
 - 遇到未知字段不会报错。
 
 ## CI artifact fixture

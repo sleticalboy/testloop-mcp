@@ -59,6 +59,10 @@
     "framework": "vitest",
     "internal_reason": "LocalCache.get is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually",
     "internal_symbol": true,
+    "manual_review_kind": "internal",
+    "manual_review_reason": "LocalCache.get is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually",
+    "next_action_kind": "manual_review",
+    "next_action_reason": "LocalCache.get is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually",
     "test_file": "cache.test.js"
   }
 }

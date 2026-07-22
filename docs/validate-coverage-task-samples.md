@@ -205,7 +205,7 @@
 
 ## failed / needs_better_input
 
-含义：测试命令可能通过了，但覆盖率校验发现目标行没有命中。Agent 不应吸收该测试，应根据 `metadata.coverage_miss_reason`、`coverage_hit_lines` 和 `coverage_missed_lines` 选择更强输入或更合适的公共入口。
+含义：测试命令可能通过了，但覆盖率校验发现目标行没有命中。Agent 不应吸收该测试，应根据 `metadata.next_action_reason`、`coverage_hit_lines` 和 `coverage_missed_lines` 选择更强输入或更合适的公共入口；旧客户端可回退 `metadata.coverage_miss_reason`。
 
 ```json
 {
@@ -251,6 +251,9 @@
     "coverage_hit_lines": [210, 211],
     "coverage_missed_lines": [212, 213, 214],
     "coverage_target_hit": false,
+    "next_action_kind": "coverage_target_miss",
+    "next_action_reason": "StopWatch.getNanoTime did not cover target line range 210-214; generate stronger inputs or cover the target through a better public entry point",
+    "needs_better_input_reason": "StopWatch.getNanoTime did not cover target line range 210-214; generate stronger inputs or cover the target through a better public entry point",
     "coverage_miss_reason": "StopWatch.getNanoTime did not cover target line range 210-214; generate stronger inputs or cover the target through a better public entry point"
   }
 }

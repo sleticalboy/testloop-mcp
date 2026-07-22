@@ -159,8 +159,39 @@ function validateRepairPayload(payload, fixturePath) {
 
 function validateNeedsBetterInput(payload, fixturePath) {
   const metadata = requireObject(payload.metadata, `${fixturePath}: metadata`);
-  if (typeof metadata.coverage_miss_reason !== 'string' || metadata.coverage_miss_reason.length === 0) {
-    failures.push(`${fixturePath}: needs_better_input requires metadata.coverage_miss_reason`);
+  if (metadata.next_action_kind !== 'coverage_target_miss') {
+    failures.push(`${fixturePath}: needs_better_input requires metadata.next_action_kind=coverage_target_miss`);
+  }
+  if (typeof metadata.next_action_reason !== 'string' || metadata.next_action_reason.length === 0) {
+    failures.push(`${fixturePath}: needs_better_input requires metadata.next_action_reason`);
+  }
+  if (typeof metadata.needs_better_input_reason !== 'string' || metadata.needs_better_input_reason.length === 0) {
+    failures.push(`${fixturePath}: needs_better_input requires metadata.needs_better_input_reason`);
+  }
+  if (metadata.next_action_reason !== metadata.needs_better_input_reason) {
+    failures.push(`${fixturePath}: next_action_reason must match needs_better_input_reason`);
+  }
+  if (metadata.coverage_miss_reason && metadata.next_action_reason !== metadata.coverage_miss_reason) {
+    failures.push(`${fixturePath}: next_action_reason must match legacy coverage_miss_reason when present`);
+  }
+}
+
+function validateManualReviewPayload(payload, fixturePath) {
+  const metadata = requireObject(payload.metadata, `${fixturePath}: metadata`);
+  if (metadata.next_action_kind !== 'manual_review') {
+    failures.push(`${fixturePath}: manual_review_* requires metadata.next_action_kind=manual_review`);
+  }
+  if (typeof metadata.next_action_reason !== 'string' || metadata.next_action_reason.length === 0) {
+    failures.push(`${fixturePath}: manual_review_* requires metadata.next_action_reason`);
+  }
+  if (typeof metadata.manual_review_kind !== 'string' || metadata.manual_review_kind.length === 0) {
+    failures.push(`${fixturePath}: manual_review_* requires metadata.manual_review_kind`);
+  }
+  if (typeof metadata.manual_review_reason !== 'string' || metadata.manual_review_reason.length === 0) {
+    failures.push(`${fixturePath}: manual_review_* requires metadata.manual_review_reason`);
+  }
+  if (metadata.next_action_reason !== metadata.manual_review_reason) {
+    failures.push(`${fixturePath}: next_action_reason must match manual_review_reason`);
   }
 }
 
@@ -256,6 +287,9 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
   }
   if (typeof action === 'string' && action.startsWith('manual_review_') && decision !== 'manual-review') {
     failures.push(`${fixtureRelPath}: manual_review_* must map to manual-review`);
+  }
+  if (entry.kind === 'validate_coverage_task' && typeof action === 'string' && action.startsWith('manual_review_')) {
+    validateManualReviewPayload(payload, fixtureRelPath);
   }
 }
 

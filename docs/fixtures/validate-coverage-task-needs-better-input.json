@@ -73,6 +73,9 @@
       4
     ],
     "framework": "junit",
+    "needs_better_input_reason": "Calculator.add did not cover target line range 4-4; generate stronger inputs or cover the target through a better public entry point",
+    "next_action_kind": "coverage_target_miss",
+    "next_action_reason": "Calculator.add did not cover target line range 4-4; generate stronger inputs or cover the target through a better public entry point",
     "test_file": "src/test/java/com/example/CalculatorTestLoopTest.java"
   }
 }
