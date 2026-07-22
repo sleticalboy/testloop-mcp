@@ -255,6 +255,21 @@ func TestGoTestCommandUsesModuleRootForAbsoluteTestFilePath(t *testing.T) {
 	}
 }
 
+func TestGoCoverageProfilePathHonorsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+
+	t.Setenv("TESTLOOP_GO_COVERPROFILE", "coverage/custom.out")
+	if got, want := goCoverageProfilePath(dir), filepath.Join(dir, "coverage", "custom.out"); got != want {
+		t.Fatalf("relative TESTLOOP_GO_COVERPROFILE = %q, want %q", got, want)
+	}
+
+	absolute := filepath.Join(dir, "outside.out")
+	t.Setenv("TESTLOOP_GO_COVERPROFILE", absolute)
+	if got := goCoverageProfilePath(dir); got != absolute {
+		t.Fatalf("absolute TESTLOOP_GO_COVERPROFILE = %q, want %q", got, absolute)
+	}
+}
+
 func TestFindProjectRootWalksParents(t *testing.T) {
 	dir := t.TempDir()
 	nested := filepath.Join(dir, "pkg", "calc")
