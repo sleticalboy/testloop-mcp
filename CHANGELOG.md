@@ -12,6 +12,7 @@
 - Release response 接入方样板 README 新增 CI artifact 清单，建议上传 `testloop-release-response-adopter-artifacts`，覆盖 adopter summary、install summary、response JSON 和两个 helper 的 JSON 输出。
 - `scripts/showcase-release-response-adopter.sh --json` 现在会生成 `testloop-release-response-adopter-artifacts/`，并在 adopter summary 中返回 `artifact_dir` 和 `summary_consumer_json`，外部 CI 可直接上传该目录给 Agent 离线排查。
 - 新增 `scripts/verify-release-response-adopter-artifact.mjs`，可离线自检下载后的接入样板 artifact 目录，并已纳入 release readiness。
+- `verify-release-response-adopter-artifact.mjs` 失败时会输出 `agent_next_step=inspect-release-response-adopter-artifact` 和 `should_accept=false`，避免 Agent 误用 summary 中旧的 `ready` 字段。
 - release readiness 现在会运行 `scripts/showcase-release-response-adopter.sh --json` 并用 `scripts/validate-release-response-adopter-summary.mjs` 校验接入样板 summary。
 
 ## v0.5.20 - 2026-07-21

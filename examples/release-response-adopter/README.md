@@ -144,7 +144,7 @@ node scripts/verify-release-response-adopter-artifact.mjs \
   /path/to/testloop-release-response-adopter-artifacts
 ```
 
-通过态会输出 `release_response_adopter_artifact_status=passed`、`agent_next_step=ready` 和 `should_accept=true`；失败态会返回非 0 并输出缺失文件或漂移字段。
+通过态会输出 `release_response_adopter_artifact_status=passed`、`agent_next_step=ready` 和 `should_accept=true`；失败态会返回非 0，输出 `agent_next_step=inspect-release-response-adopter-artifact`、`should_accept=false` 和缺失文件或漂移字段。
 
 ## Agent 契约
 

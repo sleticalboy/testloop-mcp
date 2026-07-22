@@ -195,6 +195,7 @@ assert_contains "$readme" "testloop-release-response-client/testloop-release-res
 assert_contains "$readme" "testloop-release-response-consumer.json"
 assert_contains "$readme" "testloop-release-response-summary-consumer.json"
 assert_contains "$readme" "release_response_adopter_artifact_status=passed"
+assert_contains "$readme" "inspect-release-response-adopter-artifact"
 assert_contains "$readme" "inspect-release-installer"
 
 bad_out="${tmp_dir}/missing.out"

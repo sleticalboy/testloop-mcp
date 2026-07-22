@@ -41,6 +41,7 @@ required = [
     "testloop-release-response-adopter-artifacts",
     "testloop-release-response-client/testloop-release-response.json",
     "release_response_adopter_artifact_status=passed",
+    "inspect-release-response-adopter-artifact",
     "../examples/release-response-adopter/README.md",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
     "scripts/verify-release-candidate.sh v0.5.20",

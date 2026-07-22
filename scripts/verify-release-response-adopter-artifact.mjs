@@ -198,14 +198,17 @@ for (const [label, payload] of [
 }
 
 const status = failures.length === 0 ? 'passed' : 'failed';
+const agentNextStep = status === 'passed'
+  ? (typeof adopterSummary.agent_next_step === 'string' ? adopterSummary.agent_next_step : '')
+  : 'inspect-release-response-adopter-artifact';
 const output = {
   status,
   artifact_dir: artifactDir,
   summary_json: artifactPath('testloop-release-response-adopter-summary.json'),
   release_ref: typeof adopterSummary.release_ref === 'string' ? adopterSummary.release_ref : '',
   fixture_count: Number.isInteger(adopterSummary.fixture_count) ? adopterSummary.fixture_count : 0,
-  agent_next_step: typeof adopterSummary.agent_next_step === 'string' ? adopterSummary.agent_next_step : '',
-  should_accept: adopterSummary.should_accept === true,
+  agent_next_step: agentNextStep,
+  should_accept: status === 'passed' && adopterSummary.should_accept === true,
   required_files: requiredFiles.length,
   files: fileResults,
   failures,

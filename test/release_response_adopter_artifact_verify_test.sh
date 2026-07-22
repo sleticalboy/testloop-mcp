@@ -87,6 +87,8 @@ cp -R "$artifact_dir" "$missing_file_dir"
 rm "$missing_file_dir/testloop-release-response-summary-consumer.json"
 run_expect_code 1 "${tmp_dir}/missing.out" node "$script" "$missing_file_dir"
 assert_contains "${tmp_dir}/missing.out" "release_response_adopter_artifact_status=failed"
+assert_contains "${tmp_dir}/missing.out" "agent_next_step=inspect-release-response-adopter-artifact"
+assert_contains "${tmp_dir}/missing.out" "should_accept=false"
 assert_contains "${tmp_dir}/missing.out" "missing required file testloop-release-response-summary-consumer.json"
 
 bad_consumer_dir="${tmp_dir}/bad-consumer"
@@ -105,6 +107,8 @@ path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
 run_expect_code 1 "${tmp_dir}/bad-consumer.out" node "$script" --json "$bad_consumer_dir"
 assert_contains "${tmp_dir}/bad-consumer.out" '"status": "failed"'
+assert_contains "${tmp_dir}/bad-consumer.out" '"agent_next_step": "inspect-release-response-adopter-artifact"'
+assert_contains "${tmp_dir}/bad-consumer.out" '"should_accept": false'
 assert_contains "${tmp_dir}/bad-consumer.out" 'consumer response agent_next_step=\"inspect-release-consumer-response\", want \"ready\"'
 assert_contains "${tmp_dir}/bad-consumer.out" "consumer response failures must be an empty array"
 

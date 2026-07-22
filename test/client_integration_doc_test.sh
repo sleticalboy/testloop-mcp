@@ -71,6 +71,7 @@ required_snippets = [
     "testloop-release-response-consumer.json",
     "testloop-release-response-summary-consumer.json",
     "should_accept=true",
+    "inspect-release-response-adopter-artifact",
     "../examples/release-response-adopter/README.md",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
