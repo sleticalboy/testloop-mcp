@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -269,6 +270,154 @@ func TestHandleValidateCoverageTaskPytestCoverageHit(t *testing.T) {
 	if out.Metadata["coverage_target_hit"] != true {
 		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
 	}
+}
+
+func TestHandleValidateCoverageTaskVitestCoverageHit(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "src", "sum.ts")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := strings.Join([]string{
+		"export function add(a: number, b: number): number {",
+		"  if (a === 0) return b",
+		"  return a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := vitestCoverageHitTask(source, filepath.Join(dir, "src", "sum.test.ts"))
+	installFakeNpxRecorderSuccessWithCoverage(t, vitestPassOutput(), istanbulCoverageJSON("src/sum.ts", map[int]int{1: 1, 2: 1, 3: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != true {
+		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
+	}
+}
+
+func TestHandleValidateCoverageTaskVitestCoverageMissNeedsBetterInput(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"vitest run"},"devDependencies":{"vitest":"^1.0.0"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	source := filepath.Join(dir, "src", "sum.ts")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := strings.Join([]string{
+		"export function add(a: number, b: number): number {",
+		"  if (a === 0) return b",
+		"  return a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := vitestCoverageHitTask(source, filepath.Join(dir, "src", "sum.test.ts"))
+	installFakeNpxRecorderSuccessWithCoverage(t, vitestPassOutput(), istanbulCoverageJSON("src/sum.ts", map[int]int{1: 1, 2: 0, 3: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "vitest",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/coverage/coverage-final.json") {
+		t.Fatalf("expected coverage-final.json report metadata, got %+v", out.Metadata)
+	}
+}
+
+func vitestCoverageHitTask(source string, testFile string) types.CoverageTestTask {
+	return types.CoverageTestTask{
+		ID:              "vitest-1",
+		Framework:       "vitest",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a === 0"},
+		UncoveredLines:  []int{2},
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		Goal:            "为 add 补充测试，覆盖未执行行段 2-2",
+		Command:         "npx vitest run",
+		TestFile:        testFile,
+		TestName:        "covers add coverage gap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+}
+
+func vitestPassOutput() string {
+	return strings.Join([]string{
+		" ✓ src/sum.test.ts (1 test)",
+		" Test Files  1 passed (1)",
+		"      Tests  1 passed (1)",
+	}, "\n")
+}
+
+func istanbulCoverageJSON(path string, hitByLine map[int]int) string {
+	statementMap := map[string]any{}
+	hits := map[string]int{}
+	i := 0
+	for line, hit := range hitByLine {
+		id := strconv.Itoa(i)
+		statementMap[id] = map[string]any{
+			"start": map[string]any{"line": line, "column": 0},
+			"end":   map[string]any{"line": line, "column": 20},
+		}
+		hits[id] = hit
+		i++
+	}
+	payload := map[string]any{
+		path: map[string]any{
+			"path":         path,
+			"statementMap": statementMap,
+			"s":            hits,
+			"fnMap":        map[string]any{},
+			"f":            map[string]int{},
+		},
+	}
+	data, _ := json.Marshal(payload)
+	return string(data)
 }
 
 func TestHandleValidateCoverageTaskPytestCoverageMissNeedsBetterInput(t *testing.T) {
@@ -1831,6 +1980,27 @@ func installFakeNpxFailure(t *testing.T, output string) {
 		t.Fatalf("write fake npx: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakeNpxRecorderSuccessWithCoverage(t *testing.T, output string, coverageJSON string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "npx.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"mkdir -p coverage\n" +
+		"cat > coverage/coverage-final.json <<'COVERAGE_JSON'\n" + coverageJSON + "\nCOVERAGE_JSON\n" +
+		"cat <<'NPX_OUTPUT'\n" + output + "\nNPX_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "npx")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
 }
 
 func installFakePython3RecorderSuccessWithCoverage(t *testing.T, output string, coverageJSON string) string {

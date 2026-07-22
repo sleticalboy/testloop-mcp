@@ -8,6 +8,7 @@
 - `run_tests coverage=true` 支持为 `node-test` 追加 `--experimental-test-coverage` 并回填 `coverage_percent`；`parse_coverage framework=node-test` 可解析 Node TAP coverage report，生成文件级报告、未覆盖行建议和 `test_tasks[]`。
 - `validate_coverage_task coverage=true` 支持读取 `node-test` TAP coverage raw output 校验目标行命中；测试通过但目标行仍未覆盖时返回 `failed/needs_better_input`，避免弱 ready 被 Agent 吸收。
 - `validate_coverage_task coverage=true` 支持读取 pytest 项目根目录的 `coverage.json` 校验目标行命中；测试通过但 coverage.py JSON 仍标记目标行 missing 时返回 `failed/needs_better_input`。
+- `validate_coverage_task coverage=true` 支持读取 Jest/Vitest/Mocha 的 Istanbul `coverage/coverage-final.json` 校验目标行命中；测试通过但目标行仍未覆盖时返回 `failed/needs_better_input`。
 
 ## v0.5.21 - 2026-07-22
 

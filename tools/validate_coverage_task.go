@@ -161,7 +161,7 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
 	framework = strings.ToLower(strings.TrimSpace(framework))
-	if (framework != "junit" && framework != "node-test" && framework != "pytest") || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha") || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
@@ -173,6 +173,13 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 	}
 	if framework == "pytest" {
 		report, reportPath, ok := pytestCoverageReportForValidation(generated.TestFile, task.File)
+		if !ok {
+			return false, "", nil, nil, false
+		}
+		return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+	}
+	if framework == "jest" || framework == "vitest" || framework == "mocha" {
+		report, reportPath, ok := istanbulCoverageReportForValidation(framework, generated.TestFile, task.File)
 		if !ok {
 			return false, "", nil, nil, false
 		}
@@ -280,6 +287,25 @@ func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, 
 			continue
 		}
 		report, err := coverage.ParsePytestCoverage(reportPath)
+		if err != nil {
+			continue
+		}
+		return report, reportPath, true
+	}
+	return nil, "", false
+}
+
+func istanbulCoverageReportForValidation(framework string, paths ...string) (*types.CoverageReport, string, bool) {
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		root := findProjectRoot(path, "package.json")
+		reportPath := filepath.Join(root, "coverage", "coverage-final.json")
+		if !fileExists(reportPath) {
+			continue
+		}
+		report, err := coverage.ParseJestCoverage(reportPath, framework)
 		if err != nil {
 			continue
 		}
