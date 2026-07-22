@@ -38,6 +38,8 @@ required = [
     "./fixtures/agent-decision-client-ci-template-install-summary.schema.json",
     "./fixtures/agent-decision-client-ci-template-install-summary/passed.json",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json",
+    "response_json",
+    "response_validation_json",
     "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
     "agent_decision_client_consumer_smoke_status=passed",
     "client_summary_json",

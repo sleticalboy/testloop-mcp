@@ -22,6 +22,8 @@ required = [
     "bash /tmp/install-testloop-agent-decision-ci.sh /absolute/path/to/client-repo",
     "scripts/showcase-agent-decision-client-ci-template-install.sh --json",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json",
+    "response_validation_json",
+    "response_validator_exit_code",
     "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
     "node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /tmp/testloop-agent-decision-consumer-smoke-summary.json",

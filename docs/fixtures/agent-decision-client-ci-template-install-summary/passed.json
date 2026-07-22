@@ -8,6 +8,8 @@
   "helper_dir": "/tmp/testloop-agent-decision-template-install/external-client/.testloop-mcp",
   "helper_ref": "v0.5.21",
   "summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",
+  "response_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-response.json",
+  "response_validation_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-response-validation.json",
   "fixture_count": 8,
   "decisions": [
     "accept",
@@ -21,5 +23,6 @@
   ],
   "failures": [],
   "contract_exit_code": 0,
-  "validator_exit_code": 0
+  "validator_exit_code": 0,
+  "response_validator_exit_code": 0
 }

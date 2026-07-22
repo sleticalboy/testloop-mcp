@@ -63,6 +63,8 @@ client_dir="${TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR:-${tmp_dir}/external-client}
 helper_dir="${TESTLOOP_AGENT_DECISION_CI_HELPER_DIR:-$repo_root}"
 workflow_path="${client_dir}/.github/workflows/testloop-agent-decision-contract.yml"
 summary_json="${tmp_dir}/testloop-agent-decision-client-summary.json"
+response_json="${tmp_dir}/testloop-agent-decision-client-response.json"
+response_validation_json="${tmp_dir}/testloop-agent-decision-client-response-validation.json"
 contract_client_dir="${tmp_dir}/testloop-agent-decision-client"
 
 command -v node >/dev/null 2>&1 || fail "missing required command: node"
@@ -86,6 +88,8 @@ fi
 [[ -f "$installer_path" ]] || fail "installer script does not exist: $installer_path"
 [[ -d "$helper_dir" ]] || fail "helper dir must be an existing directory: $helper_dir"
 [[ -x "$helper_dir/scripts/showcase-agent-decision-client-ci.sh" ]] || fail "helper dir is missing scripts/showcase-agent-decision-client-ci.sh: $helper_dir"
+[[ -f "$helper_dir/scripts/render-agent-decision-client-ci-response.mjs" ]] || fail "helper dir is missing scripts/render-agent-decision-client-ci-response.mjs: $helper_dir"
+[[ -f "$helper_dir/scripts/validate-agent-decision-client-ci-response.mjs" ]] || fail "helper dir is missing scripts/validate-agent-decision-client-ci-response.mjs: $helper_dir"
 mkdir -p "$client_dir"
 
 installer_args=(--force)
@@ -111,7 +115,17 @@ set +e
 contract_status=$?
 set -e
 
-node - "$output_format" "$installer_path" "$installer_url" "$client_dir" "$workflow_path" "$helper_dir" "$summary_json" "$installer_output" "$contract_status" <<'JS'
+set +e
+node "$helper_dir/scripts/render-agent-decision-client-ci-response.mjs" \
+  --json "$summary_json" \
+  | tee "$response_json" >/dev/null
+node "$helper_dir/scripts/validate-agent-decision-client-ci-response.mjs" \
+  --json "$response_json" \
+  | tee "$response_validation_json" >/dev/null
+response_validator_status=$?
+set -e
+
+node - "$output_format" "$installer_path" "$installer_url" "$client_dir" "$workflow_path" "$helper_dir" "$summary_json" "$response_json" "$response_validation_json" "$installer_output" "$contract_status" "$response_validator_status" <<'JS'
 const fs = require('node:fs');
 const [
   outputFormat,
@@ -121,16 +135,21 @@ const [
   workflowPath,
   helperDir,
   summaryPath,
+  responsePath,
+  responseValidationPath,
   installerOutputPath,
   contractStatusRaw,
+  responseValidatorStatusRaw,
 ] = process.argv.slice(2);
 const contractExitCode = Number(contractStatusRaw);
+const responseValidatorExitCode = Number(responseValidatorStatusRaw);
 const contractSummary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+const responseValidation = JSON.parse(fs.readFileSync(responseValidationPath, 'utf8'));
 const installerOutput = fs.readFileSync(installerOutputPath, 'utf8');
 const refMatch = installerOutput.match(/^agent_decision_client_ci_template_ref=(.+)$/m);
 const payload = {
   schema_version: 1,
-  status: contractSummary.status === 'passed' && contractExitCode === 0 ? 'passed' : 'failed',
+  status: contractSummary.status === 'passed' && contractExitCode === 0 && responseValidation.status === 'passed' && responseValidatorExitCode === 0 ? 'passed' : 'failed',
   installer_path: installerPath,
   installer_url: installerUrl,
   client_dir: clientDir,
@@ -138,11 +157,17 @@ const payload = {
   helper_dir: helperDir,
   helper_ref: refMatch ? refMatch[1] : '',
   summary_json: summaryPath,
+  response_json: responsePath,
+  response_validation_json: responseValidationPath,
   fixture_count: contractSummary.fixture_count,
   decisions: contractSummary.decisions,
-  failures: contractSummary.failures || [],
+  failures: [
+    ...(contractSummary.failures || []),
+    ...(responseValidation.failures || []).map((failure) => `response validation: ${failure}`),
+  ],
   contract_exit_code: contractExitCode,
   validator_exit_code: contractSummary.validator_exit_code,
+  response_validator_exit_code: responseValidatorExitCode,
 };
 if (outputFormat === 'json') {
   console.log(JSON.stringify(payload, null, 2));

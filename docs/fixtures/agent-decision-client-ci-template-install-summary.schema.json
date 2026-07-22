@@ -15,11 +15,14 @@
     "helper_dir",
     "helper_ref",
     "summary_json",
+    "response_json",
+    "response_validation_json",
     "fixture_count",
     "decisions",
     "failures",
     "contract_exit_code",
-    "validator_exit_code"
+    "validator_exit_code",
+    "response_validator_exit_code"
   ],
   "properties": {
     "schema_version": {
@@ -60,6 +63,14 @@
       "type": "string",
       "minLength": 1
     },
+    "response_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "response_validation_json": {
+      "type": "string",
+      "minLength": 1
+    },
     "fixture_count": {
       "type": "integer",
       "minimum": 0
@@ -79,6 +90,10 @@
       "minimum": 0
     },
     "validator_exit_code": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "response_validator_exit_code": {
       "type": "integer",
       "minimum": 0
     }

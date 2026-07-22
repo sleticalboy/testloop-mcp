@@ -48,11 +48,14 @@ const requiredFields = [
   'helper_dir',
   'helper_ref',
   'summary_json',
+  'response_json',
+  'response_validation_json',
   'fixture_count',
   'decisions',
   'failures',
   'contract_exit_code',
   'validator_exit_code',
+  'response_validator_exit_code',
 ];
 const expectedDecisions = [
   'accept',
@@ -130,7 +133,7 @@ if (summary.status !== 'passed') {
 if (summary.fixture_count !== 8) {
   failures.push(`${summaryPath}: fixture_count must be 8`);
 }
-for (const field of ['installer_path', 'client_dir', 'workflow_path', 'helper_dir', 'helper_ref', 'summary_json']) {
+for (const field of ['installer_path', 'client_dir', 'workflow_path', 'helper_dir', 'helper_ref', 'summary_json', 'response_json', 'response_validation_json']) {
   requireNonEmptyString(summary[field], `${summaryPath}: ${field}`);
 }
 if (typeof summary.installer_url !== 'string' || !summary.installer_url.includes('/scripts/install-agent-decision-client-ci-template.sh')) {
@@ -147,6 +150,9 @@ if (summary.contract_exit_code !== 0) {
 }
 if (summary.validator_exit_code !== 0) {
   failures.push(`${summaryPath}: validator_exit_code must be 0`);
+}
+if (summary.response_validator_exit_code !== 0) {
+  failures.push(`${summaryPath}: response_validator_exit_code must be 0`);
 }
 
 if (failures.length > 0) {

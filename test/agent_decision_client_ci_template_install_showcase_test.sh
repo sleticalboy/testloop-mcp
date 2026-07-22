@@ -85,7 +85,16 @@ assert payload["decisions"] == [
 assert payload["failures"] == []
 assert payload["contract_exit_code"] == 0
 assert payload["validator_exit_code"] == 0
+assert payload["response_validator_exit_code"] == 0
 assert Path(payload["summary_json"]).exists()
+assert Path(payload["response_json"]).exists()
+assert Path(payload["response_validation_json"]).exists()
+
+response = json.loads(Path(payload["response_json"]).read_text(encoding="utf-8"))
+response_validation = json.loads(Path(payload["response_validation_json"]).read_text(encoding="utf-8"))
+assert response["status"] == "passed"
+assert response["agent_next_step"] == "ready"
+assert response_validation["status"] == "passed"
 PY
 
 url_client_dir="${tmp_dir}/url-client"

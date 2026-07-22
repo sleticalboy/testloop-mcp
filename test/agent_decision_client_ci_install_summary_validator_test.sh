@@ -56,6 +56,9 @@ payload = json.loads(Path("docs/fixtures/agent-decision-client-ci-template-insta
 payload["status"] = "failed"
 payload["decisions"][-1] = "inspect"
 payload["failures"] = ["boom"]
+payload["response_validator_exit_code"] = 1
+payload["response_json"] = ""
+payload["response_validation_json"] = ""
 Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -66,6 +69,9 @@ fi
 assert_contains "${tmp_dir}/bad.out" "status must be passed"
 assert_contains "${tmp_dir}/bad.out" "decisions must be accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
+assert_contains "${tmp_dir}/bad.out" "response_validator_exit_code must be 0"
+assert_contains "${tmp_dir}/bad.out" "response_json"
+assert_contains "${tmp_dir}/bad.out" "response_validation_json"
 
 if node scripts/validate-agent-decision-client-ci-install-summary.mjs --json "$bad_summary" > "${tmp_dir}/bad.json"; then
   echo "expected JSON validator to fail for invalid install summary" >&2

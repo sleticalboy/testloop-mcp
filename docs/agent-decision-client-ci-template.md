@@ -168,7 +168,7 @@ sh test/agent_decision_client_ci_template_dry_run_test.sh
 scripts/showcase-agent-decision-client-ci-template-install.sh --json
 ```
 
-该 showcase 默认从 `main` raw URL 下载 installer。仓库测试会用本地 installer 路径和 `file://` URL 代替网络下载，保证 CI 稳定。`--json` 输出结构由 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)。
+该 showcase 默认从 `main` raw URL 下载 installer。仓库测试会用本地 installer 路径和 `file://` URL 代替网络下载，保证 CI 稳定。`--json` 输出结构由 [Agent 决策客户端 CI 模板安装 summary schema](./fixtures/agent-decision-client-ci-template-install-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-ci-template-install-summary/passed.json)，并包含 `response_json`、`response_validation_json` 和 `response_validator_exit_code`。
 维护者也可以运行 `node scripts/validate-agent-decision-client-ci-install-summary.mjs /path/to/install-summary.json`，对安装 dry-run JSON 做无依赖校验。
 
 如果要进一步模拟接入方消费 artifact 的完整链路：

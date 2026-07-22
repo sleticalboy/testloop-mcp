@@ -61,6 +61,7 @@ def validate_payload(payload, label):
         "fixture_count": 8,
         "contract_exit_code": 0,
         "validator_exit_code": 0,
+        "response_validator_exit_code": 0,
     }
     for key, want in expected_exact.items():
         if payload.get(key) != want:
@@ -79,7 +80,7 @@ def validate_payload(payload, label):
         failures.append(f"{label} unexpected decisions sequence")
     if payload.get("failures") != []:
         failures.append(f"{label} failures must be empty on passed showcase")
-    for key in ("installer_path", "client_dir", "workflow_path", "helper_dir", "summary_json"):
+    for key in ("installer_path", "client_dir", "workflow_path", "helper_dir", "summary_json", "response_json", "response_validation_json"):
         if not isinstance(payload.get(key), str) or not payload[key]:
             failures.append(f"{label} {key} must be a non-empty string")
 
@@ -90,6 +91,10 @@ if not Path(summary["workflow_path"]).exists():
     failures.append("workflow_path does not exist")
 if not Path(summary["summary_json"]).exists():
     failures.append("summary_json does not exist")
+if not Path(summary["response_json"]).exists():
+    failures.append("response_json does not exist")
+if not Path(summary["response_validation_json"]).exists():
+    failures.append("response_validation_json does not exist")
 if sample.get("installer_url") != "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/scripts/install-agent-decision-client-ci-template.sh":
     failures.append("fixture sample installer_url must point to the documented raw installer")
 
