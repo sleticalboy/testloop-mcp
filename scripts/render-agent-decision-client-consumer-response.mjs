@@ -72,12 +72,19 @@ function decide(summary) {
     client_summary_validator_json: nonEmptyString(summary.client_summary_validator_json)
       ? summary.client_summary_validator_json
       : '',
+    client_response_json: nonEmptyString(summary.client_response_json) ? summary.client_response_json : '',
+    client_response_validator_json: nonEmptyString(summary.client_response_validator_json)
+      ? summary.client_response_validator_json
+      : '',
     workflow_path: nonEmptyString(summary.workflow_path) ? summary.workflow_path : '',
     install_summary_validator_exit_code: Number.isInteger(summary.install_summary_validator_exit_code)
       ? summary.install_summary_validator_exit_code
       : -1,
     client_summary_validator_exit_code: Number.isInteger(summary.client_summary_validator_exit_code)
       ? summary.client_summary_validator_exit_code
+      : -1,
+    client_response_validator_exit_code: Number.isInteger(summary.client_response_validator_exit_code)
+      ? summary.client_response_validator_exit_code
       : -1,
     fixture_validator_exit_code: Number.isInteger(summary.fixture_validator_exit_code)
       ? summary.fixture_validator_exit_code
@@ -100,6 +107,12 @@ function decide(summary) {
   if (!nonEmptyString(summary.client_summary_validator_json)) {
     failures.push('client_summary_validator_json is required');
   }
+  if (!nonEmptyString(summary.client_response_json)) {
+    failures.push('client_response_json is required');
+  }
+  if (!nonEmptyString(summary.client_response_validator_json)) {
+    failures.push('client_response_validator_json is required');
+  }
   if (!nonEmptyString(summary.result_json)) {
     failures.push('result_json is required');
   }
@@ -114,6 +127,7 @@ function decide(summary) {
   for (const field of [
     'install_summary_validator_exit_code',
     'client_summary_validator_exit_code',
+    'client_response_validator_exit_code',
     'fixture_validator_exit_code',
     'npm_validator_exit_code',
   ]) {
@@ -129,10 +143,10 @@ function decide(summary) {
   }
 
   let agentNextStep = 'ready';
-  if (failures.some((failure) => failure.includes('validator_exit_code'))) {
-    agentNextStep = 'inspect-consumer-smoke-validator';
-  } else if (failures.some((failure) => failure.includes('fixture_count') || failure.includes('decisions'))) {
+  if (failures.some((failure) => failure.includes('fixture_count') || failure.includes('decisions'))) {
     agentNextStep = 'inspect-agent-decision-fixtures';
+  } else if (failures.some((failure) => failure.includes('validator_exit_code'))) {
+    agentNextStep = 'inspect-consumer-smoke-validator';
   } else if (failures.length > 0) {
     agentNextStep = 'inspect-consumer-smoke-summary';
   }
@@ -163,9 +177,12 @@ try {
       result_json: '',
       client_summary_json: '',
       client_summary_validator_json: '',
+      client_response_json: '',
+      client_response_validator_json: '',
       workflow_path: '',
       install_summary_validator_exit_code: -1,
       client_summary_validator_exit_code: -1,
+      client_response_validator_exit_code: -1,
       fixture_validator_exit_code: -1,
       npm_validator_exit_code: -1,
     },
@@ -183,6 +200,7 @@ if (jsonMode) {
   console.log(`decisions=${response.evidence.decisions.join(',')}`);
   console.log(`result_json=${response.evidence.result_json}`);
   console.log(`client_summary_validator_json=${response.evidence.client_summary_validator_json}`);
+  console.log(`client_response_validator_json=${response.evidence.client_response_validator_json}`);
   if (response.failures.length > 0) {
     console.log(`failures=${response.failures.join('; ')}`);
   }

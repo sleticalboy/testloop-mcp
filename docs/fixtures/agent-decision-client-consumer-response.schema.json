@@ -43,9 +43,12 @@
         "result_json",
         "client_summary_json",
         "client_summary_validator_json",
+        "client_response_json",
+        "client_response_validator_json",
         "workflow_path",
         "install_summary_validator_exit_code",
         "client_summary_validator_exit_code",
+        "client_response_validator_exit_code",
         "fixture_validator_exit_code",
         "npm_validator_exit_code"
       ],
@@ -73,6 +76,12 @@
         "client_summary_validator_json": {
           "type": "string"
         },
+        "client_response_json": {
+          "type": "string"
+        },
+        "client_response_validator_json": {
+          "type": "string"
+        },
         "workflow_path": {
           "type": "string"
         },
@@ -80,6 +89,9 @@
           "type": "integer"
         },
         "client_summary_validator_exit_code": {
+          "type": "integer"
+        },
+        "client_response_validator_exit_code": {
           "type": "integer"
         },
         "fixture_validator_exit_code": {

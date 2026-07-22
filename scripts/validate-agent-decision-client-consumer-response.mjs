@@ -63,9 +63,12 @@ const requiredEvidenceFields = [
   'result_json',
   'client_summary_json',
   'client_summary_validator_json',
+  'client_response_json',
+  'client_response_validator_json',
   'workflow_path',
   'install_summary_validator_exit_code',
   'client_summary_validator_exit_code',
+  'client_response_validator_exit_code',
   'fixture_validator_exit_code',
   'npm_validator_exit_code',
 ];
@@ -162,12 +165,13 @@ if (evidence.fixture_count !== expectedDecisions.length) {
 if (JSON.stringify(evidence.decisions) !== JSON.stringify(expectedDecisions)) {
   failures.push(`${responsePath}: evidence.decisions must be ${expectedDecisions.join(',')}`);
 }
-for (const field of ['result_json', 'client_summary_json', 'client_summary_validator_json', 'workflow_path']) {
+for (const field of ['result_json', 'client_summary_json', 'client_summary_validator_json', 'client_response_json', 'client_response_validator_json', 'workflow_path']) {
   requireNonEmptyString(evidence[field], `${responsePath}: evidence.${field}`);
 }
 for (const field of [
   'install_summary_validator_exit_code',
   'client_summary_validator_exit_code',
+  'client_response_validator_exit_code',
   'fixture_validator_exit_code',
   'npm_validator_exit_code',
 ]) {

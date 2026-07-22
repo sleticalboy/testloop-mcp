@@ -63,6 +63,7 @@ required_snippets = [
     "./fixtures/agent-decision-client-consumer-response/validator-failed.json",
     "./fixtures/agent-decision-client-consumer-response/fixture-drift.json",
     "node scripts/validate-agent-decision-client-consumer-response.mjs /path/to/consumer-response.json",
+    "client_response_validator_exit_code",
     "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client",
     "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo",
     "node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json",

@@ -54,6 +54,7 @@ assert_contains "${tmp_dir}/bad.out" "status must be passed"
 assert_contains "${tmp_dir}/bad.out" "agent_next_step must be ready"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
 assert_contains "${tmp_dir}/bad.out" "evidence.client_summary_validator_exit_code must be 0"
+assert_contains "${tmp_dir}/bad.out" "evidence.client_response_validator_exit_code must be 0"
 
 if node scripts/validate-agent-decision-client-consumer-response.mjs --json "$bad_response" > "${tmp_dir}/bad.json"; then
   echo "expected JSON validator to fail for invalid consumer response" >&2

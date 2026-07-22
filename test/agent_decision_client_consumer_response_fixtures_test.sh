@@ -67,9 +67,12 @@ def validate_shape(payload, label):
         "result_json",
         "client_summary_json",
         "client_summary_validator_json",
+        "client_response_json",
+        "client_response_validator_json",
         "workflow_path",
         "install_summary_validator_exit_code",
         "client_summary_validator_exit_code",
+        "client_response_validator_exit_code",
         "fixture_validator_exit_code",
         "npm_validator_exit_code",
     ]:
@@ -121,6 +124,8 @@ if passed["evidence"]["decisions"] != expected_decisions:
     failures.append("passed fixture decisions drifted")
 if passed["evidence"]["client_summary_validator_exit_code"] != 0:
     failures.append("passed fixture client_summary_validator_exit_code must be 0")
+if passed["evidence"]["client_response_validator_exit_code"] != 0:
+    failures.append("passed fixture client_response_validator_exit_code must be 0")
 
 if failures:
     print("Agent decision client consumer response fixtures test failed:", file=sys.stderr)
