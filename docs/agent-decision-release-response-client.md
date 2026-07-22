@@ -182,6 +182,14 @@ node scripts/verify-release-response-adopter-artifact.mjs /path/to/testloop-rele
 ```
 
 verifier 不依赖原始 CI 绝对路径；它检查目录内必备文件、JSON 状态字段和 summary 路径后缀是否自洽。
+如果要把 verifier 输出纳入客户端单元测试，可运行：
+
+```bash
+node scripts/verify-release-response-adopter-artifact.mjs --json /path/to/testloop-release-response-adopter-artifacts > /tmp/testloop-release-response-adopter-artifact-verification.json
+node scripts/validate-release-response-adopter-artifact-verification.mjs /tmp/testloop-release-response-adopter-artifact-verification.json
+```
+
+结构契约见 [release-response-adopter-artifact-verification.schema.json](./fixtures/release-response-adopter-artifact-verification.schema.json)，通过态 fixture 见 [passed.json](./fixtures/release-response-adopter-artifact-verification/passed.json)，失败态 fixture 见 [missing-summary-consumer.json](./fixtures/release-response-adopter-artifact-verification/missing-summary-consumer.json)。
 
 ## 回归入口
 
