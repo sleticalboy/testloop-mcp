@@ -555,7 +555,7 @@ TESTLOOP_VALIDATE_RUST_COVERAGE_FILE='target/llvm-cov/lcov.info' \
 scripts/validate-rust-coverage-top-tasks.sh /path/to/rust/project 20 /tmp/testloop-rust-top20.jsonl
 ```
 
-Rust 脚本会读取 LCOV 文件，默认命令为 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin`。当前也支持通过环境变量接入 `cargo llvm-cov` 或项目自定义覆盖率命令。验证单个 Rust coverage task 时，`validate_coverage_task coverage=true` 会读取 `target/tarpaulin/lcov.info`，也可通过 `TESTLOOP_VALIDATE_RUST_COVERAGE_FILE` 指向自定义 LCOV 文件，校验目标行命中。
+Rust 脚本会读取 LCOV 文件，默认命令为 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin`。当前也支持通过环境变量接入 `cargo llvm-cov` 或项目自定义覆盖率命令；baseline 和每个 task 的 `validate_coverage_task coverage=true` 都会使用同一组 `TESTLOOP_VALIDATE_RUST_COVERAGE_COMMAND` / `TESTLOOP_VALIDATE_RUST_COVERAGE_FILE`，确保目标行命中校验读取到实际生成的 LCOV 文件。
 
 Java/Maven 或 Gradle 项目可使用：
 

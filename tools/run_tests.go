@@ -634,17 +634,35 @@ func collectCoveragePercent(ctx context.Context, framework string, path string, 
 
 func collectRustCoveragePercent(ctx context.Context, path string) (float64, bool) {
 	root := findProjectRoot(path, "Cargo.toml")
-	outputDir := filepath.Join(root, "target", "tarpaulin")
-	cmd := exec.CommandContext(ctx, "cargo", "tarpaulin", "--out", "Lcov", "--output-dir", outputDir)
+	cmd := rustCoverageCommand(ctx)
 	cmd.Dir = root
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return 0, false
 	}
-	report, err := coverage.ParseRustTarpaulinCoverage(filepath.Join(outputDir, "lcov.info"))
+	report, err := coverage.ParseRustTarpaulinCoverage(rustCoverageFilePath(root))
 	if err != nil {
 		return 0, false
 	}
 	return report.TotalPercent, true
+}
+
+func rustCoverageCommand(ctx context.Context) *exec.Cmd {
+	template := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_COMMAND"))
+	if template == "" {
+		template = "cargo tarpaulin --out Lcov --output-dir target/tarpaulin"
+	}
+	return configureCommandProcessGroup(exec.CommandContext(ctx, "sh", "-c", template))
+}
+
+func rustCoverageFilePath(root string) string {
+	coverageFile := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE"))
+	if coverageFile == "" {
+		coverageFile = filepath.Join("target", "tarpaulin", "lcov.info")
+	}
+	if !filepath.IsAbs(coverageFile) {
+		coverageFile = filepath.Join(root, coverageFile)
+	}
+	return coverageFile
 }
 
 func collectJavaCoveragePercent(path string) (float64, bool) {

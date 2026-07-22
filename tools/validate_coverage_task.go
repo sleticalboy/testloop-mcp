@@ -364,13 +364,7 @@ func rustCoverageReportForValidation(paths ...string) (*types.CoverageReport, st
 			continue
 		}
 		root := findProjectRoot(path, "Cargo.toml")
-		reportPath := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE"))
-		if reportPath == "" {
-			reportPath = filepath.Join("target", "tarpaulin", "lcov.info")
-		}
-		if !filepath.IsAbs(reportPath) {
-			reportPath = filepath.Join(root, reportPath)
-		}
+		reportPath := rustCoverageFilePath(root)
 		if !fileExists(reportPath) {
 			continue
 		}

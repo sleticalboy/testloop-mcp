@@ -172,6 +172,25 @@ func TestCollectJavaCoveragePercentReadsMavenReport(t *testing.T) {
 	}
 }
 
+func TestRustCoverageFilePathHonorsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+
+	if got, want := rustCoverageFilePath(dir), filepath.Join(dir, "target", "tarpaulin", "lcov.info"); got != want {
+		t.Fatalf("default rust coverage file = %q, want %q", got, want)
+	}
+
+	t.Setenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE", "target/llvm-cov/lcov.info")
+	if got, want := rustCoverageFilePath(dir), filepath.Join(dir, "target", "llvm-cov", "lcov.info"); got != want {
+		t.Fatalf("relative rust coverage file = %q, want %q", got, want)
+	}
+
+	absolute := filepath.Join(dir, "custom.lcov")
+	t.Setenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE", absolute)
+	if got := rustCoverageFilePath(dir); got != absolute {
+		t.Fatalf("absolute rust coverage file = %q, want %q", got, absolute)
+	}
+}
+
 func TestNormalizeGoTestPathUsesContainingDirForGoFile(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "calc_test.go")

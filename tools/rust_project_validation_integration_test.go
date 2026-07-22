@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -155,13 +154,7 @@ func parseRustCoverageReportForProject(t *testing.T, projectRoot string, timeout
 	if err != nil {
 		t.Fatalf("baseline coverage failed: %v\n%s", err, output)
 	}
-	coverageFile := os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE")
-	if coverageFile == "" {
-		coverageFile = filepath.Join("target", "tarpaulin", "lcov.info")
-	}
-	if !filepath.IsAbs(coverageFile) {
-		coverageFile = filepath.Join(projectRoot, coverageFile)
-	}
+	coverageFile := rustCoverageFilePath(projectRoot)
 	data, err := os.ReadFile(coverageFile)
 	if err != nil {
 		t.Fatalf("read Rust LCOV file %s: %v", coverageFile, err)
@@ -190,14 +183,6 @@ func parseRustCoverageReportForProject(t *testing.T, projectRoot string, timeout
 		t.Fatalf("unmarshal coverage report: %v", err)
 	}
 	return report
-}
-
-func rustCoverageCommand(ctx context.Context) *exec.Cmd {
-	template := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_COMMAND"))
-	if template == "" {
-		template = "cargo tarpaulin --out Lcov --output-dir target/tarpaulin"
-	}
-	return configureCommandProcessGroup(exec.CommandContext(ctx, "sh", "-c", template))
 }
 
 func TestRustCoverageCommandKillsProcessGroupOnTimeout(t *testing.T) {
