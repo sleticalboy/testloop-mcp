@@ -32,6 +32,7 @@ import json
 import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == [

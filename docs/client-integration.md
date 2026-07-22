@@ -55,7 +55,7 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
   .
 ```
 
-该 JSON 固定包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；`fixtures[]` 会在可用时带 `reason`，来源同样优先使用 `metadata.next_action_reason`。失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
+该 JSON 固定包含 `schema_version`、`status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；`fixtures[]` 会在可用时带 `reason`，来源同样优先使用 `metadata.next_action_reason`。输出结构见 [Agent 决策 fixture validator result schema](./fixtures/agent-decision-fixtures-result.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-fixtures-result/passed.json)。失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
 validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`。
 
 如果接入方只想复制最小决策 fixture 包，而不是整个仓库，可以先导出：

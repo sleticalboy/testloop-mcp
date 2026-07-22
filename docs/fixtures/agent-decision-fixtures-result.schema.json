@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-fixtures-result.schema.json",
+  "title": "testloop Agent decision fixtures validator result",
+  "description": "Machine-readable contract for scripts/validate-agent-decision-fixtures.mjs --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "fixture_count",
+    "decisions",
+    "fixtures",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "fixture_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "kind",
+          "source",
+          "manifest_status",
+          "manifest_action",
+          "expected_decision",
+          "status",
+          "action",
+          "decision"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "validate_coverage_task",
+              "real_project_agent_loop"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "synthetic",
+              "real_project"
+            ]
+          },
+          "manifest_status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "manifest_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected_decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -35,6 +35,13 @@ Release response 接入方样板 summary 的 JSON 结构见 [release-response-ad
 | [validate-coverage-task-apply-fix-suggestions.json](./fixtures/validate-coverage-task-apply-fix-suggestions.json) | `failed/apply_fix_suggestions` | 临时 Go 项目，已有失败测试触发 `failures[]`、`fix_suggestions[]` 和 `repair_task` | 优先读取 `run_result.fix_suggestions[].repair_task`，按限定文件和命令进入修复闭环。 |
 | [validate-coverage-task-needs-better-input.json](./fixtures/validate-coverage-task-needs-better-input.json) | `failed/needs_better_input` | 临时 Java/JUnit 项目，测试命令通过但 JaCoCo 目标行未命中 | 不吸收该测试；优先读取 `metadata.next_action_reason` 和未命中行，改用更强输入或更合适的公共入口。 |
 
+## Agent 决策 fixture validator result
+
+| 文件 | 内容 | 用途 |
+| --- | --- | --- |
+| [agent-decision-fixtures-result.schema.json](./fixtures/agent-decision-fixtures-result.schema.json) | `scripts/validate-agent-decision-fixtures.mjs --json` 的输出 schema | 接入方可用它固定 `schema_version/status/decisions/fixtures/reason/failures` 字段。 |
+| [agent-decision-fixtures-result/passed.json](./fixtures/agent-decision-fixtures-result/passed.json) | 当前 8 个决策 fixture 的通过态 validator 输出 | 客户端 CI 可复制该样例，确认自己的解析器能消费 validator JSON。 |
+
 ## 真实项目 Agent 闭环 fixture
 
 | 文件 | status/action | 来源 | Agent 下一步 |

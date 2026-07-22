@@ -62,6 +62,7 @@ const validExpectedDecisions = new Set([
 function emitJSON(status, manifest) {
   const fixtures = Array.isArray(manifest?.fixtures) ? manifest.fixtures : [];
   console.log(JSON.stringify({
+    schema_version: 1,
     status,
     fixture_count: fixtures.length,
     decisions,

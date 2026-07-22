@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "fixture_count": 8,
+  "decisions": [
+    "accept",
+    "accept",
+    "accept",
+    "manual-review",
+    "manual-review",
+    "manual-review",
+    "apply-repair",
+    "needs-better-input"
+  ],
+  "fixtures": [
+    {
+      "path": "docs/fixtures/validate-coverage-task-ready.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "manifest_status": "passed",
+      "manifest_action": "ready",
+      "expected_decision": "accept",
+      "status": "passed",
+      "action": "ready",
+      "decision": "accept"
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/laoxia-server-go-utils.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "manifest_status": "passed",
+      "manifest_action": "ready",
+      "expected_decision": "accept",
+      "status": "passed",
+      "action": "ready",
+      "decision": "accept"
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/mcp-hub-vitest-repair.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "manifest_status": "passed",
+      "manifest_action": "ready",
+      "expected_decision": "accept",
+      "status": "passed",
+      "action": "ready",
+      "decision": "accept"
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-manual-review-internal.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "manifest_status": "passed",
+      "manifest_action": "manual_review_internal",
+      "expected_decision": "manual-review",
+      "status": "passed",
+      "action": "manual_review_internal",
+      "decision": "manual-review",
+      "reason": "LocalCache.get is not exported from this JavaScript module; cover it through an exported API, add a test seam, or review manually"
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-environment.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "manifest_status": "passed",
+      "manifest_action": "manual_review_environment",
+      "expected_decision": "manual-review",
+      "status": "passed",
+      "action": "manual_review_environment",
+      "decision": "manual-review",
+      "reason": "serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main"
+    },
+    {
+      "path": "docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json",
+      "kind": "real_project_agent_loop",
+      "source": "real_project",
+      "manifest_status": "failed",
+      "manifest_action": "manual_review_external_service",
+      "expected_decision": "manual-review",
+      "status": "failed",
+      "action": "manual_review_external_service",
+      "decision": "manual-review",
+      "reason": "download_apk depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable"
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-apply-fix-suggestions.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "manifest_status": "failed",
+      "manifest_action": "apply_fix_suggestions",
+      "expected_decision": "apply-repair",
+      "status": "failed",
+      "action": "apply_fix_suggestions",
+      "decision": "apply-repair"
+    },
+    {
+      "path": "docs/fixtures/validate-coverage-task-needs-better-input.json",
+      "kind": "validate_coverage_task",
+      "source": "synthetic",
+      "manifest_status": "failed",
+      "manifest_action": "needs_better_input",
+      "expected_decision": "needs-better-input",
+      "status": "failed",
+      "action": "needs_better_input",
+      "decision": "needs-better-input",
+      "reason": "Calculator.add did not cover target line range 4-4; generate stronger inputs or cover the target through a better public entry point"
+    }
+  ],
+  "failures": []
+}
