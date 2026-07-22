@@ -194,6 +194,12 @@ func TestHandleValidateCoverageTaskGoCoverageMissNeedsBetterInput(t *testing.T) 
 	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/testloop-cover.out") {
 		t.Fatalf("expected testloop-cover.out report metadata, got %+v", out.Metadata)
 	}
+	if out.Metadata["next_action_kind"] != "coverage_target_miss" {
+		t.Fatalf("expected coverage_target_miss next action metadata, got %+v", out.Metadata)
+	}
+	if out.Metadata["needs_better_input_reason"] == "" || out.Metadata["needs_better_input_reason"] != out.Metadata["coverage_miss_reason"] {
+		t.Fatalf("expected stable needs_better_input reason metadata, got %+v", out.Metadata)
+	}
 }
 
 func TestCoverageTaskTargetLineHitSupportedFrameworkMatrix(t *testing.T) {
@@ -284,13 +290,27 @@ func TestCoverageTaskAnnotateActionMetadataAddsManualReviewReason(t *testing.T) 
 			if metadata["manual_review_reason"] != "review this target" {
 				t.Fatalf("manual_review_reason = %q, want stable reason", metadata["manual_review_reason"])
 			}
+			if metadata["next_action_kind"] != "manual_review" || metadata["next_action_reason"] != "review this target" {
+				t.Fatalf("unexpected generic next action metadata: %+v", metadata)
+			}
 		})
 	}
 
-	metadata := map[string]any{"unreachable_reason": "not used"}
+	metadata := map[string]any{"unreachable_reason": "not used", "coverage_miss_reason": "try another input"}
 	coverageTaskAnnotateActionMetadata(metadata, "needs_better_input")
 	if _, ok := metadata["manual_review_kind"]; ok {
 		t.Fatalf("did not expect manual review metadata for non-manual action: %+v", metadata)
+	}
+	if metadata["next_action_kind"] != "coverage_target_miss" ||
+		metadata["next_action_reason"] != "try another input" ||
+		metadata["needs_better_input_reason"] != "try another input" {
+		t.Fatalf("unexpected needs_better_input metadata: %+v", metadata)
+	}
+
+	repairMetadata := map[string]any{"coverage_miss_reason": "not used"}
+	coverageTaskAnnotateActionMetadata(repairMetadata, "apply_fix_suggestions")
+	if _, ok := repairMetadata["next_action_kind"]; ok {
+		t.Fatalf("did not expect generic next action metadata for repair action: %+v", repairMetadata)
 	}
 }
 

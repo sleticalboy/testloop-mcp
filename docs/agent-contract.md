@@ -81,12 +81,12 @@ Agent 决策应以 `status/action` 为准：
 - `passed/ready`：生成测试已通过，可以进入下一个任务或重新统计覆盖率。
 - `failed/apply_fix_suggestions`：读取 `run_result.fix_suggestions[].repair_task`。
 - `failed/manual_review_external_service`：失败来自外部服务、路由状态或长重试时序；不要自动修同一个生成测试。
-- `failed/needs_better_input`：测试通过能力不足，目标覆盖行未命中，需要更强输入或公共入口。
+- `failed/needs_better_input`：测试通过能力不足，目标覆盖行未命中，需要更强输入或公共入口；优先读取 `metadata.next_action_reason`。
 - `generation_error`：读取 `provider_error.action` 或 `error`。
 - `run_error`：先修测试命令、依赖或项目环境。
 - `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计；该 action 可出现在 `passed` 或 `failed` 状态。
 
-`manual_review_*` 结果会在 `metadata.manual_review_kind` 和 `metadata.manual_review_reason` 中提供统一分类与原因；原有分类字段例如 `unreachable_reason`、`environment_reason`、`private_reason` 仍保留用于兼容。
+需要分流的 `validate_coverage_task` 结果会在 `metadata.next_action_kind` 和 `metadata.next_action_reason` 中提供统一分类与原因。`manual_review_*` 会额外提供 `metadata.manual_review_kind` 和 `metadata.manual_review_reason`；`needs_better_input` 会额外提供 `metadata.needs_better_input_reason`。原有分类字段例如 `coverage_miss_reason`、`unreachable_reason`、`environment_reason`、`private_reason` 仍保留用于兼容。
 
 当请求带 `coverage=true` 时，`validate_coverage_task` 会尽量校验 `coverage_task.line_range` 是否真正被生成测试命中。目前已覆盖 Go coverprofile、Jest/Vitest/Mocha 的 Istanbul `coverage/coverage-final.json`、`node-test` 的 TAP coverage raw output、pytest 项目根目录的 `coverage.json`、Rust/Cargo 的 LCOV 和 Java/JUnit 的 JaCoCo XML。Go 默认读取项目根目录的 `testloop-cover.out`，可通过 `TESTLOOP_GO_COVERPROFILE` 改为相对项目根或绝对路径；JS、Python、Rust 和 Java 可分别通过 `TESTLOOP_VALIDATE_JS_COVERAGE_FILE`、`TESTLOOP_VALIDATE_PY_COVERAGE_FILE`、`TESTLOOP_VALIDATE_RUST_COVERAGE_FILE` 和 `TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE` 指向自定义报告。`metadata.coverage_target_hit_supported` 会明确当前框架是否支持目标行命中校验，`metadata.coverage_target_hit_supported_frameworks` 会返回支持矩阵。若测试命令通过但目标行仍在未覆盖列表中，结果会降级为 `failed/needs_better_input`，并在 `metadata` 中返回 `coverage_target_hit=false`、`coverage_missed_lines` 和 `coverage_miss_reason`。
 

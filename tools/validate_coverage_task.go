@@ -166,7 +166,18 @@ func coverageTaskValidationMetadata(framework string, coverageRequested bool, ge
 }
 
 func coverageTaskAnnotateActionMetadata(metadata map[string]any, action string) {
-	if metadata == nil || !strings.HasPrefix(action, "manual_review_") {
+	if metadata == nil {
+		return
+	}
+	if action == "needs_better_input" {
+		metadata["next_action_kind"] = "coverage_target_miss"
+		if reason, ok := metadata["coverage_miss_reason"].(string); ok && strings.TrimSpace(reason) != "" {
+			metadata["next_action_reason"] = reason
+			metadata["needs_better_input_reason"] = reason
+		}
+		return
+	}
+	if !strings.HasPrefix(action, "manual_review_") {
 		return
 	}
 	kind := strings.TrimPrefix(action, "manual_review_")
@@ -180,10 +191,12 @@ func coverageTaskAnnotateActionMetadata(metadata map[string]any, action string) 
 		"internal":         "internal_reason",
 		"no_runtime":       "no_runtime_reason",
 	}
+	metadata["next_action_kind"] = "manual_review"
 	metadata["manual_review_kind"] = kind
 	if reasonKey := reasonKeys[kind]; reasonKey != "" {
 		if reason, ok := metadata[reasonKey].(string); ok && strings.TrimSpace(reason) != "" {
 			metadata["manual_review_reason"] = reason
+			metadata["next_action_reason"] = reason
 		}
 	}
 }

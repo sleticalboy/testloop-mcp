@@ -8,7 +8,7 @@
 - `action=manual_review_*`：不要继续自动修同一个生成测试；记录原因，改走公共入口、环境设计、依赖注入或人工复核。该 action 可出现在 `passed` 或 `failed` 状态。
 - `action=apply_fix_suggestions`：优先读取 `run_result.fix_suggestions[].repair_task`。
 - `action=repair_generated_test`：读取 `run_result.failures[]`，判断修测试草稿还是修实现。
-- `action=needs_better_input`：测试可能通过了，但目标覆盖行没命中；需要更强输入或更合适的公共入口。
+- `action=needs_better_input`：测试可能通过了，但目标覆盖行没命中；需要更强输入或更合适的公共入口。优先读取 `metadata.next_action_reason`。
 - `generation_error` / `run_error`：先修生成器/provider 或测试运行环境，不要把它当业务测试失败处理。
 
 覆盖率命中校验当前支持 Go coverprofile、Jest/Vitest/Mocha 的 Istanbul `coverage/coverage-final.json`、`node-test` 的 TAP coverage raw output、pytest 项目根目录的 `coverage.json`、Rust/Cargo 的 LCOV 和 Java/JUnit 的 JaCoCo XML。Go 默认读取项目根目录的 `testloop-cover.out`，可通过 `TESTLOOP_GO_COVERPROFILE` 改为相对项目根或绝对路径；JS、Python、Rust 和 Java 可分别通过 `TESTLOOP_VALIDATE_JS_COVERAGE_FILE`、`TESTLOOP_VALIDATE_PY_COVERAGE_FILE`、`TESTLOOP_VALIDATE_RUST_COVERAGE_FILE` 和 `TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE` 指向自定义报告。请求 `coverage=true` 后，客户端应先读取 `metadata.coverage_target_hit_supported` 判断当前框架是否具备目标行命中校验，再读取 `coverage_target_hit`。客户端看到 `metadata.coverage_target_hit=false` 时，应优先把它当作输入/入口不足，而不是测试运行器失败。
@@ -29,12 +29,12 @@
 | `failed` | `apply_fix_suggestions` | 读取 `run_result.fix_suggestions[].repair_task`，按 `target_file`、`editable_files` 和 `suggested_commands` 执行修复闭环。 |
 | `failed` | `manual_review_external_service` | 失败来自 live RPC、对象存储、路由状态或长重试时序；不要自动修生成测试，改用 fake client、route data 或集成环境验证。 |
 | `failed` | `repair_generated_test` | 读取 `run_result.failures[]`；如果失败来自测试草稿输入/断言，修生成测试；如果暴露真实 bug，再修实现。 |
-| `failed` | `needs_better_input` | 当前测试没有命中目标行；根据 `metadata.coverage_miss_reason`、`coverage_hit_lines`、`coverage_missed_lines` 重新选择输入或公共入口。 |
+| `failed` | `needs_better_input` | 当前测试没有命中目标行；根据 `metadata.next_action_reason`、`coverage_hit_lines`、`coverage_missed_lines` 重新选择输入或公共入口。 |
 | `generation_error` | `inspect_generation_error` | 读取 `error`；通常是文件缺失、源码不可解析或静态生成器无法处理。先修任务上下文或源码路径。 |
 | `generation_error` | provider-specific action | 读取 `provider_error.action`；按 LLM/provider 策略决定重试、降级 `static` 或提示用户修配置。 |
 | `run_error` | `inspect_test_runner` | 先修测试命令、依赖安装、工作目录、框架识别或项目环境。 |
 
-`manual_review_*` 结果会在 `metadata` 中提供统一字段：`manual_review_kind` 表示分类，`manual_review_reason` 表示可直接展示或写入任务记录的原因。历史分类字段例如 `unreachable_reason`、`environment_reason`、`private_reason` 仍会保留；客户端应优先读取统一字段，再按需回退到分类字段。
+`validate_coverage_task` 会为需要分流的结果提供通用 action 元数据：`next_action_kind` 表示下一步分类，`next_action_reason` 表示可直接展示或写入任务记录的原因。`manual_review_*` 还会提供 `manual_review_kind` 和 `manual_review_reason`；`needs_better_input` 还会提供 `needs_better_input_reason`。历史分类字段例如 `coverage_miss_reason`、`unreachable_reason`、`environment_reason`、`private_reason` 仍会保留；客户端应优先读取统一字段，再按需回退到历史字段。
 
 ## 不要做的事
 
