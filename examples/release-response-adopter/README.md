@@ -97,6 +97,30 @@ testloop_release_response_summary_should_accept=true
 
 失败态会返回非 0。Agent 应读取 `testloop_release_response_summary_next_step` 和 `testloop_release_response_summary_failures`，并停止继续发布。
 
+## Helper 输出字段
+
+`read-testloop-release-response.mjs` 输出字段：
+
+| 字段 | 来源 | Agent 动作 |
+| --- | --- | --- |
+| `testloop_release_response_status` | `testloop-release-response.json.status` | 判断 release response 是否通过。 |
+| `testloop_release_response_next_step` | `agent_next_step` | 主分流字段；`ready` 才继续发布。 |
+| `testloop_release_response_release_ref` | `evidence.release_ref` | 核对 release tag。 |
+| `testloop_release_response_fixture_count` | `evidence.fixture_count` | 核对 fixture 数量是否漂移。 |
+| `testloop_release_response_should_accept` | helper 归一化结果 | `true` 才接受结果。 |
+| `testloop_release_response_failures` | `failures[]` | 失败时交给 Agent 排查。 |
+
+`read-testloop-release-response-summary.mjs` 输出字段：
+
+| 字段 | 来源 | Agent 动作 |
+| --- | --- | --- |
+| `testloop_release_response_summary_status` | adopter summary `status` | 判断接入样板链路是否通过。 |
+| `testloop_release_response_summary_next_step` | adopter summary `agent_next_step` | 主分流字段；非 `ready` 时停止发布。 |
+| `testloop_release_response_summary_release_ref` | adopter summary `release_ref` | 核对 release tag。 |
+| `testloop_release_response_summary_fixture_count` | adopter summary `fixture_count` | 核对 fixture 数量是否漂移。 |
+| `testloop_release_response_summary_should_accept` | adopter summary `should_accept` | `false` 时停止发布。 |
+| `testloop_release_response_summary_failures` | adopter summary `failures[]` | 失败时交给 Agent 排查。 |
+
 ## Agent 契约
 
 Agent 只读取 `testloop-release-response-client/testloop-release-response.json`，并基于这些字段分流：

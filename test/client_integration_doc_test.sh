@@ -62,6 +62,7 @@ required_snippets = [
     "./fixtures/release-response-adopter-summary/invalid-response.json",
     "examples/release-response-adopter/scripts/read-testloop-release-response-summary.mjs",
     "testloop_release_response_summary_next_step",
+    "testloop_release_response_summary_*",
     "../examples/release-response-adopter/README.md",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
