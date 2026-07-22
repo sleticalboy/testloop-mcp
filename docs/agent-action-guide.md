@@ -34,6 +34,8 @@
 | `generation_error` | provider-specific action | 读取 `provider_error.action`；按 LLM/provider 策略决定重试、降级 `static` 或提示用户修配置。 |
 | `run_error` | `inspect_test_runner` | 先修测试命令、依赖安装、工作目录、框架识别或项目环境。 |
 
+`manual_review_*` 结果会在 `metadata` 中提供统一字段：`manual_review_kind` 表示分类，`manual_review_reason` 表示可直接展示或写入任务记录的原因。历史分类字段例如 `unreachable_reason`、`environment_reason`、`private_reason` 仍会保留；客户端应优先读取统一字段，再按需回退到分类字段。
+
 ## 不要做的事
 
 - 不要只看 `status=passed` 就自动合入测试；`manual_review_*` 也常常是 `passed`，它表示生成了可运行的手审草稿或 skip。

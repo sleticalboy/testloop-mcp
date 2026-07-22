@@ -86,6 +86,8 @@ Agent 决策应以 `status/action` 为准：
 - `run_error`：先修测试命令、依赖或项目环境。
 - `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计；该 action 可出现在 `passed` 或 `failed` 状态。
 
+`manual_review_*` 结果会在 `metadata.manual_review_kind` 和 `metadata.manual_review_reason` 中提供统一分类与原因；原有分类字段例如 `unreachable_reason`、`environment_reason`、`private_reason` 仍保留用于兼容。
+
 当请求带 `coverage=true` 时，`validate_coverage_task` 会尽量校验 `coverage_task.line_range` 是否真正被生成测试命中。目前已覆盖 Go coverprofile、Jest/Vitest/Mocha 的 Istanbul `coverage/coverage-final.json`、`node-test` 的 TAP coverage raw output、pytest 项目根目录的 `coverage.json`、Rust/Cargo 的 LCOV 和 Java/JUnit 的 JaCoCo XML。Go 默认读取项目根目录的 `testloop-cover.out`，可通过 `TESTLOOP_GO_COVERPROFILE` 改为相对项目根或绝对路径；JS、Python、Rust 和 Java 可分别通过 `TESTLOOP_VALIDATE_JS_COVERAGE_FILE`、`TESTLOOP_VALIDATE_PY_COVERAGE_FILE`、`TESTLOOP_VALIDATE_RUST_COVERAGE_FILE` 和 `TESTLOOP_VALIDATE_JAVA_COVERAGE_FILE` 指向自定义报告。`metadata.coverage_target_hit_supported` 会明确当前框架是否支持目标行命中校验，`metadata.coverage_target_hit_supported_frameworks` 会返回支持矩阵。若测试命令通过但目标行仍在未覆盖列表中，结果会降级为 `failed/needs_better_input`，并在 `metadata` 中返回 `coverage_target_hit=false`、`coverage_missed_lines` 和 `coverage_miss_reason`。
 
 更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)，典型返回可对照 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)，客户端回归建议见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。

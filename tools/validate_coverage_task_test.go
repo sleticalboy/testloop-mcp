@@ -259,6 +259,41 @@ func TestCoverageTaskValidationMetadataExposesTargetHitSupportWhenCoverageReques
 	}
 }
 
+func TestCoverageTaskAnnotateActionMetadataAddsManualReviewReason(t *testing.T) {
+	tests := []struct {
+		action    string
+		reasonKey string
+		wantKind  string
+	}{
+		{action: "manual_review_unreachable", reasonKey: "unreachable_reason", wantKind: "unreachable"},
+		{action: "manual_review_environment", reasonKey: "environment_reason", wantKind: "environment"},
+		{action: "manual_review_protocol", reasonKey: "protocol_reason", wantKind: "protocol"},
+		{action: "manual_review_database", reasonKey: "database_reason", wantKind: "database"},
+		{action: "manual_review_external_service", reasonKey: "external_service_reason", wantKind: "external_service"},
+		{action: "manual_review_private", reasonKey: "private_reason", wantKind: "private"},
+		{action: "manual_review_internal", reasonKey: "internal_reason", wantKind: "internal"},
+		{action: "manual_review_no_runtime", reasonKey: "no_runtime_reason", wantKind: "no_runtime"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.action, func(t *testing.T) {
+			metadata := map[string]any{tt.reasonKey: "review this target"}
+			coverageTaskAnnotateActionMetadata(metadata, tt.action)
+			if metadata["manual_review_kind"] != tt.wantKind {
+				t.Fatalf("manual_review_kind = %q, want %q", metadata["manual_review_kind"], tt.wantKind)
+			}
+			if metadata["manual_review_reason"] != "review this target" {
+				t.Fatalf("manual_review_reason = %q, want stable reason", metadata["manual_review_reason"])
+			}
+		})
+	}
+
+	metadata := map[string]any{"unreachable_reason": "not used"}
+	coverageTaskAnnotateActionMetadata(metadata, "needs_better_input")
+	if _, ok := metadata["manual_review_kind"]; ok {
+		t.Fatalf("did not expect manual review metadata for non-manual action: %+v", metadata)
+	}
+}
+
 func goCoverageHitTask(source string, testFile string) types.CoverageTestTask {
 	return types.CoverageTestTask{
 		ID:              "go-test-1",
@@ -1462,6 +1497,9 @@ func RemoteIP(r *http.Request, fallback string) string {
 	reason, _ := out.Metadata["unreachable_reason"].(string)
 	if !strings.Contains(reason, "partIndex < 0") {
 		t.Fatalf("unexpected unreachable reason: %q", reason)
+	}
+	if out.Metadata["manual_review_kind"] != "unreachable" || out.Metadata["manual_review_reason"] != reason {
+		t.Fatalf("unexpected manual review metadata: %+v", out.Metadata)
 	}
 }
 

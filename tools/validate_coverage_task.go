@@ -93,6 +93,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 		action = "needs_better_input"
 		status = "failed"
 	}
+	coverageTaskAnnotateActionMetadata(metadata, action)
 	out := types.CoverageTaskValidationOutput{
 		Status:       status,
 		Action:       action,
@@ -162,6 +163,29 @@ func coverageTaskValidationMetadata(framework string, coverageRequested bool, ge
 		metadata["no_runtime_reason"] = reason
 	}
 	return metadata
+}
+
+func coverageTaskAnnotateActionMetadata(metadata map[string]any, action string) {
+	if metadata == nil || !strings.HasPrefix(action, "manual_review_") {
+		return
+	}
+	kind := strings.TrimPrefix(action, "manual_review_")
+	reasonKeys := map[string]string{
+		"unreachable":      "unreachable_reason",
+		"environment":      "environment_reason",
+		"protocol":         "protocol_reason",
+		"database":         "database_reason",
+		"external_service": "external_service_reason",
+		"private":          "private_reason",
+		"internal":         "internal_reason",
+		"no_runtime":       "no_runtime_reason",
+	}
+	metadata["manual_review_kind"] = kind
+	if reasonKey := reasonKeys[kind]; reasonKey != "" {
+		if reason, ok := metadata[reasonKey].(string); ok && strings.TrimSpace(reason) != "" {
+			metadata["manual_review_reason"] = reason
+		}
+	}
 }
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
