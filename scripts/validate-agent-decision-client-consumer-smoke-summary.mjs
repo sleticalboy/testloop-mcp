@@ -48,6 +48,8 @@ const requiredFields = [
   'install_summary_validator_json',
   'client_summary_json',
   'client_summary_validator_json',
+  'client_response_json',
+  'client_response_validator_json',
   'fixture_dir',
   'fixture_validation_json',
   'result_json',
@@ -57,6 +59,7 @@ const requiredFields = [
   'failures',
   'install_summary_validator_exit_code',
   'client_summary_validator_exit_code',
+  'client_response_validator_exit_code',
   'fixture_validator_exit_code',
   'npm_validator_exit_code',
 ];
@@ -146,6 +149,8 @@ for (const field of [
   'install_summary_validator_json',
   'client_summary_json',
   'client_summary_validator_json',
+  'client_response_json',
+  'client_response_validator_json',
   'fixture_dir',
   'fixture_validation_json',
   'result_json',
@@ -162,6 +167,7 @@ if (!Array.isArray(summary.failures) || summary.failures.length !== 0) {
 for (const field of [
   'install_summary_validator_exit_code',
   'client_summary_validator_exit_code',
+  'client_response_validator_exit_code',
   'fixture_validator_exit_code',
   'npm_validator_exit_code',
 ]) {

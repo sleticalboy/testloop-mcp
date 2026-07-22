@@ -14,6 +14,8 @@ grep -F "agent_decision_client_consumer_smoke_status=passed" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_helper_ref=v0.5.21" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_fixture_count=8" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input" "$out" >/dev/null
+grep -F "agent_decision_client_consumer_smoke_client_response_json=" "$out" >/dev/null
+grep -F "agent_decision_client_consumer_smoke_client_response_validator_json=" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_agent_response_json=" "$out" >/dev/null
 grep -F "agent_decision_client_consumer_smoke_agent_next_step=ready" "$out" >/dev/null
 
@@ -45,6 +47,7 @@ assert payload["decisions"] == expected_decisions
 assert payload["failures"] == []
 assert payload["install_summary_validator_exit_code"] == 0
 assert payload["client_summary_validator_exit_code"] == 0
+assert payload["client_response_validator_exit_code"] == 0
 assert payload["fixture_validator_exit_code"] == 0
 assert payload["npm_validator_exit_code"] == 0
 
@@ -55,6 +58,8 @@ for key in [
     "install_summary_validator_json",
     "client_summary_json",
     "client_summary_validator_json",
+    "client_response_json",
+    "client_response_validator_json",
     "fixture_dir",
     "fixture_validation_json",
     "result_json",
@@ -66,6 +71,8 @@ for key in [
 install_summary = json.loads(Path(payload["install_summary_json"]).read_text(encoding="utf-8"))
 client_summary = json.loads(Path(payload["client_summary_json"]).read_text(encoding="utf-8"))
 client_summary_validation = json.loads(Path(payload["client_summary_validator_json"]).read_text(encoding="utf-8"))
+client_response = json.loads(Path(payload["client_response_json"]).read_text(encoding="utf-8"))
+client_response_validation = json.loads(Path(payload["client_response_validator_json"]).read_text(encoding="utf-8"))
 result_payload = json.loads(Path(payload["result_json"]).read_text(encoding="utf-8"))
 fixture_validation = json.loads(Path(payload["fixture_validation_json"]).read_text(encoding="utf-8"))
 agent_response = json.loads(Path(payload["agent_response_json"]).read_text(encoding="utf-8"))
@@ -73,6 +80,9 @@ agent_response = json.loads(Path(payload["agent_response_json"]).read_text(encod
 assert install_summary["status"] == "passed"
 assert client_summary["status"] == "passed"
 assert client_summary_validation["status"] == "passed"
+assert client_response["status"] == "passed"
+assert client_response["agent_next_step"] == "ready"
+assert client_response_validation["status"] == "passed"
 assert result_payload["status"] == "passed"
 assert fixture_validation["status"] == "passed"
 assert agent_response["status"] == "passed"

@@ -8,6 +8,8 @@
   "install_summary_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/install-summary-validation.json",
   "client_summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",
   "client_summary_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/client-summary-validation.json",
+  "client_response_json": "/tmp/testloop-agent-decision-consumer-smoke/client-response.json",
+  "client_response_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/client-response-validation.json",
   "fixture_dir": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/testloop-agent-decision-fixtures",
   "fixture_validation_json": "/tmp/testloop-agent-decision-consumer-smoke/fixture-validation.json",
   "result_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/agent-decision-fixtures-result.json",
@@ -26,6 +28,7 @@
   "failures": [],
   "install_summary_validator_exit_code": 0,
   "client_summary_validator_exit_code": 0,
+  "client_response_validator_exit_code": 0,
   "fixture_validator_exit_code": 0,
   "npm_validator_exit_code": 0
 }

@@ -58,6 +58,8 @@ client_dir="${TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR:-${tmp_dir}/external-client}
 install_summary_json="${tmp_dir}/install-summary.json"
 install_validation_json="${tmp_dir}/install-summary-validation.json"
 client_summary_validation_json="${tmp_dir}/client-summary-validation.json"
+client_response_json="${tmp_dir}/client-response.json"
+client_response_validation_json="${tmp_dir}/client-response-validation.json"
 fixture_validation_json="${tmp_dir}/fixture-validation.json"
 consumer_summary_json="${tmp_dir}/consumer-smoke-summary.json"
 agent_response_json="${tmp_dir}/agent-response.json"
@@ -105,6 +107,14 @@ node "${repo_root}/scripts/validate-agent-decision-client-ci-summary.mjs" \
 client_summary_validator_exit_code=$?
 set -e
 
+set +e
+node "${repo_root}/scripts/render-agent-decision-client-ci-response.mjs" \
+  --json "$client_summary_json" > "$client_response_json"
+node "${repo_root}/scripts/validate-agent-decision-client-ci-response.mjs" \
+  --json "$client_response_json" > "$client_response_validation_json"
+client_response_validator_exit_code=$?
+set -e
+
 fixture_dir="$(
   node -e "const fs=require('node:fs'); const payload=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); process.stdout.write(payload.fixture_dir || '');" \
     "$client_summary_json"
@@ -125,9 +135,12 @@ node - \
   "$install_validation_json" \
   "$client_summary_json" \
   "$client_summary_validation_json" \
+  "$client_response_json" \
+  "$client_response_validation_json" \
   "$fixture_validation_json" \
   "$install_summary_validator_exit_code" \
   "$client_summary_validator_exit_code" \
+  "$client_response_validator_exit_code" \
   "$fixture_validator_exit_code" \
   "$consumer_summary_json" \
   "$agent_response_json" <<'JS'
@@ -137,9 +150,12 @@ const [
   installValidationPath,
   clientSummaryPath,
   clientSummaryValidationPath,
+  clientResponsePath,
+  clientResponseValidationPath,
   fixtureValidationPath,
   installValidatorExitCodeRaw,
   clientSummaryValidatorExitCodeRaw,
+  clientResponseValidatorExitCodeRaw,
   fixtureValidatorExitCodeRaw,
   consumerSummaryPath,
   agentResponsePath,
@@ -153,11 +169,14 @@ const installSummary = readJSON(installSummaryPath);
 const installValidation = readJSON(installValidationPath);
 const clientSummary = readJSON(clientSummaryPath);
 const clientSummaryValidation = readJSON(clientSummaryValidationPath);
+const clientResponse = readJSON(clientResponsePath);
+const clientResponseValidation = readJSON(clientResponseValidationPath);
 const fixtureValidation = readJSON(fixtureValidationPath);
 const resultJSONPath = clientSummary.result_json || '';
 const resultPayload = resultJSONPath ? readJSON(resultJSONPath) : {};
 const installValidatorExitCode = Number(installValidatorExitCodeRaw);
 const clientSummaryValidatorExitCode = Number(clientSummaryValidatorExitCodeRaw);
+const clientResponseValidatorExitCode = Number(clientResponseValidatorExitCodeRaw);
 const fixtureValidatorExitCode = Number(fixtureValidatorExitCodeRaw);
 const failures = [];
 
@@ -171,6 +190,8 @@ requirePassed(installSummary, 'install summary');
 requirePassed(installValidation, 'install summary validator');
 requirePassed(clientSummary, 'client summary');
 requirePassed(clientSummaryValidation, 'client summary validator');
+requirePassed(clientResponse, 'client response');
+requirePassed(clientResponseValidation, 'client response validator');
 requirePassed(fixtureValidation, 'fixture validator');
 requirePassed(resultPayload, 'result json');
 
@@ -179,6 +200,9 @@ if (installValidatorExitCode !== 0) {
 }
 if (clientSummaryValidatorExitCode !== 0) {
   failures.push(`client summary validator exit code=${clientSummaryValidatorExitCode}`);
+}
+if (clientResponseValidatorExitCode !== 0) {
+  failures.push(`client response validator exit code=${clientResponseValidatorExitCode}`);
 }
 if (fixtureValidatorExitCode !== 0) {
   failures.push(`fixture validator exit code=${fixtureValidatorExitCode}`);
@@ -210,6 +234,8 @@ const payload = {
   install_summary_validator_json: installValidationPath,
   client_summary_json: clientSummaryPath,
   client_summary_validator_json: clientSummaryValidationPath,
+  client_response_json: clientResponsePath,
+  client_response_validator_json: clientResponseValidationPath,
   fixture_dir: clientSummary.fixture_dir,
   fixture_validation_json: fixtureValidationPath,
   result_json: resultJSONPath,
@@ -219,6 +245,7 @@ const payload = {
   failures,
   install_summary_validator_exit_code: installValidatorExitCode,
   client_summary_validator_exit_code: clientSummaryValidatorExitCode,
+  client_response_validator_exit_code: clientResponseValidatorExitCode,
   fixture_validator_exit_code: fixtureValidatorExitCode,
   npm_validator_exit_code: clientSummary.validator_exit_code,
 };
@@ -246,6 +273,8 @@ console.log(`agent_decision_client_consumer_smoke_helper_ref=${payload.helper_re
 console.log(`agent_decision_client_consumer_smoke_fixture_count=${payload.fixture_count}`);
 console.log(`agent_decision_client_consumer_smoke_decisions=${payload.decisions.join(',')}`);
 console.log(`agent_decision_client_consumer_smoke_result_json=${payload.result_json}`);
+console.log(`agent_decision_client_consumer_smoke_client_response_json=${payload.client_response_json}`);
+console.log(`agent_decision_client_consumer_smoke_client_response_validator_json=${payload.client_response_validator_json}`);
 console.log(`agent_decision_client_consumer_smoke_agent_response_json=${payload.agent_response_json}`);
 console.log(`agent_decision_client_consumer_smoke_agent_next_step=${response.agent_next_step}`);
 JS

@@ -94,6 +94,7 @@ required_snippets = [
     "../examples/release-response-adopter/README.md",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
+    "client_response_validator_json",
     "agent_next_step",
     "inspect-consumer-smoke-validator",
     "inspect-agent-decision-fixtures",

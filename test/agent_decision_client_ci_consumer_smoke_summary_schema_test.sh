@@ -67,6 +67,7 @@ def validate_payload(payload, label):
         "fixture_count": 8,
         "install_summary_validator_exit_code": 0,
         "client_summary_validator_exit_code": 0,
+        "client_response_validator_exit_code": 0,
         "fixture_validator_exit_code": 0,
         "npm_validator_exit_code": 0,
     }
@@ -85,6 +86,8 @@ def validate_payload(payload, label):
         "install_summary_validator_json",
         "client_summary_json",
         "client_summary_validator_json",
+        "client_response_json",
+        "client_response_validator_json",
         "fixture_dir",
         "fixture_validation_json",
         "result_json",
@@ -117,6 +120,8 @@ for failed_sample_path, failed_sample in failed_samples:
         "install_summary_validator_json",
         "client_summary_json",
         "client_summary_validator_json",
+        "client_response_json",
+        "client_response_validator_json",
         "fixture_dir",
         "fixture_validation_json",
         "result_json",
@@ -131,6 +136,8 @@ for key in (
     "install_summary_validator_json",
     "client_summary_json",
     "client_summary_validator_json",
+    "client_response_json",
+    "client_response_validator_json",
     "fixture_dir",
     "fixture_validation_json",
     "result_json",
@@ -142,6 +149,8 @@ for key in (
 install_summary = json.loads(Path(summary["install_summary_json"]).read_text(encoding="utf-8"))
 client_summary = json.loads(Path(summary["client_summary_json"]).read_text(encoding="utf-8"))
 client_summary_validation = json.loads(Path(summary["client_summary_validator_json"]).read_text(encoding="utf-8"))
+client_response = json.loads(Path(summary["client_response_json"]).read_text(encoding="utf-8"))
+client_response_validation = json.loads(Path(summary["client_response_validator_json"]).read_text(encoding="utf-8"))
 result_payload = json.loads(Path(summary["result_json"]).read_text(encoding="utf-8"))
 agent_response = json.loads(Path(summary["agent_response_json"]).read_text(encoding="utf-8"))
 if install_summary.get("decisions") != expected_decisions:
@@ -150,6 +159,10 @@ if client_summary.get("decisions") != expected_decisions:
     failures.append("generated client summary decisions drifted")
 if client_summary_validation.get("status") != "passed":
     failures.append("generated client summary validator did not pass")
+if client_response.get("agent_next_step") != "ready":
+    failures.append("generated client response did not resolve agent_next_step=ready")
+if client_response_validation.get("status") != "passed":
+    failures.append("generated client response validator did not pass")
 if result_payload.get("decisions") != expected_decisions:
     failures.append("generated result JSON decisions drifted")
 if agent_response.get("agent_next_step") != "ready":

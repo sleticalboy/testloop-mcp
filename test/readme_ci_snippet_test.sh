@@ -101,6 +101,7 @@ required_text = [
     "testloop_release_response_summary_next_step",
     "./examples/release-response-adopter/README.md",
     "agent_response_json",
+    "基础客户端 CI response",
     "agent_next_step=ready",
     "./docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json",
     "./docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json",
