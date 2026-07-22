@@ -158,6 +158,7 @@ func generateRunTestFixSuggestions(input runTestsInput, failures []types.TestFai
 }
 
 func runTestRepairCommands(framework, sourceFile, testFile string) []string {
+	framework = normalizeFrameworkName(framework)
 	target := firstNonEmpty(testFile, sourceFile)
 	switch framework {
 	case "jest":

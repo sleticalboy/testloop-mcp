@@ -907,6 +907,13 @@ func TestRunTestRepairCommands(t *testing.T) {
 			want:      []string{"npx vitest run src/sum.test.ts"},
 		},
 		{
+			name:      "normalized vitest test file",
+			framework: " VITEST ",
+			source:    "src/sum.ts",
+			testFile:  "src/sum.test.ts",
+			want:      []string{"npx vitest run src/sum.test.ts"},
+		},
+		{
 			name:      "mocha test file",
 			framework: "mocha",
 			source:    "lib/calc.js",
