@@ -98,6 +98,7 @@ jobs:
           sh test/agent_decision_client_ci_summary_schema_test.sh
           sh test/agent_decision_client_ci_summary_validator_test.sh
           sh test/agent_decision_client_ci_response_test.sh
+          sh test/agent_decision_client_ci_response_fixtures_test.sh
           sh test/install_agent_decision_client_ci_template_test.sh
           sh test/agent_decision_client_ci_template_install_showcase_test.sh
           sh test/agent_decision_client_ci_template_install_summary_schema_test.sh

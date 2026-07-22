@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "agent_next_step": "ready",
+  "summary_json": "docs/fixtures/agent-decision-client-ci-summary/passed.json",
+  "evidence": {
+    "client_dir": "/tmp/testloop-agent-decision-client",
+    "fixture_dir": "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures",
+    "result_json": "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
+    "result_schema": "/tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures-result.schema.json",
+    "fixture_count": 8,
+    "decisions": [
+      "accept",
+      "accept",
+      "accept",
+      "manual-review",
+      "manual-review",
+      "manual-review",
+      "apply-repair",
+      "needs-better-input"
+    ],
+    "validator_exit_code": 0
+  },
+  "failures": []
+}

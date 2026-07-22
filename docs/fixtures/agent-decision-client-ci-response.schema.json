@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-client-ci-response.schema.json",
+  "title": "testloop Agent decision client CI response",
+  "description": "Machine-readable contract for scripts/render-agent-decision-client-ci-response.mjs --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "agent_next_step",
+    "summary_json",
+    "evidence",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "agent_next_step": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_dir",
+        "fixture_dir",
+        "result_json",
+        "result_schema",
+        "fixture_count",
+        "decisions",
+        "validator_exit_code"
+      ],
+      "properties": {
+        "client_dir": {
+          "type": "string"
+        },
+        "fixture_dir": {
+          "type": "string"
+        },
+        "result_json": {
+          "type": "string"
+        },
+        "result_schema": {
+          "type": "string"
+        },
+        "fixture_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "validator_exit_code": {
+          "type": "integer"
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
