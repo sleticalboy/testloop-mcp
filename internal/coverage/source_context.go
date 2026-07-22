@@ -33,7 +33,7 @@ func mapSourceRangesByFile(files []types.CoverageFile, framework string) map[str
 		}
 		var ranges []sourceRange
 		switch framework {
-		case "jest", "vitest", "mocha":
+		case "jest", "vitest", "mocha", "node-test":
 			ranges = parseJavaScriptFunctionRangesWithTreeSitter(sourcePath)
 			if len(ranges) == 0 {
 				ranges = parseJavaScriptFunctionRanges(sourcePath)

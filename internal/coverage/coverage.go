@@ -22,6 +22,8 @@ func ParseCoverage(profileData, framework string) (*types.CoverageReport, error)
 		return ParseJestCoverage(profileData, "vitest")
 	case "mocha":
 		return ParseJestCoverage(profileData, "mocha")
+	case "node-test":
+		return ParseNodeTestCoverage(profileData)
 	case "pytest":
 		return ParsePytestCoverage(profileData)
 	case "cargo-test":
@@ -52,7 +54,7 @@ func GenerateSuggestions(report *types.CoverageReport) []types.CoverageSuggestio
 	if report.Framework == "go-test" {
 		goFunctions = mapGoFunctionsByFile(report.Files)
 	}
-	if report.Framework == "jest" || report.Framework == "vitest" || report.Framework == "mocha" || report.Framework == "pytest" || report.Framework == "cargo-test" || report.Framework == "junit" {
+	if report.Framework == "jest" || report.Framework == "vitest" || report.Framework == "mocha" || report.Framework == "node-test" || report.Framework == "pytest" || report.Framework == "cargo-test" || report.Framework == "junit" {
 		sourceRanges = mapSourceRangesByFile(report.Files, report.Framework)
 	}
 
@@ -343,7 +345,7 @@ func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 
 func coverageSuggestionSupportsGeneratedTask(framework string, file string) bool {
 	switch strings.ToLower(strings.TrimSpace(framework)) {
-	case "javascript", "typescript", "jest", "vitest", "mocha", "nyc":
+	case "javascript", "typescript", "jest", "vitest", "mocha", "node-test", "nyc":
 		switch strings.ToLower(filepath.Ext(file)) {
 		case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
 			return true
@@ -373,6 +375,8 @@ func coverageTaskCommand(framework string, file string) string {
 		return "npx vitest run " + filepath.ToSlash(file)
 	case "mocha":
 		return "npx mocha " + filepath.ToSlash(file)
+	case "node-test":
+		return "node --test"
 	case "pytest":
 		return "python3 -m pytest " + filepath.ToSlash(file)
 	case "cargo-test":
@@ -399,7 +403,7 @@ func coverageTaskTestFile(framework string, file string) string {
 		return file
 	case "junit":
 		return javaCoverageTestFile(file)
-	case "jest", "vitest":
+	case "jest", "vitest", "node-test":
 		if strings.Contains(base, ".test") || strings.Contains(base, ".spec") {
 			return file
 		}
@@ -508,7 +512,7 @@ func coverageTaskTestName(framework string, target string) string {
 		return "test_" + snakeCase(words) + "_covers_gap"
 	case "junit":
 		return "shouldCover" + pascalCase(words) + "Gap"
-	case "jest", "vitest", "mocha":
+	case "jest", "vitest", "mocha", "node-test":
 		return "covers " + target + " coverage gap"
 	case "pytest":
 		return "test_" + snakeCase(words) + "_covers_gap"

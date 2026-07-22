@@ -772,6 +772,44 @@ func TestParseJestCoverage(t *testing.T) {
 	t.Logf("建议数: %d", len(report.Suggestions))
 }
 
+func TestParseNodeTestCoverageReport(t *testing.T) {
+	dir := t.TempDir()
+	withWorkingDirectory(t, dir)
+	srcPath := filepath.Join("src", "sum.js")
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := `export function add(a, b) {
+  if (a === 0) return b;
+  return a + b;
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := ParseNodeTestCoverage(nodeCoverageReportTAP())
+	if err != nil {
+		t.Fatalf("ParseNodeTestCoverage 失败: %v", err)
+	}
+	if report.Framework != "node-test" || report.TotalPercent != 83.33 {
+		t.Fatalf("unexpected report: %+v", report)
+	}
+	if len(report.Files) != 2 || report.Summary.TotalFiles != 2 {
+		t.Fatalf("unexpected files: %+v summary=%+v", report.Files, report.Summary)
+	}
+	task := findCoverageTask(report.TestTasks, "add")
+	if task == nil {
+		t.Fatalf("expected add task, got %+v", report.TestTasks)
+	}
+	if task.Framework != "node-test" || task.Command != "node --test" || task.TestFile != filepath.Join("src", "sum.test.js") {
+		t.Fatalf("unexpected node-test task: %+v", task)
+	}
+	if task.LineRange != "2-2" || !equalInts(task.UncoveredLines, []int{2}) {
+		t.Fatalf("unexpected uncovered range: %+v", task)
+	}
+}
+
 func TestParseJestCoverageEnrichesSourceTask(t *testing.T) {
 	dir := t.TempDir()
 	withWorkingDirectory(t, dir)
@@ -1693,6 +1731,14 @@ example.com/foo.go:1.1,2.1 1 1`
 		t.Errorf("Framework = %s, want mocha", r4.Framework)
 	}
 
+	rNode, err := ParseCoverage(nodeCoverageReportTAP(), "node-test")
+	if err != nil {
+		t.Fatalf("node-test 分发失败: %v", err)
+	}
+	if rNode.Framework != "node-test" {
+		t.Errorf("Framework = %s, want node-test", rNode.Framework)
+	}
+
 	rustData := `SF:src/lib.rs
 DA:1,1
 end_of_record`
@@ -1718,6 +1764,41 @@ end_of_record`
 	if err == nil {
 		t.Error("期望返回错误，但未返回")
 	}
+}
+
+func nodeCoverageReportTAP() string {
+	return strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: adds values",
+		"ok 1 - adds values",
+		"1..1",
+		"# tests 1",
+		"# suites 0",
+		"# pass 1",
+		"# fail 0",
+		"# start of coverage report",
+		"# -----------------------------------------------------------------",
+		"# file             | line % | branch % | funcs % | uncovered lines",
+		"# -----------------------------------------------------------------",
+		"# src/sum.js       | 66.67  |   100.00 |   50.00 | 2",
+		"# test/sum.test.js | 100.00 |   100.00 |  100.00 |",
+		"# -----------------------------------------------------------------",
+		"# all files        | 83.33  |   100.00 |   75.00 |",
+		"# -----------------------------------------------------------------",
+		"# end of coverage report",
+	}, "\n")
+}
+
+func equalInts(left []int, right []int) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestGenerateSuggestions(t *testing.T) {

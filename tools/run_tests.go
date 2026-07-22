@@ -49,7 +49,7 @@ func Register(s *mcp.Server) {
 		HandleFixSuggestions,
 	)
 	mcp.AddTool[parseCoverageInput, any](s,
-		&mcp.Tool{Name: "parse_coverage", Description: "解析覆盖率数据（Go coverprofile / Istanbul JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML），返回结构化覆盖率报告和改进建议。"},
+		&mcp.Tool{Name: "parse_coverage", Description: "解析覆盖率数据（Go coverprofile / Istanbul JSON / Node TAP coverage report / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML），返回结构化覆盖率报告和改进建议。"},
 		HandleParseCoverage,
 	)
 }

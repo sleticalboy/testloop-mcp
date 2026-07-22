@@ -21,7 +21,7 @@ go test ./... -coverprofile=coverage.out
 
 ## JavaScript / TypeScript
 
-Jest、Vitest、Mocha/nyc 都可以生成 Istanbul `coverage-final.json`。
+Jest、Vitest、Mocha/nyc 都可以生成 Istanbul `coverage-final.json`。Node.js 内置 runner 也可以直接输出 TAP coverage report。
 
 调用参数：
 
@@ -33,6 +33,21 @@ Jest、Vitest、Mocha/nyc 都可以生成 Istanbul `coverage-final.json`。
 ```
 
 `framework` 可替换为 `vitest` 或 `mocha`。
+
+Node.js 内置 runner 推荐命令：
+
+```bash
+node --test --experimental-test-coverage
+```
+
+调用参数可以直接传入命令输出文本，或传入保存后的日志文件路径：
+
+```json
+{
+  "framework": "node-test",
+  "data": "node-test-coverage.tap"
+}
+```
 
 ## Python
 

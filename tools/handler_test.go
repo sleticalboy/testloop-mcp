@@ -175,6 +175,43 @@ func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	}
 }
 
+func TestHandleParseCoverageParsesNodeTestCoverageReport(t *testing.T) {
+	data := strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: adds values",
+		"ok 1 - adds values",
+		"1..1",
+		"# tests 1",
+		"# pass 1",
+		"# fail 0",
+		"# start of coverage report",
+		"# file             | line % | branch % | funcs % | uncovered lines",
+		"# src/sum.js       | 66.67  |   100.00 |   50.00 | 2-3",
+		"# all files        | 66.67  |   100.00 |   50.00 |",
+		"# end of coverage report",
+	}, "\n")
+
+	result, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{
+		Data:      data,
+		Framework: "node-test",
+	})
+	if err != nil {
+		t.Fatalf("HandleParseCoverage returned error: %v", err)
+	}
+
+	var report types.CoverageReport
+	if err := json.Unmarshal([]byte(resultText(t, result)), &report); err != nil {
+		t.Fatalf("unmarshal report: %v", err)
+	}
+	if report.Framework != "node-test" || report.TotalPercent != 66.67 || len(report.TestTasks) != 1 {
+		t.Fatalf("unexpected report: %+v", report)
+	}
+	task := report.TestTasks[0]
+	if task.Framework != "node-test" || task.Command != "node --test" || task.LineRange != "2-3" {
+		t.Fatalf("unexpected task: %+v", task)
+	}
+}
+
 func TestHandleParseCoverageValidatesInput(t *testing.T) {
 	if _, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{}); err == nil {
 		t.Fatal("expected missing data error")

@@ -11,7 +11,7 @@ import (
 
 type parseCoverageInput struct {
 	Data      string `json:"data" jsonschema:"覆盖率数据（profile 文件内容或 JSON 字符串），必填"`
-	Framework string `json:"framework,omitempty" jsonschema:"测试框架: go-test/jest/vitest/mocha/pytest/cargo-test/junit，默认 go-test"`
+	Framework string `json:"framework,omitempty" jsonschema:"测试框架: go-test/jest/vitest/mocha/node-test/pytest/cargo-test/junit，默认 go-test"`
 }
 
 func HandleParseCoverage(ctx context.Context, req *mcp.CallToolRequest, input parseCoverageInput) (*mcp.CallToolResult, any, error) {
