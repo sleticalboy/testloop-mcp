@@ -55,6 +55,8 @@ agent_decision_fixture_json="${tmp_dir}/testloop-agent-decision-fixtures-${safe_
 agent_decision_release_response_client_dir="${tmp_dir}/testloop-release-response-client-${safe_tag}"
 agent_decision_release_response_install_dir="${tmp_dir}/testloop-release-response-install-${safe_tag}"
 agent_decision_release_response_install_summary="${tmp_dir}/testloop-release-response-install-${safe_tag}.json"
+release_response_adopter_dir="${tmp_dir}/testloop-release-response-adopter-${safe_tag}"
+release_response_adopter_summary="${tmp_dir}/testloop-release-response-adopter-${safe_tag}.json"
 
 step() {
   printf '==> %s\n' "$*"
@@ -140,6 +142,12 @@ rm -rf "$agent_decision_release_response_install_dir" "$agent_decision_release_r
 mkdir -p "$agent_decision_release_response_install_dir"
 scripts/install-agent-decision-release-response-client.sh --json "$agent_decision_release_response_install_dir" > "$agent_decision_release_response_install_summary"
 node scripts/validate-agent-decision-release-response-client-install-summary.mjs "$agent_decision_release_response_install_summary"
+
+step "verify release response adopter summary"
+rm -rf "$release_response_adopter_dir" "$release_response_adopter_summary"
+TESTLOOP_RELEASE_RESPONSE_ADOPTER_REPO_DIR="$release_response_adopter_dir" \
+  scripts/showcase-release-response-adopter.sh --json > "$release_response_adopter_summary"
+node scripts/validate-release-response-adopter-summary.mjs "$release_response_adopter_summary"
 
 step "build candidate binaries"
 go build -o "$mcp_binary" .
