@@ -1090,6 +1090,47 @@ func TestHandleGenerateTestsUsesJavaScriptFramework(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateTestsNormalizesCoverageTaskFramework(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.js")
+	if err := os.WriteFile(source, []byte("function add(a, b) {\n  return a + b;\n}\n\nmodule.exports = { add };\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:        "vitest-1",
+		Framework: " VITEST ",
+		File:      source,
+		Target:    "add",
+		Kind:      "function",
+		LineRange: "2-2",
+		TestFile:  filepath.Join(dir, "calc.test.js"),
+		TestName:  "covers add",
+	}
+
+	result, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     source,
+		Framework:    " VITEST ",
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Context == nil || generated.Context.Framework != "vitest" {
+		t.Fatalf("context framework = %+v, want vitest", generated.Context)
+	}
+	if generated.CoverageTask == nil || generated.CoverageTask.Framework != "vitest" {
+		t.Fatalf("generated coverage task = %+v, want framework vitest", generated.CoverageTask)
+	}
+	if generated.Context.CoverageTask == nil || generated.Context.CoverageTask.Framework != "vitest" {
+		t.Fatalf("context coverage task = %+v, want framework vitest", generated.Context.CoverageTask)
+	}
+}
+
 func TestHandleGenerateTestsReturnsJavaScriptPayloadFallbackNotes(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "api.ts")

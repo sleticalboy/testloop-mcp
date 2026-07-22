@@ -37,7 +37,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	input.Framework = normalizeFrameworkName(input.Framework)
 
 	testFile := targetTestFile(filePath, input.CoverageTask)
-	coverageTask, err := coverageTaskForGeneration(filePath, testFile, input.CoverageTask)
+	coverageTask, err := coverageTaskForGeneration(filePath, testFile, input.Framework, input.CoverageTask)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,9 +101,15 @@ func targetTestFile(filePath string, task *types.CoverageTestTask) string {
 	return testFile
 }
 
-func coverageTaskForGeneration(filePath, testFile string, task *types.CoverageTestTask) (*types.CoverageTestTask, error) {
+func coverageTaskForGeneration(filePath, testFile, framework string, task *types.CoverageTestTask) (*types.CoverageTestTask, error) {
 	if task == nil {
 		return task, nil
+	}
+	normalizedFramework := normalizeFrameworkName(firstNonEmpty(task.Framework, framework))
+	if normalizedFramework != "" && task.Framework != normalizedFramework {
+		adjusted := *task
+		adjusted.Framework = normalizedFramework
+		task = &adjusted
 	}
 	if strings.TrimSpace(task.TestFile) != testFile {
 		adjusted := *task

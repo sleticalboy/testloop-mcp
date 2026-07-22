@@ -20,6 +20,10 @@ func BuildGenerationContext(srcPath string) *types.TestGenerationContext {
 
 func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions) *types.TestGenerationContext {
 	ext := strings.ToLower(filepath.Ext(srcPath))
+	framework := ""
+	if effective := effectiveGenerationFramework(srcPath, opts); effective != "" {
+		framework = normalizedFrameworkForPath(srcPath, effective)
+	}
 	var ctx *types.TestGenerationContext
 	switch ext {
 	case ".go":
@@ -30,21 +34,28 @@ func BuildGenerationContextWithOptions(srcPath string, opts GenerateTestsOptions
 		ctx = buildPyGenerationContext(srcPath)
 	}
 	if opts.CoverageTask == nil {
-		if framework := effectiveGenerationFramework(srcPath, opts); framework != "" {
-			if ctx != nil {
-				ctx.Framework = normalizedFrameworkForPath(srcPath, framework)
-			}
+		if ctx != nil && framework != "" {
+			ctx.Framework = framework
 		}
 		return ctx
+	}
+	coverageTask := opts.CoverageTask
+	if framework != "" && coverageTask.Framework != framework {
+		adjusted := *coverageTask
+		adjusted.Framework = framework
+		coverageTask = &adjusted
 	}
 	if ctx == nil {
 		ctx = &types.TestGenerationContext{
 			Language:   languageNameForPath(srcPath),
-			Framework:  opts.CoverageTask.Framework,
+			Framework:  framework,
 			SourceFile: srcPath,
 		}
 	}
-	ctx.CoverageTask = opts.CoverageTask
+	if framework != "" {
+		ctx.Framework = framework
+	}
+	ctx.CoverageTask = coverageTask
 	return ctx
 }
 
@@ -52,7 +63,7 @@ func normalizedFrameworkForPath(srcPath, framework string) string {
 	if isJavaScriptPath(srcPath) {
 		return normalizeJavaScriptTestFramework(framework)
 	}
-	return strings.TrimSpace(framework)
+	return strings.ToLower(strings.TrimSpace(framework))
 }
 
 func languageNameForPath(srcPath string) string {
