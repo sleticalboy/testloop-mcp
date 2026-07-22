@@ -9,6 +9,7 @@ scripts/showcase-release-response-adopter.sh --json
 ```
 
 该 showcase 会创建临时外部客户端仓库，安装 release response 客户端包、复制接入方消费 helper、运行 `npm test --silent`，并验证 helper 能从 `testloop-release-response.json` 读出稳定动作。
+它的 JSON summary 可用 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json` 校验，结构契约见 [release-response-adopter-summary.schema.json](./fixtures/release-response-adopter-summary.schema.json)，通过态样例见 [passed.json](./fixtures/release-response-adopter-summary/passed.json)。
 
 ## 最小目录
 

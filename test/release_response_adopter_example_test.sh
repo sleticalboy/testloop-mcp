@@ -119,6 +119,8 @@ PY
 assert_contains "${repo_dir}/README.md" "node scripts/read-testloop-release-response.mjs"
 assert_contains "${repo_dir}/scripts/read-testloop-release-response.mjs" "testloop_release_response_next_step"
 assert_contains "$readme" "scripts/install-agent-decision-release-response-client.sh"
+assert_contains "$readme" "scripts/showcase-release-response-adopter.sh --json"
+assert_contains "$readme" "node scripts/validate-release-response-adopter-summary.mjs"
 assert_contains "$readme" "agent_next_step"
 assert_contains "$readme" "inspect-release-installer"
 

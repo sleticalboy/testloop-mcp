@@ -14,6 +14,9 @@ assert_contains() {
 
 assert_contains "scripts/showcase-agent-decision-client-release-response-smoke.sh --json"
 assert_contains "scripts/showcase-release-response-adopter.sh --json"
+assert_contains "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json"
+assert_contains "release-response-adopter-summary.schema.json"
+assert_contains "release-response-adopter-summary/passed.json"
 assert_contains "./agent-decision-release-response-checklist.md"
 assert_contains "scripts/showcase-agent-decision-client-release-response-ci.sh --json"
 assert_contains "scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo"
@@ -53,6 +56,9 @@ assert_contains "../examples/release-response-adopter/README.md"
 for path in \
   "${repo_root}/scripts/showcase-agent-decision-client-release-response-smoke.sh" \
   "${repo_root}/scripts/showcase-release-response-adopter.sh" \
+  "${repo_root}/scripts/validate-release-response-adopter-summary.mjs" \
+  "${repo_root}/docs/fixtures/release-response-adopter-summary.schema.json" \
+  "${repo_root}/docs/fixtures/release-response-adopter-summary/passed.json" \
   "${repo_root}/examples/release-response-adopter/README.md" \
   "${repo_root}/examples/release-response-adopter/scripts/read-testloop-release-response.mjs" \
   "${repo_root}/docs/agent-decision-release-response-checklist.md" \

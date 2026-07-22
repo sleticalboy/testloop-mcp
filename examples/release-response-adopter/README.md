@@ -30,6 +30,14 @@ node scripts/validate-agent-decision-release-response-client-install-summary.mjs
   /tmp/testloop-release-response-install-summary.json
 ```
 
+维护 testloop-mcp 仓库时，也可以直接验证完整接入样板 summary：
+
+```bash
+scripts/showcase-release-response-adopter.sh --json > /tmp/testloop-release-response-adopter-summary.json
+node scripts/validate-release-response-adopter-summary.mjs \
+  /tmp/testloop-release-response-adopter-summary.json
+```
+
 然后复制接入方消费 helper：
 
 ```bash

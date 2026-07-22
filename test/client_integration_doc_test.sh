@@ -56,6 +56,9 @@ required_snippets = [
     "./fixtures/agent-decision-release-response-client-install-summary/passed.json",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",
     "scripts/showcase-release-response-adopter.sh --json",
+    "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
+    "./fixtures/release-response-adopter-summary.schema.json",
+    "./fixtures/release-response-adopter-summary/passed.json",
     "../examples/release-response-adopter/README.md",
     ".github/workflows/testloop-release-response-contract.yml",
     "agent_response_json",
@@ -120,6 +123,7 @@ command_paths = {
     "node scripts/render-agent-decision-client-consumer-response.mjs": Path("scripts/render-agent-decision-client-consumer-response.mjs"),
     "scripts/install-agent-decision-release-response-client.sh": Path("scripts/install-agent-decision-release-response-client.sh"),
     "scripts/showcase-release-response-adopter.sh": Path("scripts/showcase-release-response-adopter.sh"),
+    "node scripts/validate-release-response-adopter-summary.mjs": Path("scripts/validate-release-response-adopter-summary.mjs"),
     "node scripts/validate-agent-decision-release-response-client-install-summary.mjs": Path("scripts/validate-agent-decision-release-response-client-install-summary.mjs"),
 }
 for command, path in command_paths.items():
