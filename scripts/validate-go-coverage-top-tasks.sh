@@ -22,6 +22,10 @@ Environment:
                                       validate_coverage_task outputs. When set, skips
                                       baseline coverage generation and reads tasks from
                                       this file.
+  TESTLOOP_VALIDATE_GO_COVERPROFILE Optional per-task coverprofile path used by
+                                      validate_coverage_task. Relative paths are
+                                      resolved from each isolated task worktree.
+                                      Default: testloop-cover.out.
 USAGE
 }
 
@@ -96,6 +100,9 @@ export TESTLOOP_VALIDATE_GO_PROJECT_DIR="$project_dir"
 export TESTLOOP_VALIDATE_GO_TASK_LIMIT="$limit"
 if [[ -n "$output" ]]; then
   export TESTLOOP_VALIDATE_GO_OUTPUT="$output"
+fi
+if [[ -n "${TESTLOOP_VALIDATE_GO_COVERPROFILE:-}" ]]; then
+  export TESTLOOP_GO_COVERPROFILE="$TESTLOOP_VALIDATE_GO_COVERPROFILE"
 fi
 
 go test ./tools -run '^TestValidateGoCoverageTopTasks$' -count=1 -v

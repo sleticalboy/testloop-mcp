@@ -79,6 +79,7 @@ func TestValidateGoCoverageTopTasks(t *testing.T) {
 		validation, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
 			FilePath:     task.File,
 			CoverageTask: &task,
+			Coverage:     true,
 		})
 		if err != nil {
 			t.Fatalf("validate task %d %s %s: %v", i+1, task.ID, task.Target, err)

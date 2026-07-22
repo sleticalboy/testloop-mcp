@@ -525,6 +525,8 @@ docker compose down                    # 停止
 scripts/validate-go-coverage-top-tasks.sh /path/to/go/project 20 /tmp/testloop-go-top20.jsonl
 ```
 
+Go 脚本会先生成 baseline coverprofile，再对选中的每个任务运行 `validate_coverage_task coverage=true`，确认生成测试不仅通过，而且命中 `coverage_task.line_range`。验证阶段默认读取每个隔离 worktree 根目录下的 `testloop-cover.out`；如需改名或接入自定义路径，可设置 `TESTLOOP_VALIDATE_GO_COVERPROFILE`，相对路径会按每个 task worktree 解析。
+
 JS/Vitest/Jest/Mocha 项目可使用：
 
 ```bash
