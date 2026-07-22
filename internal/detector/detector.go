@@ -31,7 +31,7 @@ func DetectFramework(path string) string {
 		case ".java":
 			return "junit"
 		case ".js", ".ts", ".jsx", ".tsx":
-			// JS/TS 文件需要看 package.json 决定 jest/vitest/mocha
+			// JS/TS 文件需要看 package.json 决定 jest/vitest/mocha/node-test
 			if fw := detectJSFramework(path); fw != "" {
 				return fw
 			}
@@ -46,7 +46,7 @@ func DetectFramework(path string) string {
 	return detectFromDir(dir)
 }
 
-// detectJSFramework 从 JS/TS 文件出发向上查找 package.json，返回 jest/vitest/mocha，空串表示未确定
+// detectJSFramework 从 JS/TS 文件出发向上查找 package.json，返回 jest/vitest/mocha/node-test，空串表示未确定
 func detectJSFramework(filePath string) string {
 	pkg, dir := findPackageJSON(filepath.Dir(filePath))
 	if pkg == nil {
@@ -151,6 +151,8 @@ func resolveJSFramework(pkg *packageJSON, _ string) string {
 	if testScript, ok := pkg.Scripts["test"]; ok {
 		lower := strings.ToLower(testScript)
 		switch {
+		case looksLikeNodeTestScript(lower):
+			return "node-test"
 		case strings.Contains(lower, "vitest"):
 			return "vitest"
 		case strings.Contains(lower, "mocha"):
@@ -184,6 +186,14 @@ func resolveJSFramework(pkg *packageJSON, _ string) string {
 
 	// 有 package.json 但没测试框架 → 默认 jest
 	return "jest"
+}
+
+func looksLikeNodeTestScript(script string) bool {
+	script = strings.TrimSpace(script)
+	return script == "node --test" ||
+		strings.HasPrefix(script, "node --test ") ||
+		strings.Contains(script, " node --test ") ||
+		strings.HasPrefix(script, "node --test=")
 }
 
 // hasDep 检查 dependencies map 中是否有指定包（精确匹配 key）

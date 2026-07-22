@@ -12,6 +12,8 @@ func ParseTestOutput(output, framework string) types.TestResult {
 		result = ParseGoTest(output)
 	case "jest", "vitest":
 		result = ParseJestTest(output)
+	case "node-test":
+		result = ParseNodeTest(output)
 	case "pytest":
 		result = ParsePytestTest(output)
 	case "mocha":

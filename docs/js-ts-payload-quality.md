@@ -17,7 +17,7 @@ JS/TS payload 生成遵循三个原则：
 - `response.json()` 返回：会根据函数返回注解生成 mock JSON 和 `toEqual` / `deep.equal` 断言。
 - 注入式 client 返回：支持 `client.get()`、`api.fetch()`、`http.request()` 等显式参数调用，生成局部 mock、返回 payload 和调用参数断言。
 - 普通生成与 coverage task：两条入口共用同一套 payload 推导，coverage task 会额外使用目标函数、测试名、建议输入和断言关注点。
-- Jest/Vitest/Mocha：按框架生成对应断言风格，Vitest ESM/TS 会显式导入测试 API。
+- Jest/Vitest/Mocha/node-test：按框架生成对应断言风格，Vitest ESM/TS 会显式导入测试 API，Node.js 内置 runner 会导入 `node:test` 和 `node:assert/strict`。
 
 ## 支持的 TypeScript 类型形态
 
@@ -71,7 +71,7 @@ JS/TS payload 生成遵循三个原则：
 JS/TS payload 已经有多层测试保护：
 
 - helper 级：直接固定 payload 推导函数，覆盖边界和负例。
-- 普通生成级：固定最终生成的 Jest/Vitest/Mocha 测试文本。
+- 普通生成级：固定最终生成的 Jest/Vitest/Mocha/node-test 测试文本。
 - coverage task 级：固定目标过滤、任务上下文、建议输入和框架断言风格。
 - handler 闭环级：通过普通生成与 coverage task 的 `generate_tests -> run_tests` 临时项目 fixture 校验生成文件、执行路径和解析结果。
 

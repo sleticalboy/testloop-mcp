@@ -38,7 +38,7 @@
 - [x] Rust `cargo tarpaulin` LCOV 覆盖率解析已实现。
 - [x] Java JaCoCo XML 覆盖率解析已实现。
 - [x] `run_tests` 的 coverage 模式已集成 tarpaulin/JaCoCo 报告生成命令。
-- [x] `generate_tests` 已支持接收单个 `coverage_task`，并在 Go/Python/JS/TS/Rust/Java 中使用 task-aware 静态生成草稿；JS/TS 会按 Jest/Vitest/Mocha 任务选择匹配的断言风格。
+- [x] `generate_tests` 已支持接收单个 `coverage_task`，并在 Go/Python/JS/TS/Rust/Java 中使用 task-aware 静态生成草稿；JS/TS 会按 Jest/Vitest/Mocha/node-test 任务选择匹配的断言风格。
 
 ## v0.4.0 发布前复验
 

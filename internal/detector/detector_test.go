@@ -83,6 +83,19 @@ func TestDetectFramework_JSFile_MochaViaScript(t *testing.T) {
 	}
 }
 
+func TestDetectFramework_JSFile_NodeTestViaScript(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "package.json", `{
+		"scripts": { "test": "node --test test/*.test.js" }
+	}`)
+	writeFile(t, dir, "sum.test.js", "")
+	path := filepath.Join(dir, "sum.test.js")
+
+	if fw := DetectFramework(path); fw != "node-test" {
+		t.Errorf("got %s, want node-test (scripts.test 含 node --test)", fw)
+	}
+}
+
 func TestDetectFramework_JSFile_JestViaDevDeps(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "package.json", `{

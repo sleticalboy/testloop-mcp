@@ -18,7 +18,7 @@ import (
 
 type validateCoverageTaskInput struct {
 	FilePath              string                  `json:"file_path" jsonschema:"源文件路径，例如 internal/calc/calc.go，必填"`
-	Framework             string                  `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认使用 coverage_task.framework 或自动检测"`
+	Framework             string                  `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/node-test/pytest/junit，默认使用 coverage_task.framework 或自动检测"`
 	Provider              string                  `json:"provider,omitempty" jsonschema:"测试生成 provider: static、llm 或 auto，默认 static"`
 	CoverageTask          *types.CoverageTestTask `json:"coverage_task" jsonschema:"parse_coverage 返回的单个 test_tasks 项，必填"`
 	Coverage              bool                    `json:"coverage,omitempty" jsonschema:"执行测试时是否收集覆盖率，默认 false"`

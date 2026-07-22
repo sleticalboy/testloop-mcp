@@ -57,6 +57,16 @@ func TestParseFrameworkFailureFixtures(t *testing.T) {
 			expected:  "3",
 			received:  "4",
 		},
+		{
+			name:      "node-test",
+			framework: "node-test",
+			file:      "node_test_failure.txt",
+			testName:  "adds values",
+			error:     "Expected values to be strictly equal:",
+			location:  "test/sum.test.js:6:10",
+			expected:  "3",
+			received:  "4",
+		},
 	}
 
 	for _, tt := range tests {

@@ -126,6 +126,17 @@ module.exports = { add };
 			},
 			forbidden: []string{"toBe((1 + 2))", "rejects.toThrow()"},
 		},
+		{
+			name:      "node-test uses built-in test and assert",
+			framework: "node-test",
+			want: []string{
+				"const { describe, it } = require('node:test');",
+				"const assert = require('node:assert/strict');",
+				"const { add } = require('./calc');",
+				"assert.equal(result, (1 + 2));",
+			},
+			forbidden: []string{"expect(result).toBe", "require('chai')"},
+		},
 	}
 
 	for _, tt := range tests {

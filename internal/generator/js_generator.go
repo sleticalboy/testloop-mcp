@@ -109,7 +109,7 @@ func GenerateJestTests(srcPath string) (string, error) {
 
 // GenerateJavaScriptTestsWithFramework reads JS/TS source and generates tests
 // for the requested JavaScript framework. Empty, Jest, and Vitest use Jest-style
-// matchers; Mocha uses Chai assertions.
+// matchers; Mocha uses Chai assertions; node-test uses node:test and node:assert.
 func GenerateJavaScriptTestsWithFramework(srcPath, framework string) (string, error) {
 	return GenerateJavaScriptTestsWithFrameworkAndTestFile(srcPath, framework, "")
 }
@@ -137,6 +137,8 @@ func normalizeJavaScriptTestFramework(framework string) string {
 		return "mocha"
 	case "vitest":
 		return "vitest"
+	case "node-test", "node", "node:test":
+		return "node-test"
 	default:
 		return "jest"
 	}
@@ -179,6 +181,7 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 
 	mochaTask := task != nil && strings.EqualFold(task.Framework, "mocha")
 	vitestTask := task != nil && strings.EqualFold(task.Framework, "vitest")
+	nodeTestTask := task != nil && strings.EqualFold(task.Framework, "node-test")
 	assertions := jsAssertionStyleForTask(task)
 	if mochaTask && assertions == jsAssertionStyleChai && isESModule {
 		buf.WriteString("import { expect } from 'chai';\n")
@@ -190,6 +193,12 @@ func generateJavaScriptTests(srcPath string, task *types.CoverageTestTask, cover
 		buf.WriteString("const assert = require('node:assert/strict');\n")
 	} else if vitestTask && isESModule {
 		buf.WriteString(fmt.Sprintf("import { %s } from 'vitest';\n", jsVitestImportNamesForCoverageTask(task)))
+	} else if nodeTestTask && isESModule {
+		buf.WriteString("import { describe, it } from 'node:test';\n")
+		buf.WriteString("import { strict as assert } from 'node:assert';\n")
+	} else if nodeTestTask {
+		buf.WriteString("const { describe, it } = require('node:test');\n")
+		buf.WriteString("const assert = require('node:assert/strict');\n")
 	}
 	if vitestTask {
 		buf.WriteString(jsVitestPreludeForCoverageTask(task, moduleImportPath))
@@ -345,6 +354,8 @@ func genJSFileLevelManualReviewTask(srcPath string, source []byte, task *types.C
 	var sb strings.Builder
 	if task != nil && strings.EqualFold(strings.TrimSpace(task.Framework), "vitest") {
 		sb.WriteString("import { describe, it } from 'vitest';\n\n")
+	} else if task != nil && strings.EqualFold(strings.TrimSpace(task.Framework), "node-test") {
+		sb.WriteString("import { describe, it } from 'node:test';\n\n")
 	}
 	sb.WriteString(fmt.Sprintf("describe('%s', () => {\n", target))
 	sb.WriteString(fmt.Sprintf("  it.skip('%s', () => {\n", jsEscapeTestNameValue(testName)))
@@ -3733,6 +3744,9 @@ const (
 )
 
 func jsAssertionStyleForTask(task *types.CoverageTestTask) jsAssertionStyle {
+	if task != nil && strings.EqualFold(task.Framework, "node-test") {
+		return jsAssertionStyleNode
+	}
 	if task != nil && strings.EqualFold(task.Framework, "mocha") {
 		if task.File != "" && !jsProjectHasDependency(task.File, "chai") {
 			return jsAssertionStyleNode

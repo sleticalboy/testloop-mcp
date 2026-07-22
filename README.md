@@ -9,7 +9,7 @@
 
 - **智能生成测试** — Go 优先复用 `gotests` 并回退内置 `go/ast`，其他语言结合 tree-sitter/轻量解析器生成类型感知测试。支持泛型、async、Result/Option 返回类型、JUnit 5 断言，可选接入外部 LLM provider
 - **执行测试** — 支持 `go test` / `cargo test` / Jest / Vitest / Mocha / pytest / JUnit 5（Maven/Gradle），自动检测项目类型，可选收集覆盖率
-- **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/pytest/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
+- **解析失败** — 结构化解析测试输出（Go/`cargo test`/Jest/Vitest/Mocha/Node.js `node --test`/pytest/JUnit），提取失败用例的文件、行号、错误信息，AI 友好 JSON 格式
 - **修复建议** — 根据失败类型（期望值不匹配 / nil pointer / 数组越界 / 除零 / 类型不匹配等）生成结构化修复建议
 - **覆盖率分析** — 解析 Go coverprofile / Istanbul coverage JSON / coverage.py JSON / cargo tarpaulin LCOV / JaCoCo XML，输出文件级覆盖率、未覆盖 block 定位和改进建议；Go/Rust/Java 会尽量把缺口映射到具体函数或方法，并识别常见分支、返回、错误路径
 
@@ -228,20 +228,20 @@ command = "/absolute/path/to/testloop-mcp"
 
 ### `generate_tests`
 
-根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（自动从 `package.json` 识别 Jest/Vitest/Mocha；也可显式传 `framework`）、Python（pytest）。
+根据源文件生成测试代码。支持 Go（优先 `gotests`，回退内置 AST 分析）、Rust、Java、JavaScript/TypeScript（自动从 `package.json` 识别 Jest/Vitest/Mocha/Node.js `node --test`；也可显式传 `framework`）、Python（pytest）。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `file_path` | string | ✅ | 源文件路径（`.go` / `.rs` / `.java` / `.js` / `.ts` / `.jsx` / `.tsx` / `.py`） |
-| `framework` | string | — | 测试框架，默认自动检测；JS/TS 会向上查找 `package.json`，支持 `jest` / `vitest` / `mocha` |
+| `framework` | string | — | 测试框架，默认自动检测；JS/TS 会向上查找 `package.json`，支持 `jest` / `vitest` / `mocha` / `node-test` |
 | `provider` | string | — | 测试生成 provider：`static` / `llm` / `auto`，默认 `static` |
 | `coverage_task` | object | — | `parse_coverage` 返回的单个 `test_tasks` 项，用于按覆盖率缺口生成测试 |
 
 **返回：** `{ status, test_file, generated_cases, preview, context, coverage_task, provider, error, provider_error }`
 
-传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。Go 任务会优先把可静态构造的分支、返回路径、错误路径和接收者字段变更转成非 skipped 断言；无法稳定构造的系统资源、协议 I/O 或数据库/GORM 分支会交给 `validate_coverage_task` 标记为人工复核。JS/TS 普通生成和 coverage task 都会按框架选择 Jest/Vitest 的 `expect(...).toBe(...)` / `toEqual(...)` 或 Mocha/Chai 的 `expect(...).to.equal(...)` / `to.deep.equal(...)` 风格；ESM/TS Vitest 生成会显式导入 `describe` / `it` / `expect`，CommonJS 仍沿用 runner 注入的全局 API；coverage task 会识别 `export default` 实例并通过默认导入调用实例方法，避免把未导出的内部 class 当成可构造 API；TS/TSX 源文件在最近的 `tsconfig.json` 使用 `module` 或 `moduleResolution` 为 `node16` / `nodenext` 时，会用 `./module.js` 形式导入源模块，其他 ESM 场景保持 `./module`；未显式传 `framework` 时会复用自动检测结果。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
+传入 `coverage_task` 时，工具会优先写入任务中的 `test_file`，并把任务回写到返回的 `context.coverage_task`。内置 static provider 会在 Go/Python/JS/TS/Rust/Java 中按目标函数或方法收窄生成范围，使用任务推荐测试名，把 `assertion_focus` 和 `suggested_inputs` 写入注释，并从建议输入中的条件表达式提取参数值生成更贴近覆盖率缺口的调用。Go 任务会优先把可静态构造的分支、返回路径、错误路径和接收者字段变更转成非 skipped 断言；无法稳定构造的系统资源、协议 I/O 或数据库/GORM 分支会交给 `validate_coverage_task` 标记为人工复核。JS/TS 普通生成和 coverage task 都会按框架选择 Jest/Vitest 的 `expect(...).toBe(...)` / `toEqual(...)`、Mocha/Chai 的 `expect(...).to.equal(...)` / `to.deep.equal(...)` 或 Node.js 内置 `node:assert/strict` 风格；ESM/TS Vitest 生成会显式导入 `describe` / `it` / `expect`，Node.js 内置 runner 会显式导入 `node:test` 和 `node:assert/strict`，CommonJS 仍沿用 runner 注入的全局 API；coverage task 会识别 `export default` 实例并通过默认导入调用实例方法，避免把未导出的内部 class 当成可构造 API；TS/TSX 源文件在最近的 `tsconfig.json` 使用 `module` 或 `moduleResolution` 为 `node16` / `nodenext` 时，会用 `./module.js` 形式导入源模块，其他 ESM 场景保持 `./module`；未显式传 `framework` 时会复用自动检测结果。LLM provider 也会收到同一份 task 上下文，便于在静态草稿基础上进一步增强断言。
 
-普通生成的 JS/TS 测试文件默认写在源文件同目录，例如 `src/sum.ts` → `src/sum.test.ts`、`lib/calc.js` → `lib/calc.test.js`。`run_tests` 会从 `package.json` 所在目录执行，并把生成文件转成相对项目根的参数；覆盖率任务仍优先使用 `coverage_task.test_file` 推荐路径。
+普通生成的 JS/TS 测试文件默认写在源文件同目录，例如 `src/sum.ts` → `src/sum.test.ts`、`lib/calc.js` → `lib/calc.test.js`。`run_tests` 会从 `package.json` 所在目录执行，并把生成文件转成相对项目根的参数；覆盖率任务仍优先使用 `coverage_task.test_file` 推荐路径。JS runner 当前覆盖 Jest、Vitest、Mocha 和 Node.js 内置 `node --test`，其中 `node-test` 会解析 TAP 输出并映射到 `failures[]` / `fix_suggestions[]`。
 
 **LLM provider：** 默认不依赖任何外部 LLM。需要启用时，在服务端配置 `TESTLOOP_LLM_PROVIDER_CMD`，并调用 `generate_tests` 时传 `provider: "llm"` 或 `provider: "auto"`。命令会从 stdin 接收 JSON（`source_file`、`context`、`static_code`），其中 `context.coverage_task` 会携带覆盖率任务上下文；JS/TS 目标还会在 `return_type_expr` 和 `payload_notes` 中说明 TypeScript 返回注解、复杂泛型或不可解析 imported type 导致静态 payload 回退的原因。相对 import 指向的本地类型文件，或能通过简单 named/star barrel re-export 解析到的本地类型文件，会让 `static_code` 和 `context` 使用同一份类型声明；无法解析时才会在 `payload_notes` 中追加 imported type 来源和候选源码文件。stdout 可以直接返回测试代码，也可以返回 `{"code":"..."}`。provider 输出会自动清洗常见 Markdown 代码围栏和前后解释性文本；如果输出不含可识别测试代码，或对 Go/Python/JS/TS/Rust/Java 来说明显不像测试文件，会返回错误。`auto` 在未配置命令时会自动回退到 `static`。
 
@@ -314,7 +314,7 @@ artifact_count=2
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `path` | string | ✅ | 测试文件或目录路径 |
-| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`，默认自动检测 |
+| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `node-test` / `pytest` / `junit`，默认自动检测 |
 | `coverage` | bool | — | 是否收集覆盖率，默认 `false` |
 | `verbose` | bool | — | 详细输出，默认 `true` |
 | `include_fix_suggestions` | bool | — | 测试失败时附带 `fix_suggestions[]` 摘要，默认 `false` |
@@ -340,7 +340,7 @@ artifact_count=2
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `output` | string | ✅ | 测试执行的标准输出/错误输出原文 |
-| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `pytest` / `junit`，默认 `go-test` |
+| `framework` | string | — | `go-test` / `cargo-test` / `jest` / `vitest` / `mocha` / `node-test` / `pytest` / `junit`，默认 `go-test` |
 
 **返回：** 同 `run_tests` 的结构化结果，聚焦失败用例的文件名、行号、错误信息。
 
@@ -358,7 +358,7 @@ artifact_count=2
 
 **返回：** `[{ file, line, issue, category, context_file, context_line, suggested_fix, confidence, repair_task }]`
 
-识别的失败类型：期望值不匹配（`got X, want Y`、Jest/Vitest/Mocha 的 expected/received）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。返回会用 `category` 标识失败类型，并在能匹配到源码或测试文件时填充 `context_file` / `context_line`；建议文本也会尽量带上实际/期望值、越界索引和长度、相关源码行等上下文，便于 Agent 判断是修测试还是修实现。
+识别的失败类型：期望值不匹配（`got X, want Y`、Jest/Vitest/Mocha/Node.js `node:test` 的 expected/received）、nil pointer panic、数组越界、除零错误、未定义引用、类型不匹配。返回会用 `category` 标识失败类型，并在能匹配到源码或测试文件时填充 `context_file` / `context_line`；建议文本也会尽量带上实际/期望值、越界索引和长度、相关源码行等上下文，便于 Agent 判断是修测试还是修实现。
 
 `repair_task` 是面向 Agent 的稳定子契约，包含 `id`、`test_name`、`category`、`target_file`、`target_line`、`context_snippet`、`editable_files`、`suggested_commands` 和 `assertion_focus`，用于把单个失败转成可执行修复任务。
 
@@ -442,7 +442,7 @@ testloop-mcp/
 │   │   ├── context.go                # 面向 LLM/AI Agent 的测试生成上下文
 │   │   ├── go_gotests.go             # gotests 优先生成器
 │   │   ├── go_generator.go           # Go AST 回退测试生成器（泛型/通道/接口/变参）
-│   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；支持 Jest/Vitest/Mocha 断言风格）
+│   │   ├── js_generator.go           # JS/TS 测试生成器（函数/箭头/类/async；支持 Jest/Vitest/Mocha/node-test 断言风格）
 │   │   ├── py_generator.go           # Python pytest 测试生成器（def/class/async）
 │   │   ├── rs_generator.go           # Rust 测试生成器
 │   │   └── java_generator.go         # Java JUnit 4/5 测试生成器

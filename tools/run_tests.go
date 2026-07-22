@@ -18,7 +18,7 @@ import (
 
 type runTestsInput struct {
 	Path                  string `json:"path" jsonschema:"测试文件或目录路径，必填"`
-	Framework             string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/pytest/junit，默认自动检测"`
+	Framework             string `json:"framework,omitempty" jsonschema:"测试框架，可选值: go-test/cargo-test/jest/vitest/mocha/node-test/pytest/junit，默认自动检测"`
 	Coverage              bool   `json:"coverage,omitempty" jsonschema:"是否收集覆盖率，默认 false"`
 	Verbose               bool   `json:"verbose,omitempty" jsonschema:"是否输出详细日志，默认 true"`
 	IncludeFixSuggestions bool   `json:"include_fix_suggestions,omitempty" jsonschema:"测试失败时是否附带 fix_suggestions 摘要，默认 false"`
@@ -89,6 +89,10 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		cmd := jsTestCommand(ctx, framework, path, verbose, coverage)
 		output, err = cmd.CombinedOutput()
 
+	case "node-test":
+		cmd := nodeTestCommand(ctx, path, coverage)
+		output, err = cmd.CombinedOutput()
+
 	case "pytest":
 		cmd := pytestCommand(ctx, path, verbose, coverage)
 		output, err = cmd.CombinedOutput()
@@ -107,7 +111,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		output, err = cmd.CombinedOutput()
 
 	default:
-		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, cargo-test, jest, vitest, mocha, pytest, junit）", framework)
+		return nil, nil, fmt.Errorf("暂不支持框架: %s（当前支持: go-test, cargo-test, jest, vitest, mocha, node-test, pytest, junit）", framework)
 	}
 
 	// 测试失败是正常情况，继续解析输出；如果解析器没有识别失败，再用非零退出码兜底。
@@ -167,6 +171,11 @@ func runTestRepairCommands(framework, sourceFile, testFile string) []string {
 			return []string{"npx mocha " + filepath.ToSlash(target)}
 		}
 		return []string{"npx mocha"}
+	case "node-test":
+		if target != "" {
+			return []string{"node --test " + filepath.ToSlash(target)}
+		}
+		return []string{"node --test"}
 	default:
 		return nil
 	}
@@ -253,6 +262,20 @@ func commandPathArg(path, dir string) string {
 		}
 	}
 	return filepath.ToSlash(path)
+}
+
+func nodeTestCommand(ctx context.Context, path string, coverage bool) *exec.Cmd {
+	root := findProjectRoot(path, "package.json")
+	args := []string{"--test"}
+	if coverage {
+		args = append(args, "--experimental-test-coverage")
+	}
+	if path != "." {
+		args = append(args, commandPathArg(path, root))
+	}
+	cmd := exec.CommandContext(ctx, "node", args...)
+	cmd.Dir = root
+	return cmd
 }
 
 func pytestCommand(ctx context.Context, path string, verbose, coverage bool) *exec.Cmd {

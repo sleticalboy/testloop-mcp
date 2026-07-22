@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 Node.js 内置 `node --test` 闭环支持：`detector` 可从 `package.json` 识别 `node-test`，`run_tests` 可执行 `node --test`，`parse_results` 可解析 TAP 失败输出，JS/TS 静态生成器可生成 `node:test` / `node:assert/strict` 风格测试。
+
 ## v0.5.21 - 2026-07-22
 
 ### Added

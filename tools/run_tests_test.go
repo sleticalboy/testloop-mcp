@@ -996,6 +996,44 @@ func TestHandleRunTestsJSCoverageUsesPackageRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsNodeTestUsesPackageRootAndRelativePath(t *testing.T) {
+	dir := writeTempNodeTestPackage(t)
+	testFile := filepath.Join(dir, "test", "sum.test.js")
+	logPath := installFakeNodeRecorder(t, nodeTestFailureOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:                  testFile,
+		IncludeFixSuggestions: true,
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "node-test" || parsed.Status != "fail" || len(parsed.Failures) != 1 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+	if len(parsed.FixSuggestions) != 1 || parsed.FixSuggestions[0].RepairTask == nil {
+		t.Fatalf("expected repair task, got %+v", parsed.FixSuggestions)
+	}
+	wantCommand := "node --test " + filepath.ToSlash(testFile)
+	if !equalStrings(parsed.FixSuggestions[0].RepairTask.SuggestedCommands, []string{wantCommand}) {
+		t.Fatalf("suggested commands = %+v, want %q", parsed.FixSuggestions[0].RepairTask.SuggestedCommands, wantCommand)
+	}
+
+	logText := readTextFile(t, logPath)
+	wantDir := absCleanPath(t, dir)
+	if !strings.Contains(logText, "PWD="+wantDir+"\n") {
+		t.Fatalf("fake node cwd log = %q, want PWD=%s", logText, wantDir)
+	}
+	if !strings.Contains(logText, "ARGS=--test test/sum.test.js\n") {
+		t.Fatalf("fake node args log = %q, want node --test relative path", logText)
+	}
+}
+
 func TestHandleRunTestsJSCustomCommandTemplateUsesPackageRootAndRelativePath(t *testing.T) {
 	dir := writeTempMochaPackage(t)
 	testFile := filepath.Join(dir, "test", "calc.test.js")
@@ -1562,6 +1600,43 @@ func writeTempMochaPackage(t *testing.T) string {
 	return "./" + filepath.Base(dir)
 }
 
+func writeTempNodeTestPackage(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(".", "run-tests-node-")
+	if err != nil {
+		t.Fatalf("mkdir temp node package: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatalf("remove temp node package: %v", err)
+		}
+	})
+
+	testDir := filepath.Join(dir, "test")
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
+		t.Fatalf("mkdir test: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sum.js"), []byte("exports.add = (a, b) => a + b + 1;\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	testSource := strings.Join([]string{
+		"const test = require('node:test')",
+		"const assert = require('node:assert/strict')",
+		"const { add } = require('../sum')",
+		"",
+		"test('adds values', () => {",
+		"  assert.equal(add(1, 2), 3)",
+		"})",
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(testDir, "sum.test.js"), []byte(testSource), 0o644); err != nil {
+		t.Fatalf("write test source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"node --test"}}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	return "./" + filepath.Base(dir)
+}
+
 func installFakePython3(t *testing.T, output string) {
 	t.Helper()
 	fakeBin := t.TempDir()
@@ -1622,6 +1697,25 @@ func installFakeNpxRecorder(t *testing.T, output string) string {
 	return logPath
 }
 
+func installFakeNodeRecorder(t *testing.T, output string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "node.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"cat <<'NODE_OUTPUT'\n" + output + "\nNODE_OUTPUT\n" +
+		"exit 1\n"
+	path := filepath.Join(fakeBin, "node")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake node: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
+}
+
 func pytestFailureOutput() string {
 	return strings.Join([]string{
 		"test_calc.py::test_divide FAILED                                           [100%]",
@@ -1644,6 +1738,35 @@ func pytestFailureOutput() string {
 		"",
 		"calc.py:7: ValueError",
 		"============================== 1 failed in 0.01s ===============================",
+	}, "\n")
+}
+
+func nodeTestFailureOutput() string {
+	return strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: adds values",
+		"not ok 1 - adds values",
+		"  ---",
+		"  duration_ms: 2.1",
+		"  failureType: 'testCodeFailure'",
+		"  error: 'Expected values to be strictly equal:'",
+		"  code: 'ERR_ASSERTION'",
+		"  expected: 3",
+		"  actual: 4",
+		"  operator: 'strictEqual'",
+		"  stack: |-",
+		"    TestContext.<anonymous> (test/sum.test.js:6:10)",
+		"    Test.runInAsyncScope (node:async_hooks:206:9)",
+		"  ...",
+		"1..1",
+		"# tests 1",
+		"# suites 0",
+		"# pass 0",
+		"# fail 1",
+		"# cancelled 0",
+		"# skipped 0",
+		"# todo 0",
+		"# duration_ms 18.4",
 	}, "\n")
 }
 

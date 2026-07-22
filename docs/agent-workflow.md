@@ -1,6 +1,6 @@
 # Agent 闭环工作流示例
 
-这个示例展示 AI Agent 或编辑器集成如何把 `run_tests`、`parse_results`、`parse_coverage` 和 `generate_tests` 串成一个可执行闭环。示例使用仓库内 Go demo，其他语言只需要替换测试命令和覆盖率格式。
+这个示例展示 AI Agent 或编辑器集成如何把 `run_tests`、`parse_results`、`parse_coverage` 和 `generate_tests` 串成一个可执行闭环。示例使用仓库内 Go demo，其他语言只需要替换测试命令和覆盖率格式；JS/TS 项目可使用 Jest、Vitest、Mocha 或 Node.js 内置 `node --test`，其中 `node-test` 会通过 TAP parser 返回同一套 `failures[]` / `fix_suggestions[]`。
 
 如果要先验证客户端消费方式，可以直接运行最小 MCP 客户端 demo：
 
