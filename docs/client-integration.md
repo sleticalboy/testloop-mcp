@@ -118,6 +118,7 @@ scripts/showcase-agent-decision-client-release-response-smoke.sh --json
 如果要写入真实外部仓库，可运行 `scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo`；该 installer 会安装 `testloop-release-response-client/`、`.github/workflows/testloop-release-response-contract.yml`，并在目标包目录执行 `npm test --silent`。
 安装 summary 可用 `node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json` 校验，结构契约见 [agent-decision-release-response-client-install-summary.schema.json](./fixtures/agent-decision-release-response-client-install-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-release-response-client-install-summary/passed.json)。
 如果要模拟接入方仓库的 GitHub Actions 形态，可运行 `scripts/showcase-agent-decision-client-release-response-ci.sh --json`；该命令会写入 `.github/workflows/testloop-release-response-contract.yml` 并运行同一条 `npm test --silent`。
+如果要看外部仓库可直接照抄的最小样板，见 [Release response 接入方样板](../examples/release-response-adopter/README.md)，也可以运行 `scripts/showcase-release-response-adopter.sh --json` 验证 installer、workflow、`npm test --silent` 和接入方消费 helper 的完整链路。
 
 ## 使用真实 fixture
 

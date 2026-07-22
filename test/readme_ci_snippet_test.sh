@@ -92,6 +92,8 @@ required_text = [
     "./docs/fixtures/first-run-artifacts/user-project-smoke-failed/",
     "node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
+    "scripts/showcase-release-response-adopter.sh --json",
+    "./examples/release-response-adopter/README.md",
     "agent_response_json",
     "agent_next_step=ready",
     "./docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json",

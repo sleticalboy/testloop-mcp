@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增 `examples/release-response-adopter/`、`scripts/showcase-release-response-adopter.sh --json` 和 `read-testloop-release-response.mjs`，提供外部客户端可照抄的 release response 接入样板、临时仓库验证入口和 Agent JSON 消费 helper。
+
 ## v0.5.20 - 2026-07-21
 
 ### Added

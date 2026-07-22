@@ -2,6 +2,14 @@
 
 这份文档面向已经接入 Agent 决策 fixture CI 的客户端项目。它只说明发布后 smoke summary 的消费方式：把 release smoke 的 JSON 汇总转成稳定 `agent_next_step`，让 Codex、Claude、Cursor 或自研 Agent 知道下一步该接受、排查 installer，还是排查 fixture 漂移。按步骤接入时优先看 [Agent 决策 release response 接入 Checklist](./agent-decision-release-response-checklist.md)。
 
+如果要看接入方仓库可以直接照抄的最小样板，见 [Release response 接入方样板](../examples/release-response-adopter/README.md)。维护者可以运行：
+
+```bash
+scripts/showcase-release-response-adopter.sh --json
+```
+
+该 showcase 会创建临时外部客户端仓库，安装 release response 客户端包、复制接入方消费 helper、运行 `npm test --silent`，并验证 helper 能从 `testloop-release-response.json` 读出稳定动作。
+
 ## 最小目录
 
 接入方项目可以只保留这几个文件：
@@ -186,3 +194,4 @@ sh test/agent_decision_client_release_response_smoke_test.sh
 - [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)
 - [Agent 决策客户端 CI 模板](./agent-decision-client-ci-template.md)
 - [真实结构化 fixture](./fixtures.md)
+- [Release response 接入方样板](../examples/release-response-adopter/README.md)

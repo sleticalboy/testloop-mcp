@@ -264,6 +264,48 @@ accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,need
 
 这条记录和 release response checklist 的分工不同：checklist 告诉接入方如何执行；本记录证明按 checklist 的核心安装步骤，接入方能得到可校验的 summary、workflow、导出包和 Agent response。
 
+## v0.5.20 release response 接入方样板记录
+
+这条记录面向真实外部客户端和 AI Agent 接入方。目标是验证接入方可以只复制一页样板说明和一个 JSON 消费 helper，然后从 release response contract 里读取稳定动作，不需要理解 testloop-mcp 仓库内部路径。
+
+运行命令：
+
+```bash
+scripts/showcase-release-response-adopter.sh --json
+```
+
+该 showcase 会创建临时外部客户端仓库，复制 [Release response 接入方样板](../examples/release-response-adopter/README.md)，调用 release response installer 写入客户端包和 GitHub Actions workflow，再运行目标包内的 `npm test --silent`，最后用接入方 helper 读取 `testloop-release-response.json`。
+
+关键结果：
+
+```text
+status=passed
+release_ref=v0.5.20
+fixture_count=8
+agent_next_step=ready
+should_accept=true
+npm_exit_code=0
+```
+
+外部仓库关键制品：
+
+- `README.md`
+- `scripts/read-testloop-release-response.mjs`
+- `.github/workflows/testloop-release-response-contract.yml`
+- `testloop-release-response-client/testloop-release-response.json`
+
+消费 helper 的稳定输出：
+
+```text
+testloop_release_response_status=passed
+testloop_release_response_next_step=ready
+testloop_release_response_release_ref=v0.5.20
+testloop_release_response_fixture_count=8
+testloop_release_response_should_accept=true
+```
+
+这条记录补齐“接入方能照抄什么”的证据：安装脚本负责写入 contract 包和 workflow，样板 helper 负责把 JSON response 转成 Agent 容易消费的稳定键值或 JSON 输出。
+
 ## laoxia 双栈报告入口
 
 前面的 server/web 验收已经证明两条 smoke 都能通过。为了后续复用更方便，可以直接使用新的双栈入口一次性产出两份报告：

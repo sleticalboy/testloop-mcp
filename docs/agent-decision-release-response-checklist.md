@@ -107,6 +107,14 @@ testloop-release-response-client/docs/fixtures/agent-decision-client-release-res
 scripts/showcase-agent-decision-client-release-response-ci.sh --json
 ```
 
+如果要验证接入方仓库照抄样板，可以运行：
+
+```bash
+scripts/showcase-release-response-adopter.sh --json
+```
+
+该入口会把 [Release response 接入方样板](../examples/release-response-adopter/README.md) 复制到临时外部仓库，确认 installer、workflow、`npm test --silent` 和接入方消费 helper 都能跑通。
+
 如果只想导出最小包：
 
 ```bash
