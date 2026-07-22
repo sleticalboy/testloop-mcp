@@ -69,7 +69,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	}
 
 	coverageTask := validationCoverageTask(input.CoverageTask, generated)
-	metadata := coverageTaskValidationMetadata(framework, generated, runResult, coverageTask)
+	metadata := coverageTaskValidationMetadata(framework, input.Coverage, generated, runResult, coverageTask)
 	action := coverageTaskValidationAction(runResult)
 	status := coverageTaskValidationStatus(runResult)
 	if metadata["unreachable"] == true {
@@ -104,9 +104,13 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	return coverageTaskValidationResult(out)
 }
 
-func coverageTaskValidationMetadata(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) map[string]any {
+func coverageTaskValidationMetadata(framework string, coverageRequested bool, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) map[string]any {
 	metadata := map[string]any{
 		"framework": framework,
+	}
+	if coverageRequested {
+		metadata["coverage_target_hit_supported"] = coverageTaskTargetLineHitSupported(framework)
+		metadata["coverage_target_hit_supported_frameworks"] = coverageTaskTargetLineHitFrameworks()
 	}
 	if generated != nil {
 		metadata["test_file"] = generated.TestFile

@@ -227,6 +227,35 @@ func TestCoverageTaskTargetLineHitSupportedFrameworkMatrix(t *testing.T) {
 	}
 }
 
+func TestCoverageTaskValidationMetadataExposesTargetHitSupportWhenCoverageRequested(t *testing.T) {
+	generated := &types.GenerateTestsOutput{TestFile: "src/service.test.ts"}
+	result := &types.TestResult{Status: "pass"}
+	task := &types.CoverageTestTask{
+		File:      "src/service.ts",
+		Target:    "service",
+		LineRange: "10-10",
+	}
+
+	supported := coverageTaskValidationMetadata(" vitest ", true, generated, result, task)
+	if supported["coverage_target_hit_supported"] != true {
+		t.Fatalf("expected supported coverage target-hit metadata, got %+v", supported)
+	}
+	frameworks, ok := supported["coverage_target_hit_supported_frameworks"].([]string)
+	if !ok || strings.Join(frameworks, ",") != strings.Join(coverageTaskTargetLineHitFrameworks(), ",") {
+		t.Fatalf("unexpected supported frameworks metadata: %#v", supported["coverage_target_hit_supported_frameworks"])
+	}
+
+	unsupported := coverageTaskValidationMetadata("playwright", true, generated, result, task)
+	if unsupported["coverage_target_hit_supported"] != false {
+		t.Fatalf("expected unsupported coverage target-hit metadata, got %+v", unsupported)
+	}
+
+	notRequested := coverageTaskValidationMetadata("vitest", false, generated, result, task)
+	if _, ok := notRequested["coverage_target_hit_supported"]; ok {
+		t.Fatalf("did not expect target-hit support metadata when coverage was not requested: %+v", notRequested)
+	}
+}
+
 func goCoverageHitTask(source string, testFile string) types.CoverageTestTask {
 	return types.CoverageTestTask{
 		ID:              "go-test-1",
