@@ -58,6 +58,7 @@ function decide(summary) {
     client_dir: typeof summary.client_dir === 'string' ? summary.client_dir : '',
     fixture_dir: typeof summary.fixture_dir === 'string' ? summary.fixture_dir : '',
     result_json: typeof summary.result_json === 'string' ? summary.result_json : '',
+    result_schema: typeof summary.result_schema === 'string' ? summary.result_schema : '',
     fixture_count: Number.isInteger(summary.fixture_count) ? summary.fixture_count : 0,
     decisions: Array.isArray(summary.decisions) ? summary.decisions : [],
     validator_exit_code: Number.isInteger(summary.validator_exit_code) ? summary.validator_exit_code : -1,
@@ -118,6 +119,7 @@ try {
       client_dir: '',
       fixture_dir: '',
       result_json: '',
+      result_schema: '',
       fixture_count: 0,
       decisions: [],
       validator_exit_code: -1,
@@ -135,6 +137,9 @@ if (jsonMode) {
   console.log(`decisions=${response.evidence.decisions.join(',')}`);
   console.log(`validator_exit_code=${response.evidence.validator_exit_code}`);
   console.log(`result_json=${response.evidence.result_json}`);
+  if (response.evidence.result_schema) {
+    console.log(`result_schema=${response.evidence.result_schema}`);
+  }
   if (response.failures.length > 0) {
     console.log(`failures=${response.failures.join('; ')}`);
   }

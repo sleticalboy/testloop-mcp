@@ -52,6 +52,7 @@ assert_contains "$out" "agent_decision_client_response_status=passed"
 assert_contains "$out" "agent_next_step=ready"
 assert_contains "$out" "fixture_count=8"
 assert_contains "$out" "validator_exit_code=0"
+assert_contains "$out" "result_schema="
 
 json_out="${tmp_dir}/response.json"
 node "$script" --json "$summary_json" > "$json_out"
@@ -66,6 +67,7 @@ assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
 assert payload["evidence"]["fixture_count"] == 8
 assert payload["evidence"]["validator_exit_code"] == 0
+assert payload["evidence"]["result_schema"].endswith("agent-decision-fixtures-result.schema.json")
 assert payload["failures"] == []
 PY
 

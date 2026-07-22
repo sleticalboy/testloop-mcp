@@ -79,14 +79,17 @@ set -e
 
 node - "$result_json" "$client_dir" "$fixture_dir" "$output_format" "$npm_status" <<'JS'
 const fs = require('node:fs');
+const path = require('node:path');
 const [resultPath, clientDir, fixtureDir, outputFormat, npmStatusRaw] = process.argv.slice(2);
 const npmStatus = Number(npmStatusRaw);
 const payload = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+const resultSchemaPath = path.join(fixtureDir, 'docs/fixtures/agent-decision-fixtures-result.schema.json');
 const summary = {
   status: payload.status,
   client_dir: clientDir,
   fixture_dir: fixtureDir,
   result_json: resultPath,
+  result_schema: resultSchemaPath,
   fixture_count: payload.fixture_count,
   decisions: payload.decisions,
   failures: payload.failures || [],
@@ -99,6 +102,7 @@ if (outputFormat === 'json') {
   console.log(`agent_decision_client_dir=${summary.client_dir}`);
   console.log(`agent_decision_fixture_dir=${summary.fixture_dir}`);
   console.log(`agent_decision_result_json=${summary.result_json}`);
+  console.log(`agent_decision_result_schema=${summary.result_schema}`);
   console.log(`agent_decision_fixture_count=${summary.fixture_count}`);
   console.log(`agent_decision_decisions=${summary.decisions.join(',')}`);
 }

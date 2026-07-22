@@ -100,6 +100,7 @@ assert_contains "$default_second_out" "agent_decision_fixture_count=8"
 client_dir="${tmp_dir}/client"
 exported_fixture_dir="${client_dir}/testloop-agent-decision-fixtures"
 result_json="${client_dir}/agent-decision-fixtures-result.json"
+result_schema="${exported_fixture_dir}/docs/fixtures/agent-decision-fixtures-result.schema.json"
 success_out="${tmp_dir}/success.out"
 run_expect_code 0 "$success_out" env \
   TESTLOOP_AGENT_DECISION_CLIENT_DIR="$client_dir" \
@@ -109,12 +110,14 @@ assert_contains "$success_out" "agent_decision_client_status=passed"
 assert_contains "$success_out" "agent_decision_client_dir=$client_dir"
 assert_contains "$success_out" "agent_decision_fixture_dir=$exported_fixture_dir"
 assert_contains "$success_out" "agent_decision_result_json=$result_json"
+assert_contains "$success_out" "agent_decision_result_schema=$result_schema"
 assert_contains "$success_out" "agent_decision_fixture_count=8"
 assert_contains "$success_out" "agent_decision_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input"
 assert_exists "$exported_fixture_dir/package.json"
 assert_exists "$exported_fixture_dir/scripts/validate-agent-decision-fixtures.mjs"
 assert_exists "$exported_fixture_dir/docs/fixtures/agent-decision-fixtures.json"
 assert_exists "$result_json"
+assert_exists "$result_schema"
 
 python3 - "$result_json" <<'PY'
 from pathlib import Path
@@ -140,11 +143,12 @@ PY
 json_client_dir="${tmp_dir}/json-client"
 json_fixture_dir="${json_client_dir}/testloop-agent-decision-fixtures"
 json_result_json="${json_client_dir}/agent-decision-fixtures-result.json"
+json_result_schema="${json_fixture_dir}/docs/fixtures/agent-decision-fixtures-result.schema.json"
 json_summary="${tmp_dir}/summary.json"
 run_expect_code 0 "$json_summary" env \
   TESTLOOP_AGENT_DECISION_CLIENT_DIR="$json_client_dir" \
   bash scripts/showcase-agent-decision-client-ci.sh --json
-python3 - "$json_summary" "$json_client_dir" "$json_fixture_dir" "$json_result_json" <<'PY'
+python3 - "$json_summary" "$json_client_dir" "$json_fixture_dir" "$json_result_json" "$json_result_schema" <<'PY'
 from pathlib import Path
 import json
 import sys
@@ -154,6 +158,7 @@ assert summary["status"] == "passed"
 assert summary["client_dir"] == sys.argv[2]
 assert summary["fixture_dir"] == sys.argv[3]
 assert summary["result_json"] == sys.argv[4]
+assert summary["result_schema"] == sys.argv[5]
 assert summary["fixture_count"] == 8
 assert summary["decisions"] == [
     "accept",
@@ -168,6 +173,7 @@ assert summary["decisions"] == [
 assert summary["failures"] == []
 assert summary["validator_exit_code"] == 0
 assert Path(summary["result_json"]).exists()
+assert Path(summary["result_schema"]).exists()
 PY
 
 echo "agent decision client CI showcase test passed"
