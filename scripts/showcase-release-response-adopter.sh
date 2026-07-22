@@ -14,6 +14,8 @@ Create a realistic external-client repository sample for release response adopti
 Environment:
   TESTLOOP_RELEASE_RESPONSE_ADOPTER_REPO_DIR       External client repo directory.
                                                    Default: a fresh temp directory.
+  TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR   Artifact directory.
+                                                   Default: <repo>/testloop-release-response-adopter-artifacts.
   TESTLOOP_RELEASE_RESPONSE_ADOPTER_SUMMARY_JSON   Existing release smoke summary JSON.
                                                    Default: checked-in passed fixture.
 
@@ -52,6 +54,7 @@ client_repo_dir="${TESTLOOP_RELEASE_RESPONSE_ADOPTER_REPO_DIR:-${tmp_dir}/extern
 summary_json="${TESTLOOP_RELEASE_RESPONSE_ADOPTER_SUMMARY_JSON:-${repo_root}/docs/fixtures/agent-decision-client-release-smoke-summary/passed.json}"
 install_summary_json="${tmp_dir}/install-summary.json"
 consumer_json="${tmp_dir}/consumer-response.json"
+artifact_dir_input="${TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR:-${client_repo_dir}/testloop-release-response-adopter-artifacts}"
 
 command -v node >/dev/null 2>&1 || fail "missing required command: node"
 command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
@@ -62,6 +65,10 @@ command -v npm >/dev/null 2>&1 || fail "missing required command: npm"
 
 mkdir -p "$client_repo_dir"
 client_repo_real="$(cd "$client_repo_dir" && pwd)"
+mkdir -p "$artifact_dir_input"
+artifact_dir_real="$(cd "$artifact_dir_input" && pwd)"
+adopter_summary_json="${artifact_dir_real}/testloop-release-response-adopter-summary.json"
+summary_consumer_json="${artifact_dir_real}/testloop-release-response-summary-consumer.json"
 
 cp "${repo_root}/examples/release-response-adopter/README.md" \
   "${client_repo_real}/README.md"
@@ -92,13 +99,15 @@ node "${client_repo_real}/scripts/read-testloop-release-response.mjs" \
   > "$consumer_json"
 
 node - \
-  "$output_format" \
   "$client_repo_real" \
+  "$artifact_dir_real" \
   "$install_summary_json" \
-  "$consumer_json" <<'JS'
+  "$consumer_json" \
+  "$adopter_summary_json" \
+  "$summary_consumer_json" <<'JS'
 const fs = require('node:fs');
 const path = require('node:path');
-const [outputFormat, repoDir, installSummaryPath, consumerPath] = process.argv.slice(2);
+const [repoDir, artifactDir, installSummaryPath, consumerPath, adopterSummaryPath, summaryConsumerPath] = process.argv.slice(2);
 const installSummary = JSON.parse(fs.readFileSync(installSummaryPath, 'utf8'));
 const consumer = JSON.parse(fs.readFileSync(consumerPath, 'utf8'));
 const failures = [];
@@ -129,16 +138,30 @@ if (consumer.should_accept !== true) {
   failures.push('consumer should_accept must be true');
 }
 
+const artifactClientDir = path.join(artifactDir, 'testloop-release-response-client');
+fs.mkdirSync(artifactClientDir, {recursive: true});
+const artifactInstallSummary = path.join(artifactDir, 'testloop-release-response-install-summary.json');
+const artifactConsumer = path.join(artifactDir, 'testloop-release-response-consumer.json');
+const artifactReleaseSummary = path.join(artifactClientDir, 'testloop-release-smoke-summary.json');
+const artifactAgentResponse = path.join(artifactClientDir, 'testloop-release-response.json');
+
+fs.copyFileSync(installSummaryPath, artifactInstallSummary);
+fs.copyFileSync(consumerPath, artifactConsumer);
+fs.copyFileSync(installSummary.release_summary_json, artifactReleaseSummary);
+fs.copyFileSync(installSummary.agent_response_json, artifactAgentResponse);
+
 const payload = {
   schema_version: 1,
   status: failures.length === 0 ? 'passed' : 'failed',
   repo_dir: repoDir,
+  artifact_dir: artifactDir,
   readme_path: path.join(repoDir, 'README.md'),
   workflow_path: installSummary.workflow_path || '',
   package_dir: installSummary.package_dir || '',
-  install_summary_json: installSummaryPath,
-  agent_response_json: installSummary.agent_response_json || '',
-  consumer_json: consumerPath,
+  install_summary_json: artifactInstallSummary,
+  agent_response_json: artifactAgentResponse,
+  consumer_json: artifactConsumer,
+  summary_consumer_json: summaryConsumerPath,
   release_ref: installSummary.release_ref || consumer.evidence?.release_ref || '',
   fixture_count: installSummary.fixture_count || consumer.evidence?.fixture_count || 0,
   agent_next_step: consumer.agent_next_step || '',
@@ -147,11 +170,24 @@ const payload = {
   failures,
 };
 
+fs.writeFileSync(adopterSummaryPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+JS
+
+node "${client_repo_real}/scripts/read-testloop-release-response-summary.mjs" \
+  --json \
+  "$adopter_summary_json" > "$summary_consumer_json"
+
+node - "$output_format" "$adopter_summary_json" <<'JS'
+const fs = require('node:fs');
+const [outputFormat, summaryPath] = process.argv.slice(2);
+const payload = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+
 if (outputFormat === 'json') {
   console.log(JSON.stringify(payload, null, 2));
 } else {
   console.log(`release_response_adopter_status=${payload.status}`);
   console.log(`release_response_adopter_repo_dir=${payload.repo_dir}`);
+  console.log(`release_response_adopter_artifact_dir=${payload.artifact_dir}`);
   console.log(`release_response_adopter_workflow_path=${payload.workflow_path}`);
   console.log(`release_response_adopter_package_dir=${payload.package_dir}`);
   console.log(`release_response_adopter_release_ref=${payload.release_ref}`);

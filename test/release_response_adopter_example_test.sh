@@ -137,12 +137,14 @@ assert payload["npm_exit_code"] == 0
 assert payload["failures"] == []
 for key in [
     "repo_dir",
+    "artifact_dir",
     "readme_path",
     "workflow_path",
     "package_dir",
     "install_summary_json",
     "agent_response_json",
     "consumer_json",
+    "summary_consumer_json",
 ]:
     assert Path(payload[key]).exists(), f"{key} does not exist: {payload[key]}"
 
@@ -153,6 +155,21 @@ assert "testloop-release-response-contract" in workflow
 consumer = json.loads(Path(payload["consumer_json"]).read_text(encoding="utf-8"))
 assert consumer["agent_next_step"] == "ready"
 assert consumer["should_accept"] is True
+
+summary_consumer = json.loads(Path(payload["summary_consumer_json"]).read_text(encoding="utf-8"))
+assert summary_consumer["agent_next_step"] == "ready"
+assert summary_consumer["should_accept"] is True
+
+artifact_dir = Path(payload["artifact_dir"])
+for rel in [
+    "testloop-release-response-adopter-summary.json",
+    "testloop-release-response-install-summary.json",
+    "testloop-release-response-client/testloop-release-smoke-summary.json",
+    "testloop-release-response-client/testloop-release-response.json",
+    "testloop-release-response-consumer.json",
+    "testloop-release-response-summary-consumer.json",
+]:
+    assert (artifact_dir / rel).exists(), f"missing artifact {rel}"
 PY
 
 assert_contains "${repo_dir}/README.md" "node scripts/read-testloop-release-response.mjs"

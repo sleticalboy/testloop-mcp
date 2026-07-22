@@ -9,7 +9,7 @@ scripts/showcase-release-response-adopter.sh --json
 ```
 
 该 showcase 会创建临时外部客户端仓库，安装 release response 客户端包、复制接入方消费 helper、运行 `npm test --silent`，并验证 helper 能从 `testloop-release-response.json` 读出稳定动作。
-它的 JSON summary 可用 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json` 校验，结构契约见 [release-response-adopter-summary.schema.json](./fixtures/release-response-adopter-summary.schema.json)，通过态样例见 [passed.json](./fixtures/release-response-adopter-summary/passed.json)。
+它会默认生成 `testloop-release-response-adopter-artifacts/`，其中包含 adopter summary、install summary、release smoke 输入、release response、consumer JSON 和 summary consumer JSON。输出目录可用 `TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR` 覆盖。JSON summary 可用 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json` 校验，结构契约见 [release-response-adopter-summary.schema.json](./fixtures/release-response-adopter-summary.schema.json)，通过态样例见 [passed.json](./fixtures/release-response-adopter-summary/passed.json)。
 
 ## 最小目录
 
@@ -173,6 +173,8 @@ TESTLOOP_AGENT_DECISION_RELEASE_INSTALLER_URL="file://${PWD}/scripts/install-age
 - `scripts/assert-release-response.mjs`
 
 这些文件足够 Agent 判断是 release installer 漂移、客户端 response 漂移，还是 fixture 合同漂移。
+
+如果使用 [Release response 接入方样板](../examples/release-response-adopter/README.md)，可以直接上传 `scripts/showcase-release-response-adopter.sh --json` 生成的 `testloop-release-response-adopter-artifacts/` 目录。该目录额外包含 `testloop-release-response-adopter-summary.json`、installer summary、两个 helper 的 JSON 输出和 release smoke 输入，更适合 Agent 离线排查完整接入链路。
 
 ## 回归入口
 

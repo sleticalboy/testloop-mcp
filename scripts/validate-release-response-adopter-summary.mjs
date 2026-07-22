@@ -42,12 +42,14 @@ const requiredFields = [
   'schema_version',
   'status',
   'repo_dir',
+  'artifact_dir',
   'readme_path',
   'workflow_path',
   'package_dir',
   'install_summary_json',
   'agent_response_json',
   'consumer_json',
+  'summary_consumer_json',
   'release_ref',
   'fixture_count',
   'agent_next_step',
@@ -127,12 +129,14 @@ if (summary.status !== 'passed') {
 }
 for (const field of [
   'repo_dir',
+  'artifact_dir',
   'readme_path',
   'workflow_path',
   'package_dir',
   'install_summary_json',
   'agent_response_json',
   'consumer_json',
+  'summary_consumer_json',
   'release_ref',
 ]) {
   requireNonEmptyString(summary[field], `${summaryPath}: ${field}`);

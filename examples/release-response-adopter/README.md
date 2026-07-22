@@ -47,6 +47,7 @@ node scripts/validate-release-response-adopter-summary.mjs --json \
 ```
 
 该命令应返回非 0；JSON 输出里的 `agent_next_step` 和 `failures[]` 可直接交给 Agent 分流。
+`scripts/showcase-release-response-adopter.sh --json` 默认还会在接入方仓库下生成 `testloop-release-response-adopter-artifacts/`，其中包含总 summary、installer summary、release response、两个 helper 的 JSON 输出和 release smoke 输入。需要指定输出目录时设置 `TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR=/absolute/path/to/artifacts`。
 
 然后复制接入方消费 helper：
 
@@ -123,7 +124,7 @@ testloop_release_response_summary_should_accept=true
 
 ## CI artifact 清单
 
-外部仓库建议上传一个名为 `testloop-release-response-adopter-artifacts` 的 artifact，至少包含：
+`scripts/showcase-release-response-adopter.sh --json` 会默认生成一个名为 `testloop-release-response-adopter-artifacts` 的目录。外部仓库可以直接把该目录作为同名 CI artifact 上传，至少包含：
 
 | 文件 | 作用 |
 | --- | --- |
@@ -134,7 +135,7 @@ testloop_release_response_summary_should_accept=true
 | `testloop-release-response-consumer.json` | `read-testloop-release-response.mjs --json` 输出，用来排查接入方消费 helper。 |
 | `testloop-release-response-summary-consumer.json` | `read-testloop-release-response-summary.mjs --json` 输出，用来排查 summary helper。 |
 
-如果只能上传一份文件，优先上传 `testloop-release-response-adopter-summary.json`；它包含 `install_summary_json`、`agent_response_json` 和 `consumer_json` 路径，可让 Agent 继续定位缺失证据。
+如果只能上传一份文件，优先上传 `testloop-release-response-adopter-summary.json`；它包含 `install_summary_json`、`agent_response_json`、`consumer_json` 和 `summary_consumer_json` 路径，可让 Agent 继续定位缺失证据。
 
 ## Agent 契约
 

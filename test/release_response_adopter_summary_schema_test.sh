@@ -64,12 +64,14 @@ for name, expected in fixtures.items():
 
     for key in [
         "repo_dir",
+        "artifact_dir",
         "readme_path",
         "workflow_path",
         "package_dir",
         "install_summary_json",
         "agent_response_json",
         "consumer_json",
+        "summary_consumer_json",
     ]:
         if not isinstance(fixture_payload.get(key), str) or not fixture_payload[key]:
             failures.append(f"{fixture}: {key} must be a non-empty string")
