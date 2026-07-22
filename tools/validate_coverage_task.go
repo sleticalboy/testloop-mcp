@@ -161,7 +161,7 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
 	framework = strings.ToLower(strings.TrimSpace(framework))
-	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha") || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha" && framework != "cargo-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
@@ -180,6 +180,13 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 	}
 	if framework == "jest" || framework == "vitest" || framework == "mocha" {
 		report, reportPath, ok := istanbulCoverageReportForValidation(framework, generated.TestFile, task.File)
+		if !ok {
+			return false, "", nil, nil, false
+		}
+		return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+	}
+	if framework == "cargo-test" {
+		report, reportPath, ok := rustCoverageReportForValidation(generated.TestFile, task.File)
 		if !ok {
 			return false, "", nil, nil, false
 		}
@@ -287,6 +294,31 @@ func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, 
 			continue
 		}
 		report, err := coverage.ParsePytestCoverage(reportPath)
+		if err != nil {
+			continue
+		}
+		return report, reportPath, true
+	}
+	return nil, "", false
+}
+
+func rustCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		root := findProjectRoot(path, "Cargo.toml")
+		reportPath := strings.TrimSpace(os.Getenv("TESTLOOP_VALIDATE_RUST_COVERAGE_FILE"))
+		if reportPath == "" {
+			reportPath = filepath.Join("target", "tarpaulin", "lcov.info")
+		}
+		if !filepath.IsAbs(reportPath) {
+			reportPath = filepath.Join(root, reportPath)
+		}
+		if !fileExists(reportPath) {
+			continue
+		}
+		report, err := coverage.ParseRustTarpaulinCoverage(reportPath)
 		if err != nil {
 			continue
 		}

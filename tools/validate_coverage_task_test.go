@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -363,6 +364,143 @@ func TestHandleValidateCoverageTaskVitestCoverageMissNeedsBetterInput(t *testing
 	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/coverage/coverage-final.json") {
 		t.Fatalf("expected coverage-final.json report metadata, got %+v", out.Metadata)
 	}
+}
+
+func TestHandleValidateCoverageTaskRustCoverageHit(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"calc\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"), 0o644); err != nil {
+		t.Fatalf("write Cargo.toml: %v", err)
+	}
+	source := filepath.Join(dir, "src", "lib.rs")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := strings.Join([]string{
+		"pub fn add(a: i32, b: i32) -> i32 {",
+		"    if a == 0 {",
+		"        return b;",
+		"    }",
+		"    a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := rustCoverageHitTask(source, filepath.Join(dir, "src", "lib.test.rs"))
+	installFakeCargoSuccessWithLCOV(t, rustCargoPassOutput(), rustLCOV("src/lib.rs", map[int]int{1: 1, 2: 1, 3: 1, 4: 1, 5: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "cargo-test",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != true {
+		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
+	}
+}
+
+func TestHandleValidateCoverageTaskRustCoverageMissNeedsBetterInput(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"calc\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"), 0o644); err != nil {
+		t.Fatalf("write Cargo.toml: %v", err)
+	}
+	source := filepath.Join(dir, "src", "lib.rs")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := strings.Join([]string{
+		"pub fn add(a: i32, b: i32) -> i32 {",
+		"    if a == 0 {",
+		"        return b;",
+		"    }",
+		"    a + b",
+		"}",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := rustCoverageHitTask(source, filepath.Join(dir, "src", "lib.test.rs"))
+	installFakeCargoSuccessWithLCOV(t, rustCargoPassOutput(), rustLCOV("src/lib.rs", map[int]int{1: 1, 2: 0, 3: 0, 4: 1, 5: 1}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "cargo-test",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/target/tarpaulin/lcov.info") {
+		t.Fatalf("expected lcov report metadata, got %+v", out.Metadata)
+	}
+}
+
+func rustCoverageHitTask(source string, testFile string) types.CoverageTestTask {
+	return types.CoverageTestTask{
+		ID:              "cargo-test-1",
+		Framework:       "cargo-test",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-3",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{2, 3},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 add 补充测试，覆盖未执行行段 2-3",
+		Command:         "cargo test",
+		TestFile:        testFile,
+		TestName:        "covers add coverage gap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+}
+
+func rustCargoPassOutput() string {
+	return strings.Join([]string{
+		"running 1 test",
+		"test tests::covers_add_coverage_gap ... ok",
+		"",
+		"test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+	}, "\n")
+}
+
+func rustLCOV(path string, hitByLine map[int]int) string {
+	var lines []string
+	lines = append(lines, "TN:", "SF:"+path)
+	for line, hit := range hitByLine {
+		lines = append(lines, fmt.Sprintf("DA:%d,%d", line, hit))
+	}
+	lines = append(lines, "end_of_record")
+	return strings.Join(lines, "\n")
 }
 
 func vitestCoverageHitTask(source string, testFile string) types.CoverageTestTask {
@@ -1998,6 +2136,27 @@ func installFakeNpxRecorderSuccessWithCoverage(t *testing.T, output string, cove
 	path := filepath.Join(fakeBin, "npx")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake npx: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
+}
+
+func installFakeCargoSuccessWithLCOV(t *testing.T, output string, lcov string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "cargo.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} >> '" + logPath + "'\n" +
+		"mkdir -p target/tarpaulin\n" +
+		"cat > target/tarpaulin/lcov.info <<'LCOV'\n" + lcov + "\nLCOV\n" +
+		"cat <<'CARGO_OUTPUT'\n" + output + "\nCARGO_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "cargo")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake cargo: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return logPath
