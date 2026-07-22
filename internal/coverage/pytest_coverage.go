@@ -54,8 +54,13 @@ type coveragePyJSON struct {
 
 // ParsePytestCoverage 解析 coverage.py 生成的 JSON 覆盖率数据
 func ParsePytestCoverage(profileData string) (*types.CoverageReport, error) {
+	content, err := coverageInputContent(profileData)
+	if err != nil {
+		return nil, err
+	}
+
 	var cov coveragePyJSON
-	if err := json.Unmarshal([]byte(profileData), &cov); err != nil {
+	if err := json.Unmarshal([]byte(content), &cov); err != nil {
 		return nil, fmt.Errorf("pytest 覆盖率数据不是有效的 JSON: %w", err)
 	}
 

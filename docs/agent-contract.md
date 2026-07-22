@@ -86,7 +86,7 @@ Agent 决策应以 `status/action` 为准：
 - `run_error`：先修测试命令、依赖或项目环境。
 - `manual_review_*`：不要继续自动修同一个生成测试，应交给人工复核、公共入口测试或环境设计；该 action 可出现在 `passed` 或 `failed` 状态。
 
-当请求带 `coverage=true` 时，`validate_coverage_task` 会尽量校验 `coverage_task.line_range` 是否真正被生成测试命中。目前已覆盖 Java/JUnit 的 JaCoCo XML 和 `node-test` 的 TAP coverage raw output。若测试命令通过但目标行仍在未覆盖列表中，结果会降级为 `failed/needs_better_input`，并在 `metadata` 中返回 `coverage_target_hit=false`、`coverage_missed_lines` 和 `coverage_miss_reason`。
+当请求带 `coverage=true` 时，`validate_coverage_task` 会尽量校验 `coverage_task.line_range` 是否真正被生成测试命中。目前已覆盖 Java/JUnit 的 JaCoCo XML、`node-test` 的 TAP coverage raw output 和 pytest 项目根目录的 `coverage.json`。若测试命令通过但目标行仍在未覆盖列表中，结果会降级为 `failed/needs_better_input`，并在 `metadata` 中返回 `coverage_target_hit=false`、`coverage_missed_lines` 和 `coverage_miss_reason`。
 
 更完整的 action 决策建议见 [Agent Action 决策表](./agent-action-guide.md)，典型返回可对照 [validate_coverage_task 结构化返回样例](./validate-coverage-task-samples.md)，客户端回归建议见 [客户端集成说明](./client-integration.md) 和 [MCP 客户端契约测试说明](./mcp-client-contract-tests.md)。
 

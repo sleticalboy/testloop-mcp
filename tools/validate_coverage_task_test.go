@@ -232,6 +232,143 @@ func TestHandleValidateCoverageTaskNodeTestCoverageMissNeedsBetterInput(t *testi
 	}
 }
 
+func TestHandleValidateCoverageTaskPytestCoverageHit(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.py")
+	src := strings.Join([]string{
+		"def add(a, b):",
+		"    if a == 0:",
+		"        return b",
+		"    return a + b",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := pytestCoverageHitTask(source, filepath.Join(dir, "test_calc.py"))
+	installFakePython3RecorderSuccessWithCoverage(t, pytestPassOutput(), pytestCoverageJSON("calc.py", []int{1, 2, 3, 4}, nil))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "pytest",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != true {
+		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
+	}
+}
+
+func TestHandleValidateCoverageTaskPytestCoverageMissNeedsBetterInput(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "calc.py")
+	src := strings.Join([]string{
+		"def add(a, b):",
+		"    if a == 0:",
+		"        return b",
+		"    return a + b",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := pytestCoverageHitTask(source, filepath.Join(dir, "test_calc.py"))
+	installFakePython3RecorderSuccessWithCoverage(t, pytestPassOutput(), pytestCoverageJSON("calc.py", []int{1, 4}, []int{2, 3}))
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		Framework:    "pytest",
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	if reportPath, ok := out.Metadata["coverage_report"].(string); !ok || !strings.HasSuffix(filepath.ToSlash(reportPath), "/coverage.json") {
+		t.Fatalf("expected coverage.json report metadata, got %+v", out.Metadata)
+	}
+}
+
+func pytestCoverageHitTask(source string, testFile string) types.CoverageTestTask {
+	return types.CoverageTestTask{
+		ID:              "pytest-1",
+		Framework:       "pytest",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-3",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a == 0"},
+		UncoveredLines:  []int{2, 3},
+		SuggestedInputs: []string{"构造满足条件 `a == 0` 的输入"},
+		Goal:            "为 add 补充测试，覆盖未执行行段 2-3",
+		Command:         "python3 -m pytest",
+		TestFile:        testFile,
+		TestName:        "test_add_covers_gap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+}
+
+func pytestPassOutput() string {
+	return "test_calc.py::test_add_covers_gap PASSED\n============================== 1 passed in 0.01s =============================="
+}
+
+func pytestCoverageJSON(path string, executed []int, missing []int) string {
+	covered := len(executed)
+	total := covered + len(missing)
+	percent := 100.0
+	if total > 0 {
+		percent = float64(covered) * 100 / float64(total)
+	}
+	payload := map[string]any{
+		"totals": map[string]any{
+			"covered_lines":   covered,
+			"num_statements":  total,
+			"percent_covered": percent,
+			"missing_lines":   len(missing),
+		},
+		"files": map[string]any{
+			path: map[string]any{
+				"executed_lines": executed,
+				"missing_lines":  missing,
+				"summary": map[string]any{
+					"covered_lines":   covered,
+					"num_statements":  total,
+					"percent_covered": percent,
+					"missing_lines":   len(missing),
+				},
+			},
+		},
+	}
+	data, _ := json.Marshal(payload)
+	return string(data)
+}
+
 func nodeTestCoverageMissOutput() string {
 	return strings.Join([]string{
 		"TAP version 13",
@@ -1694,6 +1831,26 @@ func installFakeNpxFailure(t *testing.T, output string) {
 		t.Fatalf("write fake npx: %v", err)
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func installFakePython3RecorderSuccessWithCoverage(t *testing.T, output string, coverageJSON string) string {
+	t.Helper()
+	fakeBin := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "python3.log")
+	script := "#!/usr/bin/env sh\n" +
+		"{\n" +
+		"  printf 'PWD=%s\\n' \"$PWD\"\n" +
+		"  printf 'ARGS=%s\\n' \"$*\"\n" +
+		"} > '" + logPath + "'\n" +
+		"cat > coverage.json <<'COVERAGE_JSON'\n" + coverageJSON + "\nCOVERAGE_JSON\n" +
+		"cat <<'PYTEST_OUTPUT'\n" + output + "\nPYTEST_OUTPUT\n" +
+		"exit 0\n"
+	path := filepath.Join(fakeBin, "python3")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake python3: %v", err)
+	}
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return logPath
 }
 
 func installFakeMvnSuccessWithJaCoCo(t *testing.T, report string) {

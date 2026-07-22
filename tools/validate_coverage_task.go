@@ -161,7 +161,7 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
 	framework = strings.ToLower(strings.TrimSpace(framework))
-	if (framework != "junit" && framework != "node-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	if (framework != "junit" && framework != "node-test" && framework != "pytest") || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
@@ -171,10 +171,21 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 	if framework == "node-test" {
 		return nodeCoverageTaskTargetLineHit(result, task, start, end)
 	}
+	if framework == "pytest" {
+		report, reportPath, ok := pytestCoverageReportForValidation(generated.TestFile, task.File)
+		if !ok {
+			return false, "", nil, nil, false
+		}
+		return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+	}
 	report, reportPath, ok := javaCoverageReportForValidation(generated.TestFile, task.File)
 	if !ok {
 		return false, "", nil, nil, false
 	}
+	return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+}
+
+func coverageReportTaskTargetLineHit(report *types.CoverageReport, reportPath string, task *types.CoverageTestTask, start int, end int) (bool, string, []int, []int, bool) {
 	file := coverageTaskFindCoverageFile(report, task.File)
 	if file == nil {
 		return false, reportPath, nil, coverageTaskLineNumbers(start, end), true
@@ -250,6 +261,25 @@ func javaCoverageReportForValidation(paths ...string) (*types.CoverageReport, st
 			continue
 		}
 		report, err := coverage.ParseJaCoCoCoverage(reportPath)
+		if err != nil {
+			continue
+		}
+		return report, reportPath, true
+	}
+	return nil, "", false
+}
+
+func pytestCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		root := findPytestProjectRoot(path)
+		reportPath := filepath.Join(root, "coverage.json")
+		if !fileExists(reportPath) {
+			continue
+		}
+		report, err := coverage.ParsePytestCoverage(reportPath)
 		if err != nil {
 			continue
 		}

@@ -288,6 +288,8 @@ JS/TS payload 的支持范围、保守回退和不支持边界见 [docs/js-ts-pa
 
 `status=failed` 只表示生成后的验证没有通过，不等同于“一定要自动修测试”。Agent 仍应先看 `action`：`failed/apply_fix_suggestions` 才进入 `run_result.fix_suggestions[].repair_task` 修复闭环；`failed/manual_review_external_service` 这类 `manual_review_*` 结果表示失败来自外部服务、数据库、协议或环境依赖，应记录原因并转 fake client、依赖注入或集成环境验证；`failed/needs_better_input` 表示目标覆盖行没命中，需要换输入或公共入口。`generation_error` 表示测试草稿未能生成，优先查看 `provider_error.action` 或 `error`；`run_error` 表示测试命令执行入口本身异常。
 
+`coverage=true` 时，`validate_coverage_task` 会尽量校验 `coverage_task.line_range` 是否真正被生成测试命中。当前支持 Java/JUnit 的 JaCoCo XML、`node-test` 的 TAP coverage raw output，以及 pytest 项目根目录的 `coverage.json`。测试命令通过但目标行仍未覆盖时会返回 `failed/needs_better_input`，并在 `metadata` 中提供 `coverage_target_hit`、`coverage_hit_lines`、`coverage_missed_lines` 和 `coverage_miss_reason`。
+
 完整 action 执行建议见 [Agent Action 决策表](./docs/agent-action-guide.md)，结构化返回样例见 [validate_coverage_task 结构化返回样例](./docs/validate-coverage-task-samples.md)，真实 handler fixture、CI artifact fixture 和 [agent decision fixture manifest](./docs/fixtures/agent-decision-fixtures.json) 见 [真实结构化 fixture](./docs/fixtures.md)，decision manifest schema 见 [agent-decision-fixtures.schema.json](./docs/fixtures/agent-decision-fixtures.schema.json)，artifact manifest schema 见 [agent-response-artifact-manifest.schema.json](./docs/fixtures/agent-response-artifact-manifest.schema.json)，summary schema 见 [verification-summary.schema.json](./docs/fixtures/verification-summary.schema.json)，客户端接入建议见 [客户端集成说明](./docs/client-integration.md)，客户端 CI 模板见 [MCP 客户端契约测试说明](./docs/mcp-client-contract-tests.md) 和 [Agent 决策客户端 CI 模板](./docs/agent-decision-client-ci-template.md)，release response 独立客户端接入见 [Agent 决策 release response 客户端接入](./docs/agent-decision-release-response-client.md) 和 [Agent 决策 release response 接入 Checklist](./docs/agent-decision-release-response-checklist.md)。可运行 `go run ./examples/agent-decision-demo` 查看最小客户端决策映射，也可以运行 `go run ./examples/agent-response-manifest-demo docs/fixtures/agent-response-artifact-manifest.json` 验证 CI artifact manifest 消费路径。
 
 `agent-response-manifest-demo` 的正常输出会包含：
@@ -541,7 +543,7 @@ TESTLOOP_VALIDATE_PY_COVERAGE_COMMAND='python3 -m pytest --cov=src --cov-report=
 scripts/validate-py-coverage-top-tasks.sh /path/to/python/project 20 /tmp/testloop-py-top20.jsonl
 ```
 
-Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
+Python 脚本会读取 pytest-cov 生成的 `coverage.json`，并在隔离副本中逐个验证 coverage task。验证单个 pytest coverage task 时，`validate_coverage_task coverage=true` 会读取项目根目录的 `coverage.json` 校验目标行命中，避免生成测试通过但没有覆盖缺口的弱 ready。常用变量包括 `TESTLOOP_VALIDATE_PY_TEST_ARGS`、`TESTLOOP_VALIDATE_PY_FILE_FILTER`、`TESTLOOP_VALIDATE_PY_STAGE_TIMEOUT_SECONDS` 和 `TESTLOOP_VALIDATE_PY_TASK_TIMEOUT_SECONDS`。
 
 Rust/Cargo 项目可使用：
 

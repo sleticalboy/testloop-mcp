@@ -11,7 +11,7 @@
 - `action=needs_better_input`：测试可能通过了，但目标覆盖行没命中；需要更强输入或更合适的公共入口。
 - `generation_error` / `run_error`：先修生成器/provider 或测试运行环境，不要把它当业务测试失败处理。
 
-覆盖率命中校验当前支持 Java/JUnit 的 JaCoCo XML 和 `node-test` 的 TAP coverage raw output。客户端看到 `metadata.coverage_target_hit=false` 时，应优先把它当作输入/入口不足，而不是测试运行器失败。
+覆盖率命中校验当前支持 Java/JUnit 的 JaCoCo XML、`node-test` 的 TAP coverage raw output 和 pytest 项目根目录的 `coverage.json`。客户端看到 `metadata.coverage_target_hit=false` 时，应优先把它当作输入/入口不足，而不是测试运行器失败。
 
 ## 决策表
 
