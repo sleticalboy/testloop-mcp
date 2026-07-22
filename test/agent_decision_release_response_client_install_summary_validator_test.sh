@@ -22,7 +22,7 @@ validator="scripts/validate-agent-decision-release-response-client-install-summa
 
 out="${tmp_dir}/validator.out"
 node "$validator" > "$out"
-assert_contains "$out" "agent_decision_release_response_client_install_summary_status=passed release_ref=v0.5.20"
+assert_contains "$out" "agent_decision_release_response_client_install_summary_status=passed release_ref=v0.5.21"
 assert_contains "$out" "agent_decision_release_response_client_install_summary_fixture_count=8"
 assert_contains "$out" "agent_decision_release_response_client_install_summary_agent_next_step=ready"
 
@@ -35,7 +35,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["decisions"] == [

@@ -57,7 +57,7 @@ def validate_payload(payload, label):
     expected_exact = {
         "schema_version": 1,
         "status": "passed",
-        "helper_ref": "v0.5.20",
+        "helper_ref": "v0.5.21",
         "fixture_count": 8,
         "contract_exit_code": 0,
         "validator_exit_code": 0,

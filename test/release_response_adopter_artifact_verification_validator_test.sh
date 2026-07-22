@@ -22,7 +22,7 @@ validator="scripts/validate-release-response-adopter-artifact-verification.mjs"
 
 out="${tmp_dir}/validator.out"
 node "$validator" > "$out"
-assert_contains "$out" "release_response_adopter_artifact_verification_status=passed release_ref=v0.5.20"
+assert_contains "$out" "release_response_adopter_artifact_verification_status=passed release_ref=v0.5.21"
 assert_contains "$out" "release_response_adopter_artifact_status=passed"
 assert_contains "$out" "release_response_adopter_artifact_verification_fixture_count=8"
 assert_contains "$out" "release_response_adopter_artifact_verification_agent_next_step=ready"
@@ -38,7 +38,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["should_accept"] is True
@@ -53,7 +53,7 @@ TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR="$runtime_artifact" \
   scripts/showcase-release-response-adopter.sh --json > "${tmp_dir}/showcase.json"
 node scripts/verify-release-response-adopter-artifact.mjs --json "$runtime_artifact" > "$runtime_json"
 node "$validator" "$runtime_json" > "${tmp_dir}/runtime-validator.out"
-assert_contains "${tmp_dir}/runtime-validator.out" "release_response_adopter_artifact_verification_status=passed release_ref=v0.5.20"
+assert_contains "${tmp_dir}/runtime-validator.out" "release_response_adopter_artifact_verification_status=passed release_ref=v0.5.21"
 
 failed_fixture="docs/fixtures/release-response-adopter-artifact-verification/missing-summary-consumer.json"
 if node "$validator" "$failed_fixture" > "${tmp_dir}/failed.out" 2>&1; then
@@ -77,7 +77,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "failed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "inspect-release-response-adopter-artifact"
 assert payload["should_accept"] is False
@@ -116,7 +116,7 @@ assert payload["release_ref"] == "v0.0.0"
 assert payload["fixture_count"] == 7
 assert payload["required_files"] == 5
 assert "boom" in payload["failures"]
-assert any("release_ref must be v0.5.20" in item for item in payload["failures"])
+assert any("release_ref must be v0.5.21" in item for item in payload["failures"])
 assert any("files length must be 6" in item for item in payload["failures"])
 PY
 

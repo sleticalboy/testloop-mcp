@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.21 - 2026-07-22
+
 ### Added
 
 - 新增 `examples/release-response-adopter/`、`scripts/showcase-release-response-adopter.sh --json` 和 `read-testloop-release-response.mjs`，提供外部客户端可照抄的 release response 接入样板、临时仓库验证入口和 Agent JSON 消费 helper。
@@ -17,6 +19,10 @@
 - 新增 `examples/release-response-adopter-artifact-demo`，演示客户端如何把 artifact verification JSON 映射为 `accept` 或 `inspect-artifact`。
 - 新增 `docs/plan-release-notes-v0.5.21.md` 和 `docs/plan-release-v0.5.21.md`，整理 v0.5.21 候选发布说明和发布检查清单。
 - release readiness 现在会运行 `scripts/showcase-release-response-adopter.sh --json` 并用 `scripts/validate-release-response-adopter-summary.mjs` 校验接入样板 summary。
+
+### Changed
+
+- MCP server implementation version 更新为 `0.5.21`。
 
 ## v0.5.20 - 2026-07-21
 

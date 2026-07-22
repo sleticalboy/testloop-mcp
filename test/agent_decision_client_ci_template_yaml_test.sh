@@ -59,7 +59,7 @@ if result.returncode != 0:
 required = [
     "name: testloop agent decision contract",
     "repository: sleticalboy/testloop-mcp",
-    "ref: v0.5.20",
+    "ref: v0.5.21",
     "path: .testloop-mcp",
     "actions/setup-node@v4",
     "TESTLOOP_AGENT_DECISION_CLIENT_DIR=/tmp/testloop-agent-decision-client",

@@ -76,7 +76,7 @@ node scripts/read-testloop-release-response.mjs \
 ```text
 testloop_release_response_status=passed
 testloop_release_response_next_step=ready
-testloop_release_response_release_ref=v0.5.20
+testloop_release_response_release_ref=v0.5.21
 testloop_release_response_fixture_count=8
 testloop_release_response_should_accept=true
 ```

@@ -78,8 +78,8 @@ if not failures:
     payload = json.loads(install_summary.read_text(encoding="utf-8"))
     if payload.get("status") != "written":
         failures.append("install summary status must be written")
-    if payload.get("release_ref") != "v0.5.20":
-        failures.append("install summary release_ref must be v0.5.20")
+    if payload.get("release_ref") != "v0.5.21":
+        failures.append("install summary release_ref must be v0.5.21")
     if payload.get("fixture_count") != 8:
         failures.append("install summary fixture_count must be 8")
     if payload.get("agent_next_step") != "ready":
@@ -122,7 +122,7 @@ if not failures:
         failures.append(f"{doc}: seventh bash block must be release response adopter showcase")
     if blocks[7].strip() != "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client":
         failures.append(f"{doc}: eighth bash block must export release response client")
-    if blocks[8].strip() != "scripts/verify-release-candidate.sh v0.5.20":
+    if blocks[8].strip() != "scripts/verify-release-candidate.sh v0.5.21":
         failures.append(f"{doc}: ninth bash block must be release readiness command")
 
 if failures:

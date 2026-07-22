@@ -4,11 +4,11 @@
   "agent_next_step": "inspect-agent-decision-fixtures",
   "summary_json": "docs/fixtures/agent-decision-client-release-smoke-summary/passed.json",
   "evidence": {
-    "release_ref": "v0.5.20",
-    "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.20/scripts/install-agent-decision-client-ci-template.sh",
+    "release_ref": "v0.5.21",
+    "installer_url": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.21/scripts/install-agent-decision-client-ci-template.sh",
     "helper_refs": {
-      "install": "v0.5.20",
-      "consumer": "v0.5.20"
+      "install": "v0.5.21",
+      "consumer": "v0.5.21"
     },
     "fixture_count": 7,
     "decisions": [

@@ -19,7 +19,7 @@ Options:
 
 Examples:
   scripts/install-agent-decision-client-ci-template.sh /path/to/client
-  scripts/install-agent-decision-client-ci-template.sh --version v0.5.20 /path/to/client
+  scripts/install-agent-decision-client-ci-template.sh --version v0.5.21 /path/to/client
 USAGE
 }
 
@@ -29,7 +29,7 @@ fail() {
 }
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-default_helper_ref="v0.5.20"
+default_helper_ref="v0.5.21"
 client_dir="."
 workflow_path=".github/workflows/testloop-agent-decision-contract.yml"
 helper_ref="${TESTLOOP_AGENT_DECISION_CI_VERSION:-}"

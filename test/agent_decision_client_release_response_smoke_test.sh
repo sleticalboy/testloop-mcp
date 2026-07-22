@@ -47,7 +47,7 @@ out="${tmp_dir}/response-smoke.out"
 TESTLOOP_AGENT_DECISION_RELEASE_RESPONSE_SUMMARY_JSON="$sample" \
   "$script" > "$out"
 assert_contains "$out" "agent_decision_client_release_response_smoke_status=passed"
-assert_contains "$out" "agent_decision_client_release_response_smoke_release_ref=v0.5.20"
+assert_contains "$out" "agent_decision_client_release_response_smoke_release_ref=v0.5.21"
 assert_contains "$out" "agent_decision_client_release_response_smoke_fixture_count=8"
 assert_contains "$out" "agent_decision_client_release_response_smoke_agent_next_step=ready"
 
@@ -73,7 +73,7 @@ expected_decisions = [
 
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["decisions"] == expected_decisions
 assert payload["agent_next_step"] == "ready"
@@ -95,7 +95,7 @@ assert (client_dir / "scripts/assert-release-response.mjs").exists()
 response = json.loads(Path(payload["agent_response_json"]).read_text(encoding="utf-8"))
 assert response["status"] == "passed"
 assert response["agent_next_step"] == "ready"
-assert response["evidence"]["release_ref"] == "v0.5.20"
+assert response["evidence"]["release_ref"] == "v0.5.21"
 PY
 
 runtime_json="${tmp_dir}/runtime-response-smoke.json"
@@ -108,7 +108,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["npm_exit_code"] == 0

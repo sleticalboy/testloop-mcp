@@ -137,8 +137,8 @@ for (const field of [
 ]) {
   requireNonEmptyString(verification[field], `${verificationPath}: ${field}`);
 }
-if (verification.release_ref !== 'v0.5.20') {
-  failures.push(`${verificationPath}: release_ref must be v0.5.20`);
+if (verification.release_ref !== 'v0.5.21') {
+  failures.push(`${verificationPath}: release_ref must be v0.5.21`);
 }
 if (verification.fixture_count !== 8) {
   failures.push(`${verificationPath}: fixture_count must be 8`);

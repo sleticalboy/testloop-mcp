@@ -3,7 +3,7 @@
   "status": "failed",
   "client_dir": "/tmp/testloop-agent-decision-consumer-smoke/external-client",
   "workflow_path": "/tmp/testloop-agent-decision-consumer-smoke/external-client/.github/workflows/testloop-agent-decision-contract.yml",
-  "helper_ref": "v0.5.20",
+  "helper_ref": "v0.5.21",
   "install_summary_json": "/tmp/testloop-agent-decision-consumer-smoke/install-summary.json",
   "install_summary_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/install-summary-validation.json",
   "client_summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",

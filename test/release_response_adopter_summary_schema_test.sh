@@ -16,7 +16,7 @@ schema_payload = json.loads(schema.read_text(encoding="utf-8"))
 fixtures = {
     "passed.json": {
         "status": "passed",
-        "release_ref": "v0.5.20",
+        "release_ref": "v0.5.21",
         "fixture_count": 8,
         "agent_next_step": "ready",
         "should_accept": True,
@@ -25,7 +25,7 @@ fixtures = {
     },
     "invalid-response.json": {
         "status": "failed",
-        "release_ref": "v0.5.20",
+        "release_ref": "v0.5.21",
         "fixture_count": 8,
         "agent_next_step": "inspect-release-smoke-summary",
         "should_accept": False,

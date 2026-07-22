@@ -6,7 +6,7 @@
   "package_dir": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client",
   "release_summary_json": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client/testloop-release-smoke-summary.json",
   "agent_response_json": "/tmp/testloop-release-response-client-install/external-client/testloop-release-response-client/testloop-release-response.json",
-  "release_ref": "v0.5.20",
+  "release_ref": "v0.5.21",
   "fixture_count": 8,
   "decisions": [
     "accept",

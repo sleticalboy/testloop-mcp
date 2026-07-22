@@ -57,15 +57,15 @@ def validate_payload(payload, label):
         failures.append(f"{label} schema_version must be 1")
     if payload.get("status") != "passed":
         failures.append(f"{label} status must be passed")
-    if payload.get("release_ref") != "v0.5.20":
-        failures.append(f"{label} release_ref must be v0.5.20")
+    if payload.get("release_ref") != "v0.5.21":
+        failures.append(f"{label} release_ref must be v0.5.21")
     installer_url = payload.get("installer_url")
     if label == "fixture sample":
-        if installer_url != "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.20/scripts/install-agent-decision-client-ci-template.sh":
-            failures.append(f"{label} installer_url must point at v0.5.20 raw installer")
+        if installer_url != "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/v0.5.21/scripts/install-agent-decision-client-ci-template.sh":
+            failures.append(f"{label} installer_url must point at v0.5.21 raw installer")
     elif not isinstance(installer_url, str) or not installer_url.startswith("file://"):
         failures.append(f"{label} installer_url must point at local file URL in regression test")
-    if payload.get("helper_refs") != {"install": "v0.5.20", "consumer": "v0.5.20"}:
+    if payload.get("helper_refs") != {"install": "v0.5.21", "consumer": "v0.5.21"}:
         failures.append(f"{label} helper_refs drifted")
     if payload.get("fixture_count") != 8:
         failures.append(f"{label} fixture_count must be 8")

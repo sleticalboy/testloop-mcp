@@ -82,7 +82,7 @@ import sys
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
-assert payload["evidence"]["release_ref"] == "v0.5.20"
+assert payload["evidence"]["release_ref"] == "v0.5.21"
 assert payload["failures"] == []
 PY
 

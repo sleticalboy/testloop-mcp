@@ -22,7 +22,7 @@ validator="scripts/validate-release-response-adopter-summary.mjs"
 
 out="${tmp_dir}/validator.out"
 node "$validator" > "$out"
-assert_contains "$out" "release_response_adopter_summary_status=passed release_ref=v0.5.20"
+assert_contains "$out" "release_response_adopter_summary_status=passed release_ref=v0.5.21"
 assert_contains "$out" "release_response_adopter_summary_fixture_count=8"
 assert_contains "$out" "release_response_adopter_summary_agent_next_step=ready"
 assert_contains "$out" "release_response_adopter_summary_should_accept=true"
@@ -36,7 +36,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["should_accept"] is True
@@ -49,7 +49,7 @@ TESTLOOP_RELEASE_RESPONSE_ADOPTER_REPO_DIR="${tmp_dir}/adopter-repo" \
 TESTLOOP_RELEASE_RESPONSE_ADOPTER_SUMMARY_JSON="docs/fixtures/agent-decision-client-release-smoke-summary/passed.json" \
   scripts/showcase-release-response-adopter.sh --json > "$showcase_json"
 node "$validator" "$showcase_json" > "${tmp_dir}/showcase-validator.out"
-assert_contains "${tmp_dir}/showcase-validator.out" "release_response_adopter_summary_status=passed release_ref=v0.5.20"
+assert_contains "${tmp_dir}/showcase-validator.out" "release_response_adopter_summary_status=passed release_ref=v0.5.21"
 
 bad_summary="${tmp_dir}/bad-summary.json"
 python3 - "$bad_summary" <<'PY'
@@ -73,7 +73,7 @@ if node "$validator" "$bad_summary" > "${tmp_dir}/bad.out" 2>&1; then
   exit 1
 fi
 assert_contains "${tmp_dir}/bad.out" "status must be passed"
-assert_contains "${tmp_dir}/bad.out" "release_ref must be v0.5.20"
+assert_contains "${tmp_dir}/bad.out" "release_ref must be v0.5.21"
 assert_contains "${tmp_dir}/bad.out" "fixture_count must be 8"
 assert_contains "${tmp_dir}/bad.out" "agent_next_step must be ready"
 assert_contains "${tmp_dir}/bad.out" "should_accept must be true"
@@ -101,7 +101,7 @@ import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "failed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "inspect-release-smoke-summary"
 assert payload["should_accept"] is False

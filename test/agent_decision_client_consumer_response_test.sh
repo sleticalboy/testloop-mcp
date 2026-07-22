@@ -46,7 +46,7 @@ out="${tmp_dir}/response.out"
 node "$script" > "$out"
 assert_contains "$out" "agent_decision_client_consumer_response_status=passed"
 assert_contains "$out" "agent_next_step=ready"
-assert_contains "$out" "helper_ref=v0.5.20"
+assert_contains "$out" "helper_ref=v0.5.21"
 assert_contains "$out" "fixture_count=8"
 assert_contains "$out" "decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input"
 
@@ -61,7 +61,7 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
-assert payload["evidence"]["helper_ref"] == "v0.5.20"
+assert payload["evidence"]["helper_ref"] == "v0.5.21"
 assert payload["evidence"]["fixture_count"] == 8
 assert payload["failures"] == []
 PY

@@ -62,7 +62,7 @@ consumer_out="${tmp_dir}/consumer.out"
 run_expect_code 0 "$consumer_out" node "$consumer" "$response"
 assert_contains "$consumer_out" "testloop_release_response_status=passed"
 assert_contains "$consumer_out" "testloop_release_response_next_step=ready"
-assert_contains "$consumer_out" "testloop_release_response_release_ref=v0.5.20"
+assert_contains "$consumer_out" "testloop_release_response_release_ref=v0.5.21"
 assert_contains "$consumer_out" "testloop_release_response_fixture_count=8"
 assert_contains "$consumer_out" "testloop_release_response_should_accept=true"
 
@@ -78,7 +78,7 @@ assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
 assert payload["should_accept"] is True
-assert payload["evidence"]["release_ref"] == "v0.5.20"
+assert payload["evidence"]["release_ref"] == "v0.5.21"
 assert payload["evidence"]["fixture_count"] == 8
 assert payload["failures"] == []
 PY
@@ -87,7 +87,7 @@ summary_consumer_out="${tmp_dir}/summary-consumer.out"
 run_expect_code 0 "$summary_consumer_out" node "$summary_consumer" "$adopter_summary"
 assert_contains "$summary_consumer_out" "testloop_release_response_summary_status=passed"
 assert_contains "$summary_consumer_out" "testloop_release_response_summary_next_step=ready"
-assert_contains "$summary_consumer_out" "testloop_release_response_summary_release_ref=v0.5.20"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_release_ref=v0.5.21"
 assert_contains "$summary_consumer_out" "testloop_release_response_summary_fixture_count=8"
 assert_contains "$summary_consumer_out" "testloop_release_response_summary_should_accept=true"
 
@@ -110,7 +110,7 @@ assert payload["schema_version"] == 1
 assert payload["status"] == "failed"
 assert payload["agent_next_step"] == "inspect-release-smoke-summary"
 assert payload["should_accept"] is False
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["failures"]
 PY
@@ -129,7 +129,7 @@ import sys
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["should_accept"] is True

@@ -38,7 +38,7 @@ node scripts/validate-agent-decision-release-response-client-install-summary.mjs
 ```json
 {
   "status": "written",
-  "release_ref": "v0.5.20",
+  "release_ref": "v0.5.21",
   "fixture_count": 8,
   "agent_next_step": "ready",
   "npm_exit_code": 0,
@@ -128,7 +128,7 @@ node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-rel
 如果要在发版前跑完整本地门禁：
 
 ```bash
-scripts/verify-release-candidate.sh v0.5.20
+scripts/verify-release-candidate.sh v0.5.21
 ```
 
 release readiness 会同时验证 release response 导出包和真实仓库安装 summary。

@@ -10,7 +10,7 @@
   "agent_response_json": "/tmp/testloop-release-response-adopter/external-client-repo/testloop-release-response-adopter-artifacts/testloop-release-response-client/testloop-release-response.json",
   "consumer_json": "/tmp/testloop-release-response-adopter/external-client-repo/testloop-release-response-adopter-artifacts/testloop-release-response-consumer.json",
   "summary_consumer_json": "/tmp/testloop-release-response-adopter/external-client-repo/testloop-release-response-adopter-artifacts/testloop-release-response-summary-consumer.json",
-  "release_ref": "v0.5.20",
+  "release_ref": "v0.5.21",
   "fixture_count": 8,
   "agent_next_step": "inspect-release-smoke-summary",
   "should_accept": false,

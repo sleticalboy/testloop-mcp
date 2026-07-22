@@ -6,7 +6,7 @@
 
 发布重点见 [v0.5.21 发布说明草案](./plan-release-notes-v0.5.21.md)。
 
-当前发布状态：候选发布说明和检查清单已创建；尚未更新 `main.go` implementation version，尚未收敛 `CHANGELOG.md` 到 `v0.5.21`，尚未打 tag，尚未创建 GitHub Release，尚未更新 Homebrew tap。
+当前发布状态：已进入正式版本准备。`main.go` implementation version 已更新为 `0.5.21`，`CHANGELOG.md` 已收敛到 `v0.5.21 - 2026-07-22` 并保留空 Unreleased；尚未打 `v0.5.21` tag，尚未创建 GitHub Release，尚未更新 Homebrew tap。
 
 ## 当前差异核对
 
@@ -52,24 +52,25 @@
 - [x] `61e4e19` 远端 CI run `29894128846` passed，覆盖 artifact 消费 demo CI 记录。
 - [x] `91c3498` 远端 CI run `29894309974` passed，覆盖 artifact 消费 demo 记录。
 - [x] `5b197ed` 远端 CI run `29894452504` passed，覆盖 artifact 消费 demo 记录再验证。
+- [x] `TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.21-release-prep-dist scripts/verify-release-candidate.sh v0.5.21` 输出 `release_candidate_status=passed`。
 
 ## 发布前门禁
 
-- [ ] 最新 main CI passed。
-- [ ] 本地 release readiness passed：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.21-release-prep-dist scripts/verify-release-candidate.sh v0.5.21`。
-- [ ] readiness 输出包含 release response adopter summary 校验。
-- [ ] readiness 输出包含 release response adopter artifact 自检。
-- [ ] readiness 输出包含 artifact verification validator。
-- [ ] readiness 输出包含候选二进制版本：`testloop-mcp 0.5.21`。
-- [ ] readiness 输出包含 darwin arm64 打包 dry-run 和 sha256 校验。
+- [ ] 正式版本准备后的最新 main CI passed。
+- [x] 正式版本准备后的本地 release readiness passed：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.21-release-prep-dist scripts/verify-release-candidate.sh v0.5.21`。
+- [x] readiness 输出包含 release response adopter summary 校验：`release_response_adopter_summary_status=passed release_ref=v0.5.21`。
+- [x] readiness 输出包含 release response adopter artifact 自检：`release_response_adopter_artifact_status=passed`。
+- [x] readiness 输出包含 artifact verification validator：`release_response_adopter_artifact_verification_status=passed release_ref=v0.5.21`。
+- [x] readiness 输出包含候选二进制版本：`testloop-mcp 0.5.21`。
+- [x] readiness 输出包含 darwin arm64 打包 dry-run 和 sha256 校验：`testloop-mcp_v0.5.21_darwin_arm64.tar.gz: OK`。
 
 ## 正式发布前待办
 
-- [ ] 更新 `main.go` MCP implementation version 到 `0.5.21`。
-- [ ] 将 `CHANGELOG.md` 的 Unreleased 内容收敛到 `v0.5.21 - 2026-07-22`，并保留新的空 Unreleased。
-- [ ] 同步 README、installation、quickstart 和必要版本引用到 `0.5.21` / `v0.5.21`。
-- [ ] 测试中的版本期望同步到 `0.5.21`。
-- [ ] 重新运行完整 release readiness。
+- [x] 更新 `main.go` MCP implementation version 到 `0.5.21`。
+- [x] 将 `CHANGELOG.md` 的 Unreleased 内容收敛到 `v0.5.21 - 2026-07-22`，并保留新的空 Unreleased。
+- [x] 同步 README、installation、quickstart 和必要版本引用到 `0.5.21` / `v0.5.21`。
+- [x] 测试中的版本期望同步到 `0.5.21`。
+- [x] 重新运行完整 release readiness。
 - [ ] 提交版本准备改动后确认远端 CI passed。
 - [ ] 打 tag `v0.5.21` 并推送。
 - [ ] 等 Release Artifacts workflow 生成五平台资产和 `.sha256`。
@@ -82,4 +83,4 @@
 
 ## 当前结论
 
-v0.5.21 已具备候选发布边界：release response 接入样板的 evidence artifact 已从生成、上传建议、下载后离线自检、JSON 契约验证推进到最小客户端消费 demo。下一步应先跑候选 release readiness，再进入正式版本准备。
+v0.5.21 已进入正式版本准备：版本号、changelog、用户文档和测试期望已同步到 `0.5.21` / `v0.5.21`，完整本地 release readiness 已通过。下一步应提交版本准备改动并等待 main CI。

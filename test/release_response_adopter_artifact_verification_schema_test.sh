@@ -62,7 +62,7 @@ for name, expected in fixtures.items():
 
     for key, expected_value in {
         "schema_version": 1,
-        "release_ref": "v0.5.20",
+        "release_ref": "v0.5.21",
         "fixture_count": 8,
         "required_files": 6,
         "status": expected["status"],

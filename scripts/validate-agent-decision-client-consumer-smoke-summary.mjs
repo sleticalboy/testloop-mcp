@@ -131,8 +131,8 @@ if (summary.schema_version !== 1) {
 if (summary.status !== 'passed') {
   failures.push(`${summaryPath}: status must be passed`);
 }
-if (summary.helper_ref !== 'v0.5.20') {
-  failures.push(`${summaryPath}: helper_ref must be v0.5.20`);
+if (summary.helper_ref !== 'v0.5.21') {
+  failures.push(`${summaryPath}: helper_ref must be v0.5.21`);
 }
 if (summary.fixture_count !== 8) {
   failures.push(`${summaryPath}: fixture_count must be 8`);

@@ -130,7 +130,7 @@ const summaryConsumer = readJSON(
 if (Object.keys(adopterSummary).length > 0) {
   expectEqual(adopterSummary.schema_version, 1, 'adopter summary schema_version');
   expectEqual(adopterSummary.status, 'passed', 'adopter summary status');
-  expectEqual(adopterSummary.release_ref, 'v0.5.20', 'adopter summary release_ref');
+  expectEqual(adopterSummary.release_ref, 'v0.5.21', 'adopter summary release_ref');
   expectEqual(adopterSummary.fixture_count, 8, 'adopter summary fixture_count');
   expectEqual(adopterSummary.agent_next_step, 'ready', 'adopter summary agent_next_step');
   expectEqual(adopterSummary.should_accept, true, 'adopter summary should_accept');
@@ -160,7 +160,7 @@ if (Object.keys(adopterSummary).length > 0) {
 
 if (Object.keys(installSummary).length > 0) {
   expectEqual(installSummary.status, 'written', 'install summary status');
-  expectEqual(installSummary.release_ref, 'v0.5.20', 'install summary release_ref');
+  expectEqual(installSummary.release_ref, 'v0.5.21', 'install summary release_ref');
   expectEqual(installSummary.fixture_count, 8, 'install summary fixture_count');
   expectEqual(installSummary.agent_next_step, 'ready', 'install summary agent_next_step');
   expectEqual(installSummary.npm_exit_code, 0, 'install summary npm_exit_code');
@@ -169,7 +169,7 @@ if (Object.keys(installSummary).length > 0) {
 
 if (Object.keys(releaseSummary).length > 0) {
   expectEqual(releaseSummary.status, 'passed', 'release smoke summary status');
-  expectEqual(releaseSummary.release_ref, 'v0.5.20', 'release smoke summary release_ref');
+  expectEqual(releaseSummary.release_ref, 'v0.5.21', 'release smoke summary release_ref');
   expectEqual(releaseSummary.fixture_count, 8, 'release smoke summary fixture_count');
   expectEqual(releaseSummary.agent_next_steps?.client, 'ready', 'release smoke summary client next step');
   expectEqual(releaseSummary.agent_next_steps?.consumer, 'ready', 'release smoke summary consumer next step');
@@ -179,7 +179,7 @@ if (Object.keys(releaseSummary).length > 0) {
 if (Object.keys(agentResponse).length > 0) {
   expectEqual(agentResponse.status, 'passed', 'release response status');
   expectEqual(agentResponse.agent_next_step, 'ready', 'release response agent_next_step');
-  expectEqual(agentResponse.evidence?.release_ref, 'v0.5.20', 'release response release_ref');
+  expectEqual(agentResponse.evidence?.release_ref, 'v0.5.21', 'release response release_ref');
   expectEqual(agentResponse.evidence?.fixture_count, 8, 'release response fixture_count');
   expectEmptyArray(agentResponse.failures, 'release response failures');
 }

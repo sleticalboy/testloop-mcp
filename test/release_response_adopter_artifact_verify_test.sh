@@ -52,7 +52,7 @@ TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR="$artifact_dir" \
 verify_out="${tmp_dir}/verify.out"
 run_expect_code 0 "$verify_out" node "$script" "$artifact_dir"
 assert_contains "$verify_out" "release_response_adopter_artifact_status=passed"
-assert_contains "$verify_out" "release_ref=v0.5.20"
+assert_contains "$verify_out" "release_ref=v0.5.21"
 assert_contains "$verify_out" "fixture_count=8"
 assert_contains "$verify_out" "agent_next_step=ready"
 assert_contains "$verify_out" "should_accept=true"
@@ -68,7 +68,7 @@ import sys
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
-assert payload["release_ref"] == "v0.5.20"
+assert payload["release_ref"] == "v0.5.21"
 assert payload["fixture_count"] == 8
 assert payload["agent_next_step"] == "ready"
 assert payload["should_accept"] is True
