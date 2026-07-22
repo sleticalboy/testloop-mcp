@@ -160,12 +160,16 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 }
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
-	if strings.ToLower(strings.TrimSpace(framework)) != "junit" || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	framework = strings.ToLower(strings.TrimSpace(framework))
+	if (framework != "junit" && framework != "node-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
 	if !ok {
 		return false, "", nil, nil, false
+	}
+	if framework == "node-test" {
+		return nodeCoverageTaskTargetLineHit(result, task, start, end)
 	}
 	report, reportPath, ok := javaCoverageReportForValidation(generated.TestFile, task.File)
 	if !ok {
@@ -191,6 +195,39 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 		}
 	}
 	return len(missedLines) == 0, reportPath, hitLines, missedLines, true
+}
+
+func nodeCoverageTaskTargetLineHit(result *types.TestResult, task *types.CoverageTestTask, start int, end int) (bool, string, []int, []int, bool) {
+	if result == nil || strings.TrimSpace(result.RawOutput) == "" {
+		return false, "", nil, nil, false
+	}
+	report, err := coverage.ParseNodeTestCoverage(result.RawOutput)
+	if err != nil {
+		return false, "", nil, nil, false
+	}
+	file := coverageTaskFindCoverageFile(report, task.File)
+	if file == nil {
+		return false, "node-test raw_output", nil, coverageTaskLineNumbers(start, end), true
+	}
+	missedByLine := make(map[int]bool)
+	for _, block := range file.Blocks {
+		if block.Covered {
+			continue
+		}
+		for line := block.StartLine; line <= block.EndLine; line++ {
+			missedByLine[line] = true
+		}
+	}
+	var hitLines []int
+	var missedLines []int
+	for line := start; line <= end; line++ {
+		if missedByLine[line] {
+			missedLines = append(missedLines, line)
+		} else {
+			hitLines = append(hitLines, line)
+		}
+	}
+	return len(missedLines) == 0, "node-test raw_output", hitLines, missedLines, true
 }
 
 func javaCoverageReportForValidation(paths ...string) (*types.CoverageReport, string, bool) {

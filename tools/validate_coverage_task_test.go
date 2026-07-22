@@ -138,6 +138,7 @@ func TestHandleValidateCoverageTaskGeneratesAndRunsNodeTestTask(t *testing.T) {
 	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
 		FilePath:     source,
 		CoverageTask: &task,
+		Coverage:     true,
 	})
 	if err != nil {
 		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
@@ -158,6 +159,9 @@ func TestHandleValidateCoverageTaskGeneratesAndRunsNodeTestTask(t *testing.T) {
 	if out.RunResult == nil || out.RunResult.Framework != "node-test" || out.RunResult.Status != "pass" || out.RunResult.Passed != 1 {
 		t.Fatalf("unexpected run result: %+v", out.RunResult)
 	}
+	if out.Metadata["coverage_target_hit"] != true {
+		t.Fatalf("expected coverage_target_hit=true metadata, got %+v", out.Metadata)
+	}
 	content, err := os.ReadFile(task.TestFile)
 	if err != nil {
 		t.Fatalf("read generated test file: %v", err)
@@ -166,6 +170,91 @@ func TestHandleValidateCoverageTaskGeneratesAndRunsNodeTestTask(t *testing.T) {
 	if !strings.Contains(text, "require('node:test')") || !strings.Contains(text, "assert.equal(result, (2));") {
 		t.Fatalf("unexpected generated node-test content:\n%s", text)
 	}
+}
+
+func TestHandleValidateCoverageTaskNodeTestCoverageMissNeedsBetterInput(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "sum.js")
+	src := strings.Join([]string{
+		"function add(a, b) {",
+		"  if (a === 0) return b;",
+		"  return a + b;",
+		"}",
+		"",
+		"module.exports = { add };",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "node-test-1",
+		Framework:       "node-test",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a === 0"},
+		UncoveredLines:  []int{2},
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入"},
+		Goal:            "为 add 补充测试，覆盖未执行行段 2-2",
+		Command:         "node --test",
+		TestFile:        filepath.Join(dir, "sum.test.js"),
+		TestName:        "covers add coverage gap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+	installFakeNodeRecorderSuccess(t, nodeTestCoverageMissOutput())
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+		Coverage:     true,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "failed" || out.Action != "needs_better_input" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Metadata["coverage_target_hit"] != false {
+		t.Fatalf("expected coverage_target_hit=false metadata, got %+v", out.Metadata)
+	}
+	if out.Metadata["coverage_report"] != "node-test raw_output" {
+		t.Fatalf("expected node raw output coverage report metadata, got %+v", out.Metadata)
+	}
+}
+
+func nodeTestCoverageMissOutput() string {
+	return strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: adds values",
+		"ok 1 - adds values",
+		"1..1",
+		"# tests 1",
+		"# suites 0",
+		"# pass 1",
+		"# fail 0",
+		"# cancelled 0",
+		"# skipped 0",
+		"# todo 0",
+		"# start of coverage report",
+		"# -----------------------------------------------------------------",
+		"# file             | line % | branch % | funcs % | uncovered lines",
+		"# -----------------------------------------------------------------",
+		"# sum.js           | 66.67  |   100.00 |   50.00 | 2",
+		"# -----------------------------------------------------------------",
+		"# all files        | 66.67  |   100.00 |   50.00 |",
+		"# -----------------------------------------------------------------",
+		"# end of coverage report",
+	}, "\n")
 }
 
 func TestHandleValidateCoverageTaskStructuredContentMatchesTextJSON(t *testing.T) {

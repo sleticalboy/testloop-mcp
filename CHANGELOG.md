@@ -6,6 +6,7 @@
 
 - 新增 Node.js 内置 `node --test` 闭环支持：`detector` 可从 `package.json` 识别 `node-test`，`run_tests` 可执行 `node --test`，`parse_results` 可解析 TAP 失败输出，JS/TS 静态生成器可生成 `node:test` / `node:assert/strict` 风格测试。
 - `run_tests coverage=true` 支持为 `node-test` 追加 `--experimental-test-coverage` 并回填 `coverage_percent`；`parse_coverage framework=node-test` 可解析 Node TAP coverage report，生成文件级报告、未覆盖行建议和 `test_tasks[]`。
+- `validate_coverage_task coverage=true` 支持读取 `node-test` TAP coverage raw output 校验目标行命中；测试通过但目标行仍未覆盖时返回 `failed/needs_better_input`，避免弱 ready 被 Agent 吸收。
 
 ## v0.5.21 - 2026-07-22
 
