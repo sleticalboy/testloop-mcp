@@ -116,6 +116,7 @@ jobs:
           sh test/agent_decision_release_response_checklist_doc_test.sh
           sh test/agent_decision_release_response_checklist_commands_test.sh
           sh test/release_response_adopter_example_test.sh
+          sh test/release_response_adopter_artifact_demo_test.sh
           sh test/release_response_adopter_artifact_verify_test.sh
           sh test/release_response_adopter_artifact_verification_schema_test.sh
           sh test/release_response_adopter_artifact_verification_validator_test.sh

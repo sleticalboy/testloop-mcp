@@ -41,6 +41,7 @@ for snippet in [
     "node scripts/validate-release-response-adopter-artifact-verification.mjs",
     "release-response-adopter-artifact-verification.schema.json",
     "missing-summary-consumer.json",
+    "go run ./examples/release-response-adopter-artifact-demo docs/fixtures/release-response-adopter-artifact-verification/passed.json",
     "testloop-release-response-adopter-artifacts/",
 ]:
     if snippet not in text:
