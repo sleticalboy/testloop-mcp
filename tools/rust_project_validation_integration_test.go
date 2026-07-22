@@ -83,6 +83,7 @@ func TestValidateRustCoverageTopTasks(t *testing.T) {
 			FilePath:              task.File,
 			Framework:             "cargo-test",
 			CoverageTask:          &task,
+			Coverage:              true,
 			IncludeFixSuggestions: &includeFixSuggestions,
 		})
 		cancel()

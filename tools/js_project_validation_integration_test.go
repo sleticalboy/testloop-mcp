@@ -116,6 +116,7 @@ func TestValidateJSCoverageTopTasks(t *testing.T) {
 			FilePath:              task.File,
 			Framework:             framework,
 			CoverageTask:          &task,
+			Coverage:              true,
 			IncludeFixSuggestions: &includeFixSuggestions,
 		})
 		cancel()

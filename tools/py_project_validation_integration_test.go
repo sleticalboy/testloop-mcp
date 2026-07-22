@@ -109,6 +109,7 @@ func TestValidatePyCoverageTopTasks(t *testing.T) {
 			FilePath:              task.File,
 			Framework:             "pytest",
 			CoverageTask:          &task,
+			Coverage:              true,
 			IncludeFixSuggestions: &includeFixSuggestions,
 		})
 		cancel()
