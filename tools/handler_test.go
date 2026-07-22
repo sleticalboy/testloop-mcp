@@ -2565,6 +2565,92 @@ func TestHandleFixSuggestionsClassifiesCommonFailures(t *testing.T) {
 	}
 }
 
+func TestHandleParseCoverageGenerateTestsNodeTestLoop(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, filepath.Join("src", "sum.js"), strings.Join([]string{
+		"function add(a, b) {",
+		"  if (a === 0) return b;",
+		"  return a + b;",
+		"}",
+		"",
+		"module.exports = { add };",
+	}, "\n")+"\n")
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+
+	coverageTAP := strings.Join([]string{
+		"TAP version 13",
+		"# start of coverage report",
+		"# file             | line % | branch % | funcs % | uncovered lines",
+		"# src/sum.js       | 66.67  |   100.00 |   50.00 | 2",
+		"# all files        | 66.67  |   100.00 |   50.00 |",
+		"# end of coverage report",
+	}, "\n")
+	coverageResult, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{
+		Data:      coverageTAP,
+		Framework: "node-test",
+	})
+	if err != nil {
+		t.Fatalf("HandleParseCoverage returned error: %v", err)
+	}
+
+	var report types.CoverageReport
+	if err := json.Unmarshal([]byte(resultText(t, coverageResult)), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v", err)
+	}
+	if len(report.TestTasks) != 1 {
+		t.Fatalf("test tasks len = %d, want 1: %+v", len(report.TestTasks), report.TestTasks)
+	}
+	task := report.TestTasks[0]
+	if task.Framework != "node-test" || task.Target != "add" || task.TestFile != filepath.Join("src", "sum.test.js") {
+		t.Fatalf("unexpected node-test coverage task: %+v", task)
+	}
+
+	generateResult, _, err := HandleGenerateTests(context.Background(), nil, generateTestsInput{
+		FilePath:     task.File,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleGenerateTests returned error: %v", err)
+	}
+	var generated types.GenerateTestsOutput
+	if err := json.Unmarshal([]byte(resultText(t, generateResult)), &generated); err != nil {
+		t.Fatalf("unmarshal generated output: %v", err)
+	}
+	if generated.Status != "ok" || generated.Provider != "static" || generated.CoverageTask == nil {
+		t.Fatalf("unexpected generated output: %+v", generated)
+	}
+	content, err := os.ReadFile(task.TestFile)
+	if err != nil {
+		t.Fatalf("read generated test file: %v", err)
+	}
+	text := string(content)
+	for _, want := range []string{
+		"const { describe, it } = require('node:test');",
+		"const assert = require('node:assert/strict');",
+		"const { add } = require('./sum');",
+		"assert.equal(result, (2));",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("generated node-test file missing %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "expect(result).toBe") || strings.Contains(text, "require('chai')") {
+		t.Fatalf("generated node-test file used non-node assertion style:\n%s", text)
+	}
+}
+
 func TestHandleFixSuggestionsUsesParsedFrameworkFixtures(t *testing.T) {
 	tests := []struct {
 		name            string
