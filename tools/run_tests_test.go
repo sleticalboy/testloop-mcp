@@ -1034,6 +1034,33 @@ func TestHandleRunTestsNodeTestUsesPackageRootAndRelativePath(t *testing.T) {
 	}
 }
 
+func TestHandleRunTestsNodeTestCoverageParsesLinePercent(t *testing.T) {
+	dir := writeTempNodeTestPackage(t)
+	testFile := filepath.Join(dir, "test", "sum.test.js")
+	logPath := installFakeNodeRecorderSuccess(t, nodeTestCoverageOutput())
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:     testFile,
+		Coverage: true,
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal run result: %v", err)
+	}
+	if parsed.Framework != "node-test" || parsed.Status != "pass" || parsed.CoveragePercent != 87.5 {
+		t.Fatalf("unexpected run result: %+v", parsed)
+	}
+
+	logText := readTextFile(t, logPath)
+	if !strings.Contains(logText, "ARGS=--test --experimental-test-coverage test/sum.test.js\n") {
+		t.Fatalf("fake node args log = %q, want coverage flag and relative path", logText)
+	}
+}
+
 func TestHandleRunTestsJSCustomCommandTemplateUsesPackageRootAndRelativePath(t *testing.T) {
 	dir := writeTempMochaPackage(t)
 	testFile := filepath.Join(dir, "test", "calc.test.js")
@@ -1698,6 +1725,14 @@ func installFakeNpxRecorder(t *testing.T, output string) string {
 }
 
 func installFakeNodeRecorder(t *testing.T, output string) string {
+	return installFakeNodeRecorderWithExit(t, output, "exit 1")
+}
+
+func installFakeNodeRecorderSuccess(t *testing.T, output string) string {
+	return installFakeNodeRecorderWithExit(t, output, "exit 0")
+}
+
+func installFakeNodeRecorderWithExit(t *testing.T, output string, exitLine string) string {
 	t.Helper()
 	fakeBin := t.TempDir()
 	logPath := filepath.Join(t.TempDir(), "node.log")
@@ -1707,7 +1742,7 @@ func installFakeNodeRecorder(t *testing.T, output string) string {
 		"  printf 'ARGS=%s\\n' \"$*\"\n" +
 		"} > '" + logPath + "'\n" +
 		"cat <<'NODE_OUTPUT'\n" + output + "\nNODE_OUTPUT\n" +
-		"exit 1\n"
+		exitLine + "\n"
 	path := filepath.Join(fakeBin, "node")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake node: %v", err)
@@ -1767,6 +1802,32 @@ func nodeTestFailureOutput() string {
 		"# skipped 0",
 		"# todo 0",
 		"# duration_ms 18.4",
+	}, "\n")
+}
+
+func nodeTestCoverageOutput() string {
+	return strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: adds values",
+		"ok 1 - adds values",
+		"1..1",
+		"# tests 1",
+		"# suites 0",
+		"# pass 1",
+		"# fail 0",
+		"# cancelled 0",
+		"# skipped 0",
+		"# todo 0",
+		"# start of coverage report",
+		"# -----------------------------------------------------------------",
+		"# file             | line % | branch % | funcs % | uncovered lines",
+		"# -----------------------------------------------------------------",
+		"# sum.js           | 100.00 |   100.00 |   50.00 |",
+		"# test/sum.test.js | 100.00 |   100.00 |  100.00 |",
+		"# -----------------------------------------------------------------",
+		"# all files        | 87.50 |   75.00 |   66.67 |",
+		"# -----------------------------------------------------------------",
+		"# end of coverage report",
 	}, "\n")
 }
 

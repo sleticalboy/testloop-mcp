@@ -10,6 +10,7 @@ import (
 
 var (
 	nodeTestSummaryRe       = regexp.MustCompile(`^#\s+(tests|pass|fail|skipped|todo|cancelled)\s+(\d+)\s*$`)
+	nodeTestCoverageAllRe   = regexp.MustCompile(`^#\s+all files\s+\|\s+([0-9]+(?:\.[0-9]+)?)\s+\|`)
 	nodeTestSubtestRe       = regexp.MustCompile(`^#\s+Subtest:\s+(.+)$`)
 	nodeTestNotOKRe         = regexp.MustCompile(`^not ok\s+\d+\s+-\s+(.+)$`)
 	nodeTestLocationLineRe  = regexp.MustCompile(`^location:\s+'?([^']+):(\d+):(\d+)'?\s*$`)
@@ -28,6 +29,7 @@ func ParseNodeTest(output string) types.TestResult {
 
 	lines := strings.Split(output, "\n")
 	parseNodeTestSummary(lines, &result)
+	result.CoveragePercent = parseNodeTestCoveragePercent(lines)
 	result.Failures = parseNodeTestFailures(lines)
 	if result.Failed == 0 && len(result.Failures) > 0 {
 		result.Failed = len(result.Failures)
@@ -68,6 +70,18 @@ func parseNodeTestSummary(lines []string, result *types.TestResult) {
 			result.Skipped += count
 		}
 	}
+}
+
+func parseNodeTestCoveragePercent(lines []string) float64 {
+	for _, line := range lines {
+		match := nodeTestCoverageAllRe.FindStringSubmatch(strings.TrimSpace(line))
+		if len(match) != 2 {
+			continue
+		}
+		percent, _ := strconv.ParseFloat(match[1], 64)
+		return percent
+	}
+	return 0
 }
 
 func parseNodeTestFailures(lines []string) []types.TestFailure {

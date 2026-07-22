@@ -29,6 +29,36 @@ ok 1 - adds values
 	}
 }
 
+func TestParseNodeTestCoverageSummary(t *testing.T) {
+	output := `TAP version 13
+# Subtest: adds values
+ok 1 - adds values
+1..1
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+# start of coverage report
+# -----------------------------------------------------------------
+# file             | line % | branch % | funcs % | uncovered lines
+# -----------------------------------------------------------------
+# sum.js           | 100.00 |   100.00 |   50.00 |
+# test/sum.test.js | 100.00 |   100.00 |  100.00 |
+# -----------------------------------------------------------------
+# all files        | 87.50 |   75.00 |   66.67 |
+# -----------------------------------------------------------------
+# end of coverage report`
+
+	result := ParseNodeTest(output)
+
+	if result.Status != "pass" || result.Total != 1 || result.Passed != 1 {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+	if result.CoveragePercent != 87.5 {
+		t.Fatalf("coverage = %.2f, want 87.50", result.CoveragePercent)
+	}
+}
+
 func TestParseNodeTestFailure(t *testing.T) {
 	output := `TAP version 13
 # Subtest: adds values

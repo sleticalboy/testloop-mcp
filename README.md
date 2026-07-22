@@ -325,7 +325,7 @@ artifact_count=2
 
 `action` 给 Agent 做下一步分流：`ready` 表示至少有真实测试通过且当前没有失败；`manual_review` 表示命令通过但没有真实执行通过的用例，例如全部 skipped/TODO，不应当成有效覆盖；`apply_fix_suggestions` 表示失败结果已内联 `fix_suggestions[]`；`inspect_failures` 表示需要读取 `failures[]`；`inspect_test_runner` 表示测试命令异常但没有具体失败用例。
 
-`coverage=true` 时，Rust 会额外调用 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin` 并回填 `coverage_percent`；Java Maven/Gradle 项目会执行 JaCoCo report 任务并从 XML 报告回填 `coverage_percent`。也可以通过 `parse_coverage` 直接解析已有 LCOV/JaCoCo XML 文件。
+`coverage=true` 时，Node.js 内置 `node-test` 会追加 `--experimental-test-coverage` 并从 TAP coverage report 的 `all files` 行回填 `coverage_percent`；Rust 会额外调用 `cargo tarpaulin --out Lcov --output-dir target/tarpaulin` 并回填 `coverage_percent`；Java Maven/Gradle 项目会执行 JaCoCo report 任务并从 XML 报告回填 `coverage_percent`。也可以通过 `parse_coverage` 直接解析已有 LCOV/JaCoCo XML 文件。
 
 `include_fix_suggestions=true` 且测试失败时，`run_tests` 会把失败结果同步转换为 `fix_suggestions[]`，其中包含 `repair_task`。未传 `source_code` / `test_code` 时仍会返回基础分类和任务信息，但源码/测试行上下文可能不完整。
 
