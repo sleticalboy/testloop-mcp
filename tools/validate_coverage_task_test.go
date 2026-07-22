@@ -98,6 +98,76 @@ func Add(a, b int) int {
 	}
 }
 
+func TestHandleValidateCoverageTaskGeneratesAndRunsNodeTestTask(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "src", "sum.js")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatalf("mkdir source dir: %v", err)
+	}
+	src := strings.Join([]string{
+		"function add(a, b) {",
+		"  if (a === 0) return b;",
+		"  return a + b;",
+		"}",
+		"",
+		"module.exports = { add };",
+	}, "\n") + "\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "node-test-1",
+		Framework:       "node-test",
+		File:            source,
+		Target:          "add",
+		Kind:            "function",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		MissingBranches: []string{"未覆盖 if 分支: a === 0"},
+		UncoveredLines:  []int{2},
+		SuggestedInputs: []string{"构造满足条件 `a === 0` 的输入", "设置 a 覆盖未执行分支", "设置 b 覆盖未执行分支"},
+		Goal:            "为 add 补充测试，覆盖未执行行段 2-2",
+		Command:         "node --test",
+		TestFile:        filepath.Join(dir, "src", "sum.test.js"),
+		TestName:        "covers add coverage gap",
+		AssertionFocus:  []string{"断言未覆盖分支的返回值或副作用"},
+		Confidence:      0.9,
+	}
+	installFakeNodeRecorderSuccess(t, nodeTestCoverageOutput())
+
+	result, _, err := HandleValidateCoverageTask(context.Background(), nil, validateCoverageTaskInput{
+		FilePath:     source,
+		CoverageTask: &task,
+	})
+	if err != nil {
+		t.Fatalf("HandleValidateCoverageTask returned error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("result.IsError = true, output: %s", resultText(t, result))
+	}
+	var out types.CoverageTaskValidationOutput
+	if err := json.Unmarshal([]byte(resultText(t, result)), &out); err != nil {
+		t.Fatalf("unmarshal validation output: %v", err)
+	}
+	if out.Status != "passed" || out.Action != "ready" {
+		t.Fatalf("unexpected validation status: %+v", out)
+	}
+	if out.Generated == nil || out.Generated.TestFile != task.TestFile || out.Generated.GeneratedCases == 0 {
+		t.Fatalf("unexpected generated output: %+v", out.Generated)
+	}
+	if out.RunResult == nil || out.RunResult.Framework != "node-test" || out.RunResult.Status != "pass" || out.RunResult.Passed != 1 {
+		t.Fatalf("unexpected run result: %+v", out.RunResult)
+	}
+	content, err := os.ReadFile(task.TestFile)
+	if err != nil {
+		t.Fatalf("read generated test file: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "require('node:test')") || !strings.Contains(text, "assert.equal(result, (2));") {
+		t.Fatalf("unexpected generated node-test content:\n%s", text)
+	}
+}
+
 func TestHandleValidateCoverageTaskStructuredContentMatchesTextJSON(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/calc\n\ngo 1.23\n"), 0o644); err != nil {
