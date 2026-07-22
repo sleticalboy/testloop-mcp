@@ -94,7 +94,11 @@ assert_contains "$workflow" "tee /tmp/testloop-agent-decision-client-summary.jso
 assert_contains "$workflow" "Render Agent decision response"
 assert_contains "$workflow" ".testloop-mcp/scripts/render-agent-decision-client-ci-response.mjs"
 assert_contains "$workflow" "tee /tmp/testloop-agent-decision-client-response.json"
+assert_contains "$workflow" "Validate Agent decision response"
+assert_contains "$workflow" ".testloop-mcp/scripts/validate-agent-decision-client-ci-response.mjs"
+assert_contains "$workflow" "tee /tmp/testloop-agent-decision-client-response-validation.json"
 assert_contains "$workflow" "/tmp/testloop-agent-decision-client-response.json"
+assert_contains "$workflow" "/tmp/testloop-agent-decision-client-response-validation.json"
 
 out="${tmp_dir}/exists.out"
 run_expect_code 1 "$out" bash "$script" "$client_dir"

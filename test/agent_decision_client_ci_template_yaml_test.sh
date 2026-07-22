@@ -69,9 +69,13 @@ required = [
     "Render Agent decision response",
     ".testloop-mcp/scripts/render-agent-decision-client-ci-response.mjs",
     "tee /tmp/testloop-agent-decision-client-response.json",
+    "Validate Agent decision response",
+    ".testloop-mcp/scripts/validate-agent-decision-client-ci-response.mjs",
+    "tee /tmp/testloop-agent-decision-client-response-validation.json",
     "actions/upload-artifact@v4",
     "/tmp/testloop-agent-decision-client-summary.json",
     "/tmp/testloop-agent-decision-client-response.json",
+    "/tmp/testloop-agent-decision-client-response-validation.json",
     "/tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json",
 ]
 for item in required:

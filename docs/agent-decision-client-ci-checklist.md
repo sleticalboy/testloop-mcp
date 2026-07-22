@@ -50,6 +50,7 @@ CI 会 checkout `sleticalboy/testloop-mcp` helper，运行：
 ```text
 /tmp/testloop-agent-decision-client-summary.json
 /tmp/testloop-agent-decision-client-response.json
+/tmp/testloop-agent-decision-client-response-validation.json
 /tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json
 /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json
 /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json

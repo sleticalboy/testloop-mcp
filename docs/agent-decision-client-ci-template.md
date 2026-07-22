@@ -85,6 +85,7 @@ jobs:
               '    "client_dir": "",' \
               '    "fixture_dir": "",' \
               '    "result_json": "",' \
+              '    "result_schema": "",' \
               '    "fixture_count": 0,' \
               '    "decisions": [],' \
               '    "validator_exit_code": -1' \
@@ -99,6 +100,28 @@ jobs:
             --json /tmp/testloop-agent-decision-client-summary.json \
             | tee /tmp/testloop-agent-decision-client-response.json
 
+      - name: Validate Agent decision response
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f /tmp/testloop-agent-decision-client-response.json ]; then
+            printf '%s\n' \
+              '{' \
+              '  "status": "failed",' \
+              '  "response_json": "/tmp/testloop-agent-decision-client-response.json",' \
+              '  "agent_next_step": "inspect-agent-decision-client-summary",' \
+              '  "fixture_count": 0,' \
+              '  "decisions": [],' \
+              '  "failures": [' \
+              '    "missing /tmp/testloop-agent-decision-client-response.json"' \
+              '  ]' \
+              '}' > /tmp/testloop-agent-decision-client-response-validation.json
+            exit 1
+          fi
+          node .testloop-mcp/scripts/validate-agent-decision-client-ci-response.mjs \
+            --json /tmp/testloop-agent-decision-client-response.json \
+            | tee /tmp/testloop-agent-decision-client-response-validation.json
+
       - name: Upload Agent decision result
         if: always()
         uses: actions/upload-artifact@v4
@@ -107,6 +130,7 @@ jobs:
           path: |
             /tmp/testloop-agent-decision-client-summary.json
             /tmp/testloop-agent-decision-client-response.json
+            /tmp/testloop-agent-decision-client-response-validation.json
             /tmp/testloop-agent-decision-client/agent-decision-fixtures-result.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/package.json
             /tmp/testloop-agent-decision-client/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json
@@ -126,7 +150,7 @@ jobs:
 }
 ```
 
-如果失败，先下载 `testloop-agent-decision-contract` artifact，查看 `testloop-agent-decision-client-response.json` 的 `agent_next_step`，再看 `testloop-agent-decision-client-summary.json` 和 `agent-decision-fixtures-result.json` 的 `failures[]`。失败通常意味着客户端同步的 fixture、manifest 元数据或 `manual_review_*` 分流语义已经漂移。
+如果失败，先下载 `testloop-agent-decision-contract` artifact，查看 `testloop-agent-decision-client-response-validation.json` 和 `testloop-agent-decision-client-response.json` 的 `agent_next_step`，再看 `testloop-agent-decision-client-summary.json` 和 `agent-decision-fixtures-result.json` 的 `failures[]`。失败通常意味着客户端同步的 fixture、manifest 元数据或 `manual_review_*` 分流语义已经漂移。
 
 ## 本地 dry-run
 
@@ -136,7 +160,7 @@ jobs:
 sh test/agent_decision_client_ci_template_dry_run_test.sh
 ```
 
-这个测试会创建临时客户端目录，把当前仓库挂成 `.testloop-mcp` helper checkout，按模板中的相对路径运行 `.testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json | tee ...`，并验证 `testloop-agent-decision-client-summary.json`、`agent-decision-fixtures-result.json`、导出包 `package.json` 和 manifest 都真实存在。
+这个测试会创建临时客户端目录，把当前仓库挂成 `.testloop-mcp` helper checkout，按模板中的相对路径运行 `.testloop-mcp/scripts/showcase-agent-decision-client-ci.sh --json | tee ...`，渲染并校验 `testloop-agent-decision-client-response.json`，并验证 `testloop-agent-decision-client-summary.json`、`testloop-agent-decision-client-response-validation.json`、`agent-decision-fixtures-result.json`、导出包 `package.json` 和 manifest 都真实存在。
 
 如果要覆盖“下载 installer -> 生成 workflow -> 模拟 helper checkout -> 执行 contract”的完整链路：
 

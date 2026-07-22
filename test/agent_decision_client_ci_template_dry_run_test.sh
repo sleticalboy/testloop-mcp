@@ -19,6 +19,7 @@ external_client_dir="${tmp_dir}/external-client"
 client_output_dir="${tmp_dir}/testloop-agent-decision-client"
 summary_json="${tmp_dir}/testloop-agent-decision-client-summary.json"
 response_json="${tmp_dir}/testloop-agent-decision-client-response.json"
+response_validation_json="${tmp_dir}/testloop-agent-decision-client-response-validation.json"
 mkdir -p "$external_client_dir"
 ln -s "$repo_root" "${external_client_dir}/.testloop-mcp"
 
@@ -30,10 +31,14 @@ ln -s "$repo_root" "${external_client_dir}/.testloop-mcp"
   node .testloop-mcp/scripts/render-agent-decision-client-ci-response.mjs \
     --json "$summary_json" \
     | tee "$response_json" >/dev/null
+  node .testloop-mcp/scripts/validate-agent-decision-client-ci-response.mjs \
+    --json "$response_json" \
+    | tee "$response_validation_json" >/dev/null
 )
 
 assert_exists "$summary_json"
 assert_exists "$response_json"
+assert_exists "$response_validation_json"
 assert_exists "${client_output_dir}/agent-decision-fixtures-result.json"
 assert_exists "${client_output_dir}/testloop-agent-decision-fixtures/package.json"
 assert_exists "${client_output_dir}/testloop-agent-decision-fixtures/docs/fixtures/agent-decision-fixtures.json"
@@ -79,6 +84,18 @@ assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
 assert payload["evidence"]["fixture_count"] == 8
 assert payload["evidence"]["validator_exit_code"] == 0
+assert payload["failures"] == []
+PY
+
+python3 - "$response_validation_json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "passed"
+assert payload["agent_next_step"] == "ready"
+assert payload["fixture_count"] == 8
 assert payload["failures"] == []
 PY
 
