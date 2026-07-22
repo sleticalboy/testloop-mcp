@@ -674,6 +674,7 @@ scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./docs/fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。
 输出可用无依赖 validator 校验：`node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`；也可以直接读取 summary 里的 `agent_response_json`。
 如果要把该 summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json`；通过态会输出 `agent_next_step=ready`，失败时会分流到 `inspect-consumer-smoke-validator`、`inspect-agent-decision-fixtures` 或 `inspect-consumer-smoke-summary`。
+consumer response 可用无依赖 validator 校验：`node scripts/validate-agent-decision-client-consumer-response.mjs /path/to/consumer-response.json`。
 失败态样例见 [validator-failed.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)。
 
 正式发布后如果要把 release tag raw installer、基础客户端 response 和 consumer response 收成一份 Agent 可消费证据：
