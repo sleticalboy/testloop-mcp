@@ -22,8 +22,8 @@ text = doc.read_text(encoding="utf-8")
 blocks = re.findall(r"```bash\n(.*?)\n```", text, flags=re.S)
 
 failures = []
-if len(blocks) != 8:
-    failures.append(f"{doc}: expected exactly 8 bash command blocks, found {len(blocks)}")
+if len(blocks) != 9:
+    failures.append(f"{doc}: expected exactly 9 bash command blocks, found {len(blocks)}")
 
 client_dir = tmp_dir / "client"
 client_dir.mkdir()
@@ -118,10 +118,12 @@ if not failures:
 if not failures:
     if blocks[5].strip() != "scripts/showcase-agent-decision-client-release-response-ci.sh --json":
         failures.append(f"{doc}: sixth bash block must be release response CI showcase")
-    if blocks[6].strip() != "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client":
-        failures.append(f"{doc}: seventh bash block must export release response client")
-    if blocks[7].strip() != "scripts/verify-release-candidate.sh v0.5.20":
-        failures.append(f"{doc}: eighth bash block must be release readiness command")
+    if blocks[6].strip() != "scripts/showcase-release-response-adopter.sh --json":
+        failures.append(f"{doc}: seventh bash block must be release response adopter showcase")
+    if blocks[7].strip() != "node scripts/export-agent-decision-release-response-client.mjs /tmp/testloop-release-response-client":
+        failures.append(f"{doc}: eighth bash block must export release response client")
+    if blocks[8].strip() != "scripts/verify-release-candidate.sh v0.5.20":
+        failures.append(f"{doc}: ninth bash block must be release readiness command")
 
 if failures:
     print("Agent decision release response checklist command test failed:", file=sys.stderr)
