@@ -13,7 +13,7 @@ import (
 
 // ParseCoverage 解析覆盖率数据
 func ParseCoverage(profileData, framework string) (*types.CoverageReport, error) {
-	framework = strings.ToLower(strings.TrimSpace(framework))
+	framework = normalizeCoverageFramework(framework)
 	switch framework {
 	case "go-test":
 		return ParseGoCoverage(profileData)
@@ -34,6 +34,10 @@ func ParseCoverage(profileData, framework string) (*types.CoverageReport, error)
 	default:
 		return nil, fmt.Errorf("不支持的覆盖率框架: %s", framework)
 	}
+}
+
+func normalizeCoverageFramework(framework string) string {
+	return strings.ToLower(strings.TrimSpace(framework))
 }
 
 func coverageInputContent(profileData string) (string, error) {
@@ -345,7 +349,7 @@ func GenerateTestTasks(report *types.CoverageReport) []types.CoverageTestTask {
 }
 
 func coverageSuggestionSupportsGeneratedTask(framework string, file string) bool {
-	switch strings.ToLower(strings.TrimSpace(framework)) {
+	switch normalizeCoverageFramework(framework) {
 	case "javascript", "typescript", "jest", "vitest", "mocha", "node-test", "nyc":
 		switch strings.ToLower(filepath.Ext(file)) {
 		case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
@@ -363,6 +367,7 @@ func coverageTaskGoal(target string, lineRange string) string {
 }
 
 func coverageTaskCommand(framework string, file string) string {
+	framework = normalizeCoverageFramework(framework)
 	switch framework {
 	case "go-test":
 		dir := filepath.Dir(file)
@@ -390,6 +395,7 @@ func coverageTaskCommand(framework string, file string) string {
 }
 
 func coverageTaskTestFile(framework string, file string) string {
+	framework = normalizeCoverageFramework(framework)
 	ext := filepath.Ext(file)
 	base := strings.TrimSuffix(file, ext)
 	switch framework {
@@ -502,6 +508,7 @@ func javaCoverageTestFile(file string) string {
 }
 
 func coverageTaskTestName(framework string, target string) string {
+	framework = normalizeCoverageFramework(framework)
 	words := identifierWords(target)
 	if len(words) == 0 {
 		return ""

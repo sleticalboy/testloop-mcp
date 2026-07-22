@@ -243,6 +243,12 @@ func TestCoverageTaskCommandMatchesRunTestsFrameworkCommands(t *testing.T) {
 			want:      "npx vitest run src/sum.ts",
 		},
 		{
+			name:      "normalized vitest",
+			framework: " VITEST ",
+			file:      filepath.Join("src", "sum.ts"),
+			want:      "npx vitest run src/sum.ts",
+		},
+		{
 			name:      "mocha",
 			framework: "mocha",
 			file:      filepath.Join("test", "calc.test.js"),
@@ -303,6 +309,12 @@ func TestCoverageTaskTestFileRecommendations(t *testing.T) {
 			want:      filepath.Join("lib", "calc.spec.js"),
 		},
 		{
+			name:      "normalized mocha source",
+			framework: " MOCHA ",
+			file:      filepath.Join("lib", "calc.js"),
+			want:      filepath.Join("lib", "calc.spec.js"),
+		},
+		{
 			name:      "pytest root source",
 			framework: "pytest",
 			file:      "service.py",
@@ -332,6 +344,42 @@ func TestCoverageTaskTestFileRecommendations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := coverageTaskTestFile(tt.framework, tt.file); got != tt.want {
 				t.Fatalf("coverageTaskTestFile() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCoverageTaskTestNameNormalizesFramework(t *testing.T) {
+	tests := []struct {
+		name      string
+		framework string
+		target    string
+		want      string
+	}{
+		{
+			name:      "go",
+			framework: " GO-TEST ",
+			target:    "Add",
+			want:      "TestAdd",
+		},
+		{
+			name:      "pytest",
+			framework: " PYTEST ",
+			target:    "billing.Invoice",
+			want:      "test_billing_invoice_covers_gap",
+		},
+		{
+			name:      "vitest",
+			framework: " VITEST ",
+			target:    "add",
+			want:      "covers add coverage gap",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := coverageTaskTestName(tt.framework, tt.target); got != tt.want {
+				t.Fatalf("coverageTaskTestName() = %q, want %q", got, tt.want)
 			}
 		})
 	}
