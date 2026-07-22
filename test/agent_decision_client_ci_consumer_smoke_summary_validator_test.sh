@@ -104,4 +104,12 @@ assert_contains "${tmp_dir}/validator-fixture.out" "status must be passed"
 assert_contains "${tmp_dir}/validator-fixture.out" "fixture_validator_exit_code must be 0"
 assert_contains "${tmp_dir}/validator-fixture.out" "failures must be an empty array"
 
+if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs docs/fixtures/agent-decision-client-consumer-smoke-summary/client-summary-validator-failed.json > "${tmp_dir}/client-validator-fixture.out" 2>&1; then
+  echo "expected client-summary-validator-failed fixture to fail validation" >&2
+  exit 1
+fi
+assert_contains "${tmp_dir}/client-validator-fixture.out" "status must be passed"
+assert_contains "${tmp_dir}/client-validator-fixture.out" "client_summary_validator_exit_code must be 0"
+assert_contains "${tmp_dir}/client-validator-fixture.out" "failures must be an empty array"
+
 echo "agent decision client consumer smoke summary validator test passed"

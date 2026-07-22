@@ -63,6 +63,7 @@ assert payload["status"] == "passed"
 assert payload["agent_next_step"] == "ready"
 assert payload["evidence"]["helper_ref"] == "v0.5.21"
 assert payload["evidence"]["fixture_count"] == 8
+assert payload["evidence"]["client_summary_validator_exit_code"] == 0
 assert payload["failures"] == []
 PY
 
@@ -78,6 +79,12 @@ run_expect_code 1 "${tmp_dir}/bad-validator.out" node "$script" "$bad_validator"
 assert_contains "${tmp_dir}/bad-validator.out" "agent_decision_client_consumer_response_status=failed"
 assert_contains "${tmp_dir}/bad-validator.out" "agent_next_step=inspect-consumer-smoke-validator"
 assert_contains "${tmp_dir}/bad-validator.out" "fixture_validator_exit_code=1"
+
+bad_client_validator="docs/fixtures/agent-decision-client-consumer-smoke-summary/client-summary-validator-failed.json"
+
+run_expect_code 1 "${tmp_dir}/bad-client-validator.out" node "$script" "$bad_client_validator"
+assert_contains "${tmp_dir}/bad-client-validator.out" "agent_next_step=inspect-consumer-smoke-validator"
+assert_contains "${tmp_dir}/bad-client-validator.out" "client_summary_validator_exit_code=1"
 
 bad_decisions="docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json"
 

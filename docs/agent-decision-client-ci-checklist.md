@@ -89,7 +89,7 @@ scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。
 如果要在客户端 CI 中固定消费端 smoke 输出形状，可运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
 如果要把消费端 smoke summary 转成 Agent 可执行分流，可运行 `node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json`。通过态输出 `agent_next_step=ready`；失败时按 `inspect-consumer-smoke-validator`、`inspect-agent-decision-fixtures` 或 `inspect-consumer-smoke-summary` 分流。
-失败态样例见 [validator-failed.json](./fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)。
+失败态样例见 [client-summary-validator-failed.json](./fixtures/agent-decision-client-consumer-smoke-summary/client-summary-validator-failed.json)、[validator-failed.json](./fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json) 和 [fixture-drift.json](./fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json)。
 
 ## 失败排查
 

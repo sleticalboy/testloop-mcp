@@ -14,6 +14,7 @@ python3 - \
   "$summary_json" \
   docs/fixtures/agent-decision-client-consumer-smoke-summary.schema.json \
   docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json \
+  docs/fixtures/agent-decision-client-consumer-smoke-summary/client-summary-validator-failed.json \
   docs/fixtures/agent-decision-client-consumer-smoke-summary/validator-failed.json \
   docs/fixtures/agent-decision-client-consumer-smoke-summary/fixture-drift.json <<'PY'
 from pathlib import Path
