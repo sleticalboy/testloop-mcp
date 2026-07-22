@@ -687,7 +687,7 @@ scripts/showcase-agent-decision-client-release-response-smoke.sh --json
 如果要直接安装到真实外部仓库，可运行 `scripts/install-agent-decision-release-response-client.sh /absolute/path/to/client-repo`；它会写入 `testloop-release-response-client/`、`.github/workflows/testloop-release-response-contract.yml`，并在目标包目录运行 `npm test --silent`。
 安装 summary 可用 `node scripts/validate-agent-decision-release-response-client-install-summary.mjs /path/to/install-summary.json` 校验，结构契约见 `agent-decision-release-response-client-install-summary.schema.json`。
 如果要模拟接入方仓库的 GitHub Actions 形态，可运行 `scripts/showcase-agent-decision-client-release-response-ci.sh --json`。
-如果要看外部仓库可直接照抄的最小样板，见 [Release response 接入方样板](./examples/release-response-adopter/README.md)，也可以运行 `scripts/showcase-release-response-adopter.sh --json` 验证 installer、workflow、`npm test --silent` 和接入方消费 helper 的完整链路；summary 可用 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json` 校验，结构契约见 `release-response-adopter-summary.schema.json`，失败态样例见 `invalid-response.json`。validator 失败时可用 `--json` 读取 `agent_next_step` 和 `failures[]`。
+如果要看外部仓库可直接照抄的最小样板，见 [Release response 接入方样板](./examples/release-response-adopter/README.md)，也可以运行 `scripts/showcase-release-response-adopter.sh --json` 验证 installer、workflow、`npm test --silent` 和接入方消费 helper 的完整链路；summary 可用 `node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json` 校验，结构契约见 `release-response-adopter-summary.schema.json`，失败态样例见 `invalid-response.json`。validator 失败时可用 `--json` 读取 `agent_next_step` 和 `failures[]`，也可以用 `read-testloop-release-response-summary.mjs` 输出 `testloop_release_response_summary_next_step`。
 
 ### 用户项目接入：直接复制
 

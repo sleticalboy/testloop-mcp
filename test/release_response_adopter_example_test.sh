@@ -38,8 +38,11 @@ run_expect_code() {
 
 script="scripts/showcase-release-response-adopter.sh"
 consumer="examples/release-response-adopter/scripts/read-testloop-release-response.mjs"
+summary_consumer="examples/release-response-adopter/scripts/read-testloop-release-response-summary.mjs"
 summary="docs/fixtures/agent-decision-client-release-smoke-summary/passed.json"
 response="docs/fixtures/agent-decision-client-release-response/passed.json"
+adopter_summary="docs/fixtures/release-response-adopter-summary/passed.json"
+bad_adopter_summary="docs/fixtures/release-response-adopter-summary/invalid-response.json"
 readme="examples/release-response-adopter/README.md"
 
 help_out="${tmp_dir}/help.out"
@@ -50,6 +53,10 @@ assert_contains "$help_out" "TESTLOOP_RELEASE_RESPONSE_ADOPTER_REPO_DIR"
 consumer_help="${tmp_dir}/consumer-help.out"
 run_expect_code 0 "$consumer_help" node "$consumer" --help
 assert_contains "$consumer_help" "Usage: node scripts/read-testloop-release-response.mjs"
+
+summary_consumer_help="${tmp_dir}/summary-consumer-help.out"
+run_expect_code 0 "$summary_consumer_help" node "$summary_consumer" --help
+assert_contains "$summary_consumer_help" "Usage: node scripts/read-testloop-release-response-summary.mjs"
 
 consumer_out="${tmp_dir}/consumer.out"
 run_expect_code 0 "$consumer_out" node "$consumer" "$response"
@@ -74,6 +81,38 @@ assert payload["should_accept"] is True
 assert payload["evidence"]["release_ref"] == "v0.5.20"
 assert payload["evidence"]["fixture_count"] == 8
 assert payload["failures"] == []
+PY
+
+summary_consumer_out="${tmp_dir}/summary-consumer.out"
+run_expect_code 0 "$summary_consumer_out" node "$summary_consumer" "$adopter_summary"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_status=passed"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_next_step=ready"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_release_ref=v0.5.20"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_fixture_count=8"
+assert_contains "$summary_consumer_out" "testloop_release_response_summary_should_accept=true"
+
+bad_summary_consumer_out="${tmp_dir}/bad-summary-consumer.out"
+run_expect_code 1 "$bad_summary_consumer_out" node "$summary_consumer" "$bad_adopter_summary"
+assert_contains "$bad_summary_consumer_out" "testloop_release_response_summary_status=failed"
+assert_contains "$bad_summary_consumer_out" "testloop_release_response_summary_next_step=inspect-release-smoke-summary"
+assert_contains "$bad_summary_consumer_out" "testloop_release_response_summary_should_accept=false"
+assert_contains "$bad_summary_consumer_out" "consumer agent_next_step=inspect-release-smoke-summary, want ready"
+
+summary_consumer_json="${tmp_dir}/summary-consumer.json"
+run_expect_code 1 "$summary_consumer_json" node "$summary_consumer" --json "$bad_adopter_summary"
+python3 - "$summary_consumer_json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
+assert payload["status"] == "failed"
+assert payload["agent_next_step"] == "inspect-release-smoke-summary"
+assert payload["should_accept"] is False
+assert payload["release_ref"] == "v0.5.20"
+assert payload["fixture_count"] == 8
+assert payload["failures"]
 PY
 
 repo_dir="${tmp_dir}/adopter-repo"
@@ -118,9 +157,11 @@ PY
 
 assert_contains "${repo_dir}/README.md" "node scripts/read-testloop-release-response.mjs"
 assert_contains "${repo_dir}/scripts/read-testloop-release-response.mjs" "testloop_release_response_next_step"
+assert_contains "${repo_dir}/scripts/read-testloop-release-response-summary.mjs" "testloop_release_response_summary_next_step"
 assert_contains "$readme" "scripts/install-agent-decision-release-response-client.sh"
 assert_contains "$readme" "scripts/showcase-release-response-adopter.sh --json"
 assert_contains "$readme" "node scripts/validate-release-response-adopter-summary.mjs"
+assert_contains "$readme" "node scripts/read-testloop-release-response-summary.mjs"
 assert_contains "$readme" "docs/fixtures/release-response-adopter-summary/invalid-response.json"
 assert_contains "$readme" "agent_next_step"
 assert_contains "$readme" "failures[]"

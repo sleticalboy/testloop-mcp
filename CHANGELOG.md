@@ -7,6 +7,7 @@
 - 新增 `examples/release-response-adopter/`、`scripts/showcase-release-response-adopter.sh --json` 和 `read-testloop-release-response.mjs`，提供外部客户端可照抄的 release response 接入样板、临时仓库验证入口和 Agent JSON 消费 helper。
 - 新增 release response 接入样板 summary schema、通过态 fixture 和 `scripts/validate-release-response-adopter-summary.mjs`，用于机器校验 `scripts/showcase-release-response-adopter.sh --json` 输出。
 - 新增 release response 接入样板 summary 失败态 fixture `invalid-response.json`，并让 validator `--json` 在失败时合并原始 summary `failures[]`，方便 Agent 读取失败分流原因。
+- 新增 `read-testloop-release-response-summary.mjs`，接入方可直接把 adopter summary 转成 `testloop_release_response_summary_*` 键值；`should_accept=false` 时返回非 0，避免发布流程误继续。
 - release readiness 现在会运行 `scripts/showcase-release-response-adopter.sh --json` 并用 `scripts/validate-release-response-adopter-summary.mjs` 校验接入样板 summary。
 
 ## v0.5.20 - 2026-07-21

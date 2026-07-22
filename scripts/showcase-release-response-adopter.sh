@@ -68,7 +68,10 @@ cp "${repo_root}/examples/release-response-adopter/README.md" \
 mkdir -p "${client_repo_real}/scripts"
 cp "${repo_root}/examples/release-response-adopter/scripts/read-testloop-release-response.mjs" \
   "${client_repo_real}/scripts/read-testloop-release-response.mjs"
+cp "${repo_root}/examples/release-response-adopter/scripts/read-testloop-release-response-summary.mjs" \
+  "${client_repo_real}/scripts/read-testloop-release-response-summary.mjs"
 chmod +x "${client_repo_real}/scripts/read-testloop-release-response.mjs"
+chmod +x "${client_repo_real}/scripts/read-testloop-release-response-summary.mjs"
 
 "${repo_root}/scripts/install-agent-decision-release-response-client.sh" \
   --summary-json "$summary_json" \
@@ -108,6 +111,7 @@ function exists(filePath, label) {
 
 exists(path.join(repoDir, 'README.md'), 'README');
 exists(path.join(repoDir, 'scripts/read-testloop-release-response.mjs'), 'consumer helper');
+exists(path.join(repoDir, 'scripts/read-testloop-release-response-summary.mjs'), 'summary consumer helper');
 exists(installSummary.workflow_path, 'workflow');
 exists(installSummary.package_dir, 'package dir');
 exists(installSummary.agent_response_json, 'agent response json');

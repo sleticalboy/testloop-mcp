@@ -7,6 +7,7 @@
 ```text
 README.md
 scripts/read-testloop-release-response.mjs
+scripts/read-testloop-release-response-summary.mjs
 ```
 
 installer 会在目标客户端仓库里创建剩余文件：
@@ -53,6 +54,8 @@ node scripts/validate-release-response-adopter-summary.mjs --json \
 mkdir -p /absolute/path/to/client-repo/scripts
 cp examples/release-response-adopter/scripts/read-testloop-release-response.mjs \
   /absolute/path/to/client-repo/scripts/read-testloop-release-response.mjs
+cp examples/release-response-adopter/scripts/read-testloop-release-response-summary.mjs \
+  /absolute/path/to/client-repo/scripts/read-testloop-release-response-summary.mjs
 ```
 
 ## 本地验证
@@ -76,6 +79,23 @@ testloop_release_response_release_ref=v0.5.20
 testloop_release_response_fixture_count=8
 testloop_release_response_should_accept=true
 ```
+
+如果要消费 showcase summary：
+
+```bash
+node scripts/read-testloop-release-response-summary.mjs \
+  /tmp/testloop-release-response-adopter-summary.json
+```
+
+通过态输出应包含：
+
+```text
+testloop_release_response_summary_status=passed
+testloop_release_response_summary_next_step=ready
+testloop_release_response_summary_should_accept=true
+```
+
+失败态会返回非 0。Agent 应读取 `testloop_release_response_summary_next_step` 和 `testloop_release_response_summary_failures`，并停止继续发布。
 
 ## Agent 契约
 
