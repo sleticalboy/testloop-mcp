@@ -161,7 +161,7 @@ func coverageTaskValidationMetadata(framework string, generated *types.GenerateT
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
 	framework = strings.ToLower(strings.TrimSpace(framework))
-	if (framework != "junit" && framework != "node-test" && framework != "pytest" && framework != "jest" && framework != "vitest" && framework != "mocha" && framework != "cargo-test" && framework != "go-test") || generated == nil || result == nil || result.Status != "pass" || task == nil {
+	if !coverageTaskTargetLineHitSupported(framework) || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
 	start, end, ok := coverageTaskLineRange(task.LineRange)
@@ -204,6 +204,29 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 		return false, "", nil, nil, false
 	}
 	return coverageReportTaskTargetLineHit(report, reportPath, task, start, end)
+}
+
+func coverageTaskTargetLineHitSupported(framework string) bool {
+	framework = strings.ToLower(strings.TrimSpace(framework))
+	for _, supported := range coverageTaskTargetLineHitFrameworks() {
+		if framework == supported {
+			return true
+		}
+	}
+	return false
+}
+
+func coverageTaskTargetLineHitFrameworks() []string {
+	return []string{
+		"go-test",
+		"cargo-test",
+		"jest",
+		"vitest",
+		"mocha",
+		"node-test",
+		"pytest",
+		"junit",
+	}
 }
 
 func coverageReportTaskTargetLineHit(report *types.CoverageReport, reportPath string, task *types.CoverageTestTask, start int, end int) (bool, string, []int, []int, bool) {

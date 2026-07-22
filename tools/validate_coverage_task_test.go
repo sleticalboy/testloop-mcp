@@ -196,6 +196,37 @@ func TestHandleValidateCoverageTaskGoCoverageMissNeedsBetterInput(t *testing.T) 
 	}
 }
 
+func TestCoverageTaskTargetLineHitSupportedFrameworkMatrix(t *testing.T) {
+	want := []string{
+		"go-test",
+		"cargo-test",
+		"jest",
+		"vitest",
+		"mocha",
+		"node-test",
+		"pytest",
+		"junit",
+	}
+	got := coverageTaskTargetLineHitFrameworks()
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("coverage target-hit frameworks = %v, want %v", got, want)
+	}
+	for _, framework := range want {
+		t.Run(framework, func(t *testing.T) {
+			if !coverageTaskTargetLineHitSupported(" " + strings.ToUpper(framework) + " ") {
+				t.Fatalf("expected %q to support coverage target-hit", framework)
+			}
+		})
+	}
+	for _, framework := range []string{"", "go", "node", "playwright", "coverage.py"} {
+		t.Run("unsupported_"+framework, func(t *testing.T) {
+			if coverageTaskTargetLineHitSupported(framework) {
+				t.Fatalf("expected %q to be unsupported for coverage target-hit", framework)
+			}
+		})
+	}
+}
+
 func goCoverageHitTask(source string, testFile string) types.CoverageTestTask {
 	return types.CoverageTestTask{
 		ID:              "go-test-1",
