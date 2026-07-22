@@ -93,6 +93,7 @@ required_text = [
     "node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json",
     "node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json",
     "scripts/showcase-release-response-adopter.sh --json",
+    "node scripts/validate-release-response-adopter-artifact-verification.mjs",
     "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
     "release-response-adopter-summary.schema.json",
     "invalid-response.json",

@@ -58,6 +58,10 @@ required_snippets = [
     "scripts/showcase-release-response-adopter.sh --json",
     "node scripts/validate-release-response-adopter-summary.mjs /path/to/release-response-adopter-summary.json",
     "node scripts/verify-release-response-adopter-artifact.mjs /path/to/testloop-release-response-adopter-artifacts",
+    "node scripts/validate-release-response-adopter-artifact-verification.mjs /tmp/testloop-release-response-adopter-artifact-verification.json",
+    "./fixtures/release-response-adopter-artifact-verification.schema.json",
+    "./fixtures/release-response-adopter-artifact-verification/passed.json",
+    "./fixtures/release-response-adopter-artifact-verification/missing-summary-consumer.json",
     "./fixtures/release-response-adopter-summary.schema.json",
     "./fixtures/release-response-adopter-summary/passed.json",
     "./fixtures/release-response-adopter-summary/invalid-response.json",
@@ -137,6 +141,7 @@ command_paths = {
     "scripts/install-agent-decision-release-response-client.sh": Path("scripts/install-agent-decision-release-response-client.sh"),
     "scripts/showcase-release-response-adopter.sh": Path("scripts/showcase-release-response-adopter.sh"),
     "scripts/verify-release-response-adopter-artifact.mjs": Path("scripts/verify-release-response-adopter-artifact.mjs"),
+    "node scripts/validate-release-response-adopter-artifact-verification.mjs": Path("scripts/validate-release-response-adopter-artifact-verification.mjs"),
     "node scripts/validate-release-response-adopter-summary.mjs": Path("scripts/validate-release-response-adopter-summary.mjs"),
     "node scripts/validate-agent-decision-release-response-client-install-summary.mjs": Path("scripts/validate-agent-decision-release-response-client-install-summary.mjs"),
 }

@@ -38,6 +38,9 @@ if not fixtures:
 
 for snippet in [
     "node scripts/verify-release-response-adopter-artifact.mjs /path/to/testloop-release-response-adopter-artifacts",
+    "node scripts/validate-release-response-adopter-artifact-verification.mjs",
+    "release-response-adopter-artifact-verification.schema.json",
+    "missing-summary-consumer.json",
     "testloop-release-response-adopter-artifacts/",
 ]:
     if snippet not in text:

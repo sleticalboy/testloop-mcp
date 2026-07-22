@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/release-response-adopter-artifact-verification.schema.json",
+  "title": "testloop release response adopter artifact verification",
+  "description": "Machine-readable contract for scripts/verify-release-response-adopter-artifact.mjs --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "artifact_dir",
+    "summary_json",
+    "release_ref",
+    "fixture_count",
+    "agent_next_step",
+    "should_accept",
+    "required_files",
+    "files",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "artifact_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "agent_next_step": {
+      "type": "string",
+      "minLength": 1
+    },
+    "should_accept": {
+      "type": "boolean"
+    },
+    "required_files": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "exists"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "exists": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -202,6 +202,7 @@ const agentNextStep = status === 'passed'
   ? (typeof adopterSummary.agent_next_step === 'string' ? adopterSummary.agent_next_step : '')
   : 'inspect-release-response-adopter-artifact';
 const output = {
+  schema_version: 1,
   status,
   artifact_dir: artifactDir,
   summary_json: artifactPath('testloop-release-response-adopter-summary.json'),

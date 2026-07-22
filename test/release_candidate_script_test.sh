@@ -71,7 +71,8 @@ assert_contains "$script" 'TESTLOOP_RELEASE_RESPONSE_ADOPTER_ARTIFACT_DIR="$rele
 assert_contains "$script" 'scripts/showcase-release-response-adopter.sh --json > "$release_response_adopter_summary"'
 assert_contains "$script" 'node scripts/validate-release-response-adopter-summary.mjs "$release_response_adopter_summary"'
 assert_contains "$script" "verify release response adopter artifact"
-assert_contains "$script" 'node scripts/verify-release-response-adopter-artifact.mjs "$release_response_adopter_artifact_dir"'
+assert_contains "$script" 'node scripts/verify-release-response-adopter-artifact.mjs --json "$release_response_adopter_artifact_dir" > "$release_response_adopter_artifact_verification"'
+assert_contains "$script" 'node scripts/validate-release-response-adopter-artifact-verification.mjs "$release_response_adopter_artifact_verification"'
 assert_contains "$script" 'go build -o "$mcp_binary" .'
 assert_contains "$script" 'go build -o "$testgen_binary" ./cmd/testgen'
 assert_contains "$script" '"$mcp_binary" --version'

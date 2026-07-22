@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "artifact_dir": "/tmp/testloop-release-response-adopter-artifacts",
+  "summary_json": "/tmp/testloop-release-response-adopter-artifacts/testloop-release-response-adopter-summary.json",
+  "release_ref": "v0.5.20",
+  "fixture_count": 8,
+  "agent_next_step": "inspect-release-response-adopter-artifact",
+  "should_accept": false,
+  "required_files": 6,
+  "files": [
+    {
+      "path": "testloop-release-response-adopter-summary.json",
+      "exists": true
+    },
+    {
+      "path": "testloop-release-response-install-summary.json",
+      "exists": true
+    },
+    {
+      "path": "testloop-release-response-client/testloop-release-smoke-summary.json",
+      "exists": true
+    },
+    {
+      "path": "testloop-release-response-client/testloop-release-response.json",
+      "exists": true
+    },
+    {
+      "path": "testloop-release-response-consumer.json",
+      "exists": true
+    },
+    {
+      "path": "testloop-release-response-summary-consumer.json",
+      "exists": false
+    }
+  ],
+  "failures": [
+    "missing required file testloop-release-response-summary-consumer.json"
+  ]
+}

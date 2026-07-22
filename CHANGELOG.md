@@ -13,6 +13,7 @@
 - `scripts/showcase-release-response-adopter.sh --json` 现在会生成 `testloop-release-response-adopter-artifacts/`，并在 adopter summary 中返回 `artifact_dir` 和 `summary_consumer_json`，外部 CI 可直接上传该目录给 Agent 离线排查。
 - 新增 `scripts/verify-release-response-adopter-artifact.mjs`，可离线自检下载后的接入样板 artifact 目录，并已纳入 release readiness。
 - `verify-release-response-adopter-artifact.mjs` 失败时会输出 `agent_next_step=inspect-release-response-adopter-artifact` 和 `should_accept=false`，避免 Agent 误用 summary 中旧的 `ready` 字段。
+- 新增 release response 接入样板 artifact verification schema、通过态/失败态 fixture 和 `scripts/validate-release-response-adopter-artifact-verification.mjs`，用于机器校验 verifier `--json` 输出。
 - release readiness 现在会运行 `scripts/showcase-release-response-adopter.sh --json` 并用 `scripts/validate-release-response-adopter-summary.mjs` 校验接入样板 summary。
 
 ## v0.5.20 - 2026-07-21

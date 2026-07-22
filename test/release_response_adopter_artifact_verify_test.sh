@@ -66,6 +66,7 @@ import json
 import sys
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["release_ref"] == "v0.5.20"
 assert payload["fixture_count"] == 8
@@ -107,6 +108,7 @@ path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
 run_expect_code 1 "${tmp_dir}/bad-consumer.out" node "$script" --json "$bad_consumer_dir"
 assert_contains "${tmp_dir}/bad-consumer.out" '"status": "failed"'
+assert_contains "${tmp_dir}/bad-consumer.out" '"schema_version": 1'
 assert_contains "${tmp_dir}/bad-consumer.out" '"agent_next_step": "inspect-release-response-adopter-artifact"'
 assert_contains "${tmp_dir}/bad-consumer.out" '"should_accept": false'
 assert_contains "${tmp_dir}/bad-consumer.out" 'consumer response agent_next_step=\"inspect-release-consumer-response\", want \"ready\"'
