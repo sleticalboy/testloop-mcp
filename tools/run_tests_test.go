@@ -385,6 +385,15 @@ func TestHandleRunTestsValidatesInput(t *testing.T) {
 	}
 }
 
+func TestNormalizeFrameworkName(t *testing.T) {
+	if got := normalizeFrameworkName(" Vitest "); got != "vitest" {
+		t.Fatalf("normalizeFrameworkName = %q, want vitest", got)
+	}
+	if got := normalizeFrameworkName("\tGO-TEST\n"); got != "go-test" {
+		t.Fatalf("normalizeFrameworkName = %q, want go-test", got)
+	}
+}
+
 func TestHandleRunTestsExecutesGoTest(t *testing.T) {
 	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
 	if Add(1, 2) != 3 {
@@ -417,6 +426,30 @@ func TestHandleRunTestsExecutesGoTest(t *testing.T) {
 	structured := structuredContentAs[types.TestResult](t, result)
 	if structured.Framework != parsed.Framework || structured.Status != parsed.Status || structured.Action != parsed.Action || structured.CoveragePercent != parsed.CoveragePercent {
 		t.Fatalf("structured content mismatch: %+v vs %+v", structured, parsed)
+	}
+}
+
+func TestHandleRunTestsNormalizesFrameworkInput(t *testing.T) {
+	dir := writeTempGoTestPackage(t, `func TestAdd(t *testing.T) {
+	if Add(1, 2) != 3 {
+		t.Fatal("bad add")
+	}
+}`)
+
+	result, _, err := HandleRunTests(context.Background(), nil, runTestsInput{
+		Path:      dir,
+		Framework: " GO-TEST ",
+	})
+	if err != nil {
+		t.Fatalf("HandleRunTests returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Framework != "go-test" || parsed.Status != "pass" {
+		t.Fatalf("unexpected normalized result: %+v", parsed)
 	}
 }
 

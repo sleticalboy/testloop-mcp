@@ -32,7 +32,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 	if input.CoverageTask == nil {
 		return nil, nil, fmt.Errorf("coverage_task 参数必填")
 	}
-	framework := firstNonEmpty(input.Framework, input.CoverageTask.Framework)
+	framework := normalizeFrameworkName(firstNonEmpty(input.Framework, input.CoverageTask.Framework))
 
 	generated, err := validateCoverageTaskGenerate(ctx, input, framework)
 	if err != nil {
@@ -105,6 +105,7 @@ func HandleValidateCoverageTask(ctx context.Context, req *mcp.CallToolRequest, i
 }
 
 func coverageTaskValidationMetadata(framework string, coverageRequested bool, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) map[string]any {
+	framework = normalizeFrameworkName(framework)
 	metadata := map[string]any{
 		"framework": framework,
 	}
@@ -164,7 +165,7 @@ func coverageTaskValidationMetadata(framework string, coverageRequested bool, ge
 }
 
 func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsOutput, result *types.TestResult, task *types.CoverageTestTask) (bool, string, []int, []int, bool) {
-	framework = strings.ToLower(strings.TrimSpace(framework))
+	framework = normalizeFrameworkName(framework)
 	if !coverageTaskTargetLineHitSupported(framework) || generated == nil || result == nil || result.Status != "pass" || task == nil {
 		return false, "", nil, nil, false
 	}
@@ -211,7 +212,7 @@ func coverageTaskTargetLineHit(framework string, generated *types.GenerateTestsO
 }
 
 func coverageTaskTargetLineHitSupported(framework string) bool {
-	framework = strings.ToLower(strings.TrimSpace(framework))
+	framework = normalizeFrameworkName(framework)
 	for _, supported := range coverageTaskTargetLineHitFrameworks() {
 		if framework == supported {
 			return true
@@ -707,7 +708,7 @@ func coverageTaskInternalSymbolReason(task *types.CoverageTestTask, generated *t
 	if generated.Context != nil {
 		contextFramework = generated.Context.Framework
 	}
-	framework := strings.ToLower(strings.TrimSpace(firstNonEmpty(task.Framework, contextFramework)))
+	framework := normalizeFrameworkName(firstNonEmpty(task.Framework, contextFramework))
 	if framework == "junit" || strings.HasSuffix(strings.ToLower(task.File), ".java") {
 		return fmt.Sprintf("%s is private/internal Java code; cover it through a visible public or package entry point, add a test seam, or review manually", target)
 	}
@@ -760,7 +761,7 @@ func validateCoverageTaskRun(ctx context.Context, input validateCoverageTaskInpu
 	if input.IncludeFixSuggestions != nil {
 		includeFixSuggestions = *input.IncludeFixSuggestions
 	}
-	collectCoverage := input.Coverage || strings.ToLower(strings.TrimSpace(framework)) == "junit"
+	collectCoverage := input.Coverage || normalizeFrameworkName(framework) == "junit"
 	if timeout := validateCoverageTaskTimeout(); timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)

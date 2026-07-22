@@ -60,7 +60,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 		return nil, nil, fmt.Errorf("path 参数必填")
 	}
 
-	framework := input.Framework
+	framework := normalizeFrameworkName(input.Framework)
 	coverage := input.Coverage
 	verbose := input.Verbose
 	if !verbose {
@@ -69,7 +69,7 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 
 	// 自动检测框架
 	if framework == "" {
-		framework = detector.DetectFramework(path)
+		framework = normalizeFrameworkName(detector.DetectFramework(path))
 	}
 	input.Framework = framework
 
@@ -133,6 +133,10 @@ func HandleRunTests(ctx context.Context, req *mcp.CallToolRequest, input runTest
 	}
 	annotateTestResultAction(&result)
 	return structuredToolResult(result)
+}
+
+func normalizeFrameworkName(framework string) string {
+	return strings.ToLower(strings.TrimSpace(framework))
 }
 
 func generateRunTestFixSuggestions(input runTestsInput, failures []types.TestFailure) []types.FixSuggestion {

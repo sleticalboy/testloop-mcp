@@ -34,6 +34,7 @@ func HandleGenerateTests(ctx context.Context, req *mcp.CallToolRequest, input ge
 	if _, err := os.Stat(filePath); err != nil {
 		return nil, nil, fmt.Errorf("文件不存在: %w", err)
 	}
+	input.Framework = normalizeFrameworkName(input.Framework)
 
 	testFile := targetTestFile(filePath, input.CoverageTask)
 	coverageTask, err := coverageTaskForGeneration(filePath, testFile, input.CoverageTask)

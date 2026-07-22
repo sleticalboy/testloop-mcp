@@ -237,6 +237,9 @@ func TestCoverageTaskValidationMetadataExposesTargetHitSupportWhenCoverageReques
 	}
 
 	supported := coverageTaskValidationMetadata(" vitest ", true, generated, result, task)
+	if supported["framework"] != "vitest" {
+		t.Fatalf("expected normalized framework metadata, got %+v", supported)
+	}
 	if supported["coverage_target_hit_supported"] != true {
 		t.Fatalf("expected supported coverage target-hit metadata, got %+v", supported)
 	}
