@@ -64,6 +64,7 @@ required_commands = [
     "node scripts/verify-release-response-adopter-artifact.mjs",
     "node scripts/validate-release-response-adopter-artifact-verification.mjs",
     "node scripts/validate-agent-decision-client-ci-install-summary.mjs",
+    "node scripts/validate-agent-decision-client-ci-summary.mjs",
     "npm test --silent",
     "scripts/doctor-first-run.sh",
     "sh scripts/render-first-run-agent-response.sh",

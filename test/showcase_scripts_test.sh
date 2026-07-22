@@ -55,6 +55,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-consumer-smoke.sh"
   node --check "${repo_root}/scripts/render-agent-decision-client-ci-response.mjs"
   node --check "${repo_root}/scripts/render-agent-decision-client-consumer-response.mjs"
+  node --check "${repo_root}/scripts/validate-agent-decision-client-ci-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-client-ci-install-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-release-response-client-install-summary.mjs"
