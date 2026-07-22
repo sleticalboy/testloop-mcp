@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "agent_next_step": "ready",
+  "summary_json": "docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json",
+  "evidence": {
+    "helper_ref": "v0.5.21",
+    "fixture_count": 8,
+    "decisions": [
+      "accept",
+      "accept",
+      "accept",
+      "manual-review",
+      "manual-review",
+      "manual-review",
+      "apply-repair",
+      "needs-better-input"
+    ],
+    "result_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client/agent-decision-fixtures-result.json",
+    "client_summary_json": "/tmp/testloop-agent-decision-template-install/testloop-agent-decision-client-summary.json",
+    "client_summary_validator_json": "/tmp/testloop-agent-decision-consumer-smoke/client-summary-validation.json",
+    "workflow_path": "/tmp/testloop-agent-decision-consumer-smoke/external-client/.github/workflows/testloop-agent-decision-contract.yml",
+    "install_summary_validator_exit_code": 0,
+    "client_summary_validator_exit_code": 0,
+    "fixture_validator_exit_code": 0,
+    "npm_validator_exit_code": 0
+  },
+  "failures": []
+}

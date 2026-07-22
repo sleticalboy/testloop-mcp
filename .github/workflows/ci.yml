@@ -106,6 +106,7 @@ jobs:
           sh test/agent_decision_client_ci_consumer_smoke_summary_schema_test.sh
           sh test/agent_decision_client_ci_consumer_smoke_summary_validator_test.sh
           sh test/agent_decision_client_consumer_response_test.sh
+          sh test/agent_decision_client_consumer_response_fixtures_test.sh
           sh test/agent_decision_client_release_smoke_test.sh
           sh test/agent_decision_client_release_response_test.sh
           sh test/agent_decision_client_release_response_fixtures_test.sh
