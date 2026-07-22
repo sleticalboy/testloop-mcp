@@ -57,6 +57,7 @@ tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/testloop-agent-decision-consumer-smoke.XXX
 client_dir="${TESTLOOP_AGENT_DECISION_CI_CLIENT_DIR:-${tmp_dir}/external-client}"
 install_summary_json="${tmp_dir}/install-summary.json"
 install_validation_json="${tmp_dir}/install-summary-validation.json"
+client_summary_validation_json="${tmp_dir}/client-summary-validation.json"
 fixture_validation_json="${tmp_dir}/fixture-validation.json"
 consumer_summary_json="${tmp_dir}/consumer-smoke-summary.json"
 agent_response_json="${tmp_dir}/agent-response.json"
@@ -98,6 +99,12 @@ client_summary_json="$(
 [[ -n "$client_summary_json" ]] || fail "install summary is missing summary_json: $install_summary_json"
 [[ -f "$client_summary_json" ]] || fail "client summary JSON does not exist: $client_summary_json"
 
+set +e
+node "${repo_root}/scripts/validate-agent-decision-client-ci-summary.mjs" \
+  --json "$client_summary_json" > "$client_summary_validation_json"
+client_summary_validator_exit_code=$?
+set -e
+
 fixture_dir="$(
   node -e "const fs=require('node:fs'); const payload=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); process.stdout.write(payload.fixture_dir || '');" \
     "$client_summary_json"
@@ -117,8 +124,10 @@ node - \
   "$install_summary_json" \
   "$install_validation_json" \
   "$client_summary_json" \
+  "$client_summary_validation_json" \
   "$fixture_validation_json" \
   "$install_summary_validator_exit_code" \
+  "$client_summary_validator_exit_code" \
   "$fixture_validator_exit_code" \
   "$consumer_summary_json" \
   "$agent_response_json" <<'JS'
@@ -127,8 +136,10 @@ const [
   installSummaryPath,
   installValidationPath,
   clientSummaryPath,
+  clientSummaryValidationPath,
   fixtureValidationPath,
   installValidatorExitCodeRaw,
+  clientSummaryValidatorExitCodeRaw,
   fixtureValidatorExitCodeRaw,
   consumerSummaryPath,
   agentResponsePath,
@@ -141,10 +152,12 @@ function readJSON(filePath) {
 const installSummary = readJSON(installSummaryPath);
 const installValidation = readJSON(installValidationPath);
 const clientSummary = readJSON(clientSummaryPath);
+const clientSummaryValidation = readJSON(clientSummaryValidationPath);
 const fixtureValidation = readJSON(fixtureValidationPath);
 const resultJSONPath = clientSummary.result_json || '';
 const resultPayload = resultJSONPath ? readJSON(resultJSONPath) : {};
 const installValidatorExitCode = Number(installValidatorExitCodeRaw);
+const clientSummaryValidatorExitCode = Number(clientSummaryValidatorExitCodeRaw);
 const fixtureValidatorExitCode = Number(fixtureValidatorExitCodeRaw);
 const failures = [];
 
@@ -157,11 +170,15 @@ function requirePassed(payload, label) {
 requirePassed(installSummary, 'install summary');
 requirePassed(installValidation, 'install summary validator');
 requirePassed(clientSummary, 'client summary');
+requirePassed(clientSummaryValidation, 'client summary validator');
 requirePassed(fixtureValidation, 'fixture validator');
 requirePassed(resultPayload, 'result json');
 
 if (installValidatorExitCode !== 0) {
   failures.push(`install summary validator exit code=${installValidatorExitCode}`);
+}
+if (clientSummaryValidatorExitCode !== 0) {
+  failures.push(`client summary validator exit code=${clientSummaryValidatorExitCode}`);
 }
 if (fixtureValidatorExitCode !== 0) {
   failures.push(`fixture validator exit code=${fixtureValidatorExitCode}`);
@@ -192,6 +209,7 @@ const payload = {
   install_summary_json: installSummaryPath,
   install_summary_validator_json: installValidationPath,
   client_summary_json: clientSummaryPath,
+  client_summary_validator_json: clientSummaryValidationPath,
   fixture_dir: clientSummary.fixture_dir,
   fixture_validation_json: fixtureValidationPath,
   result_json: resultJSONPath,
@@ -200,6 +218,7 @@ const payload = {
   decisions: installSummary.decisions,
   failures,
   install_summary_validator_exit_code: installValidatorExitCode,
+  client_summary_validator_exit_code: clientSummaryValidatorExitCode,
   fixture_validator_exit_code: fixtureValidatorExitCode,
   npm_validator_exit_code: clientSummary.validator_exit_code,
 };

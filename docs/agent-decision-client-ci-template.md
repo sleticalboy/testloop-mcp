@@ -153,7 +153,7 @@ scripts/showcase-agent-decision-client-ci-template-install.sh --json
 scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 ```
 
-该 smoke 会在安装 dry-run 基础上继续校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致，并把 renderer 输出写到 `agent_response_json`。JSON 输出结构由 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)；也可以运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json` 做无依赖校验。
+该 smoke 会在安装 dry-run 基础上继续校验安装 summary、基础客户端 CI summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致，并把 renderer 输出写到 `agent_response_json`。JSON 输出结构由 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json) 固定，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)；也可以运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json` 做无依赖校验。
 
 ## Agent 分流示例
 

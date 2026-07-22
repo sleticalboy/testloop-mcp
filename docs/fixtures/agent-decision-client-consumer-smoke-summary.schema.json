@@ -14,6 +14,7 @@
     "install_summary_json",
     "install_summary_validator_json",
     "client_summary_json",
+    "client_summary_validator_json",
     "fixture_dir",
     "fixture_validation_json",
     "result_json",
@@ -22,6 +23,7 @@
     "decisions",
     "failures",
     "install_summary_validator_exit_code",
+    "client_summary_validator_exit_code",
     "fixture_validator_exit_code",
     "npm_validator_exit_code"
   ],
@@ -61,6 +63,10 @@
       "type": "string",
       "minLength": 1
     },
+    "client_summary_validator_json": {
+      "type": "string",
+      "minLength": 1
+    },
     "fixture_dir": {
       "type": "string",
       "minLength": 1
@@ -92,6 +98,10 @@
       "type": "array"
     },
     "install_summary_validator_exit_code": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "client_summary_validator_exit_code": {
       "type": "integer",
       "minimum": 0
     },

@@ -39,6 +39,7 @@ required = [
     "scripts/showcase-agent-decision-client-consumer-smoke.sh --json",
     "agent_decision_client_consumer_smoke_status=passed",
     "client_summary_json",
+    "client_summary_validator_json",
     "fixture_validation_json",
     "agent_response_json",
     "./fixtures/agent-decision-client-consumer-smoke-summary.schema.json",

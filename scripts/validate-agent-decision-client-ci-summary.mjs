@@ -140,14 +140,14 @@ if (summary.validator_exit_code !== 0) {
 }
 
 const expectedResultJSON = path.join(summary.client_dir || '', 'agent-decision-fixtures-result.json');
-if (summary.result_json !== expectedResultJSON) {
+if (path.normalize(summary.result_json || '') !== path.normalize(expectedResultJSON)) {
   failures.push(`${summaryPath}: result_json must be ${expectedResultJSON}`);
 }
 const expectedResultSchema = path.join(
   summary.fixture_dir || '',
   'docs/fixtures/agent-decision-fixtures-result.schema.json',
 );
-if (summary.result_schema !== expectedResultSchema) {
+if (path.normalize(summary.result_schema || '') !== path.normalize(expectedResultSchema)) {
   failures.push(`${summaryPath}: result_schema must be ${expectedResultSchema}`);
 }
 

@@ -161,6 +161,8 @@ if not failures:
                     failures.append("consumer smoke fixture_count must be 8")
                 if payload.get("install_summary_validator_exit_code") != 0:
                     failures.append("consumer smoke install_summary_validator_exit_code must be 0")
+                if payload.get("client_summary_validator_exit_code") != 0:
+                    failures.append("consumer smoke client_summary_validator_exit_code must be 0")
                 if payload.get("fixture_validator_exit_code") != 0:
                     failures.append("consumer smoke fixture_validator_exit_code must be 0")
 

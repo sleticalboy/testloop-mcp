@@ -85,7 +85,7 @@ scripts/showcase-agent-decision-client-ci-template-install.sh --json
 scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 ```
 
-该命令会创建一个临时外部 client，使用本仓库 installer 生成 workflow，运行安装后的 helper dry-run，校验安装 summary，并再次校验导出的 fixture manifest 与 `agent-decision-fixtures-result.json`。成功时会输出 `agent_decision_client_consumer_smoke_status=passed`，并给出 `workflow_path`、`client_summary_json`、`fixture_validation_json`、`result_json` 和 `agent_response_json`，方便接入方复用同样的 artifact 消费检查。
+该命令会创建一个临时外部 client，使用本仓库 installer 生成 workflow，运行安装后的 helper dry-run，校验安装 summary、基础客户端 CI summary，并再次校验导出的 fixture manifest 与 `agent-decision-fixtures-result.json`。成功时会输出 `agent_decision_client_consumer_smoke_status=passed`，并给出 `workflow_path`、`client_summary_json`、`client_summary_validator_json`、`fixture_validation_json`、`result_json` 和 `agent_response_json`，方便接入方复用同样的 artifact 消费检查。
 JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。
 如果要在客户端 CI 中固定消费端 smoke 输出形状，可运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
 如果要把消费端 smoke summary 转成 Agent 可执行分流，可运行 `node scripts/render-agent-decision-client-consumer-response.mjs /path/to/consumer-smoke-summary.json`。通过态输出 `agent_next_step=ready`；失败时按 `inspect-consumer-smoke-validator`、`inspect-agent-decision-fixtures` 或 `inspect-consumer-smoke-summary` 分流。

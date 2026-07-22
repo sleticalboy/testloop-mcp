@@ -60,8 +60,10 @@ import sys
 payload = json.loads(Path("docs/fixtures/agent-decision-client-consumer-smoke-summary/passed.json").read_text(encoding="utf-8"))
 payload["status"] = "failed"
 payload["helper_ref"] = "main"
+payload["client_summary_validator_exit_code"] = 1
 payload["fixture_validator_exit_code"] = 1
 payload["failures"] = ["boom"]
+payload["client_summary_validator_json"] = ""
 payload["agent_response_json"] = ""
 Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
@@ -72,8 +74,10 @@ if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs "$bad_
 fi
 assert_contains "${tmp_dir}/bad.out" "status must be passed"
 assert_contains "${tmp_dir}/bad.out" "helper_ref must be v0.5.21"
+assert_contains "${tmp_dir}/bad.out" "client_summary_validator_exit_code must be 0"
 assert_contains "${tmp_dir}/bad.out" "fixture_validator_exit_code must be 0"
 assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
+assert_contains "${tmp_dir}/bad.out" "client_summary_validator_json"
 assert_contains "${tmp_dir}/bad.out" "agent_response_json"
 
 if node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs --json "$bad_summary" > "${tmp_dir}/bad.json"; then

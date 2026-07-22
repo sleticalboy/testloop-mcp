@@ -131,7 +131,7 @@ scripts/showcase-agent-decision-client-ci-template-install.sh --json
 scripts/showcase-agent-decision-client-consumer-smoke.sh --json
 ```
 
-该命令会校验安装 summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致。JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。客户端 CI 不想引入 JSON Schema 校验器时，可以运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
+该命令会校验安装 summary、基础客户端 CI summary、导出的 fixture manifest 和 `agent-decision-fixtures-result.json` 互相一致。JSON 输出结构见 [Agent 决策客户端消费端 smoke summary schema](./fixtures/agent-decision-client-consumer-smoke-summary.schema.json)，通过态样例见 [passed.json](./fixtures/agent-decision-client-consumer-smoke-summary/passed.json)。客户端 CI 不想引入 JSON Schema 校验器时，可以运行 `node scripts/validate-agent-decision-client-consumer-smoke-summary.mjs /path/to/consumer-smoke-summary.json`。
 发布后如果要验证 release smoke summary 能被独立客户端消费，可以运行：
 
 ```bash
