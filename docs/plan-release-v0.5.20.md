@@ -67,11 +67,12 @@
 - [x] 本机 Homebrew tap 已 fast-forward 到 `bee0521`，`brew fetch --force --formula sleticalboy/tap/testloop-mcp` 成功，`brew audit --formula --strict sleticalboy/tap/testloop-mcp` 通过。
 - [x] 发布后 release smoke 已通过：`status=passed`、`release_ref=v0.5.20`、`helper_refs.install=v0.5.20`、`helper_refs.consumer=v0.5.20`、`fixture_count=8`、`agent_next_steps.client=ready`、`agent_next_steps.consumer=ready`。
 - [x] 发布后 release response smoke 已通过：`status=passed`、`release_ref=v0.5.20`、`fixture_count=8`、`agent_next_step=ready`、`npm_exit_code=0`。
-- [ ] Post-Release Verify run `29848148743` 已触发，当前等待 GitHub runner 分配。
+- [x] Post-Release Verify run `29848148743` passed，覆盖 asset manifest、Linux amd64/arm64、macOS arm64、Windows amd64/arm64 安装校验。
+- [x] `c22cd07` 远端 CI run `29849305668` passed，覆盖 v0.5.20 正式发布记录。
 
 ## 发布前门禁
 
-- [x] 最新 main CI passed：`353d255` run `29846178265` passed。
+- [x] 最新 main CI passed：`c22cd07` run `29849305668` passed。
 - [x] 本地 release readiness passed：`TESTLOOP_RELEASE_CANDIDATE_DIST_DIR=/tmp/testloop-v0.5.19-goal-readiness-dist scripts/verify-release-candidate.sh v0.5.19`。
 - [x] readiness 输出包含 release response 导出包验证：`response_fixture_count=5`。
 - [x] readiness 输出包含真实仓库安装 summary 验证：`agent_decision_release_response_client_install_summary_status=passed release_ref=v0.5.19`。
@@ -96,9 +97,9 @@
 - [x] 更新 GitHub Release 正文为正式 v0.5.20 发布说明。
 - [x] 使用 `scripts/generate-homebrew-formula.sh v0.5.20` 更新仓库内 Formula。
 - [x] 更新 Homebrew tap 到 `0.5.20`。
-- [ ] Post-Release Verify。
+- [x] Post-Release Verify。
 - [x] 发布后运行 release response checklist 核心 smoke。
 
 ## 当前结论
 
-v0.5.20 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap 和发布后 release response smoke。当前仍在等待 Post-Release Verify run `29848148743` 获取 GitHub runner；该 run 完成后应提交发布完成记录并等待 main CI。
+v0.5.20 已完成正式 GitHub Release、五平台资产发布、资产清单校验、GitHub Release 正文、仓库内 Formula、Homebrew tap、Post-Release Verify、发布后 release smoke 和 release response smoke。发布记录提交 `c22cd07` 的 main CI 已通过；下一步应回到产品主线，继续做真实外部客户端/Agent 接入样板。
