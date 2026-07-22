@@ -36,6 +36,13 @@ def has_key(value, key):
 if not fixtures:
     failures.append(f"{fixture_dir}: no fixture JSON files found")
 
+for snippet in [
+    "node scripts/verify-release-response-adopter-artifact.mjs /path/to/testloop-release-response-adopter-artifacts",
+    "testloop-release-response-adopter-artifacts/",
+]:
+    if snippet not in text:
+        failures.append(f"{index}: missing release response adopter artifact verifier snippet {snippet!r}")
+
 for fixture in fixtures:
     try:
         data = json.loads(fixture.read_text(encoding="utf-8"))

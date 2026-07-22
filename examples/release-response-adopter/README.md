@@ -137,6 +137,15 @@ testloop_release_response_summary_should_accept=true
 
 如果只能上传一份文件，优先上传 `testloop-release-response-adopter-summary.json`；它包含 `install_summary_json`、`agent_response_json`、`consumer_json` 和 `summary_consumer_json` 路径，可让 Agent 继续定位缺失证据。
 
+下载 CI artifact 后可以离线自检：
+
+```bash
+node scripts/verify-release-response-adopter-artifact.mjs \
+  /path/to/testloop-release-response-adopter-artifacts
+```
+
+通过态会输出 `release_response_adopter_artifact_status=passed`、`agent_next_step=ready` 和 `should_accept=true`；失败态会返回非 0 并输出缺失文件或漂移字段。
+
 ## Agent 契约
 
 Agent 只读取 `testloop-release-response-client/testloop-release-response.json`，并基于这些字段分流：
