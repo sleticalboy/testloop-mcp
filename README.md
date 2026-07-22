@@ -636,7 +636,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 导出目录会保留 `docs/fixtures/...`、validator result schema 和 `scripts/validate-agent-decision-fixtures.mjs`，因此复制后仍可在目标项目内运行同一条 `--json` 校验命令。
 导出目录还包含无依赖 `package.json`，接入方也可以直接运行 `npm test --silent`。
 如果要模拟外部客户端 CI 从导出到校验的完整链路，可以运行 `scripts/showcase-agent-decision-client-ci.sh`；预期输出包含 `agent_decision_client_status=passed` 和 `agent_decision_fixture_count=8`。
-机器断言推荐运行 `scripts/showcase-agent-decision-client-ci.sh --json`，直接读取 `status`、`fixture_count`、`decisions[]`、`failures[]`、`result_json`、`result_schema` 和 `validator_exit_code`。如果要把该 summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json`，通过态输出 `agent_next_step=ready`。
+机器断言推荐运行 `scripts/showcase-agent-decision-client-ci.sh --json`，直接读取 `schema_version`、`status`、`fixture_count`、`decisions[]`、`failures[]`、`result_json`、`result_schema` 和 `validator_exit_code`；summary 结构契约见 [agent-decision-client-ci-summary.schema.json](./docs/fixtures/agent-decision-client-ci-summary.schema.json)，通过态样例见 [passed.json](./docs/fixtures/agent-decision-client-ci-summary/passed.json)。如果要把该 summary 转成 Agent 下一步动作，可运行 `node scripts/render-agent-decision-client-ci-response.mjs /path/to/testloop-agent-decision-client-summary.json`，通过态输出 `agent_next_step=ready`。
 客户端仓库可直接复制的 GitHub Actions 模板见 [Agent 决策客户端 CI 模板](./docs/agent-decision-client-ci-template.md)，保存路径建议为 `.github/workflows/testloop-agent-decision-contract.yml`。
 最短接入步骤见 [Agent 决策客户端 CI 接入 Checklist](./docs/agent-decision-client-ci-checklist.md)。
 如果要直接把模板安装到外部客户端仓库，可以运行：

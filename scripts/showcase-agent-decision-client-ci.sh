@@ -85,6 +85,7 @@ const npmStatus = Number(npmStatusRaw);
 const payload = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
 const resultSchemaPath = path.join(fixtureDir, 'docs/fixtures/agent-decision-fixtures-result.schema.json');
 const summary = {
+  schema_version: 1,
   status: payload.status,
   client_dir: clientDir,
   fixture_dir: fixtureDir,
