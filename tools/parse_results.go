@@ -20,7 +20,7 @@ func HandleParseResults(ctx context.Context, req *mcp.CallToolRequest, input par
 	if output == "" {
 		return nil, nil, fmt.Errorf("output 参数必填")
 	}
-	framework := input.Framework
+	framework := normalizeFrameworkName(input.Framework)
 	if framework == "" {
 		framework = "go-test"
 	}
@@ -34,7 +34,7 @@ func HandleParseResults(ctx context.Context, req *mcp.CallToolRequest, input par
 
 // 保留原有函数以兼容
 func parseResults(input parseResultsInput) (types.TestResult, error) {
-	framework := input.Framework
+	framework := normalizeFrameworkName(input.Framework)
 	if framework == "" {
 		framework = "go-test"
 	}

@@ -18,7 +18,7 @@ func HandleParseCoverage(ctx context.Context, req *mcp.CallToolRequest, input pa
 	if input.Data == "" {
 		return nil, nil, fmt.Errorf("data 参数必填")
 	}
-	framework := input.Framework
+	framework := normalizeFrameworkName(input.Framework)
 	if framework == "" {
 		framework = "go-test"
 	}

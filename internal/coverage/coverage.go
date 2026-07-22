@@ -13,6 +13,7 @@ import (
 
 // ParseCoverage 解析覆盖率数据
 func ParseCoverage(profileData, framework string) (*types.CoverageReport, error) {
+	framework = strings.ToLower(strings.TrimSpace(framework))
 	switch framework {
 	case "go-test":
 		return ParseGoCoverage(profileData)

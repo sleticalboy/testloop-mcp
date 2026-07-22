@@ -115,6 +115,25 @@ ok  	example.com/calc	0.001s`
 	}
 }
 
+func TestParseTestOutputNormalizesFramework(t *testing.T) {
+	output := `TAP version 13
+# Subtest: add
+ok 1 - add
+1..1
+# tests 1
+# pass 1
+# fail 0`
+
+	result := ParseTestOutput(output, " NODE-TEST ")
+
+	if result.Framework != "node-test" {
+		t.Fatalf("Framework = %q, want node-test", result.Framework)
+	}
+	if result.Status != "pass" || result.Passed != 1 {
+		t.Fatalf("Unexpected node-test result: status=%s passed=%d", result.Status, result.Passed)
+	}
+}
+
 func TestParseTestOutputDispatchesRemainingFrameworks(t *testing.T) {
 	tests := []struct {
 		name      string

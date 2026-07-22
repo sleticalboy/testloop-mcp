@@ -128,6 +128,34 @@ func TestHandleParseResultsDefaultsToGoTest(t *testing.T) {
 	}
 }
 
+func TestHandleParseResultsNormalizesFramework(t *testing.T) {
+	output := strings.Join([]string{
+		"TAP version 13",
+		"# Subtest: add",
+		"ok 1 - add",
+		"1..1",
+		"# tests 1",
+		"# pass 1",
+		"# fail 0",
+	}, "\n")
+
+	result, _, err := HandleParseResults(context.Background(), nil, parseResultsInput{
+		Output:    output,
+		Framework: " NODE-TEST ",
+	})
+	if err != nil {
+		t.Fatalf("HandleParseResults returned error: %v", err)
+	}
+
+	var parsed types.TestResult
+	if err := json.Unmarshal([]byte(resultText(t, result)), &parsed); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
+	if parsed.Framework != "node-test" || parsed.Status != "pass" {
+		t.Fatalf("unexpected parsed result: %+v", parsed)
+	}
+}
+
 func TestHandleParseResultsRequiresOutput(t *testing.T) {
 	if _, _, err := HandleParseResults(context.Background(), nil, parseResultsInput{}); err == nil {
 		t.Fatal("expected missing output error")
@@ -172,6 +200,30 @@ func TestHandleParseCoverageParsesGoCoverprofile(t *testing.T) {
 	structured := structuredContentAs[*types.CoverageReport](t, result)
 	if structured.Framework != report.Framework || structured.TotalPercent != report.TotalPercent {
 		t.Fatalf("structured content mismatch: %+v vs %+v", structured, report)
+	}
+}
+
+func TestHandleParseCoverageNormalizesFramework(t *testing.T) {
+	data := strings.Join([]string{
+		"mode: set",
+		"calc.go:1.1,2.1 1 1",
+		"calc.go:3.1,4.1 1 0",
+	}, "\n")
+
+	result, _, err := HandleParseCoverage(context.Background(), nil, parseCoverageInput{
+		Data:      data,
+		Framework: " GO-TEST ",
+	})
+	if err != nil {
+		t.Fatalf("HandleParseCoverage returned error: %v", err)
+	}
+
+	var report types.CoverageReport
+	if err := json.Unmarshal([]byte(resultText(t, result)), &report); err != nil {
+		t.Fatalf("unmarshal report: %v", err)
+	}
+	if report.Framework != "go-test" || report.TotalPercent != 50 {
+		t.Fatalf("unexpected report: %+v", report)
 	}
 }
 

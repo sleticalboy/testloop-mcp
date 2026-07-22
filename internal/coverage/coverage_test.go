@@ -1703,6 +1703,14 @@ example.com/foo.go:1.1,2.1 1 1`
 		t.Errorf("Framework = %s", r1.Framework)
 	}
 
+	rNormalized, err := ParseCoverage(goData, " GO-TEST ")
+	if err != nil {
+		t.Fatalf("normalized go-test 分发失败: %v", err)
+	}
+	if rNormalized.Framework != "go-test" {
+		t.Errorf("Framework = %s, want go-test", rNormalized.Framework)
+	}
+
 	// jest
 	jestData := `{"x.js": {"path":"x.js","statementMap":{"0":{"start":{"line":1,"column":0},"end":{"line":1,"column":1}}},"s":{"0":1},"fnMap":{},"f":{},"branchMap":{},"b":{}}}`
 	r2, err := ParseCoverage(jestData, "jest")

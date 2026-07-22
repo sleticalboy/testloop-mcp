@@ -1,11 +1,14 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/sleticalboy/testloop-mcp/types"
 )
 
 // ParseTestOutput 根据框架类型解析测试输出
 func ParseTestOutput(output, framework string) types.TestResult {
+	framework = strings.ToLower(strings.TrimSpace(framework))
 	var result types.TestResult
 	switch framework {
 	case "go-test":
