@@ -39,7 +39,11 @@
     "framework": "pytest",
     "test_file": "tests/test_apps_download_external_testloop.py",
     "external_service_dependent": true,
-    "external_service_reason": "download_apk depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable"
+    "external_service_reason": "download_apk depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable",
+    "manual_review_kind": "external_service",
+    "manual_review_reason": "download_apk depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable",
+    "next_action_kind": "manual_review",
+    "next_action_reason": "download_apk depends on a live RPC/external service, route state, or long retry timing; validate it with injected fake clients/route data or an integration environment instead of treating the generated unit test as directly repairable"
   },
   "regression_note": "该真实 haoy-apk-station 样本用于确认外部对象存储下载 endpoint timeout 会进入 failed/manual_review_external_service，而不是被误判为可自动修复的 apply_fix_suggestions。",
   "redaction_note": "该 fixture 只保留真实 haoy-apk-station 验证摘要；原始 run_result.raw_output 包含外部项目测试日志和本机临时路径，不能入仓。"

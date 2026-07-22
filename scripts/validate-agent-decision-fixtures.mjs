@@ -195,6 +195,27 @@ function validateManualReviewPayload(payload, fixturePath) {
   }
 }
 
+function actionReason(payload) {
+  const metadata = payload && typeof payload === 'object' && payload.metadata && typeof payload.metadata === 'object'
+    ? payload.metadata
+    : {};
+  for (const key of [
+    'next_action_reason',
+    'manual_review_reason',
+    'needs_better_input_reason',
+    'coverage_miss_reason',
+    'external_service_reason',
+    'environment_reason',
+    'internal_reason',
+  ]) {
+    const value = metadata[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
 let manifest;
 try {
   manifest = readJSON(manifestPath);
@@ -270,6 +291,10 @@ for (const [index, item] of (manifest.fixtures || []).entries()) {
 
   const decision = decisionFor(status, action);
   result.decision = decision;
+  const reason = actionReason(payload);
+  if (reason) {
+    result.reason = reason;
+  }
   decisions.push(decision);
   if (decision !== entry.expected_decision) {
     failures.push(`${fixtureRelPath}: decision=${decision}, expected=${entry.expected_decision}`);

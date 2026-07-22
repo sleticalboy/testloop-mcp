@@ -48,7 +48,12 @@ func run() error {
 	decisions := make([]string, 0, len(samples))
 	for i, sample := range samples {
 		decision := agentDecision(sample)
+		reason := actionReason(sample)
 		decisions = append(decisions, decision)
+		if reason != "" {
+			fmt.Printf("%d. fixture=%s status=%s action=%s decision=%s reason=%q\n", i+1, sample.Name, sample.Status, sample.Action, decision, reason)
+			continue
+		}
 		fmt.Printf("%d. fixture=%s status=%s action=%s decision=%s\n", i+1, sample.Name, sample.Status, sample.Action, decision)
 	}
 	fmt.Printf("agent_decisions=%s\n", strings.Join(decisions, ","))
@@ -126,4 +131,28 @@ func agentDecision(sample validationSample) string {
 	default:
 		return "inspect"
 	}
+}
+
+func actionReason(sample validationSample) string {
+	if len(sample.Metadata) == 0 {
+		return ""
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(sample.Metadata, &metadata); err != nil {
+		return ""
+	}
+	for _, key := range []string{
+		"next_action_reason",
+		"manual_review_reason",
+		"needs_better_input_reason",
+		"coverage_miss_reason",
+		"external_service_reason",
+		"environment_reason",
+		"internal_reason",
+	} {
+		if reason, ok := metadata[key].(string); ok && strings.TrimSpace(reason) != "" {
+			return strings.TrimSpace(reason)
+		}
+	}
+	return ""
 }

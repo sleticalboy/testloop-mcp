@@ -31,6 +31,8 @@ go run ./examples/agent-decision-demo
 - `failed/apply_fix_suggestions` 映射为 `apply-repair`
 - `failed/needs_better_input` 映射为 `needs-better-input`
 
+当 fixture 提供 `metadata.next_action_reason`、`metadata.manual_review_reason`、`metadata.needs_better_input_reason` 或兼容原因字段时，demo 输出也会带 `reason="..."`，方便 Agent 把分流原因直接写入任务记录，而不是只看到动作名。
+
 这个 demo 会通过 manifest 同时读取 `docs/fixtures/validate-coverage-task-*.json` 和 `docs/fixtures/real-project-agent-loop/*.json`。后者来自 laoxia server、mcp-hub 这类真实项目的脱敏验证摘要，用来确认真实项目证据也走同一套 `status/action` 分流，而不是另写一套客户端逻辑。
 
 如果你在做自己的客户端，建议把同样的映射逻辑做成单元测试，而不是只在真实项目里手动观察。
@@ -53,7 +55,7 @@ node scripts/validate-agent-decision-fixtures.mjs --json \
   .
 ```
 
-该 JSON 固定包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
+该 JSON 固定包含 `status`、`fixture_count`、`decisions[]`、`fixtures[]` 和 `failures[]`；`fixtures[]` 会在可用时带 `reason`，来源同样优先使用 `metadata.next_action_reason`。失败时仍输出 JSON，并以非 0 退出码让 CI 失败。
 validator 不依赖 JSON Schema 工具链，也会检查 manifest 条目的 `kind`、`source`、`status`、`action`、`expected_decision` 和 `client_expectation`。
 
 如果接入方只想复制最小决策 fixture 包，而不是整个仓库，可以先导出：

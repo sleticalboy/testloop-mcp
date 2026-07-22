@@ -28,6 +28,9 @@ assert_contains "$out" "5. fixture=real-project-agent-loop/haoy-apk-station-py-e
 assert_contains "$out" "6. fixture=real-project-agent-loop/haoy-apk-station-py-external-service.json status=failed action=manual_review_external_service decision=manual-review"
 assert_contains "$out" "7. fixture=validate-coverage-task-apply-fix-suggestions.json status=failed action=apply_fix_suggestions decision=apply-repair"
 assert_contains "$out" "8. fixture=validate-coverage-task-needs-better-input.json status=failed action=needs_better_input decision=needs-better-input"
+assert_contains "$out" "reason=\"LocalCache.get is not exported from this JavaScript module"
+assert_contains "$out" "reason=\"serve_frontend is defined only when frontend/dist exists"
+assert_contains "$out" "reason=\"Calculator.add did not cover target line range 4-4"
 assert_contains "$out" "agent_decisions=accept,accept,accept,manual-review,manual-review,manual-review,apply-repair,needs-better-input"
 
 echo "agent decision demo test passed"

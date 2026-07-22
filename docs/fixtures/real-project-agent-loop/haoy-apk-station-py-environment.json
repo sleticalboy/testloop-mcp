@@ -30,6 +30,12 @@
   },
   "metadata": {
     "framework": "pytest",
+    "environment_dependent": true,
+    "environment_reason": "serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main",
+    "manual_review_kind": "environment",
+    "manual_review_reason": "serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main",
+    "next_action_kind": "manual_review",
+    "next_action_reason": "serve_frontend is defined only when frontend/dist exists at app import time; cover with an integration fixture that creates dist before importing app.main",
     "test_file": "tests/test_main_frontend_testloop.py"
   },
   "regression_note": "该真实 haoy-apk-station 样本用于确认动态前端入口依赖导入环境时会进入 manual_review_environment，而不是被误当成可直接吸收的 ready 测试。",

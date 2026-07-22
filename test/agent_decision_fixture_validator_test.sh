@@ -50,6 +50,21 @@ assert any(
     for item in payload["fixtures"]
 )
 assert any(
+    item["action"] == "manual_review_internal"
+    and item["reason"].startswith("LocalCache.get is not exported")
+    for item in payload["fixtures"]
+)
+assert any(
+    item["action"] == "manual_review_environment"
+    and item["reason"].startswith("serve_frontend is defined only when frontend/dist exists")
+    for item in payload["fixtures"]
+)
+assert any(
+    item["action"] == "needs_better_input"
+    and item["reason"].startswith("Calculator.add did not cover target line range 4-4")
+    for item in payload["fixtures"]
+)
+assert any(
     item["action"] == "apply_fix_suggestions"
     and item["expected_decision"] == "apply-repair"
     for item in payload["fixtures"]
