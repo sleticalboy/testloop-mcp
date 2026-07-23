@@ -101,7 +101,8 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 ```
 
 导出包保留 `docs/fixtures/...` 路径和 validator 脚本，适合直接放进客户端仓库的契约测试目录。
-导出包还包含无依赖 `package.json`，客户端 CI 可以直接执行 `npm test --silent`。
+导出包还包含基础客户端 CI summary/response 的 schema、fixture、renderer 和无依赖 validator。客户端仓库只复制这个包，也能校验 `showcase-agent-decision-client-ci.sh --json` 的 summary 形状，并把 summary 渲染成稳定的 `agent_next_step` response。
+导出包还包含无依赖 `package.json`，客户端 CI 可以直接执行 `npm test --silent`；需要固定基础 response 合同时，可以继续运行 `npm run validate:client-summary --silent`、`npm run render:client-response --silent` 和 `npm run validate:client-response --silent`。
 
 维护者或接入方也可以先跑一条完整的外部客户端 CI 演练：
 

@@ -62,7 +62,16 @@ try {
   copyRequiredFile('docs/fixtures/agent-decision-fixtures.schema.json');
   copyRequiredFile('docs/fixtures/agent-decision-fixtures-result.schema.json');
   copyRequiredFile('docs/fixtures/agent-decision-fixtures-result/passed.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-summary.schema.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-summary/passed.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-response.schema.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-response/passed.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-response/validator-failed.json');
+  copyRequiredFile('docs/fixtures/agent-decision-client-ci-response/fixture-drift.json');
   copyRequiredFile('scripts/validate-agent-decision-fixtures.mjs');
+  copyRequiredFile('scripts/validate-agent-decision-client-ci-summary.mjs');
+  copyRequiredFile('scripts/render-agent-decision-client-ci-response.mjs');
+  copyRequiredFile('scripts/validate-agent-decision-client-ci-response.mjs');
   for (const item of manifest.fixtures || []) {
     if (!item || typeof item.path !== 'string') {
       throw new Error(`${manifestPath}: every fixture must contain a path`);
@@ -75,6 +84,9 @@ try {
     type: 'module',
     scripts: {
       test: 'node scripts/validate-agent-decision-fixtures.mjs --json docs/fixtures/agent-decision-fixtures.json .',
+      'validate:client-summary': 'node scripts/validate-agent-decision-client-ci-summary.mjs docs/fixtures/agent-decision-client-ci-summary/passed.json',
+      'render:client-response': 'node scripts/render-agent-decision-client-ci-response.mjs --json docs/fixtures/agent-decision-client-ci-summary/passed.json',
+      'validate:client-response': 'node scripts/validate-agent-decision-client-ci-response.mjs docs/fixtures/agent-decision-client-ci-response/passed.json',
     },
   }, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, 'README.md'), [
@@ -96,6 +108,17 @@ try {
     '',
     'The validator returns non-zero on failure and still writes parseable JSON with `status=failed`.',
     'The JSON result contract is copied to `docs/fixtures/agent-decision-fixtures-result.schema.json`.',
+    '',
+    'Validate the bundled client CI summary and Agent response contracts:',
+    '',
+    '```bash',
+    'npm run validate:client-summary --silent',
+    'npm run render:client-response --silent',
+    'npm run validate:client-response --silent',
+    '```',
+    '',
+    'The copied response contract lives at `docs/fixtures/agent-decision-client-ci-response.schema.json`.',
+    'The copied renderer turns a client CI summary into a stable `agent_next_step` response for AI agents.',
     '',
   ].join('\n'), 'utf8');
 } catch (error) {

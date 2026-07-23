@@ -39,6 +39,15 @@ assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.json"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures.schema.json"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures-result.schema.json"
 assert_exists "$export_dir/docs/fixtures/agent-decision-fixtures-result/passed.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-summary.schema.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-summary/passed.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-response.schema.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-response/passed.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-response/validator-failed.json"
+assert_exists "$export_dir/docs/fixtures/agent-decision-client-ci-response/fixture-drift.json"
+assert_exists "$export_dir/scripts/validate-agent-decision-client-ci-summary.mjs"
+assert_exists "$export_dir/scripts/render-agent-decision-client-ci-response.mjs"
+assert_exists "$export_dir/scripts/validate-agent-decision-client-ci-response.mjs"
 assert_exists "$export_dir/docs/fixtures/real-project-agent-loop/haoy-apk-station-py-external-service.json"
 
 if [ -e "$export_dir/docs/fixtures/run-tests/apply-fix-suggestions.json" ]; then
@@ -90,6 +99,30 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["schema_version"] == 1
 assert payload["status"] == "passed"
 assert payload["fixture_count"] == 8
+assert payload["failures"] == []
+PY
+
+summary_validator_out="${tmp_dir}/client-summary-validator.out"
+response_json="${tmp_dir}/client-response.json"
+response_validator_out="${tmp_dir}/client-response-validator.out"
+(
+  cd "$export_dir"
+  npm run validate:client-summary --silent > "$summary_validator_out"
+  npm run render:client-response --silent > "$response_json"
+  npm run validate:client-response --silent > "$response_validator_out"
+)
+assert_contains "$summary_validator_out" "agent_decision_client_ci_summary_status=passed fixture_count=8"
+assert_contains "$response_validator_out" "agent_decision_client_ci_response_status=passed agent_next_step=ready"
+python3 - "$response_json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == 1
+assert payload["status"] == "passed"
+assert payload["agent_next_step"] == "ready"
+assert payload["evidence"]["fixture_count"] == 8
 assert payload["failures"] == []
 PY
 
