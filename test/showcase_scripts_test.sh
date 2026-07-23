@@ -49,6 +49,7 @@ test_showcase_scripts_are_valid_bash() {
   bash -n "${repo_root}/scripts/showcase-dual-project-report.sh"
   bash -n "${repo_root}/scripts/showcase-laoxia-scaffold-report.sh"
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-ci.sh"
+  bash -n "${repo_root}/scripts/showcase-agent-decision-client-adopter.sh"
   bash -n "${repo_root}/scripts/install-agent-decision-client-ci-template.sh"
   bash -n "${repo_root}/scripts/install-agent-decision-release-response-client.sh"
   bash -n "${repo_root}/scripts/showcase-agent-decision-client-ci-template-install.sh"
@@ -60,6 +61,7 @@ test_showcase_scripts_are_valid_bash() {
   node --check "${repo_root}/scripts/validate-agent-decision-client-consumer-response.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-client-ci-install-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"
+  node --check "${repo_root}/examples/agent-decision-client-adopter/scripts/read-testloop-agent-decision-response.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-release-response-client-install-summary.mjs"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
 }

@@ -67,6 +67,7 @@ node scripts/export-agent-decision-fixtures.mjs /tmp/testloop-agent-decision-fix
 导出目录会包含 `docs/fixtures/agent-decision-fixtures.json`、manifest schema、validator result schema、通过态 result fixture、manifest 中列出的 8 个 fixture，以及 `scripts/validate-agent-decision-fixtures.mjs`。路径保持为 `docs/fixtures/...`，所以复制到目标项目后仍可直接运行同一条 `--json` 校验命令。
 导出包还会携带基础客户端 CI summary/response 的 schema、通过态/失败态 fixture、`render-agent-decision-client-ci-response.mjs` 和对应无依赖 validator。接入方即使不 checkout 整个 testloop-mcp 仓库，也能离线验证“fixture contract -> client summary -> Agent 下一步动作”的基础闭环。
 导出包也包含无依赖 `package.json`，可以在客户端 CI 中用 `npm test --silent` 直接运行 fixture 契约测试；需要固定基础 response 形状时，可在导出包内运行 `npm run validate:client-summary --silent`、`npm run render:client-response --silent` 和 `npm run validate:client-response --silent`。
+如果要看外部仓库可直接照抄的基础消费样板，见 [Agent decision client 接入方样板](../examples/agent-decision-client-adopter/README.md)；维护者可运行 `scripts/showcase-agent-decision-client-adopter.sh --json` 验证导出包、response renderer、validator 和接入方 helper 的完整基础闭环。
 
 如果要模拟外部客户端 CI 的完整接入路径，可以直接运行：
 

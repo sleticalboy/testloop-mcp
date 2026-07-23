@@ -94,6 +94,7 @@ jobs:
           sh test/agent_decision_fixture_validator_test.sh
           sh test/agent_decision_fixtures_result_schema_test.sh
           sh test/agent_decision_fixture_export_test.sh
+          sh test/agent_decision_client_adopter_example_test.sh
           sh test/agent_decision_client_ci_showcase_test.sh
           sh test/agent_decision_client_ci_summary_schema_test.sh
           sh test/agent_decision_client_ci_summary_validator_test.sh
