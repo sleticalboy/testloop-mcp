@@ -690,6 +690,43 @@ func TestGenerateJavaScriptCoverageTaskUsesComparisonInputs(t *testing.T) {
 	})
 }
 
+func TestGenerateJavaScriptCoverageTaskUsesCompoundComparisonInputs(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "classify.js")
+	src := `export function classify(count, total) {
+  if (count > 0 && total < 10) return 'inside';
+  return 'outside';
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "jest-compound-comparison-1",
+		Framework:       "jest",
+		Target:          "classify",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		TestName:        "covers classify inside branch",
+		SuggestedInputs: []string{"构造满足条件 `count > 0 && total < 10` 的输入"},
+		AssertionFocus:  []string{"assert compound branch"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"it('covers classify inside branch', () => {",
+		"const result = classify(1, 9);",
+		"expect(result).toBe(('inside'));",
+	}, []string{
+		"classify(0, 2)",
+		"classify(1, 2)",
+		"('outside')",
+	})
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;

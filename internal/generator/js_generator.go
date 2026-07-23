@@ -416,9 +416,8 @@ func jsSourceIsImportExportOnly(source string) bool {
 var (
 	jsReturnRe   = regexp.MustCompile(`\breturn\s+(.+?)(?:;|\n|$)`)
 	jsThrowRe    = regexp.MustCompile(`\bthrow\b`)
-	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(===|!==|==|!=|>=|<=|>|<)\s*([^)]+?)\s*\)`)
-	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(===|!==|==|!=)\s*(null|undefined)\s*\)`)
-	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(===|!==|==|!=|>=|<=|>|<)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
+	jsIfRe       = regexp.MustCompile(`if\s*\(\s*([^)]*?)\s*\)`)
+	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*([^)]*?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
 	jsIfThrowRe  = regexp.MustCompile(`(?s)if\s*\((.*?)\)\s*\{?\s*throw\b`)
 )
 
@@ -565,43 +564,33 @@ func extractJSBoundaries(body string) []jsBoundary {
 	seen := make(map[string]bool)
 	branchReturns := extractJSBranchReturns(body)
 
-	nullMatches := jsIfNullRe.FindAllStringSubmatch(body, -1)
-	for _, m := range nullMatches {
-		param := m[1]
-		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
-		key := param + ":" + val
-		if !seen[key] {
-			seen[key] = true
-			boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: val, ReturnExpr: branchReturns[key]})
-		}
-	}
-
-	ifMatches := jsIfEqRe.FindAllStringSubmatch(body, -1)
+	ifMatches := jsIfRe.FindAllStringSubmatch(body, -1)
 	for _, m := range ifMatches {
-		param := m[1]
-		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
+		for _, condition := range taskConditionParts(m[1]) {
+			param, val, ok := parseTaskConditionValue(condition, "javascript")
+			if !ok {
+				continue
+			}
+			key := param + ":" + val
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
 
-		if val == "null" || val == "undefined" {
-			continue
+			bType := "unknown"
+			if isNumericLiteral(val) {
+				bType = "number"
+			} else if val == "null" || val == "undefined" {
+				bType = val
+			} else if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
+				(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
+				bType = "string"
+			} else if val == "true" || val == "false" {
+				bType = "boolean"
+			}
+
+			boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 		}
-
-		key := param + ":" + val
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-
-		bType := "unknown"
-		if isNumericLiteral(val) {
-			bType = "number"
-		} else if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
-			(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
-			bType = "string"
-		} else if val == "true" || val == "false" {
-			bType = "boolean"
-		}
-
-		boundaries = append(boundaries, jsBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 	}
 
 	return boundaries
@@ -610,16 +599,17 @@ func extractJSBoundaries(body string) []jsBoundary {
 func extractJSBranchReturns(body string) map[string]string {
 	results := map[string]string{}
 	for _, m := range jsIfReturnRe.FindAllStringSubmatch(body, -1) {
-		if len(m) != 5 {
+		if len(m) != 3 {
 			continue
 		}
-		param := strings.TrimSpace(m[1])
-		value := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
-		ret := strings.TrimSpace(m[4])
-		if param == "" || value == "" || ret == "" {
-			continue
+		ret := strings.TrimSpace(m[2])
+		for _, condition := range taskConditionParts(m[1]) {
+			param, value, ok := parseTaskConditionValue(condition, "javascript")
+			if !ok || ret == "" {
+				continue
+			}
+			results[param+":"+value] = ret
 		}
-		results[param+":"+value] = ret
 	}
 	return results
 }

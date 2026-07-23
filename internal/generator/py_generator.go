@@ -272,9 +272,8 @@ func splitPathParts(path string) []string {
 var (
 	pyReturnRe   = regexp.MustCompile(`\breturn\s+(.+)`)
 	pyRaiseRe    = regexp.MustCompile(`\braise\b`)
-	pyIfEqRe     = regexp.MustCompile(`if\s+(\w+)\s*(==|=|!=|>=|<=|>|<)\s*(.+?):`)
-	pyIfNoneRe   = regexp.MustCompile(`if\s+(\w+)\s+(is\s+not|is)\s+(None|True|False)\s*:`)
-	pyIfReturnRe = regexp.MustCompile(`(?s)if\s+(\w+)\s*(==|=|!=|>=|<=|>|<|is\s+not|is)\s*(.+?):\s*\n\s*return\s+([^\n]+)`)
+	pyIfRe       = regexp.MustCompile(`(?m)\bif\s+(.+?):`)
+	pyIfReturnRe = regexp.MustCompile(`(?s)if\s+(.+?):\s*\n\s*return\s+([^\n]+)`)
 )
 
 func analyzePyBody(body string) pyFuncAnalysis {
@@ -410,41 +409,31 @@ func extractPyBoundaries(body string) []pyBoundary {
 	seen := make(map[string]bool)
 	branchReturns := extractPyBranchReturns(body)
 
-	noneMatches := pyIfNoneRe.FindAllStringSubmatch(body, -1)
-	for _, m := range noneMatches {
-		param := m[1]
-		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
-		key := param + ":" + val
-		if !seen[key] {
-			seen[key] = true
-			boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: val, ReturnExpr: branchReturns[key]})
-		}
-	}
-
-	ifMatches := pyIfEqRe.FindAllStringSubmatch(body, -1)
+	ifMatches := pyIfRe.FindAllStringSubmatch(body, -1)
 	for _, m := range ifMatches {
-		param := m[1]
-		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
+		for _, condition := range taskConditionParts(m[1]) {
+			param, val, ok := parseTaskConditionValue(condition, "python")
+			if !ok {
+				continue
+			}
+			key := param + ":" + val
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
 
-		if val == "None" || val == "True" || val == "False" {
-			continue
+			bType := "unknown"
+			if isPyNumericLiteral(val) {
+				bType = "number"
+			} else if val == "None" || val == "True" || val == "False" {
+				bType = val
+			} else if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
+				(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
+				bType = "string"
+			}
+
+			boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 		}
-
-		key := param + ":" + val
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-
-		bType := "unknown"
-		if isPyNumericLiteral(val) {
-			bType = "number"
-		} else if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
-			(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
-			bType = "string"
-		}
-
-		boundaries = append(boundaries, pyBoundary{Param: param, Value: val, Type: bType, ReturnExpr: branchReturns[key]})
 	}
 
 	return boundaries
@@ -453,16 +442,17 @@ func extractPyBoundaries(body string) []pyBoundary {
 func extractPyBranchReturns(body string) map[string]string {
 	results := map[string]string{}
 	for _, m := range pyIfReturnRe.FindAllStringSubmatch(body, -1) {
-		if len(m) != 5 {
+		if len(m) != 3 {
 			continue
 		}
-		param := strings.TrimSpace(m[1])
-		value := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
-		ret := strings.TrimSpace(m[4])
-		if param == "" || value == "" || ret == "" {
-			continue
+		ret := strings.TrimSpace(m[2])
+		for _, condition := range taskConditionParts(m[1]) {
+			param, value, ok := parseTaskConditionValue(condition, "python")
+			if !ok || ret == "" {
+				continue
+			}
+			results[param+":"+value] = ret
 		}
-		results[param+":"+value] = ret
 	}
 	return results
 }

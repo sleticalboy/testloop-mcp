@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	taskBacktickRe   = regexp.MustCompile("`([^`]+)`")
-	taskConditionRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(===|!==|==|!=|>=|<=|>|<|=|is\s+not|is)\s*(.+?)\s*$`)
-	taskEqualsCallRe = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_.]*)\.equals\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
+	taskBacktickRe      = regexp.MustCompile("`([^`]+)`")
+	taskConditionRe     = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(===|!==|==|!=|>=|<=|>|<|=|is\s+not|is)\s*(.+?)\s*$`)
+	taskConditionPartRe = regexp.MustCompile(`\s*(?:&&|\band\b)\s*`)
+	taskEqualsCallRe    = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_.]*)\.equals\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
 )
 
 func taskTargetMatches(target, className, name string) bool {
@@ -42,20 +43,17 @@ func coverageTaskInputValues(task *types.CoverageTestTask, language string) map[
 	hints = append(hints, task.MissingBranches...)
 	for _, hint := range hints {
 		for _, candidate := range taskConditionCandidates(hint) {
-			if language == "java" {
-				if matches := taskEqualsCallRe.FindStringSubmatch(candidate); len(matches) == 3 {
-					values[strings.TrimSpace(matches[2])] = strings.TrimSpace(matches[1])
-					continue
+			for _, condition := range taskConditionParts(candidate) {
+				if language == "java" {
+					if matches := taskEqualsCallRe.FindStringSubmatch(condition); len(matches) == 3 {
+						values[strings.TrimSpace(matches[2])] = strings.TrimSpace(matches[1])
+						continue
+					}
 				}
-			}
-			matches := taskConditionRe.FindStringSubmatch(candidate)
-			if len(matches) != 4 {
-				continue
-			}
-			param := strings.TrimSpace(matches[1])
-			value := normalizeTaskConditionLiteral(strings.TrimSpace(matches[3]), strings.TrimSpace(matches[2]), language)
-			if param != "" && value != "" {
-				values[param] = value
+				param, value, ok := parseTaskConditionValue(condition, language)
+				if ok {
+					values[param] = value
+				}
 			}
 		}
 	}
@@ -73,6 +71,38 @@ func taskConditionCandidates(hint string) []string {
 		candidates = append(candidates, strings.TrimSpace(hint))
 	}
 	return candidates
+}
+
+func taskConditionParts(candidate string) []string {
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return nil
+	}
+	parts := taskConditionPartRe.Split(candidate, -1)
+	if len(parts) == 0 {
+		return []string{candidate}
+	}
+	conditions := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			conditions = append(conditions, part)
+		}
+	}
+	if len(conditions) == 0 {
+		return []string{candidate}
+	}
+	return conditions
+}
+
+func parseTaskConditionValue(condition, language string) (string, string, bool) {
+	matches := taskConditionRe.FindStringSubmatch(condition)
+	if len(matches) != 4 {
+		return "", "", false
+	}
+	param := strings.TrimSpace(matches[1])
+	value := normalizeTaskConditionLiteral(strings.TrimSpace(matches[3]), strings.TrimSpace(matches[2]), language)
+	return param, value, param != "" && value != ""
 }
 
 func normalizeTaskLiteral(value, language string) string {
