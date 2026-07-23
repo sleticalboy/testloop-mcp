@@ -432,6 +432,42 @@ def sub(a, b):
 	}
 }
 
+func TestGeneratePytestTestsForCoverageTaskUsesComparisonInputs(t *testing.T) {
+	src := `def classify(count):
+    if count > 0:
+        return "positive"
+    return "empty"
+`
+	srcPath := filepath.Join(t.TempDir(), "classify.py")
+	if err := os.WriteFile(srcPath, []byte(src), 0644); err != nil {
+		t.Fatal(err)
+	}
+	task := types.CoverageTestTask{
+		ID:              "pytest-comparison-1",
+		Framework:       "pytest",
+		Target:          "classify",
+		LineRange:       "2-3",
+		GapType:         "branch",
+		TestName:        "test_classify_positive_branch",
+		SuggestedInputs: []string{"构造满足条件 `count > 0` 的输入"},
+		AssertionFocus:  []string{"断言正数分支"},
+	}
+
+	code, err := GeneratePytestTestsForCoverageTask(srcPath, &task)
+	if err != nil {
+		t.Fatalf("GeneratePytestTestsForCoverageTask() error = %v", err)
+	}
+	for _, want := range []string{
+		"def test_classify_positive_branch():",
+		"result = classify(1)",
+		"assert result == (\"positive\")",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("expected %q in generated code:\n%s", want, code)
+		}
+	}
+}
+
 func TestGeneratePytestCoverageTaskUsesConcreteBytesForCompareHelpers(t *testing.T) {
 	src := `def ip_sub_compare(ip1, buff, offset):
     ip2 = buff[offset:offset+len(ip1)]

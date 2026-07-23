@@ -37,32 +37,43 @@ func TestCoverageTaskInputValuesExtractsAndNormalizesHints(t *testing.T) {
 		SuggestedInputs: []string{
 			"构造满足条件 `value == None` 和 `enabled == false` 的输入",
 			"mode = 'short';",
+			"构造满足条件 `positive > 0` 的输入",
+			"构造满足条件 `offset < 10` 的输入",
+			"构造满足条件 `limit >= 5` 的输入",
+			"构造满足条件 `total <= 99` 的输入",
+			"构造满足条件 `state != \"ready\"` 的输入",
+			"构造满足条件 `missing is not None` 的输入",
 			"invalid text without condition",
 		},
 		MissingBranches: []string{
 			"`count === 0`",
-			"`missing is undefined`",
+			"`fallback is undefined`",
 		},
 	}
 
 	jsValues := coverageTaskInputValues(&task, "javascript")
 	if jsValues["value"] != "null" || jsValues["enabled"] != "false" || jsValues["mode"] != "'short'" ||
-		jsValues["count"] != "0" || jsValues["missing"] != "undefined" {
+		jsValues["count"] != "0" || jsValues["positive"] != "1" || jsValues["offset"] != "9" || jsValues["limit"] != "5" ||
+		jsValues["total"] != "99" || jsValues["state"] != `"__testloop_other__"` ||
+		jsValues["missing"] != "{}" || jsValues["fallback"] != "undefined" {
 		t.Fatalf("unexpected JavaScript values: %+v", jsValues)
 	}
 
 	pyValues := coverageTaskInputValues(&task, "python")
-	if pyValues["value"] != "None" || pyValues["enabled"] != "False" || pyValues["missing"] != "None" {
+	if pyValues["value"] != "None" || pyValues["enabled"] != "False" || pyValues["missing"] != "object()" ||
+		pyValues["offset"] != "9" || pyValues["state"] != `"__testloop_other__"` {
 		t.Fatalf("unexpected Python values: %+v", pyValues)
 	}
 
 	rsValues := coverageTaskInputValues(&task, "rust")
-	if rsValues["value"] != "None" || rsValues["missing"] != "None" || rsValues["enabled"] != "false" {
+	if rsValues["value"] != "None" || rsValues["missing"] != "Some(0)" || rsValues["enabled"] != "false" ||
+		rsValues["positive"] != "1" {
 		t.Fatalf("unexpected Rust values: %+v", rsValues)
 	}
 
 	javaValues := coverageTaskInputValues(&task, "java")
-	if javaValues["value"] != "null" || javaValues["missing"] != "null" || javaValues["enabled"] != "false" {
+	if javaValues["value"] != "null" || javaValues["missing"] != `"__testloop_other__"` ||
+		javaValues["enabled"] != "false" || javaValues["positive"] != "1" {
 		t.Fatalf("unexpected Java values: %+v", javaValues)
 	}
 

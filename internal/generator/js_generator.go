@@ -416,9 +416,9 @@ func jsSourceIsImportExportOnly(source string) bool {
 var (
 	jsReturnRe   = regexp.MustCompile(`\breturn\s+(.+?)(?:;|\n|$)`)
 	jsThrowRe    = regexp.MustCompile(`\bthrow\b`)
-	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*([^)]+?)\s*\)`)
-	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(?:===?|!==?)\s*(null|undefined)\s*\)`)
-	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(?:===?|==)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
+	jsIfEqRe     = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(===|!==|==|!=|>=|<=|>|<)\s*([^)]+?)\s*\)`)
+	jsIfNullRe   = regexp.MustCompile(`if\s*\(\s*(\w+)\s*(===|!==|==|!=)\s*(null|undefined)\s*\)`)
+	jsIfReturnRe = regexp.MustCompile(`(?s)if\s*\(\s*(\w+)\s*(===|!==|==|!=|>=|<=|>|<)\s*([^)]+?)\s*\)\s*(?:\{\s*)?return\s+(\{[^;\n]*\}|\[[^;\n]*\]|.+?)(?:;|\n|\})`)
 	jsIfThrowRe  = regexp.MustCompile(`(?s)if\s*\((.*?)\)\s*\{?\s*throw\b`)
 )
 
@@ -568,7 +568,7 @@ func extractJSBoundaries(body string) []jsBoundary {
 	nullMatches := jsIfNullRe.FindAllStringSubmatch(body, -1)
 	for _, m := range nullMatches {
 		param := m[1]
-		val := m[2]
+		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
 		key := param + ":" + val
 		if !seen[key] {
 			seen[key] = true
@@ -579,7 +579,7 @@ func extractJSBoundaries(body string) []jsBoundary {
 	ifMatches := jsIfEqRe.FindAllStringSubmatch(body, -1)
 	for _, m := range ifMatches {
 		param := m[1]
-		val := strings.TrimSpace(m[2])
+		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
 
 		if val == "null" || val == "undefined" {
 			continue
@@ -610,12 +610,12 @@ func extractJSBoundaries(body string) []jsBoundary {
 func extractJSBranchReturns(body string) map[string]string {
 	results := map[string]string{}
 	for _, m := range jsIfReturnRe.FindAllStringSubmatch(body, -1) {
-		if len(m) != 4 {
+		if len(m) != 5 {
 			continue
 		}
 		param := strings.TrimSpace(m[1])
-		value := strings.TrimSpace(m[2])
-		ret := strings.TrimSpace(m[3])
+		value := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "javascript")
+		ret := strings.TrimSpace(m[4])
 		if param == "" || value == "" || ret == "" {
 			continue
 		}

@@ -655,6 +655,41 @@ func TestGenerateJavaScriptCoverageTaskESMImportPathFollowsTSConfig(t *testing.T
 	})
 }
 
+func TestGenerateJavaScriptCoverageTaskUsesComparisonInputs(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "classify.js")
+	src := `export function classify(count) {
+  if (count > 0) return 'positive';
+  return 'empty';
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "jest-comparison-1",
+		Framework:       "jest",
+		Target:          "classify",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		TestName:        "covers classify positive branch",
+		SuggestedInputs: []string{"构造满足条件 `count > 0` 的输入"},
+		AssertionFocus:  []string{"assert positive branch"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"it('covers classify positive branch', () => {",
+		"const result = classify(1);",
+		"expect(result).toBe(('positive'));",
+	}, []string{
+		"classify(0)",
+	})
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;

@@ -272,9 +272,9 @@ func splitPathParts(path string) []string {
 var (
 	pyReturnRe   = regexp.MustCompile(`\breturn\s+(.+)`)
 	pyRaiseRe    = regexp.MustCompile(`\braise\b`)
-	pyIfEqRe     = regexp.MustCompile(`if\s+(\w+)\s*(?:==?|!=)\s*(.+?):`)
-	pyIfNoneRe   = regexp.MustCompile(`if\s+(\w+)\s+(?:is|is\s+not)\s+(None|True|False)\s*:`)
-	pyIfReturnRe = regexp.MustCompile(`(?s)if\s+(\w+)\s*(?:==|is)\s*(.+?):\s*\n\s*return\s+([^\n]+)`)
+	pyIfEqRe     = regexp.MustCompile(`if\s+(\w+)\s*(==|=|!=|>=|<=|>|<)\s*(.+?):`)
+	pyIfNoneRe   = regexp.MustCompile(`if\s+(\w+)\s+(is\s+not|is)\s+(None|True|False)\s*:`)
+	pyIfReturnRe = regexp.MustCompile(`(?s)if\s+(\w+)\s*(==|=|!=|>=|<=|>|<|is\s+not|is)\s*(.+?):\s*\n\s*return\s+([^\n]+)`)
 )
 
 func analyzePyBody(body string) pyFuncAnalysis {
@@ -413,7 +413,7 @@ func extractPyBoundaries(body string) []pyBoundary {
 	noneMatches := pyIfNoneRe.FindAllStringSubmatch(body, -1)
 	for _, m := range noneMatches {
 		param := m[1]
-		val := m[2]
+		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
 		key := param + ":" + val
 		if !seen[key] {
 			seen[key] = true
@@ -424,7 +424,7 @@ func extractPyBoundaries(body string) []pyBoundary {
 	ifMatches := pyIfEqRe.FindAllStringSubmatch(body, -1)
 	for _, m := range ifMatches {
 		param := m[1]
-		val := strings.TrimSpace(m[2])
+		val := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
 
 		if val == "None" || val == "True" || val == "False" {
 			continue
@@ -453,12 +453,12 @@ func extractPyBoundaries(body string) []pyBoundary {
 func extractPyBranchReturns(body string) map[string]string {
 	results := map[string]string{}
 	for _, m := range pyIfReturnRe.FindAllStringSubmatch(body, -1) {
-		if len(m) != 4 {
+		if len(m) != 5 {
 			continue
 		}
 		param := strings.TrimSpace(m[1])
-		value := strings.TrimSpace(m[2])
-		ret := strings.TrimSpace(m[3])
+		value := normalizeTaskConditionLiteral(strings.TrimSpace(m[3]), strings.TrimSpace(m[2]), "python")
+		ret := strings.TrimSpace(m[4])
 		if param == "" || value == "" || ret == "" {
 			continue
 		}

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -10,7 +11,7 @@ import (
 
 var (
 	taskBacktickRe   = regexp.MustCompile("`([^`]+)`")
-	taskConditionRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:===|==|=|is)\s*(.+?)\s*$`)
+	taskConditionRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(===|!==|==|!=|>=|<=|>|<|=|is\s+not|is)\s*(.+?)\s*$`)
 	taskEqualsCallRe = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_.]*)\.equals\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
 )
 
@@ -48,11 +49,11 @@ func coverageTaskInputValues(task *types.CoverageTestTask, language string) map[
 				}
 			}
 			matches := taskConditionRe.FindStringSubmatch(candidate)
-			if len(matches) != 3 {
+			if len(matches) != 4 {
 				continue
 			}
 			param := strings.TrimSpace(matches[1])
-			value := normalizeTaskLiteral(strings.TrimSpace(matches[2]), language)
+			value := normalizeTaskConditionLiteral(strings.TrimSpace(matches[3]), strings.TrimSpace(matches[2]), language)
 			if param != "" && value != "" {
 				values[param] = value
 			}
@@ -105,6 +106,84 @@ func normalizeTaskLiteral(value, language string) string {
 		return "false"
 	}
 	return value
+}
+
+func normalizeTaskConditionLiteral(value, operator, language string) string {
+	normalized := normalizeTaskLiteral(value, language)
+	switch strings.ToLower(strings.TrimSpace(operator)) {
+	case ">", ">=":
+		if operator == ">" {
+			return incrementIntegerLiteral(normalized)
+		}
+	case "<", "<=":
+		if operator == "<" {
+			return decrementIntegerLiteral(normalized)
+		}
+	case "!=", "!==", "is not":
+		return differentTaskLiteral(normalized, language)
+	}
+	return normalized
+}
+
+func incrementIntegerLiteral(value string) string {
+	if parsed, ok := parseIntegerLiteral(value); ok {
+		return strconv.FormatInt(parsed+1, 10)
+	}
+	return value
+}
+
+func decrementIntegerLiteral(value string) string {
+	if parsed, ok := parseIntegerLiteral(value); ok {
+		return strconv.FormatInt(parsed-1, 10)
+	}
+	return value
+}
+
+func parseIntegerLiteral(value string) (int64, bool) {
+	parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+	return parsed, err == nil
+}
+
+func differentTaskLiteral(value, language string) string {
+	switch value {
+	case "true", "True":
+		if language == "python" {
+			return "False"
+		}
+		return "false"
+	case "false", "False":
+		if language == "python" {
+			return "True"
+		}
+		return "true"
+	case "null", "None", "undefined":
+		return nonNullTaskLiteral(language)
+	}
+	if parsed, ok := parseIntegerLiteral(value); ok {
+		return strconv.FormatInt(parsed+1, 10)
+	}
+	if len(value) >= 2 {
+		quote := value[:1]
+		if (quote == `"` || quote == `'`) && strings.HasSuffix(value, quote) {
+			return quote + "__testloop_other__" + quote
+		}
+	}
+	return value
+}
+
+func nonNullTaskLiteral(language string) string {
+	switch language {
+	case "python":
+		return "object()"
+	case "javascript":
+		return "{}"
+	case "java":
+		return "\"__testloop_other__\""
+	case "rust":
+		return "Some(0)"
+	default:
+		return "1"
+	}
 }
 
 func coverageTaskComment(task *types.CoverageTestTask) string {
