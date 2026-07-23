@@ -62,6 +62,7 @@ test_showcase_scripts_are_valid_bash() {
   node --check "${repo_root}/scripts/validate-agent-decision-client-ci-install-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-client-consumer-smoke-summary.mjs"
   node --check "${repo_root}/examples/agent-decision-client-adopter/scripts/read-testloop-agent-decision-response.mjs"
+  node --check "${repo_root}/scripts/validate-agent-decision-client-adopter-summary.mjs"
   node --check "${repo_root}/scripts/validate-agent-decision-release-response-client-install-summary.mjs"
   python3 -m py_compile "${repo_root}/scripts/summarize-showcase-output.py"
 }

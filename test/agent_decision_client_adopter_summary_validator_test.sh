@@ -1,0 +1,135 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT INT TERM
+
+cd "$repo_root"
+
+assert_contains() {
+  file="$1"
+  needle="$2"
+  if ! grep -F -- "$needle" "$file" >/dev/null 2>&1; then
+    echo "expected $file to contain: $needle" >&2
+    echo "--- $file ---" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
+validator="scripts/validate-agent-decision-client-adopter-summary.mjs"
+
+out="${tmp_dir}/validator.out"
+node "$validator" > "$out"
+assert_contains "$out" "agent_decision_client_adopter_summary_status=passed fixture_count=8"
+assert_contains "$out" "agent_decision_client_adopter_summary_agent_next_step=ready"
+assert_contains "$out" "agent_decision_client_adopter_summary_should_accept=true"
+
+json_out="${tmp_dir}/validator.json"
+node "$validator" --json > "$json_out"
+python3 - "$json_out" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "passed"
+assert payload["fixture_count"] == 8
+assert payload["agent_next_step"] == "ready"
+assert payload["should_accept"] is True
+assert payload["npm_exit_code"] == 0
+assert payload["failures"] == []
+PY
+
+showcase_json="${tmp_dir}/showcase.json"
+TESTLOOP_AGENT_DECISION_ADOPTER_REPO_DIR="${tmp_dir}/adopter-repo" \
+  scripts/showcase-agent-decision-client-adopter.sh --json > "$showcase_json"
+node "$validator" "$showcase_json" > "${tmp_dir}/showcase-validator.out"
+assert_contains "${tmp_dir}/showcase-validator.out" "agent_decision_client_adopter_summary_status=passed fixture_count=8"
+
+python3 - "$showcase_json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert Path(payload["readme_path"]).exists()
+PY
+
+bad_summary="${tmp_dir}/bad-summary.json"
+python3 - "$bad_summary" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path("docs/fixtures/agent-decision-client-adopter-summary/passed.json").read_text(encoding="utf-8"))
+payload["status"] = "failed"
+payload["fixture_count"] = 7
+payload["agent_next_step"] = "inspect-agent-decision-fixtures"
+payload["should_accept"] = False
+payload["npm_exit_code"] = 1
+payload["failures"] = ["boom"]
+Path(sys.argv[1]).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+if node "$validator" "$bad_summary" > "${tmp_dir}/bad.out" 2>&1; then
+  echo "expected validator to fail for invalid Agent decision client adopter summary" >&2
+  exit 1
+fi
+assert_contains "${tmp_dir}/bad.out" "status must be passed"
+assert_contains "${tmp_dir}/bad.out" "fixture_count must be 8"
+assert_contains "${tmp_dir}/bad.out" "agent_next_step must be ready"
+assert_contains "${tmp_dir}/bad.out" "should_accept must be true"
+assert_contains "${tmp_dir}/bad.out" "npm_exit_code must be 0"
+assert_contains "${tmp_dir}/bad.out" "failures must be an empty array"
+
+failed_fixture="docs/fixtures/agent-decision-client-adopter-summary/invalid-response.json"
+if node "$validator" "$failed_fixture" > "${tmp_dir}/failed-fixture.out" 2>&1; then
+  echo "expected validator to fail for failed Agent decision client adopter summary fixture" >&2
+  exit 1
+fi
+assert_contains "${tmp_dir}/failed-fixture.out" "status must be passed"
+assert_contains "${tmp_dir}/failed-fixture.out" "agent_next_step must be ready"
+assert_contains "${tmp_dir}/failed-fixture.out" "should_accept must be true"
+assert_contains "${tmp_dir}/failed-fixture.out" "failures must be an empty array"
+
+if node "$validator" --json "$failed_fixture" > "${tmp_dir}/failed-fixture.json"; then
+  echo "expected JSON validator to fail for failed Agent decision client adopter summary fixture" >&2
+  exit 1
+fi
+python3 - "${tmp_dir}/failed-fixture.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "failed"
+assert payload["fixture_count"] == 8
+assert payload["agent_next_step"] == "inspect-client-validator"
+assert payload["should_accept"] is False
+assert payload["npm_exit_code"] == 0
+assert any("consumer agent_next_step=inspect-client-validator, want ready" in item for item in payload["failures"])
+assert any("agent_next_step must be ready" in item for item in payload["failures"])
+PY
+
+if node "$validator" --json "$bad_summary" > "${tmp_dir}/bad.json"; then
+  echo "expected JSON validator to fail for invalid Agent decision client adopter summary" >&2
+  exit 1
+fi
+python3 - "${tmp_dir}/bad.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "failed"
+assert payload["fixture_count"] == 7
+assert payload["agent_next_step"] == "inspect-agent-decision-fixtures"
+assert payload["should_accept"] is False
+assert payload["npm_exit_code"] == 1
+assert "boom" in payload["failures"]
+assert any("status must be passed" in item for item in payload["failures"])
+PY
+
+echo "Agent decision client adopter summary validator test passed"

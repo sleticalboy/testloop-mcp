@@ -110,6 +110,7 @@ for key in [
     "response_json",
     "response_validation_json",
     "consumer_json",
+    "readme_path",
 ]:
     assert Path(payload[key]).exists(), f"{key} does not exist: {payload[key]}"
 
@@ -121,6 +122,9 @@ PY
 assert_contains "${repo_dir}/README.md" "node scripts/read-testloop-agent-decision-response.mjs"
 assert_contains "${repo_dir}/scripts/read-testloop-agent-decision-response.mjs" "testloop_agent_decision_response_next_step"
 assert_contains "$readme" "scripts/showcase-agent-decision-client-adopter.sh --json"
+assert_contains "$readme" "node scripts/validate-agent-decision-client-adopter-summary.mjs"
+assert_contains "$readme" "agent-decision-client-adopter-summary.schema.json"
+assert_contains "$readme" "invalid-response.json"
 assert_contains "$readme" "testloop_agent_decision_response_status"
 assert_contains "$readme" "testloop_agent_decision_response_next_step"
 assert_contains "$readme" "inspect-client-validator"

@@ -142,6 +142,7 @@ const payload = {
   schema_version: 1,
   status: failures.length === 0 ? 'passed' : 'failed',
   repo_dir: repoDir,
+  readme_path: path.join(repoDir, 'README.md'),
   package_dir: packageDir,
   result_json: resultPath,
   response_json: responsePath,

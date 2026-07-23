@@ -53,6 +53,8 @@ required_commands = [
     "node scripts/export-agent-decision-fixtures.mjs",
     "scripts/showcase-agent-decision-client-ci.sh",
     "scripts/showcase-agent-decision-client-ci.sh --json",
+    "scripts/showcase-agent-decision-client-adopter.sh --json",
+    "node scripts/validate-agent-decision-client-adopter-summary.mjs",
     "scripts/showcase-agent-decision-client-release-smoke.sh --json",
     "scripts/showcase-agent-decision-client-release-response-smoke.sh --json",
     "scripts/showcase-agent-decision-client-release-response-ci.sh --json",

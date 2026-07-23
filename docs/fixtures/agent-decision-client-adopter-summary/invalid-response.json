@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "repo_dir": "/tmp/testloop-agent-decision-client-adopter/external-client-repo",
+  "readme_path": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/README.md",
+  "package_dir": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/testloop-agent-decision-fixtures",
+  "result_json": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/agent-decision-fixtures-result.json",
+  "response_json": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/testloop-agent-decision-client-response.json",
+  "response_validation_json": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/testloop-agent-decision-client-response-validation.json",
+  "consumer_json": "/tmp/testloop-agent-decision-client-adopter/external-client-repo/testloop-agent-decision-response-consumer.json",
+  "fixture_count": 8,
+  "agent_next_step": "inspect-client-validator",
+  "should_accept": false,
+  "npm_exit_code": 0,
+  "failures": [
+    "consumer agent_next_step=inspect-client-validator, want ready"
+  ]
+}

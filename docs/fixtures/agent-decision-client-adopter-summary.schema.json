@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/sleticalboy/testloop-mcp/main/docs/fixtures/agent-decision-client-adopter-summary.schema.json",
+  "title": "testloop Agent decision client adopter summary",
+  "description": "Machine-readable contract for scripts/showcase-agent-decision-client-adopter.sh --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "repo_dir",
+    "readme_path",
+    "package_dir",
+    "result_json",
+    "response_json",
+    "response_validation_json",
+    "consumer_json",
+    "fixture_count",
+    "agent_next_step",
+    "should_accept",
+    "npm_exit_code",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "repo_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readme_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "response_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "response_validation_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "consumer_json": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "agent_next_step": {
+      "type": "string",
+      "minLength": 1
+    },
+    "should_accept": {
+      "type": "boolean"
+    },
+    "npm_exit_code": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "failures": {
+      "type": "array"
+    }
+  }
+}

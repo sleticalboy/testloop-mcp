@@ -54,9 +54,12 @@ testloop_agent_decision_response_should_accept=true
 ```bash
 scripts/showcase-agent-decision-client-adopter.sh --json \
   > /tmp/testloop-agent-decision-client-adopter-summary.json
+node scripts/validate-agent-decision-client-adopter-summary.mjs \
+  /tmp/testloop-agent-decision-client-adopter-summary.json
 ```
 
 失败态会返回非 0。Agent 应读取 `testloop_agent_decision_response_next_step` 和 `testloop_agent_decision_response_failures`，再决定排查 summary、validator，还是 fixture 漂移。
+summary 结构契约见 `docs/fixtures/agent-decision-client-adopter-summary.schema.json`，通过态 fixture 见 `passed.json`，失败态 fixture 见 `invalid-response.json`。validator 支持 `--json`，失败时会输出规范化的 `agent_next_step`、`should_accept=false` 和 `failures[]`。
 
 ## Helper 输出字段
 
