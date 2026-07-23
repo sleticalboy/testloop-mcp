@@ -14,6 +14,7 @@ var (
 	taskConditionRe     = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(===|!==|==|!=|>=|<=|>|<|=|is\s+not|is)\s*(.+?)\s*$`)
 	taskConditionPartRe = regexp.MustCompile(`\s*(?:&&|\band\b)\s*`)
 	taskEqualsCallRe    = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_.]*)\.equals\(\s*([A-Za-z_][A-Za-z0-9_]*)`)
+	taskIdentifierRe    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 )
 
 func taskTargetMatches(target, className, name string) bool {
@@ -96,6 +97,23 @@ func taskConditionParts(candidate string) []string {
 }
 
 func parseTaskConditionValue(condition, language string) (string, string, bool) {
+	condition = strings.TrimSpace(condition)
+	if strings.HasPrefix(condition, "!") {
+		param := strings.TrimSpace(strings.TrimPrefix(condition, "!"))
+		if taskIdentifierRe.MatchString(param) {
+			return param, normalizeTaskLiteral("false", language), true
+		}
+	}
+	if strings.HasPrefix(condition, "not ") {
+		param := strings.TrimSpace(strings.TrimPrefix(condition, "not "))
+		if taskIdentifierRe.MatchString(param) {
+			return param, normalizeTaskLiteral("false", language), true
+		}
+	}
+	if taskIdentifierRe.MatchString(condition) {
+		return condition, normalizeTaskLiteral("true", language), true
+	}
+
 	matches := taskConditionRe.FindStringSubmatch(condition)
 	if len(matches) != 4 {
 		return "", "", false

@@ -4299,7 +4299,11 @@ func jsArgListWithValuesForAnalysis(params []jsParamInfo, values map[string]stri
 	args := make([]string, len(params))
 	for i, p := range params {
 		if value := values[p.Name]; value != "" {
-			args[i] = value
+			if value == "false" && jsDefaultParamShouldStayUndefined(p, analysis) {
+				args[i] = "undefined"
+			} else {
+				args[i] = value
+			}
 		} else if jsDefaultParamShouldStayUndefined(p, analysis) {
 			args[i] = "undefined"
 		} else if value, ok := jsTypedParamMockValue(p, analysis); ok {

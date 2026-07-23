@@ -45,6 +45,9 @@ func TestCoverageTaskInputValuesExtractsAndNormalizesHints(t *testing.T) {
 			"构造满足条件 `missing is not None` 的输入",
 			"构造满足条件 `left > 0 && right < 10` 的输入",
 			"构造满足条件 `py_left > 1 and py_right <= 7` 的输入",
+			"构造满足条件 `!disabled` 的输入",
+			"构造满足条件 `not archived` 的输入",
+			"构造满足条件 `visible` 的输入",
 			"invalid text without condition",
 		},
 		MissingBranches: []string{
@@ -58,14 +61,16 @@ func TestCoverageTaskInputValuesExtractsAndNormalizesHints(t *testing.T) {
 		jsValues["count"] != "0" || jsValues["positive"] != "1" || jsValues["offset"] != "9" || jsValues["limit"] != "5" ||
 		jsValues["total"] != "99" || jsValues["state"] != `"__testloop_other__"` ||
 		jsValues["missing"] != "{}" || jsValues["fallback"] != "undefined" ||
-		jsValues["left"] != "1" || jsValues["right"] != "9" || jsValues["py_left"] != "2" || jsValues["py_right"] != "7" {
+		jsValues["left"] != "1" || jsValues["right"] != "9" || jsValues["py_left"] != "2" || jsValues["py_right"] != "7" ||
+		jsValues["disabled"] != "false" || jsValues["archived"] != "false" || jsValues["visible"] != "true" {
 		t.Fatalf("unexpected JavaScript values: %+v", jsValues)
 	}
 
 	pyValues := coverageTaskInputValues(&task, "python")
 	if pyValues["value"] != "None" || pyValues["enabled"] != "False" || pyValues["missing"] != "object()" ||
 		pyValues["offset"] != "9" || pyValues["state"] != `"__testloop_other__"` ||
-		pyValues["left"] != "1" || pyValues["right"] != "9" || pyValues["py_left"] != "2" || pyValues["py_right"] != "7" {
+		pyValues["left"] != "1" || pyValues["right"] != "9" || pyValues["py_left"] != "2" || pyValues["py_right"] != "7" ||
+		pyValues["disabled"] != "False" || pyValues["archived"] != "False" || pyValues["visible"] != "True" {
 		t.Fatalf("unexpected Python values: %+v", pyValues)
 	}
 

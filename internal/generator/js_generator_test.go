@@ -727,6 +727,42 @@ func TestGenerateJavaScriptCoverageTaskUsesCompoundComparisonInputs(t *testing.T
 	})
 }
 
+func TestGenerateJavaScriptCoverageTaskUsesBooleanNegationInput(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "classify.js")
+	src := `export function classify(enabled) {
+  if (!enabled) return 'disabled';
+  return 'enabled';
+}
+`
+	if err := os.WriteFile(srcPath, []byte(src), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	code, err := GenerateJavaScriptTestsForCoverageTask(srcPath, &types.CoverageTestTask{
+		ID:              "jest-bool-negation-1",
+		Framework:       "jest",
+		Target:          "classify",
+		LineRange:       "2-2",
+		GapType:         "branch",
+		TestName:        "covers classify disabled branch",
+		SuggestedInputs: []string{"构造满足条件 `!enabled` 的输入"},
+		AssertionFocus:  []string{"assert boolean negation branch"},
+	})
+	if err != nil {
+		t.Fatalf("GenerateJavaScriptTestsForCoverageTask() error = %v", err)
+	}
+
+	assertGeneratedJS(t, code, []string{
+		"it('covers classify disabled branch', () => {",
+		"const result = classify(false);",
+		"expect(result).toBe(('disabled'));",
+	}, []string{
+		"classify(true)",
+		"('enabled')",
+	})
+}
+
 func TestTreeSitterJS_ParsesAllDeclarations(t *testing.T) {
 	source := []byte(`function add(a, b) { return a + b; }
 const multiply = (a, b) => a * b;
